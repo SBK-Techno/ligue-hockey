@@ -8,14 +8,14 @@
 </script>
 
 <div class="card">
-	<h1 class="text-2xl">{t('auth.reset.title')}</h1>
+	<h1 class="text-figure">{t('auth.reset.title')}</h1>
 
-	{#if form?.sent}
-		<p class="success mt-5" role="status">{form.message}</p>
-		<a class="btn-secondary mt-5 w-full" href="/connexion">{t('auth.reset.back')}</a>
-	{:else}
+	{#if !form?.sent}
 		<p class="mt-1 text-body leading-relaxed text-muted">{t('auth.reset.lead')}</p>
-		<FormFeedback {form} class="mt-5" />
+	{/if}
+	<FormFeedback {form} class="mt-5" />
+
+	{#if !form?.sent}
 		<form method="POST" use:progressiveForm class="mt-6 space-y-4">
 			<div>
 				<label class="label" for="email">{t('auth.email')}</label>
@@ -33,8 +33,9 @@
 			</div>
 			<button class="btn-primary w-full" type="submit">{t('auth.reset.submit')}</button>
 		</form>
-		<div class="mt-5 text-center">
-			<a class="action-link text-body" href="/connexion">{t('auth.reset.back')}</a>
-		</div>
 	{/if}
+
+	<div class="mt-5 text-center">
+		<a class="action-link text-body" href="/connexion">{t('auth.reset.back')}</a>
+	</div>
 </div>
