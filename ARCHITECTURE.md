@@ -24,7 +24,8 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 
 | Fact | Owner | Consumers | Gate |
 |---|---|---|---|
-| App name, colours, icons, locale, timezone, social image | `config/branding.json` | manifest, icons, layout, emails, OG metadata | `verify:generated` |
+| App name, manifest colours, icons, locale, timezone, social image, crawl policy | `config/branding.json` | manifest, icons, app shell, robots, layout, emails, OG metadata, offline page, service-worker cache | `verify:generated` |
+| Application palette | `src/lib/ui/tokens.css` | every component, emails, docs, social image, offline page | `verify:architecture` + `verify:generated` |
 | League-editable settings (roster, fees, lead times, limits) | `config/settings-registry.ts` | settings service, admin form, services | registry test + `verify` |
 | Positions | `config/positions.ts` | schema checks, forms, roster templates, notifications | architecture check |
 | Roles and capabilities | `config/capabilities.ts`, `config/roles.ts` | policy, navigation, admin role editor | policy tests |
@@ -34,6 +35,7 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
+| Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
 | Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | drizzle-kit diff |
@@ -53,7 +55,7 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 Three explicit layers, each with one owner:
 
-1. **Branding** (build time, checked in): `config/branding.json`. Generates `static/manifest.webmanifest`, `static/icons/*`, `static/social/apercu.jpg`, and `src/lib/generated/branding.ts`.
+1. **Branding** (build time, checked in): `config/branding.json` with the palette owned by `src/lib/ui/tokens.css`. Generates `src/app.html`, `static/manifest.webmanifest`, `static/robots.txt`, `static/offline.html`, `static/icons/*`, `static/social/apercu.jpg`, and `src/lib/generated/branding.ts`.
 2. **League settings** (database): typed registry with a Zod schema, default, French label, and optional min/max. `settings.get()` validates on read and fails loudly on drift. The admin form is generated from the registry. Services ask the settings service; they never read the table.
 3. **Deployment** (environment): `src/lib/shared/config/env.ts` parses once at boot, reports every invalid key, and exports a frozen object. Secrets never enter logs or the client bundle.
 
@@ -108,7 +110,7 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 3. `vitest run`: unit, property, and contract tests.
 4. `verify:language`: rejects vouvoiement, second-person plural imperatives, em dashes and malformed placeholders in the French dictionary.
 5. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
-6. `verify:generated`: regenerates every branding asset, manifest, social image, and generated module in memory and fails if the checked-in bytes differ. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+6. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
 7. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
 8. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
 

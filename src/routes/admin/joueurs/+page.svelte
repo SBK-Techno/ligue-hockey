@@ -108,7 +108,7 @@
 					inputmode="numeric"
 					min={PLAYER_LIMITS.ageMin}
 					max={PLAYER_LIMITS.ageMax}
-					placeholder="30"
+					placeholder={String(PLAYER_LIMITS.defaultAge)}
 					required
 				/>
 				<p class="hint">{t('admin.ageHint')}</p>
@@ -123,7 +123,7 @@
 					inputmode="numeric"
 					min={PLAYER_LIMITS.jerseyMin}
 					max={PLAYER_LIMITS.jerseyMax}
-					placeholder="12"
+					placeholder={String(PLAYER_LIMITS.jerseyExample)}
 				/>
 			</div>
 			<label class="flex min-h-11 items-center gap-3 text-sm font-medium sm:col-span-2">

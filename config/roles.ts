@@ -40,6 +40,7 @@ export type Role = (typeof ROLES)[number]['key'];
 export const ROLE_KEYS = ROLES.map((role) => role.key) as [Role, ...Role[]];
 
 export const DEFAULT_ROLE: Role = 'player';
+export const ADMIN_ROLE: Role = 'admin';
 
 export function isRole(value: string): value is Role {
   return ROLE_KEYS.includes(value as Role);

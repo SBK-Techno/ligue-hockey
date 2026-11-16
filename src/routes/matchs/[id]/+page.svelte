@@ -147,7 +147,7 @@
 					<button
 						class="min-h-10 rounded-lg px-4 text-sm font-semibold transition-colors {availability.own ===
 						'present'
-							? 'bg-ice text-white'
+							? 'bg-ice text-on-brand'
 							: 'text-muted hover:bg-ink/5 hover:text-ink'}"
 						name="status"
 						value="present"

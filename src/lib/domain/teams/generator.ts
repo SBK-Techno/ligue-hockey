@@ -68,6 +68,11 @@ type PositionOption = {
 };
 
 const MAX_CANDIDATES = 200_000;
+const [TEAM_A, TEAM_B] = [TEAMS[0].key, TEAMS[1].key] as const;
+
+function zeroTotals(): Record<Team, number> {
+	return Object.fromEntries(TEAMS.map((team) => [team.key, 0])) as Record<Team, number>;
+}
 
 function combinations<T>(items: readonly T[], size: number): T[][] {
 	if (size === 0) return [[]];
@@ -134,13 +139,13 @@ function buildPositionOptions(
 			const assignments: GeneratorAssignment[] = [
 				...teamAPlayers.map((player, index) => ({
 					playerId: player.id,
-					team: 'white' as const,
+					team: TEAM_A,
 					position,
 					slotIndex: index
 				})),
 				...teamBPlayers.map((player, index) => ({
 					playerId: player.id,
-					team: 'black' as const,
+					team: TEAM_B,
 					position,
 					slotIndex: index
 				}))
@@ -149,28 +154,28 @@ function buildPositionOptions(
 			const unfilled: SlotDefinition[] = [];
 			for (const team of TEAMS) {
 				const filled =
-					team.key === 'white' ? teamAPlayers.length : teamBPlayers.length;
-				const slots = team.key === 'white' ? slotsA : slotsB;
+					team.key === TEAM_A ? teamAPlayers.length : teamBPlayers.length;
+				const slots = team.key === TEAM_A ? slotsA : slotsB;
 				for (let index = filled; index < slots; index += 1) {
 					unfilled.push({ team: team.key, position, index });
 				}
 			}
 
-			const skill = { white: 0, black: 0 };
-			const age = { white: 0, black: 0 };
+			const skill = zeroTotals();
+			const age = zeroTotals();
 			for (const player of teamAPlayers) {
-				skill.white += player.overall;
-				age.white += player.age;
+				skill[TEAM_A] += player.overall;
+				age[TEAM_A] += player.age;
 			}
 			for (const player of teamBPlayers) {
-				skill.black += player.overall;
-				age.black += player.age;
+				skill[TEAM_B] += player.overall;
+				age[TEAM_B] += player.age;
 			}
 
 			options.push({
 				assignments,
 				unfilled,
-				counts: { white: teamAPlayers.length, black: teamBPlayers.length },
+				counts: { [TEAM_A]: teamAPlayers.length, [TEAM_B]: teamBPlayers.length },
 				skill,
 				age
 			});
@@ -284,16 +289,16 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 				assignments: [...current.assignments, ...option.assignments],
 				unfilled: [...current.unfilled, ...option.unfilled],
 				counts: {
-					white: current.counts.white + option.counts.white,
-					black: current.counts.black + option.counts.black
+					[TEAM_A]: current.counts[TEAM_A] + option.counts[TEAM_A],
+					[TEAM_B]: current.counts[TEAM_B] + option.counts[TEAM_B]
 				},
 				skill: {
-					white: current.skill.white + option.skill.white,
-					black: current.skill.black + option.skill.black
+					[TEAM_A]: current.skill[TEAM_A] + option.skill[TEAM_A],
+					[TEAM_B]: current.skill[TEAM_B] + option.skill[TEAM_B]
 				},
 				age: {
-					white: current.age.white + option.age.white,
-					black: current.age.black + option.age.black
+					[TEAM_A]: current.age[TEAM_A] + option.age[TEAM_A],
+					[TEAM_B]: current.age[TEAM_B] + option.age[TEAM_B]
 				},
 				violations: []
 			});
@@ -303,9 +308,9 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	walk(0, {
 		assignments: [],
 		unfilled: [],
-		counts: { white: 0, black: 0 },
-		skill: { white: 0, black: 0 },
-		age: { white: 0, black: 0 },
+		counts: zeroTotals(),
+		skill: zeroTotals(),
+		age: zeroTotals(),
 		violations: []
 	});
 
@@ -332,14 +337,14 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	}
 
 	const scored = candidates.map((candidate) => {
-		const sizeDiff = Math.abs(candidate.counts.white - candidate.counts.black);
+		const sizeDiff = Math.abs(candidate.counts[TEAM_A] - candidate.counts[TEAM_B]);
 		const skillDiff = Math.abs(
-			average(candidate.skill.white, candidate.counts.white) -
-				average(candidate.skill.black, candidate.counts.black)
+			average(candidate.skill[TEAM_A], candidate.counts[TEAM_A]) -
+				average(candidate.skill[TEAM_B], candidate.counts[TEAM_B])
 		);
 		const ageDiff = Math.abs(
-			average(candidate.age.white, candidate.counts.white) -
-				average(candidate.age.black, candidate.counts.black)
+			average(candidate.age[TEAM_A], candidate.counts[TEAM_A]) -
+				average(candidate.age[TEAM_B], candidate.counts[TEAM_B])
 		);
 		const key = [...candidate.assignments]
 			.sort(

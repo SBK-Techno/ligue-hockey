@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { I18nKey } from './i18n/fr';
 import { TEAMS } from './teams.ts';
+import { DATE_PATTERN, TIME_PATTERN } from './time.ts';
 
 export const SETTING_GROUPS = [
   { key: 'league', labelKey: 'settings.group.league' },
@@ -47,10 +48,10 @@ function defineSetting<T>(definition: SettingDefinition<T>) {
 
 const dateString = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'invalid-date')
+  .regex(DATE_PATTERN, 'invalid-date')
   .nullable();
 
-const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'invalid-time');
+const timeString = z.string().regex(TIME_PATTERN, 'invalid-time');
 
 export const SETTINGS = {
   'league.seasonLabel': defineSetting({

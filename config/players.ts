@@ -5,5 +5,6 @@ export const PLAYER_LIMITS = {
 	ageMax: 99,
 	jerseyMin: 1,
 	jerseyMax: 99,
+	jerseyExample: 12,
 	defaultAge: 30
 } as const;

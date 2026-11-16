@@ -3,6 +3,8 @@
 	--color-ink: #101a22;
 	--color-paper: #f5f2ea;
 	--color-surface: #fffcf6;
+	/* Texte et icônes posés sur une surface de marque (bleu, rouge). */
+	--color-on-brand: var(--color-surface);
 	--color-line: #ded6c7;
 	--color-muted: #58656e;
 	--color-ice: #2453bb;

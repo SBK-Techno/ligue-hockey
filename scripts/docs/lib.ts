@@ -43,14 +43,20 @@ export function addHeadingIds(html: string): { html: string; toc: TocEntry[] } {
 export type RewriteOptions = {
 	slugs: Map<string, string>;
 	repositoryUrl: string;
+	branch: string;
 };
 
 function normalizeTarget(target: string): string {
 	return target.replace(/^\.\//, '');
 }
 
-function rawUrl(repositoryUrl: string, path: string): string {
-	return `${repositoryUrl.replace('https://github.com/', 'https://raw.githubusercontent.com/')}/main/${path}`;
+function rawUrl(repositoryUrl: string, branch: string, path: string): string {
+	const url = new URL(repositoryUrl);
+	if (url.hostname !== 'github.com') {
+		throw new Error(`Les liens bruts exigent GitHub: ${repositoryUrl}`);
+	}
+	const repositoryPath = url.pathname.replace(/\.git$/, '');
+	return `https://raw.githubusercontent.com${repositoryPath}/${branch}/${path}`;
 }
 
 export function rewriteLinks(html: string, options: RewriteOptions): string {
@@ -65,7 +71,7 @@ export function rewriteLinks(html: string, options: RewriteOptions): string {
 			const slug = options.slugs.get(normalized);
 			const next = slug
 				? `${slug}.html${fragment ? `#${fragment}` : ''}`
-				: `${options.repositoryUrl}/blob/main/${normalized}${fragment ? `#${fragment}` : ''}`;
+				: `${options.repositoryUrl}/blob/${options.branch}/${normalized}${fragment ? `#${fragment}` : ''}`;
 			return `${before}${next}${after}`;
 		}
 	);
@@ -76,7 +82,7 @@ export function rewriteLinks(html: string, options: RewriteOptions): string {
 			if (!src || src.startsWith('assets/') || /^[a-z][a-z0-9+.-]*:/i.test(src)) {
 				return `${before}${src}${after}`;
 			}
-			return `${before}${rawUrl(options.repositoryUrl, normalizeTarget(src))}${after}`;
+			return `${before}${rawUrl(options.repositoryUrl, options.branch, normalizeTarget(src))}${after}`;
 		}
 	);
 }

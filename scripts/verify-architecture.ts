@@ -98,6 +98,13 @@ for (const file of sourceFiles) {
 	);
 	check(
 		file,
+		'no-raw-colours',
+		/\b(rgb|hsl)a?\(/,
+		[join(ROOT, 'src/lib/ui/tokens.css'), join(ROOT, 'src/lib/generated/')],
+		'Use a theme token or color-mix() with tokens.'
+	);
+	check(
+		file,
 		'no-notification-bypass',
 		/\bsendEmail\s*\(|\bsendPush\s*\(/,
 		[join(ROOT, 'src/lib/server/notifications/')],
@@ -132,6 +139,18 @@ for (const file of sourceFiles) {
 	}
 }
 
+const scriptFiles = walk(join(ROOT, 'scripts'));
+
+for (const file of scriptFiles) {
+	check(
+		file,
+		'no-raw-colours-in-generators',
+		/#[0-9a-fA-F]{3,8}\b|\b(rgb|hsl)a?\(/,
+		[join(ROOT, 'scripts/verify-architecture.ts')],
+		'Generated surfaces take colours from config/branding.json.'
+	);
+}
+
 check(
 	join(ROOT, 'drizzle.config.ts'),
 	'no-process-env',
@@ -139,6 +158,27 @@ check(
 	[join(ROOT, 'drizzle.config.ts')],
 	'Build tooling may read the database URL from the environment.'
 );
+
+const packageVersion = JSON.parse(
+	readFileSync(join(ROOT, 'package.json'), 'utf8')
+).version as string;
+const envExample = readFileSync(join(ROOT, '.env.example'), 'utf8');
+const imageLine = /^LIGUE_IMAGE=(.+)$/m.exec(envExample);
+if (!imageLine) {
+	findings.push({
+		file: '.env.example',
+		line: 1,
+		rule: 'deployment-image-version',
+		detail: 'Déclare LIGUE_IMAGE avec la version publiée.'
+	});
+} else if (!imageLine[1].endsWith(`:${packageVersion}`)) {
+	findings.push({
+		file: '.env.example',
+		line: envExample.slice(0, imageLine.index).split('\n').length,
+		rule: 'deployment-image-version',
+		detail: `LIGUE_IMAGE doit correspondre à package.json (${packageVersion}).`
+	});
+}
 
 const workflowDir = join(ROOT, '.github/workflows');
 const readText = (path: string) => (existsSync(path) ? readFileSync(path, 'utf8') : '');

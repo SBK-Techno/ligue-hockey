@@ -2,10 +2,11 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
-import type { Role } from 'better-auth/plugins/access';
+import type { Role as AccessRole } from 'better-auth/plugins/access';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { building } from '$app/env';
 import { getRequestEvent } from '$app/server';
+import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '#config/roles.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { env } from '#lib/shared/config/env.ts';
 import { publicEnv } from '#lib/shared/config/public-env.ts';
@@ -90,9 +91,11 @@ export const auth = betterAuth({
 	},
 	plugins: [
 		admin({
-			defaultRole: 'player',
-			adminRoles: ['admin'],
-			roles: { player: userAc, manager: userAc, admin: adminAc } as Record<string, Role>
+			defaultRole: DEFAULT_ROLE,
+			adminRoles: [ADMIN_ROLE],
+			roles: Object.fromEntries(
+				ROLES.map((role) => [role.key, role.key === ADMIN_ROLE ? adminAc : userAc])
+			) as Record<string, AccessRole>
 		}),
 		sveltekitCookies(getRequestEvent)
 	]

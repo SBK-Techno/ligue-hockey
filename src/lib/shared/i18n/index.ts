@@ -90,10 +90,11 @@ export function formatMonthYear(ms: number): string {
 export function formatTime(time: string): string {
 	const [hour, minute] = time.split(':');
 	const value = Number(hour);
+	const unit = t('common.hourShort');
 	if (minute === '00') {
-		return `${value} h`;
+		return `${value} ${unit}`;
 	}
-	return `${value} h ${minute}`;
+	return `${value} ${unit} ${minute}`;
 }
 
 export function formatDateTime(date: string, time: string): string {

@@ -9,19 +9,21 @@ export const branding = {
   "startUrl": "/",
   "scope": "/",
   "display": "standalone",
+  "indexable": true,
   "themeColor": "#121A21",
   "backgroundColor": "#F7F5F0",
-  "brandColor": "#2453BB",
   "emailPalette": {
-    "ink": "#101A22",
-    "paper": "#F5F2EA",
-    "surface": "#FFFCF6",
-    "line": "#DED6C7",
-    "muted": "#58656E",
-    "brand": "#2453BB"
+    "ink": "#101a22",
+    "paper": "#f5f2ea",
+    "surface": "#fffcf6",
+    "line": "#ded6c7",
+    "muted": "#58656e",
+    "brand": "#2453bb"
   },
   "socialImage": "/social/apercu.jpg",
   "manifestPath": "/manifest.webmanifest",
+  "offlinePath": "/offline.html",
+  "cachePrefix": "lhdm",
   "icons": {
     "favicon": "/icons/favicon-32.b38e780a2fd7.png",
     "appleTouch": "/icons/apple-touch-180.f5b3ec40470a.png",

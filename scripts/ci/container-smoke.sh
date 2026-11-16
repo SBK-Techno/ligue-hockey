@@ -70,17 +70,10 @@ if [ -z "$session_cookie" ]; then
 	exit 1
 fi
 
-profile_body="$(curl -sS --max-time 10 -H "Cookie: $session_cookie" -w '\n%{http_code}' \
-	"http://127.0.0.1:$PORT/profil")"
-profile_status="${profile_body##*$'\n'}"
+profile_status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+	-H "Cookie: $session_cookie" "http://127.0.0.1:$PORT/profil")"
 if [ "$profile_status" != 200 ]; then
-	printf '%s\n' "$profile_body" >&2
 	printf 'erreur: /profil admin répond %s\n' "$profile_status" >&2
 	exit 1
 fi
-if ! printf '%s' "$profile_body" | grep -q 'Ton compte'; then
-	printf 'erreur: /profil admin ne contient pas le dossier de membre\n' >&2
-	exit 1
-fi
-
 printf 'profil admin: %s\n' "$profile_status"

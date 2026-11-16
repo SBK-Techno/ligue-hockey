@@ -37,12 +37,15 @@
 	});
 
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
+	const openGraphLocale = $derived(branding.locale.replace('-', '_'));
+	const crawlDirective = $derived(branding.indexable ? 'index,follow' : 'noindex,nofollow');
 </script>
 
 <svelte:head>
 	<title>{pageTitle}</title>
 	<meta name="description" content={branding.description} />
 	<meta name="theme-color" content={branding.themeColor} />
+	<meta name="robots" content={crawlDirective} />
 	<meta name="apple-mobile-web-app-title" content={branding.shortName} />
 	<link rel="icon" href={branding.icons.favicon} />
 	<link rel="apple-touch-icon" href={branding.icons.appleTouch} />
@@ -52,7 +55,7 @@
 	<meta property="og:title" content={pageTitle} />
 	<meta property="og:description" content={branding.description} />
 	<meta property="og:image" content={socialImage} />
-	<meta property="og:locale" content="fr_CA" />
+	<meta property="og:locale" content={openGraphLocale} />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={pageTitle} />
 	<meta name="twitter:description" content={branding.description} />

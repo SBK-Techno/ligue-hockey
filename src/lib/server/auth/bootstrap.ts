@@ -1,5 +1,7 @@
+import { ADMIN_ROLE } from '#config/roles.ts';
 import { auth } from '#lib/server/auth.ts';
 import { env } from '#lib/shared/config/env.ts';
+import { t } from '#lib/shared/i18n/index.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 
 export async function ensureBootstrapAdmin(): Promise<void> {
@@ -19,8 +21,8 @@ export async function ensureBootstrapAdmin(): Promise<void> {
 		body: {
 			email: credentials.email,
 			password: credentials.password,
-			name: 'Administrateur',
-			role: 'admin'
+			name: t('common.administrator'),
+			role: ADMIN_ROLE
 		}
 	});
 

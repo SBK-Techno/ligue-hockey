@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { ACCOUNT_LIMITS } from '#config/account.ts';
 	import { roleDefinition } from '#config/roles.ts';
 	import { accountSurfaces, primarySurfaces } from '#lib/domain/auth/surfaces.ts';
 	import type { UserActor } from '#lib/domain/auth/types.ts';
@@ -7,6 +8,12 @@
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
 
 	let { actor, unread }: { actor: UserActor; unread: number } = $props();
+
+	const unreadBadge = $derived(
+		unread > ACCOUNT_LIMITS.unreadBadgeMax
+			? `${ACCOUNT_LIMITS.unreadBadgeMax}+`
+			: String(unread)
+	);
 
 	const items = $derived(primarySurfaces(actor));
 	const accountItems = $derived(accountSurfaces(actor));
@@ -85,7 +92,7 @@
 				href="/notifications"
 				class="relative grid h-10 w-10 place-items-center rounded-lg text-muted no-underline transition-colors hover:bg-ink/5 hover:text-ink"
 				aria-label={unread > 0
-					? `${t('notifications.title')} · ${unread > 9 ? '9+' : formatCount(
+					? `${t('notifications.title')} · ${unread > ACCOUNT_LIMITS.unreadBadgeMax ? unreadBadge : formatCount(
 							unread,
 							'notifications.unreadCount.one',
 							'notifications.unreadCount.many'
@@ -98,9 +105,9 @@
 				</svg>
 				{#if unread > 0}
 					<span
-						class="absolute right-0.5 top-0.5 grid min-w-4 place-items-center rounded-full bg-alert px-1 text-[10px] font-bold leading-4 text-white"
+						class="absolute right-0.5 top-0.5 grid min-w-4 place-items-center rounded-full bg-alert px-1 text-[10px] font-bold leading-4 text-on-brand"
 					>
-						{unread > 9 ? '9+' : unread}
+						{unreadBadge}
 					</span>
 				{/if}
 			</a>
@@ -142,7 +149,7 @@
 						<a class="flex items-center justify-between gap-2 rounded-control px-2.5 py-2 text-sm font-medium no-underline hover:bg-ink/5" href="/notifications">
 							<span>{t('notifications.title')}</span>
 							{#if unread > 0}
-								<span class="badge-ice">{unread > 9 ? '9+' : unread}</span>
+								<span class="badge-ice">{unreadBadge}</span>
 							{/if}
 						</a>
 						<a class="rounded-control px-2.5 py-2 text-sm font-medium no-underline hover:bg-ink/5" href="/solde">

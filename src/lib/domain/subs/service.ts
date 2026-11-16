@@ -1,6 +1,6 @@
 import { isPosition, type Position } from '#config/positions.ts';
 import { branding } from '#lib/generated/branding.ts';
-import { listAdminUserIds } from '#lib/domain/auth/queries.ts';
+import { listUserIdsWithCapability } from '#lib/domain/auth/queries.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
@@ -439,7 +439,7 @@ export function claimSubstitute(
 		throw new AppError('CONFLICT', { key: 'subs.claimTaken' });
 	}
 
-	const recipients = new Set(listAdminUserIds());
+	const recipients = new Set(listUserIdsWithCapability('manageSubs'));
 	if (request.requestedByPlayerId) {
 		recipients.add(request.requestedByPlayerId);
 	}

@@ -137,7 +137,7 @@
 			{#if availability?.substitute}
 				<div class="flex flex-wrap items-center justify-between gap-3">
 					<p class="max-w-md text-sm text-paper/70">{t('home.substituteNotice')}</p>
-					<a class="btn min-h-10 bg-paper text-ink hover:bg-white" href="/remplacants">
+					<a class="btn min-h-10 bg-paper text-ink hover:bg-surface" href="/remplacants">
 						{t('home.substituteCta')}
 					</a>
 				</div>
@@ -203,7 +203,7 @@
 			{:else if isManager && !hasProfile}
 				<div class="flex flex-wrap items-center justify-between gap-3">
 					<p class="max-w-md text-sm text-paper/70">{t('home.adminHero')}</p>
-					<a class="btn min-h-10 bg-paper text-ink hover:bg-white" href="/admin/matchs">
+					<a class="btn min-h-10 bg-paper text-ink hover:bg-surface" href="/admin/matchs">
 						{t('home.manageSchedule')}
 					</a>
 				</div>

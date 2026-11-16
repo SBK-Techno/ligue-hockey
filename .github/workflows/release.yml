@@ -35,6 +35,8 @@ jobs:
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "APP_NAME=$(node -p 'require("./config/branding.json").name')" >> "$GITHUB_ENV"
+          echo "APP_DESCRIPTION=$(node -p 'require("./config/branding.json").description')" >> "$GITHUB_ENV"
       - name: Construire l'image
         env:
           SOURCE: https://github.com/${{ github.repository }}
@@ -44,6 +46,8 @@ jobs:
             --build-arg VERSION="$VERSION" \
             --build-arg REVISION="$GITHUB_SHA" \
             --build-arg SOURCE="$SOURCE" \
+            --build-arg APP_NAME="$APP_NAME" \
+            --build-arg APP_DESCRIPTION="$APP_DESCRIPTION" \
             -t "$IMAGE:$VERSION" \
             -t "$IMAGE:sha-${GITHUB_SHA::7}" \
             -t "$IMAGE:latest" .

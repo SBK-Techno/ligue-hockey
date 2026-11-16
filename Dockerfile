@@ -26,9 +26,11 @@ RUN npm ci --omit=dev
 FROM node:24-bookworm-slim AS runtime
 ARG VERSION=dev
 ARG REVISION=unknown
-ARG SOURCE=https://github.com/SBK-Techno/ligue-hockey
-LABEL org.opencontainers.image.title="Ligue de hockey du dimanche matin" \
-      org.opencontainers.image.description="Horaire, présences, équipes, remplaçants et paiements de la ligue." \
+ARG SOURCE
+ARG APP_NAME
+ARG APP_DESCRIPTION
+LABEL org.opencontainers.image.title="$APP_NAME" \
+      org.opencontainers.image.description="$APP_DESCRIPTION" \
       org.opencontainers.image.version="$VERSION" \
       org.opencontainers.image.revision="$REVISION" \
       org.opencontainers.image.source="$SOURCE"

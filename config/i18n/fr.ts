@@ -39,7 +39,6 @@ export const fr = {
   'common.hidePassword': 'Masquer le mot de passe',
 
   'brand.presentedBy': 'Présenté par {name}',
-  'brand.league': 'Ligue de hockey du dimanche matin',
   'install.title': 'Installer l’application',
   'install.body':
     'Ajoute la ligue à ton écran d’accueil pour l’ouvrir plus vite et recevoir les notifications.',
@@ -65,6 +64,15 @@ export const fr = {
   'nav.accountMenu': 'Menu du compte',
   'nav.backToLeague': 'Retour à la ligue',
   'nav.skip': 'Aller au contenu',
+  'docs.navLabel': 'Documentation',
+  'docs.onThisPage': 'Sur cette page',
+  'docs.repository': 'Dépôt',
+  'docs.source': 'Code source',
+  'docs.report': 'Signaler un problème',
+  'docs.version': 'Version {version}',
+  'docs.notFound.title': 'Page introuvable',
+  'docs.notFound.body': 'La page demandée n’existe pas.',
+  'docs.notFound.back': 'Revenir à la présentation',
 
   'auth.title': 'Connexion',
   'auth.subtitle': 'Entre avec ton courriel et ton mot de passe.',
@@ -555,7 +563,8 @@ export const fr = {
   'profile.playerSectionHelp':
     'Ces infos servent aux alignements et à la banque de remplaçants.',
   'profile.jersey': 'Numéro de chandail',
-  'profile.jerseyHelp': 'Entre 1 et 99. Il apparaît dans les alignements.',
+  'profile.jerseyHelp':
+    'Entre {min} et {max}. Il apparaît dans les alignements.',
   'profile.memberSince': 'Membre depuis {date}',
   'profile.sections': 'Sections du profil',
   'profile.tab.account': 'Compte',
@@ -640,8 +649,6 @@ export const fr = {
     'Si tu n’as pas demandé ce changement, ignore ce courriel. Ton mot de passe actuel reste bon.',
   'email.fallback':
     'Le bouton ne fonctionne pas? Copie ce lien dans ton navigateur.',
-  'email.footer.league': 'Ligue de hockey du dimanche matin',
-  'email.footer.organisation': 'Présenté par SBK Technologies',
   'email.openApp': 'Ouvrir l’application',
   'email.manage': 'Gérer mes avis',
   'email.unsubscribe':
@@ -819,6 +826,10 @@ export const fr = {
   'error.generic': 'Une erreur est survenue. Réessaie.',
   'error.title.notFound': 'Page introuvable',
   'error.title.forbidden': 'Accès refusé',
+  'offline.title': 'Tu es hors ligne',
+  'offline.body':
+    'Tes données ne sont pas accessibles sans connexion. Reconnecte-toi pour voir l’horaire, tes présences et la discussion.',
+  'offline.retry': 'Réessayer',
   'error.title.generic': 'Un pépin est survenu',
   'error.help': 'Reviens à l’accueil ou réessaie dans un instant.',
   'error.home': 'Retour à l’accueil',

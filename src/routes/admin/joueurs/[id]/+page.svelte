@@ -188,7 +188,7 @@
 						min={PLAYER_LIMITS.jerseyMin}
 						max={PLAYER_LIMITS.jerseyMax}
 						value={player.jerseyNumber ?? ''}
-						placeholder="12"
+						placeholder={String(PLAYER_LIMITS.jerseyExample)}
 					/>
 				</div>
 				<div class="sm:col-span-2">

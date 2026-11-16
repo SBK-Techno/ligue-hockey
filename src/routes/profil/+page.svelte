@@ -394,9 +394,9 @@
 								min={PLAYER_LIMITS.jerseyMin}
 								max={PLAYER_LIMITS.jerseyMax}
 								value={profile.jerseyNumber ?? ''}
-								placeholder="12"
+								placeholder={String(PLAYER_LIMITS.jerseyExample)}
 							/>
-							<p class="hint">{t('profile.jerseyHelp')}</p>
+							<p class="hint">{t('profile.jerseyHelp', { min: PLAYER_LIMITS.jerseyMin, max: PLAYER_LIMITS.jerseyMax })}</p>
 						</div>
 						<div class="sm:col-span-2">
 							<button class="btn-primary" type="submit">{t('common.save')}</button>

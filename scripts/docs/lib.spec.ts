@@ -22,7 +22,8 @@ describe('documentation helpers', () => {
 	it('maps Markdown links to generated pages', () => {
 		const html = rewriteLinks('<a href="OPERATIONS.md#sauvegarde">Exploitation</a>', {
 			slugs: new Map([['OPERATIONS.md', 'exploitation']]),
-			repositoryUrl: 'https://github.com/SBK-Techno/ligue-hockey'
+			repositoryUrl: 'https://github.com/SBK-Techno/ligue-hockey',
+			branch: 'main'
 		});
 		expect(html).toBe('<a href="exploitation.html#sauvegarde">Exploitation</a>');
 	});
@@ -30,7 +31,8 @@ describe('documentation helpers', () => {
 	it('sends code links to the repository', () => {
 		const html = rewriteLinks('<a href="./config/env-schema.ts">Schéma</a>', {
 			slugs: new Map(),
-			repositoryUrl: 'https://github.com/SBK-Techno/ligue-hockey'
+			repositoryUrl: 'https://github.com/SBK-Techno/ligue-hockey',
+			branch: 'main'
 		});
 		expect(html).toBe(
 			'<a href="https://github.com/SBK-Techno/ligue-hockey/blob/main/config/env-schema.ts">Schéma</a>'
@@ -42,7 +44,8 @@ describe('documentation helpers', () => {
 			'<a href="https://example.com">Externe</a><img src="assets/crest.svg">',
 			{
 				slugs: new Map(),
-				repositoryUrl: 'https://github.com/SBK-Techno/ligue-hockey'
+				repositoryUrl: 'https://github.com/SBK-Techno/ligue-hockey',
+				branch: 'main'
 			}
 		);
 		expect(html).toBe('<a href="https://example.com">Externe</a><img src="assets/crest.svg">');

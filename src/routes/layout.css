@@ -117,24 +117,24 @@
 		transform: translateY(1px);
 	}
 	.btn-primary {
-		@apply bg-ice text-white hover:bg-ice-deep;
-		box-shadow: 0 1px 0 rgb(255 255 255 / 0.15) inset;
+		@apply bg-ice text-on-brand hover:bg-ice-deep;
+		box-shadow: 0 1px 0 color-mix(in srgb, var(--color-on-brand) 15%, transparent) inset;
 	}
 	.btn-secondary {
-		@apply border border-line bg-surface text-ink hover:border-ink/40 hover:bg-white;
+		@apply border border-line bg-surface text-ink hover:border-ink/40 hover:bg-paper;
 	}
 	.btn-ghost {
 		@apply text-muted hover:bg-ink/5 hover:text-ink;
 	}
 	.btn-danger {
-		@apply bg-alert text-white hover:bg-alert-deep;
+		@apply bg-alert text-on-brand hover:bg-alert-deep;
 	}
 	.btn-sm {
 		@apply min-h-9 rounded-lg px-3 py-1.5 text-xs;
 	}
 
 	.input {
-		@apply min-h-11 w-full rounded-control border border-line bg-white px-3 py-2 text-base text-ink outline-none transition placeholder:text-muted/70 focus:border-ice focus:ring-4 focus:ring-ice-soft;
+		@apply min-h-11 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition placeholder:text-muted/70 focus:border-ice focus:ring-4 focus:ring-ice-soft;
 	}
 	.label {
 		@apply mb-1.5 block text-sm font-semibold text-ink;
@@ -219,7 +219,7 @@
 		@apply fixed left-4 top-4 z-50 -translate-y-24 rounded-control bg-ink px-4 py-2 text-sm font-semibold text-paper no-underline transition focus:translate-y-0;
 	}
 	dialog::backdrop {
-		background: rgb(16 26 34 / 0.45);
+		background: color-mix(in srgb, var(--color-ink) 45%, transparent);
 	}
 	dialog[open] {
 		animation: dialog-in 180ms var(--ease-out-expo);

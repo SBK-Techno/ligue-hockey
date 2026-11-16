@@ -69,7 +69,7 @@
 					class="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold no-underline transition-colors {active(
 						tab.href
 					)
-						? 'bg-ice text-white'
+						? 'bg-ice text-on-brand'
 						: 'text-muted hover:bg-ink/5 hover:text-ink'}"
 					aria-current={active(tab.href) ? 'page' : undefined}
 				>

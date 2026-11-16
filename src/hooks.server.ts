@@ -5,6 +5,7 @@ import { actorFromUser } from '#lib/domain/auth/types.ts';
 import { auth } from '#lib/server/auth.ts';
 import { startup } from '#lib/server/startup.ts';
 import { isAppError } from '#lib/shared/errors.ts';
+import { errorStatus } from '#lib/server/error-status.ts';
 import { t, type I18nKey } from '#lib/shared/i18n/index.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
@@ -67,12 +68,30 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 export const handleError: HandleServerError = (input) => {
 	const { error, event } = input;
-	const status =
+
+	if (input.kind === 'app') {
+		const status = errorStatus('app', input.error.status);
+		logger.warn('http.app_error', {
+			code: status,
+			path: event.url.pathname,
+			requestId: event.locals.requestId
+		});
+		return {
+			message: input.error.message,
+			key: input.error.key,
+			status
+		};
+	}
+
+	const caughtStatus =
 		input.kind === 'framework' || input.kind === 'validation'
 			? input.error.status
-			: isAppError(error)
-				? error.status
-				: 500;
+			: undefined;
+	const status = errorStatus(
+		input.kind,
+		caughtStatus,
+		isAppError(error) ? error.status : undefined
+	);
 
 	if (isAppError(error)) {
 		logger.warn('http.app_error', {

@@ -1,7 +1,9 @@
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { session, user } from '#lib/server/db/auth.schema.ts';
 import { ACCOUNT_LIMITS } from '#config/account.ts';
+import { ROLES } from '#config/roles.ts';
+import type { Capability } from '#config/capabilities.ts';
 
 export type AccountRow = {
 	id: string;
@@ -19,11 +21,15 @@ export type SessionRow = {
 	userAgent: string | null;
 };
 
-export function listAdminUserIds(): string[] {
+export function listUserIdsWithCapability(capability: Capability): string[] {
+	const roles = ROLES.filter((role) =>
+		(role.capabilities as readonly Capability[]).includes(capability)
+	).map((role) => role.key);
+	if (roles.length === 0) return [];
 	return db
 		.select({ id: user.id })
 		.from(user)
-		.where(eq(user.role, 'admin'))
+		.where(inArray(user.role, roles))
 		.all()
 		.map((row) => row.id);
 }

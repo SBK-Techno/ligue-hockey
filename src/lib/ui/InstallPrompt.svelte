@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/env';
+	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 
 	let { variant = 'compact' }: { variant?: 'compact' | 'full' } = $props();
+
+	const DISMISS_KEY = `${branding.cachePrefix}-install-dismissed`;
 
 	type InstallEvent = Event & {
 		prompt: () => Promise<void>;
@@ -20,7 +23,7 @@
 			window.matchMedia('(display-mode: standalone)').matches ||
 			(navigator as Navigator & { standalone?: boolean }).standalone === true;
 		isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-		dismissed = localStorage.getItem('lhdm-install-dismissed') === '1';
+		dismissed = localStorage.getItem(DISMISS_KEY) === '1';
 
 		function onPrompt(event: Event) {
 			event.preventDefault();
@@ -41,7 +44,7 @@
 
 	function dismiss() {
 		dismissed = true;
-		localStorage.setItem('lhdm-install-dismissed', '1');
+		localStorage.setItem(DISMISS_KEY, '1');
 	}
 </script>
 
