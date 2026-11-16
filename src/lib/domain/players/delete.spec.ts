@@ -39,6 +39,10 @@ vi.mock('#lib/domain/audit/service.ts', () => ({
 	recordAudit: vi.fn()
 }));
 
+vi.mock('#lib/shared/logging/logger.ts', () => ({
+	logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+}));
+
 const identitySpy = vi.fn();
 vi.mock('./../auth/identity.ts', async (importOriginal) => {
 	const original = await importOriginal<typeof import('../auth/identity.ts')>();
