@@ -138,7 +138,7 @@
 						/>
 						{#if pollOptions.length > data.limits.pollMinOptions}
 							<button
-								class="btn-ghost btn-sm"
+								class="btn-ghost btn-sm w-11 p-0"
 								type="button"
 								onclick={() => removeOption(index)}
 								aria-label={t('common.delete')}

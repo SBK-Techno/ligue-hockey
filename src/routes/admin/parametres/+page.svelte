@@ -165,7 +165,7 @@
 	{/each}
 
 	<div
-		class="sticky bottom-0 z-10 -mx-4 border-t border-line bg-paper/95 px-4 py-2 backdrop-blur"
+		class="sticky bottom-0 z-10 -mx-4 border-t border-line bg-paper/95 px-4 sticky-action-bar backdrop-blur"
 	>
 		<FormFeedback {form} />
 		<div class="mt-1 flex flex-wrap items-center justify-between gap-2">

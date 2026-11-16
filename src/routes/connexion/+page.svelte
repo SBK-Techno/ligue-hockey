@@ -42,7 +42,7 @@
 			autocomplete="current-password"
 		/>
 		<div class="flex justify-end">
-			<a class="link text-sm" href="/mot-de-passe-oublie">{t('auth.forgot')}</a>
+			<a class="action-link text-sm" href="/mot-de-passe-oublie">{t('auth.forgot')}</a>
 		</div>
 		<button class="btn-primary w-full" type="submit">{t('auth.submit')}</button>
 	</form>

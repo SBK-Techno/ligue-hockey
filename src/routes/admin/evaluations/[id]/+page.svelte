@@ -125,7 +125,7 @@
 		</aside>
 	</div>
 
-	<div class="sticky bottom-0 z-10 -mx-4 border-t border-line bg-paper/95 px-4 py-2 backdrop-blur">
+	<div class="sticky bottom-0 z-10 -mx-4 border-t border-line bg-paper/95 px-4 sticky-action-bar backdrop-blur">
 		<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
 	</div>
 </form>

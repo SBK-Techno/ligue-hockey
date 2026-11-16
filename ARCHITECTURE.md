@@ -59,7 +59,7 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 ## Visual system
 
-The interface is a printed arena match sheet, not a dashboard. It carries its own identity through two type families and three voices, plus one restrained accent:
+The interface takes its materials from a Québec rink: snow paper, deep spruce shadow, ice blue, board wood and rust red. The structure is still a printed arena match sheet, not a dashboard: square sheets, ruled lists, one restrained accent. It carries its identity through two type families and three voices.
 
 - **Display and text: Anybody Variable.** Display uses the wider optical range for page titles, the wordmark, the match-sheet date and section headings; text uses the same family at reading sizes for body, labels and buttons. Its digits are tabular, so money, clock times, jersey numbers and counts align without extra rules. `.numeric` and `.stat-value` are the only numeral classes.
 - **Data: Spline Sans Mono Variable** for measured stamps only: micro-labels, dates in ruled lists, jersey plates. Never for body copy.
@@ -68,14 +68,16 @@ Surfaces are sheets: `--radius-card` 0, `--radius-sheet` 0, `--radius-control` 2
 
 Colour is semantic:
 
-- `ink` and `paper` carry structure.
-- `ice` is the rink mark: links, focus, selected state, the centre line between the two teams.
-- `ochre` (`#a9700f`) is the league mark and appears once per viewport: the active navigation rail, the mobile tab underline. It is a line and fill colour, not a text colour.
-- `alert` is reserved for overdue, cancellation and destructive confirmation. No decorative red.
+- `ink` is deep spruce and `paper` is snow: structure, body text and surfaces, never a black-and-white print.
+- `ice` is the rink blue: links, focus, selected state, the centre line between the two teams.
+- `ochre` is board wood: the league mark, once per viewport, on the active navigation rail and the mobile tab underline. It is a line and fill colour, not a text colour.
+- `alert` is rust red, reserved for overdue, cancellation and destructive confirmation. No decorative red.
 
 `src/routes/layout.css` owns the primitives so a page cannot invent a parallel button or card: `.card`, `.card-flush`, `.btn-*`, `.badge-*`, `.label`, `.input`, `.hint`, `.micro-label`, `.numeric`, `.tear-line`. Focus rings switch to paper on ink surfaces, dialogs lock body scroll, and `prefers-reduced-motion` disables transitions and the card lift.
 
 Dark surfaces use an opacity ladder on `paper` (55% to 90%) rather than ad-hoc greys; every step was checked against `ink` for 4.5:1 body contrast.
+
+The anonymous auth shell uses one generated outdoor-rink photograph at golden hour as its only visual: the source is `config/branding/auth-source.jpg`, the served form is the content-hashed WebP under `static/auth/`, and `config/branding.json` owns its path. The brand lockup is the only identity text; the shell never repeats the league name or promises features already stated by the form.
 
 ## Configuration
 

@@ -325,10 +325,18 @@
 		text-decoration-thickness: 2px;
 	}
 
-	.link {
+	.link,
+	.action-link {
 		@apply font-semibold text-ink no-underline hover:underline;
 		text-decoration-color: var(--color-ochre);
 		text-decoration-thickness: 2px;
+	}
+	.action-link {
+		@apply inline-flex min-h-11 items-center;
+	}
+	.sticky-action-bar {
+		padding-top: 0.5rem;
+		padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 	}
 	.skip-link {
 		@apply fixed left-4 z-50 -translate-y-24 bg-ink px-4 py-2 text-sm font-semibold text-paper no-underline transition focus:translate-y-0;
@@ -513,6 +521,22 @@
 	}
 	.metric-cell:first-child {
 		border-left: 0;
+	}
+	@media (max-width: 560px) {
+		.metric-strip {
+			grid-auto-flow: row;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.metric-cell {
+			border-left: 0;
+			border-top: 1px solid var(--color-line);
+		}
+		.metric-cell:nth-child(-n + 2) {
+			border-top: 0;
+		}
+		.metric-cell:nth-child(even) {
+			border-left: 1px solid var(--color-line);
+		}
 	}
 }
 

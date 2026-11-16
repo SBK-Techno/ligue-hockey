@@ -230,6 +230,7 @@ function buildBrandingModule(
 		backgroundColor: palette.paper,
 		emailPalette: palette,
 		socialImage: branding.socialImage,
+		authImage: branding.authImage,
 		manifestPath: MANIFEST_PATH,
 		offlinePath: OFFLINE_PATH,
 		cachePrefix: cachePrefix(branding),

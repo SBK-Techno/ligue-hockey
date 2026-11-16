@@ -8,12 +8,13 @@
 	import { gameStatus } from '#config/game-status.ts';
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
 	import { positionDefinition } from '#config/positions.ts';
-	import { formatCount, formatDate, formatDecimal, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, formatDate, formatDecimal, formatTime, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import StatStrip from '#lib/ui/StatStrip.svelte';
+	import TeamLineup from '#lib/ui/TeamLineup.svelte';
 	import { playerAssessmentHref } from '#lib/ui/nav.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
@@ -221,6 +222,17 @@
 					{/if}
 				</div>
 			</div>
+
+			<TeamLineup
+				slots={game.slots}
+				actorId={data.actor.kind === 'user' ? data.actor.userId : null}
+			/>
+
+			{#if generation}
+				<p class="mt-2 text-xs text-muted">
+					{t('games.publishedAt', { date: formatTimestamp(generation.generatedAt) })}
+				</p>
+			{/if}
 
 			{#if !intelligence.complete}
 				<div class="notice mt-4">

@@ -5,13 +5,14 @@
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
-	import { TEAMS, teamDefinition } from '#config/teams.ts';
+	import { teamDefinition } from '#config/teams.ts';
 	import { formatDate, formatTime, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
 	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import TeamLineup from '#lib/ui/TeamLineup.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -43,15 +44,6 @@
 	const filledRequests = $derived(
 		data.requests.filter((request) => request.status === 'filled')
 	);
-	const orderedTeams = $derived(
-		ownTeam
-			? [...TEAMS].sort((a, b) => (a.key === ownTeam ? -1 : b.key === ownTeam ? 1 : 0))
-			: [...TEAMS]
-	);
-
-	function slotsFor(team: (typeof TEAMS)[number]['key'], position: string) {
-		return game?.slots.filter((slot) => slot.team === team && slot.position === position) ?? [];
-	}
 </script>
 
 <FormFeedback {form} class="mb-4" />
@@ -357,54 +349,7 @@
 				<span class="badge-ok">{t('games.generated')}</span>
 			</div>
 
-			<div class="mt-4 grid gap-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-line">
-
-				{#each orderedTeams as team (team.key)}
-					<div class="min-w-0 overflow-hidden border border-line">
-						<div
-							class="flex items-center justify-between gap-2 border-t-[6px] px-3 py-2 {team.tone ===
-							'black'
-								? 'border-ink bg-surface'
-								: 'border-line-strong bg-surface'}"
-						>
-							<h3 class="text-base font-semibold">{t(team.labelKey)}</h3>
-							{#if ownTeam === team.key}
-								<span class="stamp border-ochre bg-ochre/10 text-ink">{t('home.team')}</span>
-							{/if}
-						</div>
-
-						{#each POSITIONS as position (position.key)}
-							{@const rows = slotsFor(team.key, position.key)}
-							{#if rows.length > 0}
-								<p class="micro-label mt-3 px-3 first:mt-2">{t(position.labelKey)}</p>
-								<ul role="list">
-									{#each rows as slot (slot.slotIndex)}
-										{@const isMe = slot.player?.playerId === actor?.userId}
-										<li class="ledger-row border-b border-line/70 last:border-b-0" data-you={isMe}>
-											<span class="jersey">{slot.player?.jerseyNumber ?? '-'}</span>
-											{#if slot.player}
-												<span class="min-w-0 truncate text-sm {isMe ? 'font-semibold' : ''}">
-													{slot.player.fullName}
-												</span>
-												{#if isMe}
-													<span class="stamp border-ochre bg-ochre/10 text-ink">{t('common.you')}</span>
-												{:else if slot.player.kind === 'sub'}
-													<span class="badge shrink-0">{t('games.substitutes')}</span>
-												{:else}
-													<span></span>
-												{/if}
-											{:else}
-												<span class="min-w-0 truncate text-sm text-muted">{t('games.unassigned')}</span>
-												<span></span>
-											{/if}
-										</li>
-									{/each}
-								</ul>
-							{/if}
-						{/each}
-					</div>
-				{/each}
-			</div>
+			<TeamLineup slots={game.slots} ownTeam={ownTeam} actorId={actor?.userId ?? null} />
 		</section>
 
 		{#if game.generation && data.canManage}
