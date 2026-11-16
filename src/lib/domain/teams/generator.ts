@@ -184,7 +184,7 @@ function buildPositionOptions(
 	return options;
 }
 
-function pairViolations(
+export function pairViolations(
 	teamOf: Map<string, Team>,
 	rules: readonly GeneratorRule[]
 ): GeneratorViolation[] {

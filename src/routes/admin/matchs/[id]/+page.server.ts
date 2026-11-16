@@ -6,6 +6,8 @@ import {
 	updateGame
 } from '#lib/domain/games/service.ts';
 import { branding } from '#lib/generated/branding.ts';
+import { can } from '#lib/domain/auth/policy.ts';
+import { applyBestSwap, fillOpenSlots, lineupIntelligence } from '#lib/domain/games/alignment.ts';
 import { actionError } from '#lib/server/action.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { t } from '#lib/shared/i18n/index.ts';
@@ -14,10 +16,19 @@ import { gameInputSchema } from '#lib/domain/games/validators.ts';
 
 export const load: ServerLoad = ({ locals, params }) => {
 	const actor = locals.actor;
-	if (actor.kind !== 'user' || !params.id) return { game: null, canAssess: false };
+	if (actor.kind !== 'user' || !params.id) {
+		return { game: null, canAssess: false, intelligence: null };
+	}
 	const game = getGame(actor, params.id);
 	const today = todayInZone(branding.timezone, clock.nowMs());
-	return { game, canAssess: game.gameDate <= today };
+	return {
+		game,
+		canAssess:
+			can(actor, 'editRatings') &&
+			game.generated &&
+			(game.status === 'completed' || game.gameDate <= today),
+		intelligence: lineupIntelligence(game)
+	};
 };
 
 export const actions: Actions = {
@@ -34,6 +45,26 @@ export const actions: Actions = {
 		try {
 			cancelGame(locals.actor, params.id!);
 			return { ok: true, message: t('admin.gameCancelled') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	swap: async ({ locals, params }) => {
+		try {
+			const intelligence = applyBestSwap(locals.actor, params.id!);
+			return { ok: true, message: t('games.swapDone'), intelligence };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	fill: async ({ locals, params }) => {
+		try {
+			const intelligence = fillOpenSlots(locals.actor, params.id!);
+			return {
+				ok: true,
+				message: t('games.fillDone', { count: intelligence.fills.count }),
+				intelligence
+			};
 		} catch (cause) {
 			return actionError(cause);
 		}

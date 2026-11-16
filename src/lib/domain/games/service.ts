@@ -1,19 +1,13 @@
 import type { Position } from '#config/positions.ts';
-import {
-	buildSlotDefinitions,
-	rosterTemplateFromSettings,
-	rosterTemplateSchema,
-	type RosterTemplate
-} from '#config/roster.ts';
+import { buildSlotDefinitions, rosterTemplateFromSettings } from '#config/roster.ts';
 import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
-import { generateTeams, type GeneratorPlayer } from '#lib/domain/teams/generator.ts';
-import { requireCompleteRatings } from '#lib/domain/ratings/overall.ts';
+import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import { cancelAllForGame, claimsForGeneration } from '#lib/domain/subs/generation.ts';
+import { cancelAllForGame } from '#lib/domain/subs/generation.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
@@ -22,7 +16,7 @@ import { newId } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
-import { selectPool as choosePool } from './selection.ts';
+
 import {
 	cancelGame as cancelGameRow,
 	findGame,
@@ -35,6 +29,7 @@ import {
 	upsertAvailability,
 	type SlotAssignment
 } from './queries.ts';
+import { buildLineupPool, templateFromRow } from './pool.ts';
 import type { GameRow } from './schema.ts';
 import type { GameBenchView, GameGenerationView, GameSlotView, GameSummary } from './types.ts';
 import {
@@ -66,17 +61,6 @@ function summary(row: GameRow): GameSummary {
 		location: row.location,
 		status: row.status
 	};
-}
-
-function templateFrom(row: GameRow): RosterTemplate {
-	try {
-		return rosterTemplateSchema.parse(JSON.parse(row.rosterTemplateJson));
-	} catch (cause) {
-		throw new AppError('INTERNAL', {
-			message: 'Invalid roster template snapshot',
-			cause
-		});
-	}
 }
 
 function snapshotFrom(row: GameRow): GenerationSnapshot | null {
@@ -328,33 +312,12 @@ export function regenerateGame(gameId: string): GenerationResult {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
 
-	const settings = getSettings();
-	const template = templateFrom(row);
-	const { selected, bench } = choosePool({
-		template,
-		players: generationCandidates().map((player) => ({
-			playerId: player.userId,
-			position: player.position,
-			age: player.age,
-			isSubstitute: player.isSubstitute,
-			active: player.active
-		})),
-		availability: listAvailability(gameId),
-		claims: claimsForGeneration(gameId)
-	});
-	const overalls = requireCompleteRatings(selected.map((player) => player.playerId));
-
-	const pool: GeneratorPlayer[] = selected.map((player) => ({
-		id: player.playerId,
-		position: player.position,
-		age: player.age,
-		overall: overalls.get(player.playerId) ?? 0,
-		kind: player.kind
-	}));
-	const kindOf = new Map(selected.map((player) => [player.playerId, player.kind]));
+	const template = templateFromRow(row);
+	const lineup = buildLineupPool(gameId, template);
+	const { settings, bench, players, kindOf } = lineup;
 
 	const result = generateTeams({
-		players: pool,
+		players,
 		template,
 		rules: rulesForGeneration(),
 		skillTolerance: settings['teams.skillTolerance'],
