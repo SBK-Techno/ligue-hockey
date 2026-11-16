@@ -76,9 +76,6 @@ export const fr = {
 
   'auth.title': 'Connexion',
   'auth.subtitle': 'Entre avec ton courriel et ton mot de passe.',
-  'auth.welcome': 'Le hockey du dimanche matin',
-  'auth.lead':
-    'Horaire, présences, équipes, remplacements et paiements, réunis au même endroit.',
   'auth.inviteOnly':
     'L’accès se fait par invitation. Demande-la à un administrateur.',
   'auth.forgot': 'Mot de passe oublié ?',

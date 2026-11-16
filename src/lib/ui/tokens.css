@@ -1,26 +1,29 @@
 @theme {
-	/* Palette : encre, papier chaud, bleu de focus, rouge de filet, ochre de plinthe. */
-	--color-ink: #101a22;
-	--color-paper: #f5f2ea;
-	--color-paper-deep: #ece7db;
-	--color-surface: #fffcf6;
-	/* Texte et icônes posés sur une surface de marque (encre, rouge). */
+	/* Palette : épinette, neige, glace, bois de bande et rouille de filet. */
+	--color-ink: #143238;
+	--color-paper: #f4efe3;
+	--color-paper-deep: #e7decd;
+	--color-surface: #fbf7ed;
+	/* Texte et icônes posés sur une surface de marque (épinette, rouille). */
 	--color-on-brand: var(--color-surface);
 	/* Trait décoratif : séparateurs, bordures de feuilles. */
-	--color-line: #ded6c7;
+	--color-line: #d7cab4;
 	/* Trait de commande : bordure de champ, de bouton secondaire, de case. 3:1 minimum. */
-	--color-line-strong: #958872;
-	--color-muted: #58656e;
-	--color-ice: #2453bb;
-	--color-ice-deep: #173b8c;
-	--color-ice-soft: #e5eaf8;
-	--color-alert: #b23a25;
-	--color-alert-deep: #8e2c1b;
-	--color-alert-soft: #f9e4de;
-	--color-ok: #2c6a4c;
-	--color-ok-soft: #e2efe5;
-	/* Marque de la ligue : la plinthe jaune d'un aréna. Un seul repère par écran. */
-	--color-ochre: #a9700f;
+	--color-line-strong: #8a7b64;
+	--color-muted: #5b6a6a;
+	--color-ice: #2b6a8c;
+	--color-ice-deep: #1e4d68;
+	--color-ice-soft: #e0ecef;
+	--color-alert: #b24a33;
+	--color-alert-deep: #8c3625;
+	--color-alert-soft: #f7e4db;
+	--color-ok: #3f7654;
+	--color-ok-soft: #e4efe5;
+	/* Marque de la ligue : le bois clair d'une bande d'aréna. Un seul repère par écran. */
+	--color-ochre: #b47b2a;
+	/* Maillots : deux équipes, noir et blanc, indépendantes de la palette de l'app. */
+	--color-team-black: #101010;
+	--color-team-white: #ffffff;
 
 	/* Deux familles, deux voix : la planche d'aréna et la feuille de match. */
 	--font-sans: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -34,7 +37,7 @@
 	--radius-control: 2px;
 	--shadow-card: none;
 	/* Un panneau se pose : ombre dure et courte, jamais un halo. */
-	--shadow-lift: 0.25rem 0.25rem 0 rgb(16 26 34 / 0.12);
+	--shadow-lift: 0.25rem 0.25rem 0 rgb(20 50 56 / 0.12);
 	--shadow-strip: none;
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 

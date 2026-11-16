@@ -17,7 +17,9 @@ const h = vi.hoisted(() => ({
 		'teams.maxPlayers': 24,
 		'teams.maxSkillSpread': 0,
 		'teams.maxAgeSpread': 0,
-		'teams.maxSizeSpread': 0
+		'teams.maxSizeSpread': 0,
+		'games.availabilityClosesHours': 24,
+		'notifications.subRequestOnAbsence': false
 	}
 }));
 
@@ -49,6 +51,7 @@ const { sqlite } = await import('#lib/server/db/index.ts');
 const { saveGameAssessment } = await import('#lib/domain/ratings/service.ts');
 const { findGame } = await import('./queries.ts');
 const { getGame, regenerateAsAdmin } = await import('./service.ts');
+const { markAvailability } = await import('#lib/domain/availability/service.ts');
 const { applyBestSwap, fillOpenSlots, lineupIntelligence } = await import('./alignment.ts');
 
 const admin: Actor = {
@@ -328,8 +331,39 @@ beforeEach(() => {
 		'teams.maxPlayers': 24,
 		'teams.maxSkillSpread': 0,
 		'teams.maxAgeSpread': 0,
-		'teams.maxSizeSpread': 0
+		'teams.maxSizeSpread': 0,
+		'games.availabilityClosesHours': 24,
+		'notifications.subRequestOnAbsence': false
 	};
+});
+
+describe('presence recalibration', () => {
+	it('removes an absent regular and rebuilds the two teams from the live pool', () => {
+		for (const [id, overall, age] of [
+			['a', 5, 20],
+			['b', 4, 30],
+			['c', 3, 40],
+			['d', 2, 50]
+		] as const) {
+			addPlayer(id, { overall, age });
+		}
+		const gameId = addGame({ generated: false });
+		for (const id of ['a', 'b', 'c', 'd']) setPresent(gameId, id);
+
+		regenerateAsAdmin(admin, gameId);
+		const before = getGame(admin, gameId);
+		expect(before.slots.some((slot) => slot.player?.playerId === 'a')).toBe(true);
+		expect(before.slots.filter((slot) => slot.player !== null)).toHaveLength(4);
+
+		const actorA: Actor = { kind: 'user', userId: 'a', name: 'a', role: 'player' };
+		const result = markAvailability(actorA, gameId, 'absent');
+
+		expect(result.regenerated).toBe(true);
+		const after = getGame(admin, gameId);
+		expect(after.slots.some((slot) => slot.player?.playerId === 'a')).toBe(false);
+		expect(after.slots.filter((slot) => slot.player !== null)).toHaveLength(3);
+		expect(after.slots.filter((slot) => slot.player === null)).toHaveLength(1);
+	});
 });
 
 describe('alignment permissions and playability', () => {

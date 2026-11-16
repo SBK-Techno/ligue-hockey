@@ -45,6 +45,8 @@
 			/>
 			<button class="btn-primary w-full" type="submit">{t('invite.submit')}</button>
 		</form>
-		<a class="link mt-5 block text-center text-sm" href="/connexion">{t('auth.reset.back')}</a>
+		<div class="mt-5 text-center">
+			<a class="action-link text-sm" href="/connexion">{t('auth.reset.back')}</a>
+		</div>
 	{/if}
 </div>

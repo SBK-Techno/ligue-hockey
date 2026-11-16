@@ -133,7 +133,6 @@
 					class="flex min-h-11 cursor-pointer items-center gap-2 border border-line-strong bg-surface py-1 pl-1 pr-2.5 text-ink transition-colors hover:border-ink"
 					aria-expanded={open}
 					aria-controls="menu-compte"
-					aria-haspopup="menu"
 					aria-label="{t('nav.accountMenu')} · {actor.name}"
 					onclick={() => (open = !open)}
 				>

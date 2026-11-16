@@ -4,11 +4,11 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `design/identity-v2`.
-- Target version: `1.3.0`.
-- Shipped: identity, navigation, evaluations, smart sheet, locations.
-- In flight: release-blocker polish pass (season partial/clear, schedule split, balance status, payment gating, row menu, copy glossary).
-- Next: independent verifier, round-3 triple check, merge, tag, promote.
+- Branch: `design/auth-hero`.
+- Target version: `1.3.2`.
+- Shipped: identity, navigation, evaluations, smart sheet, locations, `1.3.0`; initial-paint fix, `1.3.1`.
+- In flight: natural rink palette, auth hero, round-3 defects.
+- Next: gate, PR, `1.3.2`, promote.
 
 ## Verified milestones
 

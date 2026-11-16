@@ -78,36 +78,22 @@
 {#if data.actor.kind === 'anonymous'}
 	<div class="lg:grid lg:min-h-dvh lg:grid-cols-[1.08fr_0.92fr]">
 		<aside
-			class="relative flex flex-col justify-between overflow-hidden bg-ink px-5 pb-6 pt-5 text-paper sm:px-9 sm:pb-11 sm:pt-9 lg:min-h-dvh lg:p-12"
+			class="relative flex min-h-[18rem] flex-col overflow-hidden bg-ink px-5 pb-6 pt-5 text-paper sm:min-h-[22rem] sm:px-9 sm:pb-11 sm:pt-9 lg:min-h-dvh lg:p-12"
 		>
-			<svg
+			<img
+				src={branding.authImage}
+				alt=""
+				class="absolute inset-0 h-full w-full object-cover"
+				fetchpriority="high"
+				decoding="async"
+			/>
+			<div
+				class="absolute inset-0 bg-gradient-to-b from-ink/90 via-ink/20 to-ink/35"
 				aria-hidden="true"
-				viewBox="0 0 600 600"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				class="pointer-events-none absolute -right-28 -top-24 h-[420px] w-[420px] text-paper/[0.08] sm:h-[520px] sm:w-[520px] lg:-right-32 lg:top-1/2 lg:h-[680px] lg:w-[680px] lg:-translate-y-1/2"
-			>
-				<circle cx="300" cy="300" r="232" />
-				<circle cx="300" cy="300" r="92" />
-				<path d="M0 300h600M300 0v600" />
-				<circle cx="300" cy="300" r="7" fill="currentColor" stroke="none" />
-				<path d="M68 208h56v184H68M532 208h-56v184h56" />
-			</svg>
+			></div>
 
-			<div class="relative">
+			<div class="relative z-10">
 				<BrandLockup size="md" tone="dark" />
-			</div>
-
-			<div class="relative mt-8 max-w-md lg:mt-0">
-				<p
-					class="font-display text-[length:var(--text-display)] font-[650] leading-none tracking-[-0.015em] text-paper [font-stretch:112%]"
-				>
-					{t('auth.welcome')}
-				</p>
-				<p class="mt-4 hidden text-sm leading-relaxed text-paper/70 sm:block sm:text-base">
-					{branding.description}
-				</p>
 			</div>
 		</aside>
 
