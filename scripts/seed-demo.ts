@@ -106,6 +106,9 @@ function parseOptions(argv: readonly string[]): Options {
 		throw new Error('Relance avec --yes pour confirmer la base cible.');
 	}
 	if (!Number.isInteger(seed)) throw new Error('--seed doit être un entier.');
+	if (password.length < 12) {
+		throw new Error('--password est requis (12 caractères minimum) pour les comptes de démonstration.');
+	}
 
 	return { reset, seed, password };
 }
@@ -240,8 +243,8 @@ function checkCatalogue(): void {
 
 checkCatalogue();
 
-const loginPassword = options.password || randomUUID().replaceAll('-', '').slice(0, 20);
-const loginHash = await hashPassword(loginPassword);
+// Le mot de passe vient de l'opérateur et n'est jamais écrit dans les journaux.
+const loginHash = await hashPassword(options.password);
 const fillerHash = await hashPassword(randomUUID());
 
 const demoPlayers: DemoPlayerRow[] = [];
@@ -1108,7 +1111,7 @@ console.log('');
 
 const logins = demoPlayers.filter((player) => player.login);
 if (logins.length > 0) {
-	console.log(`Mot de passe des comptes de connexion: ${loginPassword}`);
+	console.log('Comptes de démonstration (mot de passe fourni avec --password):');
 	for (const player of logins) console.log(`  ${player.email}  (${player.fullName})`);
 	console.log('');
 }
