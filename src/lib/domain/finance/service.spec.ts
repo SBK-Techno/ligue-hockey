@@ -1,0 +1,128 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Actor } from '#lib/domain/auth/types.ts';
+
+vi.mock('#lib/domain/settings/service.ts', () => ({
+	getSettings: () => ({
+		'finance.currency': 'CAD',
+		'finance.overdueGraceDays': 0,
+		'finance.installment1Due': '2026-11-01',
+		'finance.installment2Due': '2026-12-01'
+	})
+}));
+
+vi.mock('#lib/server/db/index.ts', async () => {
+	const Database = (await import('better-sqlite3')).default;
+	const { drizzle } = await import('drizzle-orm/better-sqlite3');
+	const { migrate } = await import('drizzle-orm/better-sqlite3/migrator');
+	const sqlite = new Database(':memory:');
+	sqlite.pragma('foreign_keys = ON');
+	const db = drizzle(sqlite);
+	migrate(db, { migrationsFolder: 'drizzle' });
+	return { db, sqlite };
+});
+
+const { sqlite } = await import('#lib/server/db/index.ts');
+const { recordPayment } = await import('./service.ts');
+
+const actor: Actor = {
+	kind: 'user',
+	userId: 'admin',
+	name: 'Admin',
+	role: 'admin'
+};
+
+function captureError(run: () => unknown): unknown {
+	try {
+		run();
+	} catch (error) {
+		return error;
+	}
+	throw new Error('expected an error');
+}
+
+function paymentCount(): number {
+	const row = sqlite.prepare('select count(*) as count from payments').get() as {
+		count: number;
+	};
+	return row.count;
+}
+
+beforeEach(() => {
+	sqlite.prepare('delete from payments').run();
+	sqlite.prepare('delete from payment_plans').run();
+	sqlite.prepare('delete from players').run();
+	sqlite.prepare('delete from user').run();
+	sqlite
+		.prepare(
+			`insert into user (id, name, email, email_verified, created_at, updated_at, role)
+			 values ('admin', 'Admin', 'admin@example.test', 1, 0, 0, 'admin')`
+		)
+		.run();
+	sqlite
+		.prepare(
+			`insert into user (id, name, email, email_verified, created_at, updated_at, role)
+			 values ('player', 'Joueur', 'player@example.test', 1, 0, 0, 'player')`
+		)
+		.run();
+	sqlite
+		.prepare(
+			`insert into players (user_id, first_name, last_name, position, age, is_substitute, active, created_at, updated_at)
+			 values ('player', 'Jean', 'Test', 'forward', 30, 0, 1, 0, 0)`
+		)
+		.run();
+});
+
+describe('recordPayment', () => {
+	it('rejects a payment without a plan and writes nothing', () => {
+		const error = captureError(() =>
+			recordPayment(actor, 'player', {
+				amountCents: 5_000,
+				paidAt: '2026-11-16',
+				method: 'etransfer',
+				note: null
+			})
+		);
+
+		expect(error).toMatchObject({ code: 'CONFLICT', key: 'balance.noPlan' });
+		expect(paymentCount()).toBe(0);
+	});
+
+	it('rejects a payment on a zero plan and writes nothing', () => {
+		sqlite
+			.prepare(
+				`insert into payment_plans (id, player_id, total_cents, first_cents, second_cents, created_at, updated_at)
+				 values ('plan', 'player', 0, 0, 0, 0, 0)`
+			)
+			.run();
+
+		const error = captureError(() =>
+			recordPayment(actor, 'player', {
+				amountCents: 5_000,
+				paidAt: '2026-11-16',
+				method: 'etransfer',
+				note: null
+			})
+		);
+
+		expect(error).toMatchObject({ code: 'CONFLICT', key: 'balance.noPlan' });
+		expect(paymentCount()).toBe(0);
+	});
+
+	it('accepts a payment on an active plan', () => {
+		sqlite
+			.prepare(
+				`insert into payment_plans (id, player_id, total_cents, first_cents, second_cents, created_at, updated_at)
+				 values ('plan', 'player', 30000, 15000, 15000, 0, 0)`
+			)
+			.run();
+
+		recordPayment(actor, 'player', {
+			amountCents: 5_000,
+			paidAt: '2026-11-16',
+			method: 'etransfer',
+			note: null
+		});
+
+		expect(paymentCount()).toBe(1);
+	});
+});

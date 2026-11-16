@@ -3,7 +3,8 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 
 const h = vi.hoisted(() => ({
 	now: 1_700_000_000_000,
-	today: '2023-11-14'
+	today: '2023-11-14',
+	defaultLocation: ''
 }));
 
 vi.mock('#lib/shared/time/clock.ts', async (importOriginal) => {
@@ -20,8 +21,11 @@ vi.mock('#lib/domain/settings/service.ts', () => ({
 		'roster.goaliesPerTeam': 0,
 		'roster.forwardsPerTeam': 1,
 		'roster.defensePerTeam': 0,
-		'games.defaultLocation': ''
-	})
+		'games.defaultLocation': h.defaultLocation
+	}),
+	renameDefaultLocation: (_actor: unknown, previous: string, next: string) => {
+		if (h.defaultLocation === previous) h.defaultLocation = next;
+	}
 }));
 
 vi.mock('#lib/server/db/index.ts', async () => {
@@ -93,6 +97,7 @@ beforeEach(() => {
 		)
 		.run();
 	dateCounter = 0;
+	h.defaultLocation = '';
 });
 
 describe('locations service', () => {
@@ -185,6 +190,56 @@ describe('game location assignment', () => {
 			locationId: second.id,
 			location: 'Centre sportif'
 		});
+	});
+
+	it('garde le libellé figé quand seule une note change', () => {
+		const location = addLocation('Aréna du Coin');
+		const game = addGame(location.id);
+
+		updateLocation(actor, {
+			id: location.id,
+			name: 'Centre sportif',
+			address: null,
+			mapUrl: null,
+			notes: null
+		});
+
+		const updated = updateGame(actor, game.id, {
+			gameDate: game.gameDate,
+			startTime: '10:30',
+			locationId: location.id,
+			notes: 'Apporter les chandails'
+		});
+
+		expect(updated).toMatchObject({
+			locationId: location.id,
+			location: 'Aréna du Coin'
+		});
+		expect(getGame(actor, game.id).notes).toBe('Apporter les chandails');
+	});
+
+	it('suit le nom du lieu par défaut quand il est renommé', () => {
+		const location = addLocation('Aréna du Coin');
+		h.defaultLocation = 'Aréna du Coin';
+
+		updateLocation(actor, {
+			id: location.id,
+			name: 'Centre sportif',
+			address: null,
+			mapUrl: null,
+			notes: null
+		});
+
+		expect(h.defaultLocation).toBe('Centre sportif');
+	});
+
+	it('vide le lieu par défaut quand ce lieu est supprimé', () => {
+		const location = addLocation('Aréna du Coin');
+		h.defaultLocation = 'Aréna du Coin';
+
+		deleteLocation(actor, { id: location.id });
+
+		expect(h.defaultLocation).toBe('');
 	});
 
 	it('un lieu renommé change le choix sans réécrire les matchs passés', () => {

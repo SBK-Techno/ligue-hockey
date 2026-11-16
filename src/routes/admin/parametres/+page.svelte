@@ -4,16 +4,42 @@
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { currencySymbol, formatCount, t } from '#lib/shared/i18n/index.ts';
+	import { tick } from 'svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	const symbol = $derived(currencySymbol(data.currency));
+
+	function openGroupFor(control: HTMLElement) {
+		const group = control.closest('details');
+		if (group instanceof HTMLDetailsElement) group.open = true;
+		void tick().then(() => control.focus());
+	}
+
+	/** Une valeur invalide dans un groupe fermé ne doit pas bloquer en silence. */
+	function revealInvalid(event: Event) {
+		openGroupFor(event.target as HTMLElement);
+	}
+
+	$effect(() => {
+		const setting = (form as { setting?: string } | null)?.setting;
+		if (!form || form.ok !== false || !setting) return;
+		const control = document.getElementById(setting);
+		if (control) openGroupFor(control);
+	});
 </script>
 
 <PageHeader title={t('admin.settings')} meta={t('admin.settingsHelp')} />
 
-<form id="settings-form" method="POST" action="?/save" use:progressiveForm class="space-y-5 pb-20">
+<form
+	id="settings-form"
+	method="POST"
+	action="?/save"
+	use:progressiveForm
+	class="space-y-5 pb-20"
+	oninvalidcapture={revealInvalid}
+>
 	{#each data.groups as group, index (group.key)}
 		<details
 			id="groupe-{group.key}"

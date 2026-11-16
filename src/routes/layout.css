@@ -456,7 +456,7 @@
 	/* Bandeau des sept jours : le rythme réel de la ligue. */
 	.week-strip {
 		display: grid;
-		grid-template-columns: repeat(7, minmax(0, 1fr));
+		grid-template-columns: repeat(7, minmax(2.75rem, 1fr));
 		border: 1px solid var(--color-line);
 		background: var(--color-surface);
 		overflow-x: auto;
@@ -506,6 +506,8 @@
 		background: var(--color-surface);
 	}
 	.metric-cell {
+		display: flex;
+		flex-direction: column;
 		padding: 0.625rem 0.75rem;
 		border-left: 1px solid var(--color-line);
 	}

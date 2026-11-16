@@ -4,9 +4,11 @@ import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts'
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
 import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
+import { isLineupEditable } from './playability.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
+import { gameWarningsInOrder } from '#config/game-warnings.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
@@ -97,7 +99,7 @@ function generationView(
 				? formatDecimal(snapshot.skillDiff, 2)
 				: null,
 		ageDiffLabel: includeMetrics ? formatDecimal(snapshot.ageDiff, 1) : null,
-		warnings: snapshot.warnings,
+		warnings: gameWarningsInOrder(snapshot.warnings),
 		ruleViolations: includeMetrics
 			? snapshot.ruleViolations.map((violation) => ({
 			ruleId: violation.ruleId,
@@ -257,6 +259,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 	}
 	const parsed = parseSchema(gameInputSchema, input);
 	const location = getLocation(actor, parsed.locationId);
+	const locationChanged = parsed.locationId !== row.locationId;
 
 	try {
 		updateGameRow(
@@ -265,7 +268,9 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 				gameDate: parsed.gameDate,
 				startTime: parsed.startTime,
 				locationId: location.id,
-				location: location.name,
+				// Le libellé est figé pour les matchs déjà créés : seule une
+				// changement de lieu le réécrit.
+				...(locationChanged ? { location: location.name } : {}),
 				notes: parsed.notes
 			},
 			clock.nowMs()
@@ -288,8 +293,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 		gameDate: parsed.gameDate,
 		startTime: parsed.startTime,
 		locationId: location.id,
-		location: location.name,
-		notes: parsed.notes
+		location: locationChanged ? location.name : row.location
 	});
 }
 
@@ -338,6 +342,15 @@ export function regenerateGame(
 	if (row.status !== 'scheduled') {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
+	if (
+		!isLineupEditable({
+			status: row.status,
+			gameDate: row.gameDate,
+			startTime: row.startTime
+		})
+	) {
+		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
+	}
 
 	const previousRatedPlayerIds = listGameRatingPlayerIds(gameId);
 	const slotRows: PoolSlot[] = listSlotAssignments(gameId).map((slot) => ({
@@ -383,17 +396,19 @@ export function regenerateGame(
 		skillDiff: result.skillDiff,
 		ageDiff: result.ageDiff,
 		sizeDiff: result.sizeDiff,
-		warnings: result.warnings,
+		warnings: gameWarningsInOrder(result.warnings),
 		ruleViolations: result.violations,
 		bench: plan.bench,
 		candidateKey: result.candidateKey,
 		generatedAt
 	};
 
+	// L'audit du calcul entre dans la même transaction que les places : une
+	// écriture échouée ne laisse ni alignement publié ni trace partielle.
 	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt, {
 		removedRatedPlayerIds,
-		audits:
-			removedRatedPlayerIds.length > 0
+		audits: [
+			...(removedRatedPlayerIds.length > 0
 				? [
 						auditEntry(actor, {
 							action: 'ratings.game_removed',
@@ -402,7 +417,18 @@ export function regenerateGame(
 							metadata: { playerIds: removedRatedPlayerIds }
 						})
 					]
-				: []
+				: []),
+			auditEntry(actor, {
+				action: 'game.generate',
+				entityType: 'game',
+				entityId: gameId,
+				metadata: {
+					skillDiff: result.skillDiff,
+					ageDiff: result.ageDiff,
+					assignments: assignments.length
+				}
+			})
+		]
 	});
 
 	const namedIds = [
@@ -434,7 +460,7 @@ export function regenerateGame(
 		sizeDiff: result.sizeDiff,
 		skillDiffLabel: formatDecimal(result.skillDiff, 2),
 		ageDiffLabel: formatDecimal(result.ageDiff, 1),
-		warnings: result.warnings,
+		warnings: gameWarningsInOrder(result.warnings),
 		ruleViolations: result.violations.map((violation) => ({
 			ruleId: violation.ruleId,
 			kind: violation.kind,
@@ -453,18 +479,7 @@ export function regenerateGame(
 
 export function regenerateAsAdmin(actor: Actor, gameId: string): GenerationResult {
 	requirePermission(actor, 'manageGames');
-	const result = regenerateGame(gameId, actor);
-	recordAudit(actor, {
-		action: 'game.generate',
-		entityType: 'game',
-		entityId: gameId,
-		metadata: {
-			skillDiff: result.skillDiff,
-			ageDiff: result.ageDiff,
-			assignments: result.assignments
-		}
-	});
-	return result;
+	return regenerateGame(gameId, actor);
 }
 
 export function listGamePresence(gameId: string) {

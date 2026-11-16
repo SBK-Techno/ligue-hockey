@@ -1,26 +1,16 @@
 import type { ServerLoad } from '@sveltejs/kit';
-import { branding } from '#lib/generated/branding.ts';
 import { listSchedule } from '#lib/domain/games/service.ts';
-import { clock, todayInZone } from '#lib/shared/time/clock.ts';
+import { nextGameId, splitSchedule } from '#lib/domain/games/schedule.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	const actor = locals.actor;
-	if (actor.kind !== 'user') return { upcoming: [], past: [] };
+	if (actor.kind !== 'user') return { upcoming: [], past: [], nextId: null };
 
 	const schedule = listSchedule(actor);
-	const today = todayInZone(branding.timezone, clock.nowMs());
+	const { upcoming, past } = splitSchedule(schedule);
 	return {
-		upcoming: schedule.filter(
-			(game) =>
-				(game.status === 'scheduled' && game.gameDate >= today) ||
-				(game.status === 'cancelled' && game.gameDate >= today)
-		),
-		past: schedule
-			.filter(
-				(game) =>
-					game.gameDate < today ||
-					(game.status === 'completed' && game.gameDate === today)
-			)
-			.reverse()
+		upcoming,
+		past: past.reverse(),
+		nextId: nextGameId(schedule)
 	};
 };

@@ -1,31 +1,48 @@
 <script lang="ts">
 	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
+	import {
+		gameWarningDefinition,
+		gameWarningLabelKey,
+		gameWarningsInOrder
+	} from '#config/game-warnings.ts';
 	import { gameStatus } from '#config/game-status.ts';
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
+	import { positionDefinition } from '#config/positions.ts';
 	import { formatCount, formatDate, formatDecimal, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import StatStrip from '#lib/ui/StatStrip.svelte';
+	import { playerAssessmentHref } from '#lib/ui/nav.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 	const game = $derived(data.game);
+	const generation = $derived(game?.generation ?? null);
 	const intelligence = $derived(data.intelligence);
-	const missingRatings = $derived([
-		...new Set([
-			...data.ratingsMissing.map((player) => player.fullName),
-			...(intelligence?.unratedNames ?? [])
-		])
-	]);
+	const availableBench = $derived(
+		(
+			intelligence?.benchNames.filter(
+				(name) => !generation?.bench.some((entry) => entry.fullName === name)
+			) ?? []
+		)
+	);
+	const missingRatingLinks = $derived(data.ratingsMissing);
+	const otherUnratedNames = $derived(
+		(intelligence?.unratedNames ?? []).filter(
+			(name) => !data.ratingsMissing.some((player) => player.fullName === name)
+		)
+	);
 	function formatAverage(value: number | null | undefined): string {
 		return value == null ? t('rating.notAvailable') : formatDecimal(value, 2);
 	}
 	const statCells = $derived([
 		...TEAMS.map((team) => ({
-			label: t('games.average', { team: t(teamDefinition(team.key).labelKey) }),
+			label: t('games.average', {
+				team: t(teamDefinition(team.key).shortLabelKey).toLowerCase()
+			}),
 			value: formatAverage(intelligence?.averages[team.key])
 		})),
 		{
@@ -66,16 +83,26 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if missingRatings.length > 0}
+	{#if missingRatingLinks.length > 0 || otherUnratedNames.length > 0}
 		<div class="alert mb-4">
 			<p class="font-semibold">{t('games.ratingsMissing')}</p>
-			<p class="mt-1 text-sm">
-				{t('games.ratingsMissingNames', { names: missingRatings.join(', ') })}
-			</p>
+			{#if missingRatingLinks.length > 0}
+				<ul role="list" class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+					{#each missingRatingLinks as player (player.playerId)}
+						<li>
+							<a class="link font-medium" href={playerAssessmentHref(player.playerId)}>
+								{player.fullName}
+							</a>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+			{#if otherUnratedNames.length > 0}
+				<p class="mt-1 text-sm">
+					{t('games.ratingsMissingNames', { names: otherUnratedNames.join(', ') })}
+				</p>
+			{/if}
 			<p class="mt-1 text-sm">{t('games.ratingsMissingHelp')}</p>
-			<a class="btn-secondary btn-sm mt-3" href="/admin/evaluations/matchs/{game.id}">
-				{t('games.ratingsMissingLink')}
-			</a>
 		</div>
 	{/if}
 
@@ -175,7 +202,7 @@
 					{t('games.sizeGap', { count: intelligence.sizeDiff })}
 				</p>
 				<div class="ml-auto flex flex-wrap gap-2">
-					{#if game.status === 'scheduled'}
+					{#if data.editable}
 						<form method="POST" action="?/generate" use:progressiveForm>
 							{#if game.generated}
 								<ConfirmSubmit
@@ -239,6 +266,8 @@
 						/>
 					</form>
 				</div>
+			{:else if !data.editable && intelligence.swap}
+				<p class="hint mt-3">{t('games.lineupLocked')}</p>
 			{:else}
 				<p class="hint mt-3">{t('games.alreadyBalanced')}</p>
 			{/if}
@@ -260,13 +289,39 @@
 				</div>
 			{/if}
 
-			{#if intelligence.benchNames.length > 0}
+			{#if generation}
+			{#each gameWarningsInOrder(generation.warnings) as warning (warning)}
+				{@const definition = gameWarningDefinition(warning)}
+				<div class={definition.tone === 'alert' ? 'alert mt-3' : 'notice mt-3'}>
+					<p class="font-semibold">{t(gameWarningLabelKey(warning))}</p>
+					{#if definition.helpKey}
+						<p class="mt-1">{t(definition.helpKey)}</p>
+					{/if}
+					{#if definition.detail === 'open-slots'}
+						<p class="mt-1 text-sm">{game.openSlotsLabel}</p>
+					{/if}
+				</div>
+			{/each}
+
+			{#if generation.bench.length > 0}
 				<p class="micro-label mt-4">{t('games.bench')}</p>
-				<p class="mt-1 text-sm text-muted">{intelligence.benchNames.join(', ')}</p>
+				<ul role="list" class="mt-1 flex flex-wrap gap-2">
+					{#each generation.bench as entry (entry.playerId)}
+						<li class="badge">
+							{#if entry.jerseyNumber}<span class="numeric">{entry.jerseyNumber}</span>{/if}
+							{entry.fullName} · {t(positionDefinition(entry.position).shortLabelKey)}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+			{#if availableBench.length > 0}
+				<p class="micro-label mt-4">{t('games.benchAvailable')}</p>
+				<p class="mt-1 text-sm text-muted">{availableBench.join(', ')}</p>
+			{/if}
 			{/if}
 		{:else}
 			<p class="mt-2 text-sm text-muted">{t('games.lineupSoon')}</p>
-			{#if game.status === 'scheduled'}
+			{#if data.editable}
 				<form method="POST" action="?/generate" use:progressiveForm class="mt-3">
 					<button class="btn-primary" type="submit">{t('games.generate')}</button>
 				</form>

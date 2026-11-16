@@ -5,6 +5,7 @@ import {
 	GAME_WARNING_KEYS,
 	gameWarningDefinition,
 	gameWarningLabelKey,
+	gameWarningsInOrder,
 	isGameWarning,
 	type GameWarningDefinition
 } from '#config/game-warnings.ts';
@@ -88,6 +89,15 @@ describe('game warning registry', () => {
 			expect(isGameWarning(warning)).toBe(true);
 		}
 		expect(produced).toContain('rule-limit');
+	});
+
+	it('orders every warning by the registry, never by insertion', () => {
+		const reversed = [...GAME_WARNING_KEYS].reverse();
+		expect(gameWarningsInOrder(reversed)).toEqual([...GAME_WARNING_KEYS]);
+		expect(gameWarningsInOrder(['rule-limit', 'unfilled-slots'])).toEqual([
+			'unfilled-slots',
+			'rule-limit'
+		]);
 	});
 
 	it('rejects an unknown warning in a stored snapshot', () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { GameSummary } from '#lib/domain/games/types.ts';
 	import { branding } from '#lib/generated/branding.ts';
-	import { formatWeekdayShort, t } from '#lib/shared/i18n/index.ts';
+	import { formatDate, formatWeekday, formatWeekdayShort, t } from '#lib/shared/i18n/index.ts';
 	import { addDays, todayInZone } from '#lib/shared/time/clock.ts';
 
 	let {
@@ -18,16 +18,33 @@
 <nav class="week-strip" aria-label={t('home.weekStrip')}>
 	{#each days as day (day)}
 		{@const game = byDate.get(day)}
-		<a
-			class="week-day"
-			href={game ? `/matchs/${game.id}` : '/matchs'}
-			aria-current={day === today ? 'date' : undefined}
-			data-game={game ? 'true' : 'false'}
-		>
-			<span class="text-[9px] font-semibold uppercase tracking-[0.08em]">
-				{formatWeekdayShort(day)}
+		{@const label = `${formatWeekday(day)} ${formatDate(day, 'short')}`}
+		{@const status = game?.status === 'cancelled' ? t('games.status.cancelled') : t('games.title')}
+		{#if game}
+			<a
+				class="week-day"
+				href="/matchs/{game.id}"
+				aria-current={day === today ? 'date' : undefined}
+				aria-label="{label} · {status}"
+				data-game="true"
+			>
+				<span class="text-[9px] font-semibold uppercase tracking-[0.08em]" aria-hidden="true">
+					{formatWeekdayShort(day)}
+				</span>
+				<time datetime={day} class="numeric text-sm" aria-hidden="true">
+					{Number(day.slice(8))}
+				</time>
+			</a>
+		{:else}
+			<span class="week-day" data-game="false">
+				<span class="sr-only">{label}</span>
+				<span class="text-[9px] font-semibold uppercase tracking-[0.08em]" aria-hidden="true">
+					{formatWeekdayShort(day)}
+				</span>
+				<time datetime={day} class="numeric text-sm" aria-hidden="true">
+					{Number(day.slice(8))}
+				</time>
 			</span>
-			<span class="numeric text-sm">{Number(day.slice(8))}</span>
-		</a>
+		{/if}
 	{/each}
 </nav>

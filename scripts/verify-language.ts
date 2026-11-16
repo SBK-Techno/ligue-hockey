@@ -12,10 +12,11 @@ import { fr } from '../config/i18n/fr.ts';
 
 const FORMAL_PRONOUN = /(?<!\p{L})(vous|votre|vos)(?!\p{L})/iu;
 const SECOND_PERSON_PLURAL =
-	/(?<!\p{L})(avez|êtes|serez|pouvez|devez|voulez|aurez|seriez|faites|allez|venez|savez|dites)(?!\p{L})/iu;
+	/(?<!\p{L})(avez|êtes|serez|pouvez|devez|voulez|aurez|seriez|faites|allez|venez|savez|dites|rendez|veuillez)(?!\p{L})/iu;
 const IMPERATIVE_EZ = /(?<!\p{L})([a-zà-ÿ]{2,}ez)(?!\p{L})/giu;
-const ALLOWED_EZ = new Set(['chez', 'nez', 'assez', 'rendez', 'rez', 'gaz', 'riz']);
-const EM_DASH = '—';
+const ALLOWED_EZ = new Set(['chez', 'nez', 'assez', 'rez', 'gaz', 'riz']);
+/** Les deux tirets cadratins sont bannis de la copie visible. */
+const DASHES = ['—', '–'];
 const PLACEHOLDER = /\{([^}]*)\}/g;
 
 const failures: string[] = [];
@@ -34,8 +35,10 @@ function svelteFiles(directory: string): string[] {
 for (const file of svelteFiles('src')) {
 	const lines = readFileSync(file, 'utf8').split('\n');
 	lines.forEach((line, index) => {
-		if (line.includes(EM_DASH)) {
-			failures.push(`${file}:${index + 1}: tiret cadratin`);
+		for (const dash of DASHES) {
+			if (line.includes(dash)) {
+				failures.push(`${file}:${index + 1}: tiret cadratin`);
+			}
 		}
 	});
 }
@@ -57,8 +60,10 @@ for (const [key, value] of Object.entries(fr)) {
 			failures.push(`${key}: impératif en -ez « ${match[1]} »`);
 		}
 	}
-	if (value.includes(EM_DASH)) {
-		failures.push(`${key}: tiret cadratin`);
+	for (const dash of DASHES) {
+		if (value.includes(dash)) {
+			failures.push(`${key}: tiret cadratin`);
+		}
 	}
 	for (const match of value.matchAll(PLACEHOLDER)) {
 		if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(match[1])) {
@@ -79,4 +84,6 @@ if (failures.length > 0) {
 	process.exit(1);
 }
 
-console.log(`registre: ${Object.keys(fr).length} valeurs conformes, aucun tiret cadratin dans les composants`);
+console.log(
+	`registre: ${Object.keys(fr).length} valeurs conformes, aucun tiret cadratin ni demi-cadratin dans les composants`
+);

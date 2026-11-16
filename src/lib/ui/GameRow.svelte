@@ -65,9 +65,9 @@
 		<span class="block truncate text-[11px] font-medium uppercase tracking-wide text-muted">
 			{formatWeekday(game.gameDate)}
 		</span>
-		<span class="numeric mt-0.5 block whitespace-nowrap text-[13px]">
+		<time datetime={game.gameDate} class="numeric mt-0.5 block whitespace-nowrap text-[13px]">
 			{formatDate(game.gameDate, 'short')}
-		</span>
+		</time>
 		{#if past}
 			<span class="numeric block text-[10px] text-muted">{game.gameDate.slice(0, 4)}</span>
 		{/if}

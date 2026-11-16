@@ -19,13 +19,18 @@ export type GameWarningDefinition = {
 	helpKey?: I18nKey;
 	playerHelpKey?: I18nKey;
 	tone: GameWarningTone;
+	/** Un avertissement qui ne concerne que la gestion. */
+	managerOnly?: boolean;
+	/** Un détail calculé à afficher sous le libellé, déclaré par le registre. */
+	detail?: 'open-slots';
 };
 
 export const GAME_WARNINGS = [
 	{
 		key: 'unfilled-slots',
 		labelKey: 'games.warning.unfilledSlots',
-		tone: 'notice'
+		tone: 'notice',
+		detail: 'open-slots'
 	},
 	{
 		key: 'rule-conflict',
@@ -43,7 +48,8 @@ export const GAME_WARNINGS = [
 		key: 'rule-limit',
 		labelKey: 'games.limitConflict',
 		helpKey: 'games.limitConflictHelp',
-		tone: 'alert'
+		tone: 'alert',
+		managerOnly: true
 	}
 ] as const satisfies readonly GameWarningDefinition[];
 
@@ -69,6 +75,6 @@ export function gameWarningLabelKey(warning: GameWarning): I18nKey {
 
 /** L'ordre du registre est l'ordre d'affichage et de persistance. */
 export function gameWarningsInOrder(warnings: readonly GameWarning[]): GameWarning[] {
-	const present = new Set(warnings);
+	const present = new Set(warnings.filter(isGameWarning));
 	return GAME_WARNING_KEYS.filter((warning) => present.has(warning));
 }

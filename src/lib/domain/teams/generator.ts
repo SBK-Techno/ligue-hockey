@@ -1,7 +1,7 @@
 import { POSITIONS, type Position } from '#config/positions.ts';
 import type { RosterTemplate, SlotDefinition } from '#config/roster.ts';
 import { TEAM_GENERATION, TEAMS, type Team } from '#config/teams.ts';
-import type { GameWarning } from '#config/game-warnings.ts';
+import { gameWarningsInOrder, type GameWarning } from '#config/game-warnings.ts';
 import type { PairRuleKind } from '#config/rule-modes.ts';
 
 export type GeneratorPlayer = {
@@ -434,7 +434,7 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 		ageDiff: Number(chosen.ageDiff.toFixed(2)),
 		sizeDiff: chosen.sizeDiff,
 		violations: chosen.candidate.violations,
-		warnings,
+		warnings: gameWarningsInOrder(warnings),
 		candidateKey: chosen.key
 	};
 }

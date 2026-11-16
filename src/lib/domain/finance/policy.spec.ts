@@ -21,7 +21,8 @@ describe('computeBalance', () => {
 				paid: 0,
 				outstanding: 30_000,
 				overdue: 15_000,
-				statuses: ['overdue', 'upcoming']
+				statuses: ['overdue', 'upcoming'],
+				status: 'overdue'
 			}
 		},
 		{
@@ -33,7 +34,8 @@ describe('computeBalance', () => {
 				paid: 10_000,
 				outstanding: 20_000,
 				overdue: 5_000,
-				statuses: ['overdue', 'upcoming']
+				statuses: ['overdue', 'upcoming'],
+				status: 'overdue'
 			}
 		},
 		{
@@ -45,7 +47,8 @@ describe('computeBalance', () => {
 				paid: 15_000,
 				outstanding: 15_000,
 				overdue: 0,
-				statuses: ['paid', 'upcoming']
+				statuses: ['paid', 'upcoming'],
+				status: 'partial'
 			}
 		},
 		{
@@ -57,7 +60,8 @@ describe('computeBalance', () => {
 				paid: 0,
 				outstanding: 30_000,
 				overdue: 0,
-				statuses: ['upcoming', 'upcoming']
+				statuses: ['upcoming', 'upcoming'],
+				status: 'upcoming'
 			}
 		},
 		{
@@ -69,7 +73,8 @@ describe('computeBalance', () => {
 				paid: 15_000,
 				outstanding: 15_000,
 				overdue: 15_000,
-				statuses: ['paid', 'overdue']
+				statuses: ['paid', 'overdue'],
+				status: 'overdue'
 			}
 		},
 		{
@@ -81,7 +86,8 @@ describe('computeBalance', () => {
 				paid: 40_000,
 				outstanding: 0,
 				overdue: 0,
-				statuses: ['paid', 'paid']
+				statuses: ['paid', 'paid'],
+				status: 'paid'
 			}
 		}
 	] as const;
@@ -101,8 +107,31 @@ describe('computeBalance', () => {
 			expect(balance.installments.map((entry) => entry.status)).toEqual(
 				testCase.expected.statuses
 			);
+			expect(balance.status).toBe(testCase.expected.status);
 		});
 	}
+
+	it('dates each paid share with the payment that covered it', () => {
+		const balance = computeBalance(
+			plan,
+			[
+				{ amountCents: 15_000, paidAt: '2026-10-30' },
+				{ amountCents: 12_000, paidAt: '2026-11-10' }
+			],
+			'2026-11-16',
+			0
+		);
+
+		expect(balance.installments.map((entry) => entry.paidAt)).toEqual([
+			'2026-10-30',
+			'2026-11-10'
+		]);
+	});
+
+	it('leaves the payment date empty while nothing is received', () => {
+		const balance = computeBalance(plan, [], '2026-11-16', 0);
+		expect(balance.installments.map((entry) => entry.paidAt)).toEqual([null, null]);
+	});
 
 	it('handles a plan without due dates', () => {
 		const balance = computeBalance(

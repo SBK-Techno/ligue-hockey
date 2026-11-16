@@ -1,16 +1,17 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/env';
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
 	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { roleDefinition } from '#config/roles.ts';
-	import { formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
 	import PasswordField from '#lib/ui/PasswordField.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
 	import { managementTabs } from '#lib/domain/auth/destinations.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import type { PageProps } from './$types';
@@ -161,6 +162,17 @@
 			!window.matchMedia('(display-mode: standalone)').matches
 	);
 
+	const passwordError = $derived(fieldErrorFor(form, 'securite', 'currentPassword'));
+
+	$effect(() => {
+		const field = (form as { field?: string } | null)?.field;
+		if (!form || form.ok !== false || form.section !== 'securite' || !field) return;
+		const control = document.getElementById(field);
+		const group = control?.closest('details');
+		if (group instanceof HTMLDetailsElement) group.open = true;
+		void tick().then(() => control?.focus());
+	});
+
 	const sections = $derived([
 		{ id: 'compte', label: t('profile.tab.account') },
 		...(profile ? [{ id: 'joueur', label: t('profile.tab.player') }] : []),
@@ -169,8 +181,6 @@
 		...(isManager ? [{ id: 'administration', label: t('profile.tab.admin') }] : [])
 	]);
 </script>
-
-<FormFeedback {form} class="mb-4" />
 
 <h1 class="sr-only">{t('profile.title')}</h1>
 
@@ -252,6 +262,7 @@
 			<section id="compte" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.account')}</h2>
 				<p class="hint mt-1">{t('profile.accountHelp')}</p>
+				<FormFeedback {form} section="compte" class="mt-3" />
 
 				{#if profile}
 					<dl class="mt-3 divide-y divide-line">
@@ -294,6 +305,7 @@
 				<section id="joueur" class="card scroll-mt-[var(--anchor-offset)]">
 					<h2>{t('profile.playerSection')}</h2>
 					<p class="hint mt-1">{t('profile.playerSectionHelp')}</p>
+					<FormFeedback {form} section="joueur" class="mt-3" />
 					<form method="POST" action="?/profile" use:progressiveForm class="mt-5 grid gap-4 sm:grid-cols-2">
 						<div>
 							<label class="label" for="firstName">{t('profile.firstName')}</label>
@@ -372,9 +384,10 @@
 				</section>
 
 				{#if data.isSubstitute}
-					<section class="card">
+					<section id="positions" class="card scroll-mt-[var(--anchor-offset)]">
 						<h2>{t('subs.positions')}</h2>
 						<p class="mt-1 text-sm text-muted">{t('subs.positionsHelp')}</p>
+						<FormFeedback {form} section="positions" class="mt-3" />
 						<form method="POST" action="?/positions" use:progressiveForm class="mt-4">
 							<div class="flex flex-wrap gap-2">
 								{#each POSITIONS as position (position.key)}
@@ -401,8 +414,9 @@
 			<section id="notifications" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.notifications')}</h2>
 				<p class="hint mt-1">{t('profile.notificationsHelp')}</p>
+				<FormFeedback {form} section="notifications" class="mt-3" />
 				<form method="POST" action="?/notifications" use:progressiveForm class="mt-4 space-y-3">
-					<label class="flex items-center gap-3 text-sm font-medium">
+					<label class="flex min-h-11 items-center gap-3 text-sm font-medium">
 						<input
 							type="checkbox"
 							name="emailEnabled"
@@ -411,7 +425,7 @@
 						/>
 						{t('profile.emailNotifications')}
 					</label>
-					<label class="flex items-center gap-3 text-sm font-medium">
+					<label class="flex min-h-11 items-center gap-3 text-sm font-medium">
 						<input
 							type="checkbox"
 							name="pushEnabled"
@@ -462,6 +476,7 @@
 			<section id="securite" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.security')}</h2>
 				<p class="hint mt-1">{t('profile.securityHelp')}</p>
+				<FormFeedback {form} section="securite" class="mt-3" />
 
 				<details class="mt-4">
 					<summary class="link flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold marker:content-none">
@@ -473,6 +488,7 @@
 						name="currentPassword"
 						label={t('profile.currentPassword')}
 						autocomplete="current-password"
+						error={passwordError}
 					/>
 					<PasswordField
 						id="newPassword"
@@ -481,12 +497,14 @@
 						autocomplete="new-password"
 						minlength={data.minLength}
 						hint={t('invite.tooShort', { count: data.minLength })}
+						error={fieldErrorFor(form, 'securite', 'newPassword')}
 					/>
 					<PasswordField
 						id="confirmPassword"
 						name="confirm"
 						label={t('invite.confirm')}
 						autocomplete="new-password"
+						error={fieldErrorFor(form, 'securite', 'confirmPassword')}
 					/>
 					<button class="btn-secondary" type="submit">{t('common.save')}</button>
 				</form>
@@ -528,7 +546,11 @@
 					{#if otherSessions.length > 2}
 						<details class="mt-1">
 							<summary class="link flex min-h-11 cursor-pointer list-none items-center text-sm marker:content-none">
-								{t('profile.moreSessions', { count: otherSessions.length - 2 })}
+								{formatCount(
+								otherSessions.length - 2,
+								'profile.moreSessions.one',
+								'profile.moreSessions.many'
+							)}
 							</summary>
 							<ul role="list" class="divide-y divide-line/70">
 								{#each otherSessions.slice(2) as session (session.id)}

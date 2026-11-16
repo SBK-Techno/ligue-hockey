@@ -14,7 +14,7 @@ export const fr = {
   'common.required': 'Obligatoire',
   'common.yes': 'Oui',
   'common.no': 'Non',
-  'common.today': "Aujourd'hui",
+  'common.today': "Aujourd’hui",
   'common.tomorrow': 'Demain',
   'common.sameDay': 'le jour même',
   'common.previousDay': 'la veille',
@@ -34,14 +34,13 @@ export const fr = {
   'common.hourShort': 'h',
   'common.minuteShort': 'min',
   'common.years': 'ans',
-  'common.optionalField': 'Pas obligé',
   'common.showPassword': 'Afficher le mot de passe',
   'common.hidePassword': 'Masquer le mot de passe',
 
   'brand.presentedBy': 'Présenté par {name}',
   'install.title': 'Installer l’application',
   'install.body':
-    'Ajoute la ligue à ton écran d’accueil pour l’ouvrir plus vite et recevoir les notifications.',
+    'Ajoute la ligue à ton écran d’accueil pour l’ouvrir plus vite.',
   'install.action': 'Installer',
   'install.how': 'Comment installer',
   'install.later': 'Plus tard',
@@ -82,7 +81,7 @@ export const fr = {
     'Horaire, présences, équipes, remplacements et paiements, réunis au même endroit.',
   'auth.inviteOnly':
     'L’accès se fait par invitation. Demande-la à un administrateur.',
-  'auth.forgot': 'Mot de passe oublié?',
+  'auth.forgot': 'Mot de passe oublié ?',
   'auth.reset.title': 'Mot de passe oublié',
   'auth.reset.lead':
     'Entre ton courriel. Si un compte existe, tu recevras un lien pour choisir un nouveau mot de passe.',
@@ -90,6 +89,8 @@ export const fr = {
   'auth.reset.sent':
     'Si un compte existe pour ce courriel, le lien est en route.',
   'auth.reset.success': 'Ton mot de passe est modifié. Connecte-toi.',
+  'auth.reset.chooseTitle': 'Nouveau mot de passe',
+  'auth.reset.chooseLead': 'Choisis un nouveau mot de passe pour ton compte.',
   'auth.reset.back': 'Retour à la connexion',
   'auth.email': 'Adresse courriel',
   'auth.password': 'Mot de passe',
@@ -109,7 +110,6 @@ export const fr = {
   'invite.mismatch': 'Les mots de passe ne correspondent pas.',
   'invite.tooShort':
     'Le mot de passe doit contenir au moins {count} caractères.',
-  'invite.expiry': 'Ce lien est valable {count} jours.',
   'invite.expired': 'Ce lien est expiré ou a déjà été utilisé.',
   'invite.expiredHelp': 'Demande un nouveau lien.',
   'invite.success': 'Ton mot de passe est enregistré. Connecte-toi.',
@@ -147,15 +147,17 @@ export const fr = {
   'rating.gameHelp':
     'Comment le joueur a joué ce match. Ces notes ne changent pas sa fiche de saison.',
   'rating.form': 'Forme récente',
-  'rating.formHelp':
-    'Moyenne des {count} derniers matchs évalués. Chaque match compte également, même partiellement rempli.',
+  'rating.formHelp.one':
+    'Moyenne sur {count} match évalué. Chaque match compte également, même partiellement rempli.',
+  'rating.formHelp.many':
+    'Moyenne sur {count} matchs évalués. Chaque match compte également, même partiellement rempli.',
   'rating.gamesRated.one': '{count} match évalué',
   'rating.gamesRated.many': '{count} matchs évalués',
   'rating.saved': 'Évaluation enregistrée.',
   'rating.positionOverall': 'Moyenne de poste',
   'rating.positionCriteria': '{done}/{total} critères de poste',
   'rating.positionDescriptive':
-    'Descriptive, ne sert pas à équilibrer les équipes.',
+    'Note descriptive, non utilisée pour équilibrer les équipes.',
   'rating.partial': 'Partielle',
   'rating.notAvailable': 'Non disponible',
   'rating.lastUpdated': 'Dernière mise à jour',
@@ -163,17 +165,19 @@ export const fr = {
   'rating.edit': 'Évaluer',
   'rating.editGame': 'Évaluer le match',
   'rating.noPlayedGames': 'Aucun match joué pour l’instant.',
-  'rating.ratedPlayers.one': '{count} joueur évalué sur {total}',
-  'rating.ratedPlayers.many': '{count} joueurs évalués sur {total}',
+  'rating.ratedPlayers.one': '{count} fiche complète sur {total}',
+  'rating.ratedPlayers.many': '{count} fiches complètes sur {total}',
   'rating.gameNotPlayed': 'Ce match n’a pas encore été joué.',
   'rating.playerNotInGame': 'Ce joueur n’est pas dans l’alignement de ce match.',
   'rating.gameNotGenerated': 'Les équipes ne sont pas encore formées pour ce match.',
   'rating.gameCancelled': 'Ce match est annulé et ne se note pas.',
   'rating.saveNext': 'Enregistrer et suivant',
   'rating.notSeenGame': 'Pas vu ce match',
-  'rating.impact': 'Impact sur le match',
+  'rating.notSeenGameConfirm':
+    'Effacer les quatre notes de {name} pour ce match ?',
+  'rating.impact': 'Apport dans le match',
   'rating.impactHelp': 'Ce qu’il apporte sur la glace, peu importe le résultat.',
-  'rating.effort': 'Engagement',
+  'rating.effort': 'Intensité',
   'rating.effortHelp': 'Rythme et intensité à chaque présence.',
   'rating.decisions': 'Décisions',
   'rating.decisionsHelp': 'Fait le jeu simple sous pression et évite les revirements forcés.',
@@ -185,9 +189,9 @@ export const fr = {
   'rating.netFrontHelp': 'Se place devant le gardien, fait écran, dévie et prend les retours.',
   'rating.wallPlay': 'Jeu le long des bandes',
   'rating.wallPlayHelp': 'Gagne les rondelles le long de la bande et garde le cycle vivant.',
-  'rating.gapControl': 'Contrôle de l’écart',
+  'rating.gapControl': 'Contrôle de la distance',
   'rating.gapControlHelp':
-    'Garde le bon écart à la ligne bleue et force l’attaquant vers l’extérieur.',
+    'Garde la bonne distance à la ligne bleue et force l’attaquant vers l’extérieur.',
   'rating.firstPass': 'Première passe',
   'rating.firstPassHelp': 'Récupère la rondelle et sort la zone par la première passe.',
   'rating.netFrontDefence': 'Couverture devant le filet',
@@ -197,13 +201,13 @@ export const fr = {
     'Se place devant le tireur, au bon angle et à la bonne profondeur.',
   'rating.reboundControl': 'Contrôle des rebonds',
   'rating.reboundControlHelp': 'Absorbe ou dirige les rebonds hors de la zone dangereuse.',
-  'rating.hands': 'Gants',
+  'rating.hands': 'Mains',
   'rating.handsHelp': 'Capture les tirs hauts et contrôle le bouclier.',
-  'rating.puckHandling': 'Manipulation de la rondelle',
+  'rating.puckHandling': 'Maniement de la rondelle',
   'rating.puckHandlingHelp': 'Arrête les dégagements et relance la sortie de zone.',
   'rating.recovery': 'Récupération',
   'rating.recoveryHelp': 'Se relève vite et reste dans la séquence.',
-  'rating.tracking': 'Lecture à travers l’écran',
+  'rating.tracking': 'Suivi à travers l’écran',
   'rating.trackingHelp': 'Suit la rondelle à travers les écrans et les déviations.',
   'rating.composure': 'Sang-froid',
   'rating.composureHelp': 'Reste calme après un mauvais rebond et reprend sa position.',
@@ -236,16 +240,17 @@ export const fr = {
   'settings.seasonLabel.description':
     'Affiché dans l’application et les rappels.',
   'settings.defaultLocation.label': 'Lieu par défaut',
-  'settings.defaultLocation.description': 'Proposé à la création d’un match.',
+  'settings.defaultLocation.description':
+    'Sert de lieu quand aucun match récent ou à venir ne peut servir de modèle.',
   'settings.defaultStartTime.label': 'Heure par défaut',
   'settings.defaultStartTime.description':
     'Heure préremplie à la création d’un match.',
   'settings.availabilityClosesHours.label': 'Fermeture des présences',
   'settings.availabilityClosesHours.description':
-    'Heures avant le match où les joueurs ne peuvent plus changer leur présence. Pour un match à {startTime}, fermeture {dayRelation} à {time}. Une valeur de 0 ferme les présences au début du match.',
+    'Heures avant le match où les joueurs ne peuvent plus confirmer leur présence. Pour un match à {startTime}, fermeture {dayRelation} à {time}. Une valeur de 0 ferme les présences au début du match.',
   'settings.subRequestOnAbsence.label': 'Demande automatique',
   'settings.subRequestOnAbsence.description':
-    'Créer une demande de remplaçant dès qu’un joueur régulier marque son absence.',
+    'Créer une demande de remplaçant quand un joueur déjà présent se retire.',
   'settings.lastCallMinutes.label': 'Dernier appel',
   'settings.lastCallMinutes.description':
     'Minutes avant le match où les demandes de remplaçants cessent d’être envoyées. Pour un match à {startTime}, dernier appel {dayRelation} à {time}.',
@@ -260,7 +265,7 @@ export const fr = {
     'Permettre à tous les joueurs de créer des sondages.',
   'settings.forwardsPerTeam.label': 'Attaquants par équipe',
   'settings.forwardsPerTeam.description':
-    "Nombre d'attaquants alignés par équipe. Total par match : {total}.",
+    "Nombre d’attaquants alignés par équipe. Total par match : {total}.",
   'settings.defensePerTeam.label': 'Défenseurs par équipe',
   'settings.defensePerTeam.description':
     'Nombre de défenseurs alignés par équipe. Total par match : {total}.',
@@ -272,7 +277,7 @@ export const fr = {
     'Heures d’avance accordées aux favoris par rapport à la liste générale. Pour un match à {startTime}, les favoris sont avisés {dayRelation} à {time}, soit {gap} h avant la liste générale.',
   'settings.emailEnabled.label': 'Courriels',
   'settings.emailEnabled.description': 'Envoyer les avis par courriel.',
-  'settings.pushEnabled.label': 'Notifications push',
+  'settings.pushEnabled.label': 'Notifications sur l’appareil',
   'settings.pushEnabled.description':
     'Envoyer les avis sur les appareils abonnés.',
   'settings.totalCents.label': 'Frais de saison',
@@ -286,10 +291,10 @@ export const fr = {
   'settings.currency.label': 'Devise',
   'settings.maxSkillSpread.label': 'Écart de notes maximal',
   'settings.maxSkillSpread.description':
-    'Refuse un alignement dont la moyenne de notes dépasse cet écart. 0 laisse le générateur choisir.',
+    'Refuse un alignement dont l’écart entre les moyennes de notes des deux équipes dépasse cette valeur. 0 laisse le générateur choisir.',
   'settings.maxAgeSpread.label': 'Écart d’âge maximal',
   'settings.maxAgeSpread.description':
-    'Refuse un alignement dont la somme des âges dépasse cet écart. 0 laisse le générateur choisir.',
+    'Refuse un alignement dont l’écart d’âge cumulé entre les deux équipes dépasse cette valeur. 0 laisse le générateur choisir.',
   'settings.maxSizeSpread.label': 'Écart de joueurs maximal',
   'settings.maxSizeSpread.description':
     'Refuse un alignement avec trop de joueurs d’un côté. 0 laisse le générateur choisir.',
@@ -322,6 +327,7 @@ export const fr = {
     'Le maximum de joueurs doit couvrir tous les postes d’un match.',
 
   'home.weekStrip': 'Les sept prochains jours',
+  'home.title': 'Cette semaine',
   'home.greeting': 'Bonjour, {name}',
   'home.nextGame': 'Prochain match',
   'home.noGame': 'Aucun match à l’horaire',
@@ -334,7 +340,7 @@ export const fr = {
   'home.manageGame': 'Gérer le match',
   'home.viewGame': 'Voir le match',
   'home.noGameHelp':
-    'Un responsable publie la prochaine date. Tu la verras ici.',
+    'Un administrateur publie la prochaine date. Tu la verras ici.',
   'home.noGameHelpAdmin':
     'Crée le prochain match pour ouvrir les présences et préparer l’alignement.',
   'home.createGame': 'Créer un match',
@@ -362,14 +368,14 @@ export const fr = {
   'home.absent': 'Absents',
   'home.pending': 'Pas encore répondu',
   'home.deadline': 'Réponse attendue avant le {date}.',
-  'home.cancelled': 'Ce match est annulé.',
   'home.balanceDue': 'À payer',
   'home.substituteCta': 'Voir les places ouvertes',
   'home.steps.title': 'Avant le match',
   'home.steps.answer': 'Ta présence',
   'home.steps.answerTodo': 'Réponds avant le {date}.',
   'home.steps.team': 'Ton équipe',
-  'home.steps.teamWaiting': 'Les équipes se font quand les présences ferment.',
+  'home.steps.teamWaiting':
+    'Les équipes s’affichent quand un administrateur les publie.',
   'home.steps.notInLineup': 'Tu n’as pas de place pour ce match.',
   'home.steps.viewLineup': 'Voir le match',
   'home.steps.place': 'Ta place',
@@ -382,7 +388,6 @@ export const fr = {
   'home.steps.balanceLate': 'Montant en retard : {amount}.',
   'home.steps.viewBalance': 'Voir le solde',
   'home.steps.discussion': 'La discussion',
-  'home.steps.chatEmpty': 'Aucun message pour l’instant.',
   'home.steps.openChat': 'Ouvrir la discussion',
   'home.steps.done': 'Fait',
   'home.steps.todo': 'À faire',
@@ -391,7 +396,7 @@ export const fr = {
   'home.steps.noPlace': 'Sans place',
   'home.noProfileTitle': 'Ton compte n’est pas encore lié à un joueur',
   'home.noProfileHelp':
-    'Demande à un responsable de faire le lien.',
+    'Demande à un administrateur de faire le lien.',
   'home.noProfileAdmin':
     'Ce compte gère la ligue et n’est pas lié à une fiche de joueur.',
   'home.adminWeek': 'Cette semaine',
@@ -409,11 +414,12 @@ export const fr = {
   'games.subtitle': 'Tous les matchs de la saison.',
   'games.empty': 'Aucun match à l’horaire.',
   'games.emptyHelp':
-    'Un responsable ajoute les matchs. Ils apparaîtront ici dès que l’horaire sera prêt.',
+    'Un administrateur ajoute les matchs. Ils apparaîtront ici dès que l’horaire sera prêt.',
   'games.next': 'Prochain',
   'games.upcoming': 'À venir',
   'games.past': 'Passés',
-  'games.showArchive': 'Voir les {count} matchs passés',
+  'games.showArchive.one': 'Voir {count} match passé',
+  'games.showArchive.many': 'Voir les {count} matchs passés',
   'games.hideArchive': 'Revenir aux derniers matchs',
   'games.location': 'Lieu',
   'games.openMap': 'Voir sur la carte',
@@ -430,7 +436,7 @@ export const fr = {
   'games.openSlots.many': '{count} places ouvertes',
   'games.filledPlaces.one': '{count} place comblée',
   'games.filledPlaces.many': '{count} places comblées',
-  'games.sizeGap': 'Écart de taille : {count}',
+  'games.sizeGap': 'Écart de joueurs : {count}',
   'games.teamSize': '{team} : {count}',
   'games.details': 'Détails du match',
   'games.generate': 'Faire les équipes',
@@ -442,14 +448,14 @@ export const fr = {
   'games.notGenerated': 'Sans alignement',
   'games.skillGap': 'Écart de notes',
   'games.ageGap': 'Écart d’âge cumulé',
-  'games.average': 'Moyenne {team}',
+  'games.average': 'Moyenne de l’équipe {team}',
   'games.bestSwap': 'Le meilleur échange',
   'games.bestSwapHelp':
     'Échanger {a} et {b} ferait passer l’écart de notes de {before} à {after}.',
   'games.bestSwapAge':
     'L’écart d’âge cumulé passerait de {before} à {after} ans.',
   'games.swapConfirm':
-    'Échanger {a} et {b}? L’écart de notes passera de {before} à {after} et l’écart d’âge cumulé de {ageBefore} à {ageAfter} ans.',
+    'Échanger {a} et {b} ? L’écart de notes passera de {before} à {after} et l’écart d’âge cumulé de {ageBefore} à {ageAfter} ans.',
   'games.applySwap': 'Faire l’échange',
   'games.swapDone': 'Échange fait, alignement rééquilibré.',
   'games.noBetterSwap': 'Aucun échange ne rapproche davantage les équipes.',
@@ -463,6 +469,7 @@ export const fr = {
   'games.noOneToFill': 'Aucun joueur disponible ne peut combler une place.',
   'games.alreadyBalanced': 'Aucun échange ne rapproche davantage les équipes.',
   'games.bench': 'Joueurs sans place',
+  'games.benchAvailable': 'Disponibles non habillés',
   'games.unassigned': 'Place libre',
   'games.substitutes': 'Remplaçant',
   'games.adminCreate': 'Créer un match',
@@ -478,7 +485,7 @@ export const fr = {
   'games.limitConflictHelp':
     'Aucun alignement ne respecte les écarts demandés. Demande à un administrateur d’ajuster les réglages.',
   'games.rulesConflictPlayer':
-    'L’alignement doit être ajusté. Un responsable va s’en occuper.',
+    'L’alignement doit être ajusté. Un administrateur va s’en occuper.',
   'games.rulesConflictHelp':
     'Aucune combinaison ne respecte toutes les règles. Demande à un administrateur d’ajuster les règles.',
   'games.ratingsMissing':
@@ -510,7 +517,7 @@ export const fr = {
     'Si tu ne peux plus venir, annule ta présence : ta place ira à un remplaçant.',
   'availability.withdraw': 'Je ne peux plus venir',
   'availability.withdrawConfirm':
-    'Annuler ta présence? Ta place ira à un remplaçant et les équipes seront refaites.',
+    'Annuler ta présence ? Ta place ira à un remplaçant et les équipes seront refaites.',
   'availability.absenceSaved': 'Absence enregistrée.',
   'availability.gameClosed': 'Ce match n’accepte plus de présences.',
   'availability.substituteNoConfirm':
@@ -531,9 +538,9 @@ export const fr = {
   'games.lineupSoonAdmin':
     'Publie les équipes quand les présences sont prêtes.',
   'games.lineupSoon':
-    'Les équipes s’affichent ici dès qu’un responsable les publie.',
+    'Les équipes s’affichent ici dès qu’un administrateur les publie.',
   'subs.subtitle': 'Les places ouvertes et la banque de remplaçants.',
-  'subs.openPositions': 'Postes à combler',
+  'subs.openPositions': 'Places à combler',
   'subs.positionNotSelected':
     'Ce poste ne fait pas partie des postes que tu acceptes.',
   'subs.poolEmpty':
@@ -585,15 +592,16 @@ export const fr = {
   'balance.subtitle': 'Ce que tu as payé et ce qu’il reste.',
   'balance.subtitleAdmin': 'Les frais et les versements de la saison.',
   'balance.adminNoProfile':
-    'Ton compte n’a pas de fiche de joueur. Un responsable gère les soldes des joueurs.',
+    'Ton compte n’a pas de fiche de joueur. Un administrateur gère les soldes des joueurs.',
   'balance.manageAll': 'Voir tous les soldes',
   'balance.noPlanHelp':
-    'Un responsable va t’indiquer le montant et les dates de paiement.',
+    'Un administrateur va t’indiquer le montant et les dates de paiement.',
   'balance.paymentMethods': 'Modes de paiement : {methods}.',
   'balance.payHelp':
-    'Pour payer, utilise la méthode convenue avec un responsable. Le paiement apparaîtra ici dès qu’il sera enregistré.',
+    'Pour payer, utilise la méthode convenue avec un administrateur. Le paiement apparaîtra ici dès qu’il sera enregistré.',
   'balance.paidOf': 'Payé {paid} sur {total}.',
   'balance.remaining': 'Reste {amount}.',
+  'balance.paidAmount': 'Payé {amount}.',
   'balance.total': 'Frais de saison',
   'balance.paid': 'Payé',
   'balance.outstanding': 'Montant à payer',
@@ -602,7 +610,7 @@ export const fr = {
   'balance.dueOn': 'Dû le {date}',
   'balance.dueDatePending': 'Date à confirmer',
   'balance.paidOn': 'Payé le {date}',
-  'balance.paymentDate': 'Date du versement',
+  'balance.paymentDate': 'Date du paiement',
   'balance.status.paid': 'Payé',
   'balance.status.partial': 'Partiel',
   'balance.status.overdue': 'En retard',
@@ -612,8 +620,8 @@ export const fr = {
     'Les frais de saison ne sont pas encore fixés. Règle-les dans les paramètres avant de créer les versements.',
   'balance.noPlanShort': 'Sans versements',
   'balance.noPayments':
-    'Aucun versement pour l’instant. Un responsable enregistre les paiements reçus.',
-  'balance.recordPayment': 'Enregistrer un versement',
+    'Aucun paiement pour l’instant. Un administrateur enregistre les paiements reçus.',
+  'balance.recordPayment': 'Enregistrer un paiement',
   'balance.amount': 'Montant',
   'balance.method': 'Méthode',
   'balance.note': 'Note',
@@ -628,7 +636,7 @@ export const fr = {
   'balance.secondDue': 'Date du deuxième versement',
   'balance.firstPercent': 'Part du premier versement',
   'balance.amountInvalid': 'Entre un montant valide.',
-  'balance.paymentNotFound': 'Versement introuvable.',
+  'balance.paymentNotFound': 'Paiement introuvable.',
   'balance.applyDefaults': 'Appliquer les frais par défaut',
 
   'chat.title': 'Discussion',
@@ -637,8 +645,8 @@ export const fr = {
   'chat.optionNumber': 'Choix {number}',
   'chat.messageLabel': 'Ton message',
   'chat.deleteConfirm':
-    'Supprimer ce message? Il disparaîtra pour tout le monde.',
-  'chat.closePollConfirm': 'Clôturer ce sondage? Les votes seront figés.',
+    'Supprimer ce message ? Il disparaîtra pour tout le monde.',
+  'chat.closePollConfirm': 'Clôturer ce sondage ? Les votes seront figés.',
   'chat.placeholder': 'Écris un message…',
   'chat.send': 'Envoyer',
   'chat.sent': 'Message envoyé.',
@@ -667,6 +675,8 @@ export const fr = {
   'chat.tooManyOptions': 'Trop de choix pour ce sondage.',
   'chat.pollNotFound': 'Sondage introuvable.',
   'chat.messageNotFound': 'Message introuvable.',
+  'chat.newMessages.one': '{count} nouveau message',
+  'chat.newMessages.many': '{count} nouveaux messages',
 
   'profile.title': 'Mon profil',
   'profile.firstName': 'Prénom',
@@ -677,32 +687,33 @@ export const fr = {
   'profile.substitute': 'Remplaçant',
   'profile.notifications': 'Notifications',
   'profile.emailNotifications': 'Recevoir les avis par courriel',
-  'profile.pushNotifications': 'Recevoir les notifications',
+  'profile.pushNotifications': 'Recevoir les notifications sur l’appareil',
   'profile.pushEnable': 'Activer sur cet appareil',
   'profile.pushDisable': 'Désactiver sur cet appareil',
   'profile.pushEnabled': 'Notifications activées sur cet appareil.',
   'profile.pushUnsupported':
-    'Ton navigateur ne prend pas en charge les notifications push.',
+    'Ton navigateur ne prend pas en charge les notifications sur l’appareil.',
   'profile.pushDenied':
     'Les notifications sont bloquées dans les réglages du navigateur.',
   'profile.pushUnconfigured':
-    'Les notifications push ne sont pas activées pour la ligue.',
+    'Les notifications sur l’appareil ne sont pas activées pour la ligue.',
   'profile.pushFailed': 'Impossible d’activer les notifications. Réessaie.',
   'profile.notificationsHelp':
     'Le courriel se règle ici. Pour recevoir les notifications sur cet appareil, active-les plus bas.',
   'profile.pushIosInstall':
     'Sur iPhone, ajoute d’abord l’application à l’écran d’accueil.',
   'profile.saved': 'Profil enregistré.',
+  'profile.notificationsSaved': 'Préférences de notification enregistrées.',
   'profile.changePassword': 'Changer le mot de passe',
   'profile.currentPassword': 'Mot de passe actuel',
   'profile.newPassword': 'Nouveau mot de passe',
   'profile.passwordChanged': 'Mot de passe modifié.',
   'profile.balance': 'Ton solde',
   'profile.ratingsHidden':
-    'Les notes restent confidentielles. Elles servent seulement à balancer les équipes.',
+    'Les notes restent confidentielles. Elles servent seulement à équilibrer les équipes.',
   'profile.ageHelp': 'Sert à équilibrer l’âge des deux équipes.',
   'profile.positionHelp':
-    'Ton poste principal. Il guide le balancement des équipes.',
+    'Ton poste principal. Il guide l’équilibre des équipes.',
   'profile.currentPasswordInvalid': 'Le mot de passe actuel est incorrect.',
   'profile.ageInvalid': 'Entre un âge valide.',
 
@@ -745,9 +756,10 @@ export const fr = {
   'profile.unknownDevice': 'Appareil inconnu',
   'profile.revokeOthers': 'Déconnecter les autres appareils',
   'profile.revokeOthersConfirm':
-    'Déconnecter tous les autres appareils? Ils devront se reconnecter.',
+    'Déconnecter tous les autres appareils ? Ils devront se reconnecter.',
   'profile.noOtherSessions': 'Aucun autre appareil n’était connecté.',
-  'profile.moreSessions': 'Voir les {count} autres sessions',
+  'profile.moreSessions.one': 'Voir {count} autre session',
+  'profile.moreSessions.many': 'Voir les {count} autres sessions',
   'profile.sessionsRevoked.one': '{count} appareil déconnecté.',
   'profile.sessionsRevoked.many': '{count} appareils déconnectés.',
   'profile.adminSection': 'Administration',
@@ -756,7 +768,7 @@ export const fr = {
   'profile.signOutHelp': 'Tu peux fermer ta session sur cet appareil.',
   'notifications.title': 'Notifications',
   'notifications.settings': 'Choisir les avis reçus',
-  'notifications.empty': 'Aucune notification.',
+  'notifications.empty': 'Aucun avis.',
   'notifications.emptyHelp':
     'Les avis de match, de remplacement et de solde apparaîtront ici.',
   'notifications.emptyHelpAdmin':
@@ -764,8 +776,8 @@ export const fr = {
   'notifications.noneUnread': 'Tout est lu.',
   'notifications.markAll': 'Tout marquer comme lu',
   'notifications.allRead':
-    'Les notifications affichées sont marquées comme lues.',
-  'notifications.unread': 'Nouvelle',
+    'Les avis affichés sont marqués comme lus.',
+  'notifications.unread': 'Nouvel avis',
   'notifications.unreadCount.one': '{count} non lue',
   'notifications.unreadCount.many': '{count} non lues',
   'notifications.subNeeded.title': 'Remplaçant recherché : {position}',
@@ -773,21 +785,21 @@ export const fr = {
     'Poste à pourvoir : {position}. Match du {date} à {time} ({location}).',
   'notifications.subClaimed.title': 'Poste comblé',
   'notifications.subClaimed.body':
-    'Poste {position} comblé par {name} pour le match du {date}.',
+    'Poste comblé par {name} pour le match du {date}.',
   'notifications.subBumped.title': 'Poste retiré',
   'notifications.subBumped.body':
     'Le joueur régulier est de retour. Tu n’es plus dans le match du {date}.',
   'notifications.accountAccess.title': 'Ton accès à la ligue',
   'notifications.accountAccess.body':
-    'Choisis ton mot de passe pour entrer dans l’application.',
+    'Ton accès est prêt. Ouvre le courriel d’invitation pour choisir ton mot de passe.',
   'notifications.passwordReset.title': 'Réinitialisation du mot de passe',
   'notifications.passwordReset.body':
-    'Choisis un nouveau mot de passe pour ton compte.',
+    'Ouvre le courriel de réinitialisation pour choisir un nouveau mot de passe.',
   'notifications.gameCancelled.title': 'Match annulé',
   'notifications.gameCancelled.body': 'Le match du {date} à {time} est annulé.',
   'notifications.channel.inApp': 'Dans l’application',
   'notifications.channel.email': 'Courriel',
-  'notifications.channel.push': 'Notification push',
+  'notifications.channel.push': 'Notification sur l’appareil',
   'notifications.balanceOverdue.title': 'Solde en retard',
   'notifications.balanceOverdue.body':
     'Le montant de {amount} est à payer depuis le {date}.',
@@ -796,16 +808,17 @@ export const fr = {
   'email.accountAccess.lead':
     'Ta place dans la ligue est prête. Il reste juste à choisir ton mot de passe.',
   'email.accountAccess.cta': 'Choisir mon mot de passe',
-  'email.accountAccess.expiry': 'Ce lien est valable {count} jours.',
+  'email.accountAccess.expiry.one': 'Ce lien est valable {count} jour.',
+  'email.accountAccess.expiry.many': 'Ce lien est valable {count} jours.',
   'email.accountAccess.ignore':
-    'Si tu n’as pas demandé ce lien, tu peux ignorer ce courriel.',
+    'Si tu ne t’attendais pas à cette invitation, tu peux ignorer ce courriel.',
   'email.passwordReset.lead':
     'Tu as demandé un nouveau mot de passe pour ton compte de la ligue.',
   'email.passwordReset.cta': 'Choisir un nouveau mot de passe',
   'email.passwordReset.ignore':
     'Si tu n’as pas demandé ce changement, ignore ce courriel. Ton mot de passe actuel reste bon.',
   'email.fallback':
-    'Le bouton ne fonctionne pas? Copie ce lien dans ton navigateur.',
+    'Le bouton ne fonctionne pas ? Copie ce lien dans ton navigateur.',
   'email.openApp': 'Ouvrir l’application',
   'email.manage': 'Gérer mes avis',
   'email.unsubscribe':
@@ -818,14 +831,14 @@ export const fr = {
   'admin.roleHelp':
     'Chaque rôle ouvre un ensemble de capacités. Les capacités du rôle choisi sont listées dessous.',
   'admin.roleSaved': 'Rôle enregistré.',
-  'admin.status': 'Participation',
+  'admin.status': 'Accès au compte',
   'admin.statusHelp':
-    'Un joueur désactivé reste dans l’historique, mais sort des alignements et de la liste des remplaçants.',
-  'admin.statusSaved': 'Participation enregistrée.',
+    'Accès du compte enregistré. Un joueur désactivé reste dans l’historique, mais sort des alignements et de la liste des remplaçants.',
+  'admin.statusSaved': 'Accès au compte enregistré.',
   'admin.active': 'Actif',
   'admin.inactive': 'Désactivé',
   'admin.deletePlayer': 'Supprimer le joueur',
-  'admin.deletePlayerTitle': 'Supprimer {name}?',
+  'admin.deletePlayerTitle': 'Supprimer {name} ?',
   'admin.deletePlayerConfirm':
     'Le compte, la fiche, les présences, les évaluations, les paiements, les messages et les règles seront supprimés. Cette action est définitive.',
   'admin.deletePlayerHelp':
@@ -852,10 +865,8 @@ export const fr = {
   'admin.overdueBalance': 'Solde en retard',
   'admin.toReceive': 'À recevoir',
   'admin.unanswered': 'Sans réponse',
-  'admin.noPlanBadge': 'Sans versements',
   'admin.unansweredNames': 'Sans réponse : {names}',
   'admin.openSheet': 'Ouvrir la feuille de match',
-  'admin.withoutPlan': 'Sans versements',
   'admin.withoutPlanTitle': 'Sans versements ({count})',
   'admin.noUnpaid': 'Aucun montant à recevoir.',
   'admin.withoutPlanHelp': 'Ces joueurs n’ont pas encore de frais ni de dates.',
@@ -870,7 +881,7 @@ export const fr = {
   'admin.emailHint': 'Le joueur recevra son invitation à cette adresse.',
   'admin.ageHint': 'Sert à équilibrer l’âge des équipes.',
   'admin.deactivateConfirm':
-    'Désactiver {name}? Le joueur sort des alignements et de la liste des remplaçants. Son historique reste.',
+    'Désactiver {name} ? Le joueur sort des alignements et de la liste des remplaçants. Son historique reste.',
   'admin.games': 'Matchs',
   'admin.gamesHelp':
     'La prochaine date est proposée automatiquement. Vérifie l’heure et le lieu avant de créer.',
@@ -892,7 +903,7 @@ export const fr = {
   'admin.locationInUse':
     'Ce lieu est utilisé par un match. Il ne peut pas être supprimé.',
   'admin.locationDeleteConfirm':
-    'Supprimer ce lieu? S’il est utilisé par un match, la suppression sera refusée.',
+    'Supprimer ce lieu ? S’il est utilisé par un match, la suppression sera refusée.',
   'admin.locationEdit': 'Modifier le lieu',
   'admin.locationNone': 'Aucun lieu',
   'admin.locationCreateFirst': 'Ajoute un lieu avant de créer un match.',
@@ -913,7 +924,7 @@ export const fr = {
   'admin.cancelHelp':
     'L’annulation avise tous les joueurs et ne peut pas être annulée.',
   'admin.cancelGameQuestion':
-    'Annuler le match du {date}? Tous les joueurs seront avisés.',
+    'Annuler le match du {date} ? Tous les joueurs seront avisés.',
   'admin.rules': 'Règles d’alignement',
   'admin.balances': 'Soldes',
   'admin.balancesHelp':
@@ -921,7 +932,7 @@ export const fr = {
   'admin.openPlayer': 'Voir le joueur',
   'admin.backToPlayers': 'Retour aux joueurs',
   'balance.deletePaymentConfirm':
-    'Supprimer ce versement? Le solde sera recalculé.',
+    'Supprimer le paiement de {amount} du {date} ? Le solde sera recalculé et un versement pourrait redevenir en retard.',
   'admin.settings': 'Paramètres',
   'admin.settingsHelp': 'Ces valeurs s’appliquent dès l’enregistrement.',
   'admin.substitutes': 'Remplaçants',
@@ -933,11 +944,11 @@ export const fr = {
   'admin.inviteEmailFailed':
     'Joueur créé, mais l’invitation n’est pas partie. Ouvre sa fiche pour renvoyer le lien.',
   'admin.reinvite': 'Renvoyer le lien de mot de passe',
-  'admin.inviteResent': 'Lien de connexion renvoyé.',
-  'admin.paymentDeleted': 'Versement supprimé.',
+  'admin.inviteResent': 'Lien de mot de passe renvoyé.',
+  'admin.paymentDeleted': 'Paiement supprimé.',
   'rating.notRated': 'Non noté',
   'balance.applyDefaultsConfirm':
-    'Appliquer les frais par défaut? Le plan actuel sera remplacé.',
+    'Appliquer les frais par défaut ? Le plan actuel sera remplacé.',
   'admin.evaluationsSeason': 'Fiches de saison',
   'admin.evaluationsGames': 'Matchs à évaluer',
   'admin.evaluationsEmpty': 'Aucun joueur à évaluer.',
@@ -955,7 +966,7 @@ export const fr = {
   'admin.rulesEmpty':
     'Aucune règle. Les équipes sont générées sans contrainte de paire.',
   'admin.deleteRuleConfirm':
-    'Supprimer cette règle? Elle ne s’appliquera plus aux prochains alignements.',
+    'Supprimer cette règle ? Elle ne s’appliquera plus aux prochains alignements.',
   'ruleMode.together': 'Doivent jouer ensemble',
   'ruleMode.togetherHelp': 'L’alignement place toujours ces deux joueurs dans la même équipe.',
   'ruleMode.togetherShort': 'Ensemble',
@@ -987,7 +998,7 @@ export const fr = {
   'admin.gameCancelled': 'Match annulé.',
   'admin.gameExists': 'Un match existe déjà à cette date et cette heure.',
   'admin.gameNotScheduled': 'Seuls les matchs à venir peuvent être modifiés.',
-  'admin.paymentSaved': 'Versement enregistré.',
+  'admin.paymentSaved': 'Paiement enregistré.',
   'admin.planSaved': 'Plan de paiement enregistré.',
   'admin.noPlayers': 'Aucun joueur.',
   'admin.filter': 'Filtrer',
@@ -1033,9 +1044,8 @@ export const fr = {
   'admin.status.active': 'Actif',
   'admin.status.inactive': 'Inactif',
   'admin.deactivate': 'Désactiver',
-  'admin.activate': 'Réactiver',
+  'admin.reactivate': 'Réactiver',
   'admin.overview': 'Vue d’ensemble',
-  'admin.nextGame': 'Prochain match',
   'admin.openRequests': 'Demandes ouvertes',
   'admin.overdueBalances': 'Soldes en retard',
   'admin.totalPlayers': 'Joueurs actifs',
@@ -1054,8 +1064,8 @@ export const fr = {
   'error.forbidden': 'Accès refusé.',
   'error.notFound': 'Introuvable.',
   'error.validation': 'Vérifie les champs du formulaire.',
-  'error.conflict': 'Cette action ne marche plus avec l’état actuel.',
-  'error.rateLimited': 'Trop de requêtes. Réessaie dans un instant.',
+  'error.conflict': 'Cette action n’est plus possible. Recharge la page.',
+  'error.rateLimited': 'Trop de tentatives. Réessaie dans un instant.',
   'error.sessionRequired': 'Connecte-toi pour continuer.',
   'error.invalidDate': 'Date invalide.',
   'error.invalidTime': 'Heure invalide.',
@@ -1063,8 +1073,8 @@ export const fr = {
   'error.accountNotFound': 'Compte introuvable.',
   'admin.emailExists': 'Un compte existe déjà avec ce courriel.',
   'admin.playerCreateFailed': 'Le joueur n’a pas pu être créé.',
-  'admin.inviteFailed': 'Le lien n’a pas pu être mis en file d’envoi.',
-  'error.csrf': 'Requête invalide. Recharge la page.'
+  'admin.inviteFailed': 'Le lien n’a pas pu être envoyé.',
+  'error.csrf': 'La page a expiré. Recharge-la.'
 } as const;
 
 export type I18nKey = keyof typeof fr;

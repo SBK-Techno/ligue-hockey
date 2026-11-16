@@ -130,7 +130,7 @@
 					: latest.kind === 'poll'
 						? (latest.poll?.question ?? t('chat.pollTag'))
 						: (latest.body ?? '')
-				: t('home.steps.chatEmpty'),
+				: t('chat.empty'),
 			action: { href: '/discussion', label: t('home.steps.openChat') }
 		});
 
@@ -179,11 +179,11 @@
 				</span>
 
 				<div class="min-w-0 flex-1">
-					<div class="flex items-baseline justify-between gap-2">
-						<p class="text-sm font-semibold leading-5">{step.title}</p>
+					<div class="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+						<p class="min-w-0 text-sm font-semibold leading-5">{step.title}</p>
 						{#if step.action && step.id !== 'presence'}
 							<a
-								class="link -my-2 inline-flex min-h-11 shrink-0 items-center text-xs"
+								class="link -my-2 inline-flex min-h-11 items-center text-xs"
 								href={step.action.href}
 							>
 								{step.action.label}

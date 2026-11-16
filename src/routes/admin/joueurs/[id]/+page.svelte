@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { balanceStatusDefinition } from '#config/balance-status.ts';
 	import { MONEY_INPUT } from '#config/money.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
@@ -9,6 +10,7 @@
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { SETTINGS } from '#config/settings-registry.ts';
 	import {
+		currencySymbol,
 		formatAge,
 		formatCount,
 		formatDate,
@@ -17,6 +19,7 @@
 		formatTimestamp,
 		t
 	} from '#lib/shared/i18n/index.ts';
+	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import type { PageProps } from './$types';
 
@@ -28,19 +31,13 @@
 	const isSelf = $derived(
 		data.actor.kind === 'user' && player?.userId === data.actor.userId
 	);
-
-	const statusKey = {
-		paid: 'balance.status.paid',
-		partial: 'balance.status.partial',
-		overdue: 'balance.status.overdue',
-		upcoming: 'balance.status.upcoming'
-	} as const;
+	const symbol = $derived(currencySymbol(data.currency));
 </script>
 
 <FormFeedback {form} class="mb-4" />
 
 {#if !player}
-	<div class="card">{t('error.playerNotFound')}</div>
+	<div class="card"><h1 class="text-lg">{t('error.playerNotFound')}</h1></div>
 {:else}
 	<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
 		<div class="min-w-0">
@@ -54,9 +51,7 @@
 		</div>
 		<div class="flex flex-wrap gap-2">
 			{#if player.role !== 'player'}
-				<span class="badge-ice">
-					{t(player.role === 'admin' ? 'admin.role.admin' : 'admin.role.manager')}
-				</span>
+				<span class="badge-ice">{t(roleDefinition(player.role)?.labelKey ?? 'admin.role.player')}</span>
 			{/if}
 			{#if !player.active}
 				<span class="badge-alert">{t('admin.inactive')}</span>
@@ -120,7 +115,7 @@
 					<form method="POST" action="?/status" use:progressiveForm class="mt-3">
 						<input type="hidden" name="active" value={player.active ? 'false' : 'true'} />
 						<button class="btn-secondary btn-sm" type="submit">
-							{player.active ? t('admin.inactive') : t('admin.active')}
+							{player.active ? t('admin.deactivate') : t('admin.reactivate')}
 						</button>
 					</form>
 				{/if}
@@ -248,7 +243,7 @@
 		</section>
 	</div>
 
-	<section class="card mt-4">
+	<section id="solde" class="card mt-4 scroll-mt-[var(--anchor-offset)]">
 		<div class="section-title">
 			<h2>{t('balance.title')}</h2>
 			<div class="flex flex-wrap gap-2">
@@ -284,12 +279,12 @@
 		{/if}
 
 		<div class="mt-5 grid gap-5 lg:grid-cols-2">
-			<form method="POST" action="?/plan" use:progressiveForm class="space-y-3">
+			<form id="plan" method="POST" action="?/plan" use:progressiveForm class="space-y-3">
 				<h3 class="text-sm font-semibold">{t('balance.editPlan')}</h3>
 				<div>
 					<label class="label" for="total">{t('balance.totalCents')}</label>
 					<div class="relative">
-						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
+						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">{symbol}</span>
 						<input class="input pl-7" id="total" name="total" type="number" inputmode="decimal" min={MONEY_INPUT.min} step={MONEY_INPUT.step} value={data.plan?.total} required />
 					</div>
 				</div>
@@ -323,13 +318,14 @@
 				<button class="btn-secondary btn-sm" type="submit">{t('common.save')}</button>
 			</form>
 
+			{#if data.balance?.planActive}
 			<form method="POST" action="?/payment" use:progressiveForm class="space-y-3">
 				<h3 class="text-sm font-semibold">{t('balance.recordPayment')}</h3>
 				<div class="grid gap-3 sm:grid-cols-2">
 					<div>
 						<label class="label" for="amount">{t('balance.amount')}</label>
 						<div class="relative">
-							<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
+							<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">{symbol}</span>
 							<input class="input pl-7" id="amount" name="amount" type="number" inputmode="decimal" min={MONEY_INPUT.positiveMin} step={MONEY_INPUT.step} value={data.plan?.amount} required />
 						</div>
 					</div>
@@ -352,6 +348,14 @@
 				</div>
 				<button class="btn-primary btn-sm" type="submit">{t('balance.recordPayment')}</button>
 			</form>
+			{:else}
+				<div class="space-y-2">
+					<h3 class="text-sm font-semibold">{t('balance.recordPayment')}</h3>
+					<p class="text-sm text-muted">{t('balance.noPlan')}</p>
+					<p class="hint">{t('balance.noPlanHelp')}</p>
+					<a class="btn-secondary btn-sm" href="#plan">{t('balance.editPlan')}</a>
+				</div>
+			{/if}
 		</div>
 	</section>
 
@@ -376,7 +380,10 @@
 							<input type="hidden" name="paymentId" value={payment.id} />
 							<ConfirmSubmit
 								label={t('common.delete')}
-								question={t('balance.deletePaymentConfirm')}
+								question={t('balance.deletePaymentConfirm', {
+									amount: formatMoney(payment.amountCents, data.currency),
+									date: formatDate(payment.paidAt, 'year')
+								})}
 								class="btn-ghost btn-sm"
 							/>
 						</form>
@@ -387,16 +394,23 @@
 		{#if data.balance}
 			<ul role="list" class="mt-3 space-y-1 text-xs text-muted">
 				{#each data.balance.installments as installment (installment.number)}
+					{@const installmentStatus = balanceStatusDefinition(installment.status)}
 					<li class="flex flex-wrap items-center gap-2">
 						<span>{t('balance.installment', { number: installment.number })} :</span>
-						<span>{formatMoney(installment.remainingCents, data.balance.currency)}</span>
+						<span class="numeric">{formatMoney(installment.remainingCents, data.balance.currency)}</span>
 						<span>
-							{installment.dueDate
-								? t('balance.dueOn', { date: formatDate(installment.dueDate, 'year') })
-								: t('balance.dueDatePending')}
+							{#if installment.status === 'paid'}
+								{#if installment.paidAt}
+									{t('balance.paidOn', { date: formatDate(installment.paidAt, 'year') })}
+								{/if}
+							{:else if installment.dueDate}
+								{t('balance.dueOn', { date: formatDate(installment.dueDate, 'year') })}
+							{:else}
+								{t('balance.dueDatePending')}
+							{/if}
 						</span>
-						<span class={installment.status === 'overdue' ? 'badge-alert' : 'badge'}>
-							{t(statusKey[installment.status])}
+						<span class={badgeClass(installmentStatus.tone)}>
+							{t(installmentStatus.labelKey)}
 						</span>
 					</li>
 				{/each}

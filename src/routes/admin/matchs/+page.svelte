@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
-	import { t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import GameRow from '#lib/ui/GameRow.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
@@ -107,9 +107,9 @@
 			</div>
 		{:else}
 			<ul role="list" class="divide-y divide-line/70">
-				{#each data.upcoming as game, index (game.id)}
+				{#each data.upcoming as game (game.id)}
 					<li>
-						{#if index === 0 && game.status === 'scheduled'}
+						{#if game.id === data.nextId}
 							<div class="border-b border-line bg-ice/[0.04]">
 								<GameRow
 									{game}
@@ -129,7 +129,7 @@
 
 	{#if data.past.length > 0}
 		<SectionCard
-			title="{t('games.past')} ({data.pastTotal})"
+			title="{t('games.past')} ({data.past.length})"
 			href={data.showArchive
 				? '/admin/matchs'
 				: data.pastTotal > data.past.length
@@ -138,7 +138,11 @@
 			linkLabel={data.showArchive
 				? t('games.hideArchive')
 				: data.pastTotal > data.past.length
-					? t('games.showArchive', { count: data.pastTotal })
+					? formatCount(
+						data.pastTotal,
+						'games.showArchive.one',
+						'games.showArchive.many'
+					)
 					: undefined}
 		>
 			<ul

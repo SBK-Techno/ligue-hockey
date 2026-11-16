@@ -4,8 +4,10 @@
 	import { formatCount, formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import RatingScale from '#lib/ui/RatingScale.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import { prefersReducedMotion, scrollBehavior } from '#lib/ui/scroll.ts';
 	import { tick } from 'svelte';
 	import type { PageProps } from './$types';
 
@@ -31,19 +33,30 @@
 				? players.findIndex((player) => player.playerId === savedId)
 				: -1;
 			const savedPlayer = savedIndex >= 0 ? players[savedIndex] : null;
-			const targetId = failedId
-				? failedId
-				: savedPlayer && !savedPlayer.complete
-					? savedPlayer.playerId
-					: savedIndex >= 0
-						? (players.slice(savedIndex + 1).find((player) => !player.complete)?.playerId ??
-							players.find((player) => !player.complete)?.playerId ??
-							null)
-						: null;
-			if (!targetId) return;
+			const nextIncomplete = savedIndex >= 0
+				? (players.slice(savedIndex + 1).find((player) => !player.complete)?.playerId ??
+					players.find((player) => !player.complete)?.playerId ??
+					null)
+				: null;
+			// Une feuille complète ne laisse pas le focus sur le corps de page :
+			// on garde la feuille enregistrée ouverte quand il n'y a plus rien à remplir.
+			const targetId =
+				failedId ??
+				(savedPlayer
+					? savedPlayer.complete
+						? (nextIncomplete ?? savedPlayer.playerId)
+						: savedPlayer.playerId
+					: null);
+			if (!targetId) {
+				document.getElementById('contenu')?.focus({ preventScroll: true });
+				return;
+			}
 			const sheet = document.getElementById(`assessment-${targetId}`);
 			if (sheet instanceof HTMLDetailsElement) sheet.open = true;
-			sheet?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+			sheet?.scrollIntoView({
+				block: 'start',
+				behavior: scrollBehavior(prefersReducedMotion())
+			});
 			sheet?.querySelector('summary')?.focus({ preventScroll: true });
 		});
 	});
@@ -111,7 +124,9 @@
 				</svg>
 			</summary>
 
-			{#key `${player.version}:${JSON.stringify(player.values)}`}
+			{#key `${player.version}:${JSON.stringify(player.values)}:${
+				form?.playerId === player.playerId ? (form.revision ?? '') : ''
+			}`}
 				<form
 					method="POST"
 					action="?/save"
@@ -136,9 +151,14 @@
 							<button class="btn-primary btn-sm" type="submit">
 								{t('rating.saveNext')}
 							</button>
-							<button class="btn-ghost btn-sm" type="submit" name="clear" value="1">
-								{t('rating.notSeenGame')}
-							</button>
+							<ConfirmSubmit
+								label={t('rating.notSeenGame')}
+								question={t('rating.notSeenGameConfirm', { name: player.fullName })}
+								confirmLabel={t('rating.notSeenGame')}
+								class="btn-ghost btn-sm"
+								submitName="clear"
+								submitValue="1"
+							/>
 						</div>
 					{/if}
 				</form>

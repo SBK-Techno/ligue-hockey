@@ -222,15 +222,31 @@
 									</div>
 								</form>
 
-								<form method="POST" action="?/delete" use:progressiveForm class="mt-3">
-									<input type="hidden" name="id" value={location.id} />
-									<ConfirmSubmit
-										label={t('common.delete')}
-										question={t('admin.locationDeleteConfirm')}
-										confirmLabel={t('common.delete')}
-										class="btn-ghost btn-sm"
-									/>
-								</form>
+								{#if (metric?.gameCount ?? 0) > 0}
+									<div class="mt-3">
+										<button
+											class="btn-ghost btn-sm"
+											type="button"
+											disabled
+											aria-describedby="location-delete-{location.id}"
+										>
+											{t('common.delete')}
+										</button>
+										<p class="hint" id="location-delete-{location.id}">
+											{t('admin.locationInUse')}
+										</p>
+									</div>
+								{:else}
+									<form method="POST" action="?/delete" use:progressiveForm class="mt-3">
+										<input type="hidden" name="id" value={location.id} />
+										<ConfirmSubmit
+											label={t('common.delete')}
+											question={t('admin.locationDeleteConfirm')}
+											confirmLabel={t('common.delete')}
+											class="btn-ghost btn-sm"
+										/>
+									</form>
+								{/if}
 							</details>
 						</div>
 					</li>

@@ -2,6 +2,7 @@
 	import { RATING_ATTRIBUTES } from '#config/rating-attributes.ts';
 	import { positionDefinition } from '#config/positions.ts';
 	import {
+		formatCount,
 		formatDecimal,
 		formatTimestamp,
 		t
@@ -24,7 +25,6 @@
 
 <FormFeedback {form} class="mb-4" />
 
-{#key data.ratings.updatedAt}
 <form method="POST" action="?/save" use:progressiveForm={{ reset: false }} class="space-y-4">
 	<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
 		<div class="space-y-4">
@@ -38,6 +38,7 @@
 							name={attribute.key}
 							label={t(attribute.labelKey)}
 							value={data.ratings.values[attribute.key]}
+							clearable
 						/>
 					{/each}
 				</div>
@@ -51,6 +52,7 @@
 							label={t(attribute.labelKey)}
 							help={t(attribute.helpKey)}
 							value={data.ratings.positionValues[attribute.key]}
+							clearable
 						/>
 					{/each}
 				</div>
@@ -112,7 +114,11 @@
 				</dl>
 				{#if data.ratings.form.games > 0}
 					<p class="mt-2 text-xs text-muted">
-						{t('rating.formHelp', { count: data.ratings.form.games })}
+						{formatCount(
+							data.ratings.form.games,
+							'rating.formHelp.one',
+							'rating.formHelp.many'
+						)}
 					</p>
 				{/if}
 			</section>
@@ -123,4 +129,3 @@
 		<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
 	</div>
 </form>
-{/key}

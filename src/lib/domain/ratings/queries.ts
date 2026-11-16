@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
-import { games } from '#lib/domain/games/schema.ts';
+import { games, gameSlots } from '#lib/domain/games/schema.ts';
 import { playerRatings, gamePlayerRatings, type PlayerRatingRow } from './schema.ts';
 
 export function listRatings(playerId: string): PlayerRatingRow[] {
@@ -22,15 +22,31 @@ export function listRatingsForPlayers(
 		.all();
 }
 
-export function upsertRatings(
+/**
+ * Remplace la fiche de saison d'un joueur : les clés fournies sont écrites,
+ * les clés gérées absentes sont supprimées, le tout dans une transaction.
+ */
+export function replaceSeasonRatings(
 	playerId: string,
 	values: Record<string, number>,
+	managedAttributes: readonly string[],
 	updatedAt: number,
 	updatedBy: string | null
 ): void {
-	const entries = Object.entries(values);
 	db.transaction((tx) => {
-		for (const [attribute, value] of entries) {
+		const provided = new Set(Object.keys(values));
+		const missing = managedAttributes.filter((attribute) => !provided.has(attribute));
+		if (missing.length > 0) {
+			tx.delete(playerRatings)
+				.where(
+					and(
+						eq(playerRatings.playerId, playerId),
+						inArray(playerRatings.attribute, missing as PlayerRatingRow['attribute'][])
+					)
+				)
+				.run();
+		}
+		for (const [attribute, value] of Object.entries(values)) {
 			tx.insert(playerRatings)
 				.values({
 					playerId,
@@ -163,6 +179,13 @@ export function listPlayerGameRatings(
 		})
 		.from(gamePlayerRatings)
 		.innerJoin(games, eq(games.id, gamePlayerRatings.gameId))
+		.innerJoin(
+			gameSlots,
+			and(
+				eq(gameSlots.gameId, gamePlayerRatings.gameId),
+				eq(gameSlots.assignedPlayerId, gamePlayerRatings.playerId)
+			)
+		)
 		.where(eq(gamePlayerRatings.playerId, playerId))
 		.orderBy(desc(games.gameDate), desc(games.startTime), desc(games.id), asc(gamePlayerRatings.attribute))
 		.all();

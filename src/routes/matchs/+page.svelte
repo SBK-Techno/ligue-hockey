@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { can } from '#lib/domain/auth/policy.ts';
-	import { t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, t } from '#lib/shared/i18n/index.ts';
 	import GameRow from '#lib/ui/GameRow.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
@@ -11,6 +11,7 @@
 	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'manageGames'));
 	const visiblePast = $derived(data.past.slice(0, 6));
 	const archivedPast = $derived(data.past.slice(6));
+	let archiveOpen = $state(false);
 
 </script>
 
@@ -34,9 +35,9 @@
 			</div>
 		{:else}
 			<ul role="list" class="divide-y divide-line/70">
-				{#each data.upcoming as game, index (game.id)}
+				{#each data.upcoming as game (game.id)}
 					<li>
-						{#if index === 0 && game.status === 'scheduled'}
+						{#if game.id === data.nextId}
 							<div class="border-b border-line bg-ice/[0.04]">
 								<GameRow {game} next />
 							</div>
@@ -57,11 +58,17 @@
 				{/each}
 			</ul>
 			{#if archivedPast.length > 0}
-				<details class="group border-t border-line">
+				<details class="group border-t border-line" bind:open={archiveOpen}>
 					<summary
 						class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium text-muted transition-colors hover:bg-ink/[0.03] hover:text-ink"
 					>
-						{t('games.showArchive', { count: data.past.length })}
+						{archiveOpen
+							? t('games.hideArchive')
+							: formatCount(
+									archivedPast.length,
+									'games.showArchive.one',
+									'games.showArchive.many'
+								)}
 						<svg
 							viewBox="0 0 24 24"
 							class="h-4 w-4 transition-transform group-open:rotate-180"

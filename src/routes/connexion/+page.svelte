@@ -2,6 +2,7 @@
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import { resetSuccessKey } from '#lib/ui/reset-mode.ts';
 	import PasswordField from '#lib/ui/PasswordField.svelte';
 	import type { PageProps } from './$types';
 
@@ -9,11 +10,11 @@
 </script>
 
 <div class="card">
-	<h2 class="text-2xl">{t('auth.title')}</h2>
+	<h1 class="text-2xl">{t('auth.title')}</h1>
 	<p class="mt-1 text-sm text-muted">{t('auth.subtitle')}</p>
 
 	{#if data.reset}
-		<p class="success mt-5">{t('auth.reset.success')}</p>
+		<p class="success mt-5">{t(resetSuccessKey(data.mode))}</p>
 	{/if}
 	<FormFeedback {form} class="mt-5" />
 
@@ -30,6 +31,7 @@
 				autocomplete="email"
 				autocapitalize="none"
 				spellcheck="false"
+				value={form && 'email' in form ? form.email : ''}
 				required
 			/>
 		</div>

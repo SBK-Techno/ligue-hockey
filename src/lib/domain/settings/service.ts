@@ -108,4 +108,37 @@ export function updateSettings(
 	return parsed;
 }
 
+/**
+ * Le lieu par défaut est enregistré par son nom. Un renommage ou une
+ * suppression doit donc suivre, sinon la valeur pointe vers un lieu absent.
+ * L'opération reste chez le propriétaire des réglages, avec la capacité des
+ * matchs plutôt que celle des réglages.
+ */
+export function renameDefaultLocation(
+	actor: Actor,
+	previousName: string,
+	nextName: string
+): void {
+	requirePermission(actor, 'manageGames');
+	if (getSettings()['games.defaultLocation'] !== previousName) return;
+	const parsed = parseSettings({
+		...getSettings(),
+		'games.defaultLocation': nextName
+	});
+	saveSettings([
+		{
+			key: 'games.defaultLocation',
+			valueJson: JSON.stringify(parsed['games.defaultLocation']),
+			updatedAt: clock.nowMs(),
+			updatedBy: actor.kind === 'user' ? actor.userId : null
+		}
+	]);
+	cached = parsed;
+	recordAudit(actor, {
+		action: 'settings.default_location',
+		entityType: 'settings',
+		metadata: { from: previousName, to: nextName }
+	});
+}
+
 export { SETTINGS };

@@ -89,7 +89,7 @@ describe('generated lineup invariants', () => {
 					}
 				}
 			),
-			{ numRuns: 60 }
+			{ numRuns: 60, seed: 20261116 }
 		);
 	});
 
@@ -147,7 +147,15 @@ describe('generated lineup invariants', () => {
 						kind: member.kind,
 						eligiblePositions: member.eligiblePositions
 					})),
-					rules: []
+					rules: [
+						{
+							id: 'apart',
+							playerAId: members[0].playerId,
+							playerBId: members.at(-1)!.playerId,
+							kind: 'must_not',
+							strict: true
+						}
+					]
 				});
 
 				expect(suggestions).toHaveLength(availableMembers.length);
@@ -161,7 +169,7 @@ describe('generated lineup invariants', () => {
 					expect(suggestion.slot.position).toBe('forward');
 				}
 			}),
-			{ numRuns: 40 }
+			{ numRuns: 40, seed: 20261116 }
 		);
 	});
 });

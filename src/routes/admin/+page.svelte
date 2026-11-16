@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { balanceStatusDefinition } from '#config/balance-status.ts';
 	import { gameStatus } from '#config/game-status.ts';
 	import { positionDefinition } from '#config/positions.ts';
 	import { formatCount, formatDate, formatMoney, formatTime, t } from '#lib/shared/i18n/index.ts';
-	import PageHeader from '#lib/ui/PageHeader.svelte';
+		import PageHeader from '#lib/ui/PageHeader.svelte';
 	import RecordRow from '#lib/ui/RecordRow.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import StatStrip from '#lib/ui/StatStrip.svelte';
@@ -37,7 +38,7 @@
 				]
 			: []),
 		...(data.permissions.balances
-			? [{ value: data.counts.noPlan, label: t('admin.withoutPlan') }]
+			? [{ value: data.counts.noPlan, label: t('balance.noPlanShort') }]
 			: []),
 		...(data.permissions.subs
 			? [{ value: data.counts.openRequests, label: t('admin.openRequests') }]
@@ -54,6 +55,7 @@
 			{#if hasTodo}
 				<ul role="list" class="divide-y divide-line">
 					{#each data.unpaid as balance (balance.playerId)}
+						{@const status = balanceStatusDefinition(balance.status)}
 						<li>
 							<RecordRow
 								href="/admin/joueurs/{balance.playerId}#solde"
@@ -63,10 +65,8 @@
 									total: formatMoney(balance.totalCents, balance.currency)
 								})}
 								trailing={formatMoney(balance.outstandingCents, balance.currency)}
-								badge={balance.isOverdue
-									? t('balance.status.overdue')
-									: t('balance.status.upcoming')}
-								badgeTone={balance.isOverdue ? 'alert' : 'neutral'}
+								badge={t(status.labelKey)}
+								badgeTone={status.tone}
 							/>
 						</li>
 					{/each}
@@ -116,7 +116,7 @@
 
 	<div class="space-y-4">
 		{#if data.permissions.games}
-			<SectionCard title={t('admin.nextGame')}>
+			<SectionCard title={t('home.nextGame')}>
 				{#if data.nextGame}
 					<div class="p-4">
 						<p class="serial">{formatDate(data.nextGame.gameDate)}</p>

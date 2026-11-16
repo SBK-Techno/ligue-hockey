@@ -6,6 +6,7 @@
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import { prefersReducedMotion, scrollBehavior } from '#lib/ui/scroll.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -28,20 +29,44 @@
 		return () => clearInterval(timer);
 	});
 
-	// La page doit s'ouvrir sur le dernier message, juste au-dessus du champ
-	// de réponse. On recale après le chargement des polices, qui change la hauteur.
-	const scrollToLatest = () => window.scrollTo({ top: document.documentElement.scrollHeight });
+	// La page s'ouvre sur le dernier message, mais un lecteur qui remonte
+	// l'historique n'est jamais ramené de force : un bouton l'avertit.
+	const NEAR_BOTTOM_PX = 160;
+	let newMessages = $state(0);
+
+	function nearBottom(): boolean {
+		const root = document.documentElement;
+		return root.scrollHeight - window.scrollY - window.innerHeight < NEAR_BOTTOM_PX;
+	}
+
+	const scrollToLatest = () =>
+		window.scrollTo({
+			top: document.documentElement.scrollHeight,
+			behavior: scrollBehavior(prefersReducedMotion())
+		});
 
 	onMount(() => {
-		void document.fonts.ready.then(() => requestAnimationFrame(scrollToLatest));
+		void document.fonts.ready.then(() =>
+			requestAnimationFrame(() => {
+				if (nearBottom()) scrollToLatest();
+			})
+		);
 	});
 
 	let previousCount = 0;
 	$effect(() => {
 		const count = messages.length;
-		if (count > previousCount) scrollToLatest();
+		if (count > previousCount) {
+			if (nearBottom()) scrollToLatest();
+			else newMessages += count - previousCount;
+		}
 		previousCount = count;
 	});
+
+	function showNewMessages() {
+		newMessages = 0;
+		scrollToLatest();
+	}
 
 	function addOption() {
 		pollOptions = [...pollOptions, ''];
@@ -56,6 +81,14 @@
 	{form}
 	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+5.5rem)] z-40 mx-auto max-w-md shadow-lift lg:bottom-[5.5rem]"
 />
+
+{#if newMessages > 0}
+	<div class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+5.5rem)] z-30 mx-auto flex max-w-md justify-center lg:bottom-[5.5rem]">
+		<button class="btn-primary btn-sm shadow-lift" type="button" onclick={showNewMessages}>
+			{formatCount(newMessages, 'chat.newMessages.one', 'chat.newMessages.many')}
+		</button>
+	</div>
+{/if}
 
 <PageHeader title={t('chat.title')} meta={t('chat.subtitle')}>
 	{#snippet actions()}

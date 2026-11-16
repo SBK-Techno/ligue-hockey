@@ -2,6 +2,7 @@ import { branding } from '#lib/generated/branding.ts';
 import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
+import { renameDefaultLocation } from '#lib/domain/settings/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
@@ -120,7 +121,7 @@ export function createLocation(actor: Actor, input: LocationInput): LocationView
 export function updateLocation(actor: Actor, input: LocationInput & { id: string }): LocationView {
 	requirePermission(actor, 'manageGames');
 	const parsed = parseSchema(locationUpdateSchema, input);
-	requireLocation(parsed.id);
+	const previous = requireLocation(parsed.id);
 	ensureNameAvailable(parsed.name, parsed.id);
 
 	try {
@@ -141,6 +142,10 @@ export function updateLocation(actor: Actor, input: LocationInput & { id: string
 		throw cause;
 	}
 
+	if (previous.name !== parsed.name) {
+		renameDefaultLocation(actor, previous.name, parsed.name);
+	}
+
 	recordAudit(actor, {
 		action: 'location.update',
 		entityType: 'location',
@@ -154,7 +159,7 @@ export function updateLocation(actor: Actor, input: LocationInput & { id: string
 export function deleteLocation(actor: Actor, input: { id: string }): void {
 	requirePermission(actor, 'manageGames');
 	const parsed = parseSchema(locationDeleteSchema, input);
-	requireLocation(parsed.id);
+	const removed = requireLocation(parsed.id);
 
 	let deleted: boolean;
 	try {
@@ -168,6 +173,8 @@ export function deleteLocation(actor: Actor, input: { id: string }): void {
 	if (!deleted) {
 		throw new AppError('CONFLICT', { key: 'admin.locationInUse' });
 	}
+
+	renameDefaultLocation(actor, removed.name, '');
 
 	recordAudit(actor, {
 		action: 'location.delete',

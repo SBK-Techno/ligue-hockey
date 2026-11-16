@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
-	games: [] as { id: string; status: string; generatedAt: number | null }[],
+	games: [] as {
+		id: string;
+		status: string;
+		gameDate: string;
+		startTime: string;
+		generatedAt: number | null;
+	}[],
 	regenerateGame: vi.fn()
 }));
 
@@ -27,9 +33,9 @@ beforeEach(() => {
 describe('regenerateUpcomingGeneratedGames', () => {
 	it('recalcule seulement les matchs à venir déjà publiés', () => {
 		h.games = [
-			{ id: 'scheduled', status: 'scheduled', generatedAt: 1 },
-			{ id: 'draft', status: 'scheduled', generatedAt: null },
-			{ id: 'cancelled', status: 'cancelled', generatedAt: 1 }
+			{ id: 'scheduled', status: 'scheduled', gameDate: '2999-01-04', startTime: '09:00', generatedAt: 1 },
+			{ id: 'draft', status: 'scheduled', gameDate: '2999-01-11', startTime: '09:00', generatedAt: null },
+			{ id: 'cancelled', status: 'cancelled', gameDate: '2999-01-18', startTime: '09:00', generatedAt: 1 }
 		];
 
 		const result = regenerateUpcomingGeneratedGames();
@@ -41,8 +47,8 @@ describe('regenerateUpcomingGeneratedGames', () => {
 
 	it('continue avec les autres matchs quand un recalcul échoue', () => {
 		h.games = [
-			{ id: 'broken', status: 'scheduled', generatedAt: 1 },
-			{ id: 'healthy', status: 'scheduled', generatedAt: 1 }
+			{ id: 'broken', status: 'scheduled', gameDate: '2999-01-04', startTime: '09:00', generatedAt: 1 },
+			{ id: 'healthy', status: 'scheduled', gameDate: '2999-01-11', startTime: '09:00', generatedAt: 1 }
 		];
 		h.regenerateGame.mockImplementation((gameId: string) => {
 			if (gameId === 'broken') throw new Error('notes incomplètes');

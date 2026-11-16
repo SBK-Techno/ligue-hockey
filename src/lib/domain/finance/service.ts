@@ -40,6 +40,8 @@ export type BalanceView = Balance & {
 	playerId: string;
 	currency: string;
 	playerName: string;
+	/** Un plan à zéro n'ouvre ni formulaire de paiement ni solde à payer. */
+	planActive: boolean;
 };
 
 export type AdminBalanceRow = BalanceView & {
@@ -91,6 +93,7 @@ function balanceFor(
 		playerId,
 		playerName,
 		currency: currency(),
+		planActive: planIsActive(plan),
 		...(computeBalance(plan, payments, today(), graceDays()) as Balance)
 	};
 }
@@ -100,6 +103,8 @@ function emptyBalance(playerId: string, playerName: string): BalanceView {
 		playerId,
 		playerName,
 		currency: currency(),
+		planActive: false,
+		status: 'upcoming',
 		totalCents: 0,
 		paidCents: 0,
 		outstandingCents: 0,
@@ -112,6 +117,7 @@ function emptyBalance(playerId: string, playerName: string): BalanceView {
 				paidCents: 0,
 				remainingCents: 0,
 				dueDate: null,
+				paidAt: null,
 				status: 'upcoming'
 			},
 			{
@@ -120,6 +126,7 @@ function emptyBalance(playerId: string, playerName: string): BalanceView {
 				paidCents: 0,
 				remainingCents: 0,
 				dueDate: null,
+				paidAt: null,
 				status: 'upcoming'
 			}
 		]
@@ -294,7 +301,7 @@ export function recordPayment(
 	requirePermission(actor, 'recordPayments');
 	getPlayer(actor, playerId);
 	const parsed = parseSchema(paymentInputSchema, input);
-	if (!findPlan(playerId)) {
+	if (!planIsActive(planFromRow(findPlan(playerId)))) {
 		throw new AppError('CONFLICT', { key: 'balance.noPlan' });
 	}
 

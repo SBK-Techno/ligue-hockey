@@ -49,6 +49,10 @@ export type GameGenerationView = {
 	sizeDiff: number | null;
 	skillDiffLabel: string | null;
 	ageDiffLabel: string | null;
+	/**
+	 * Avertissements d'alignement, jamais dérivés des notes : ils décrivent des
+	 * règles, des places ou des limites, et restent visibles aux joueurs.
+	 */
 	warnings: GameWarning[];
 	ruleViolations: GameRuleViolationView[];
 	bench: GameBenchView[];

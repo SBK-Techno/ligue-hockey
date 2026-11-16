@@ -8,7 +8,7 @@
 </script>
 
 <div class="card">
-	<h2 class="text-2xl">{t('auth.reset.title')}</h2>
+	<h1 class="text-2xl">{t('auth.reset.title')}</h1>
 
 	{#if form?.sent}
 		<p class="success mt-5" role="status">{form.message}</p>

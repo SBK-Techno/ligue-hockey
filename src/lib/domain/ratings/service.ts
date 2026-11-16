@@ -32,7 +32,7 @@ import {
 	listRatings,
 	listRatingsForPlayers,
 	replaceGameRatings,
-	upsertRatings,
+	replaceSeasonRatings,
 	type GameRatingRow
 } from './queries.ts';
 import { ratingsInputSchema, type RatingsInput } from './validators.ts';
@@ -203,7 +203,13 @@ export function setRatings(
 ): RatingsView {
 	const user = requirePermission(actor, 'editRatings');
 	const player = getPlayer(actor, playerId);
-	const values = parseSchema(ratingsInputSchema, input);
+	const parsed = parseSchema(ratingsInputSchema, input);
+
+	const values: Record<string, number> = {};
+	for (const key of RATING_ATTRIBUTE_KEYS) {
+		const rated = parsed[key];
+		if (rated !== undefined) values[key] = rated;
+	}
 
 	const allowed = positionRatingAttributes(player.position);
 	const positionValues: Record<string, number> = {};
@@ -223,9 +229,10 @@ export function setRatings(
 		positionValues[key] = value;
 	}
 
-	upsertRatings(
+	replaceSeasonRatings(
 		playerId,
 		{ ...values, ...positionValues },
+		[...RATING_ATTRIBUTE_KEYS, ...allowed.map((attribute) => attribute.key)],
 		clock.nowMs(),
 		user.userId
 	);

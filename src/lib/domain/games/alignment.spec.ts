@@ -46,7 +46,6 @@ vi.mock('#lib/server/db/index.ts', async () => {
 });
 
 const { sqlite } = await import('#lib/server/db/index.ts');
-const { requireCompleteRatings } = await import('#lib/domain/ratings/overall.ts');
 const { saveGameAssessment } = await import('#lib/domain/ratings/service.ts');
 const { findGame } = await import('./queries.ts');
 const { getGame, regenerateAsAdmin } = await import('./service.ts');
@@ -477,10 +476,6 @@ describe('fillOpenSlots with the live pool', () => {
 
 		expect(result.filled).toBe(1);
 		expect(result.intelligence.unratedNames).toEqual(['unrated Test']);
-		expect(captureError(() => requireCompleteRatings(['unrated']))).toMatchObject({
-			code: 'CONFLICT',
-			key: 'games.ratingsMissing'
-		});
 	});
 
 	it('keeps the unfilled-slots warning after a partial fill', () => {

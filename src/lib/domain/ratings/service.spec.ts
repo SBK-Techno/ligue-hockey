@@ -7,15 +7,21 @@ import type { Actor } from '../auth/types.ts';
 import type { RatingsInput } from './validators.ts';
 
 const {
-	upsertRatings,
+	replaceSeasonRatings,
 	listRatings,
 	listPlayerGameRatings,
 	listRatingsForPlayers,
 	getPlayer,
 	listRatingPlayers
 } = vi.hoisted(() => ({
-		upsertRatings: vi.fn<
-			(playerId: string, values: Record<string, number>, at: number, by: string | null) => void
+		replaceSeasonRatings: vi.fn<
+			(
+				playerId: string,
+				values: Record<string, number>,
+				managed: readonly string[],
+				at: number,
+				by: string | null
+			) => void
 		>(),
 		listRatings: vi.fn<
 			(playerId: string) => Array<{
@@ -41,7 +47,7 @@ const {
 	}));
 
 vi.mock('./queries.ts', () => ({
-	upsertRatings,
+	replaceSeasonRatings,
 	listRatings,
 	listPlayerGameRatings,
 	listRatingsForPlayers,
@@ -84,7 +90,7 @@ function thrownBy(run: () => unknown): unknown {
 
 describe('setRatings', () => {
 	beforeEach(() => {
-		upsertRatings.mockClear();
+		replaceSeasonRatings.mockClear();
 		listRatings.mockClear();
 		listRatings.mockReturnValue([]);
 		listPlayerGameRatings.mockReturnValue([]);
@@ -106,18 +112,23 @@ describe('setRatings', () => {
 		expect(thrownBy(() => setRatings(admin, 'target', input as never))).toMatchObject({
 			code: 'VALIDATION'
 		});
-		expect(upsertRatings).not.toHaveBeenCalled();
+		expect(replaceSeasonRatings).not.toHaveBeenCalled();
 	});
 
-	it('rejects an incomplete rating sheet', async () => {
+	it('saves a partial sheet and lets the owner clear only the missing managed keys', async () => {
 		const { setRatings } = await import('./service.ts');
 		const input = completeRatings() as Record<string, number>;
 		delete input[RATING_ATTRIBUTE_KEYS[0]];
 
-		expect(thrownBy(() => setRatings(admin, 'target', input as never))).toMatchObject({
-			code: 'VALIDATION'
-		});
-		expect(upsertRatings).not.toHaveBeenCalled();
+		setRatings(admin, 'target', input as never);
+
+		expect(replaceSeasonRatings).toHaveBeenCalledWith(
+			'target',
+			input,
+			expect.arrayContaining([...RATING_ATTRIBUTE_KEYS]),
+			expect.any(Number),
+			'admin'
+		);
 	});
 
 	it('writes a complete sheet and returns the stored view', async () => {
@@ -127,7 +138,7 @@ describe('setRatings', () => {
 			RATING_ATTRIBUTE_KEYS.map((attribute) => ({
 				playerId: 'target',
 				attribute,
-				value: input[attribute],
+				value: input[attribute] ?? RATING_SCALE.min,
 				updatedAt: 1_700_000_000_000,
 				updatedBy: 'admin'
 			}))
@@ -135,7 +146,13 @@ describe('setRatings', () => {
 
 		const view = setRatings(admin, 'target', input);
 
-		expect(upsertRatings).toHaveBeenCalledWith('target', input, expect.any(Number), 'admin');
+		expect(replaceSeasonRatings).toHaveBeenCalledWith(
+			'target',
+			input,
+			expect.arrayContaining([...RATING_ATTRIBUTE_KEYS]),
+			expect.any(Number),
+			'admin'
+		);
 		expect(view.playerId).toBe('target');
 		expect(view.overall).not.toBeNull();
 		expect(view.updatedAt).toBe(1_700_000_000_000);
@@ -146,9 +163,10 @@ describe('setRatings', () => {
 
 		setRatings(admin, 'target', completeRatings(), { forecheck: 4 });
 
-		expect(upsertRatings).toHaveBeenCalledWith(
+		expect(replaceSeasonRatings).toHaveBeenCalledWith(
 			'target',
 			{ ...completeRatings(), forecheck: 4 },
+			expect.arrayContaining([...RATING_ATTRIBUTE_KEYS, 'forecheck']),
 			expect.any(Number),
 			'admin'
 		);
@@ -162,7 +180,7 @@ describe('setRatings', () => {
 				setRatings(admin, 'target', completeRatings(), { goaliePositioning: 4 })
 			)
 		).toMatchObject({ code: 'VALIDATION' });
-		expect(upsertRatings).not.toHaveBeenCalled();
+		expect(replaceSeasonRatings).not.toHaveBeenCalled();
 	});
 
 	it('computes recent form from the last evaluated games only', async () => {
@@ -296,7 +314,7 @@ describe('setRatings', () => {
 		expect(thrownBy(() => setRatings(player, 'target', completeRatings()))).toMatchObject({
 			code: 'FORBIDDEN'
 		});
-		expect(upsertRatings).not.toHaveBeenCalled();
+		expect(replaceSeasonRatings).not.toHaveBeenCalled();
 	});
 
 	it('denies the evaluation hub to a manager without editRatings', async () => {

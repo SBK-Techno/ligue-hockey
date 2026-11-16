@@ -8,6 +8,7 @@ import {
 import { AppError } from '#lib/shared/errors.ts';
 import { actionError, loadError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
+import { clock } from '#lib/shared/time/clock.ts';
 
 export const load: ServerLoad = ({ locals, params }) => {
 	try {
@@ -49,6 +50,7 @@ export const actions: Actions = {
 				ok: true,
 				message: t('rating.saved'),
 				playerId,
+				revision: clock.nowMs(),
 				assessment: result
 			};
 		} catch (cause) {

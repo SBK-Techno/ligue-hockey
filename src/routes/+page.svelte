@@ -40,7 +40,9 @@
 			.join(' · ');
 	});
 
-	const nextGames = $derived(data.games.slice(1, 4));
+	const nextGames = $derived(
+		data.games.filter((game) => game.id !== data.game?.id).slice(0, 3)
+	);
 	const absentNames = $derived(
 		data.availability?.rows.filter((row) => row.status === 'absent').map((row) => row.fullName) ??
 			[]
@@ -58,7 +60,7 @@
 <header class="mb-3 flex flex-wrap items-end justify-between gap-2">
 	<div>
 		<p class="text-sm text-muted">{t('home.greeting', { name: actor?.name.split(' ')[0] ?? '' })}</p>
-		<h1 class="mt-0.5">{t('admin.thisWeek')}</h1>
+		<h1 class="mt-0.5">{t('home.title')}</h1>
 	</div>
 
 </header>

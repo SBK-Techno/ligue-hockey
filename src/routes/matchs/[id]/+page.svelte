@@ -115,7 +115,7 @@
 	{/if}
 
 	<section class="card">
-		<h2>{hasProfile ? t('home.availability') : t('home.attendance')}</h2>
+		<h2>{hasProfile ? t('home.availability') : t('availability.title')}</h2>
 
 		{#if game.status === 'cancelled'}
 			<p class="mt-2 text-sm text-muted">{t('games.cancelledNotice')}</p>
@@ -192,12 +192,16 @@
 			{/if}
 		{/if}
 
-		{#if availability && availability.rows.length + availability.pending.length > 0}
-			<div class="mt-4">
+	</section>
+
+	{#if availability && availability.rows.length + availability.pending.length > 0}
+		<section class="card mt-4">
+			<h2>{t('home.attendance')}</h2>
+			<div class="mt-3">
 				<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
 			</div>
-		{/if}
-	</section>
+		</section>
+	{/if}
 
 	{#if data.requests.length > 0 || isManager}
 		<section class="card mt-4">
@@ -230,12 +234,8 @@
 										{t(positionDefinition(request.position).labelKey)}
 									</p>
 									<p class="mt-0.5 text-xs text-muted">
-										{#if request.status === 'filled' && request.filledByName}
-											{t('subs.filledBy', { name: request.filledByName })}
-										{:else if request.requestedByName}
+										{#if request.requestedByName}
 											{t('subs.requestedBy', { name: request.requestedByName })}
-										{:else}
-											{t('subs.placeOpen')}
 										{/if}
 									</p>
 								</div>
@@ -381,7 +381,7 @@
 									{#each rows as slot (slot.slotIndex)}
 										{@const isMe = slot.player?.playerId === actor?.userId}
 										<li class="ledger-row border-b border-line/70 last:border-b-0" data-you={isMe}>
-											<span class="jersey">{slot.player?.jerseyNumber ?? '–'}</span>
+											<span class="jersey">{slot.player?.jerseyNumber ?? '-'}</span>
 											{#if slot.player}
 												<span class="min-w-0 truncate text-sm {isMe ? 'font-semibold' : ''}">
 													{slot.player.fullName}
@@ -420,7 +420,7 @@
 				</p>
 				{#each game.generation.warnings as warning (warning)}
 					{@const definition = gameWarningDefinition(warning)}
-					{#if warning !== 'rule-limit' || data.canManage}
+					{#if !definition.managerOnly || data.canManage}
 						<div class={definition.tone === 'alert' ? 'alert mt-3' : 'notice mt-3'}>
 							<p class="font-semibold">{t(definition.labelKey)}</p>
 							{#if definition.helpKey}
@@ -432,7 +432,7 @@
 									)}
 								</p>
 							{/if}
-							{#if warning === 'unfilled-slots'}
+							{#if definition.detail === 'open-slots'}
 								<p class="mt-1 text-sm">{game.openSlotsLabel}</p>
 							{/if}
 						</div>
@@ -467,7 +467,7 @@
 						{/each}
 					</ul>
 				{/if}
-				{#if data.canManage}
+				{#if data.canManage && data.editable}
 					<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
 						<button class="btn-secondary btn-sm" type="submit">{t('games.regenerate')}</button>
 					</form>
@@ -480,7 +480,7 @@
 			<p class="measure mt-2 text-sm text-muted">
 				{data.canManage ? t('games.lineupSoonAdmin') : t('games.lineupSoon')}
 			</p>
-			{#if data.canManage}
+			{#if data.canManage && data.editable}
 				<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
 					<button class="btn-primary" type="submit">{t('games.generate')}</button>
 				</form>

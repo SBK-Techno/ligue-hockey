@@ -13,7 +13,10 @@ export type PlayableGame = {
 	generated: boolean;
 };
 
-function startsAt(game: PlayableGame, timeZone: string): number {
+function startsAt(
+	game: Pick<PlayableGame, 'gameDate' | 'startTime'>,
+	timeZone: string
+): number {
 	return zonedDateTimeToMs(game.gameDate, game.startTime, timeZone);
 }
 
@@ -31,10 +34,11 @@ export function isGamePlayable(
 /**
  * L'alignement se modifie seulement avant le début d'un match encore
  * programmé. Un match commencé, terminé ou annulé est figé; aucune comparaison
- * de chaîne de date ne décide de cette politique.
+ * de chaîne de date ne décide de cette politique. La génération n'entre pas
+ * dans cette décision : seule l'heure de départ et le statut la fixent.
  */
 export function isLineupEditable(
-	game: PlayableGame,
+	game: Pick<PlayableGame, 'status' | 'gameDate' | 'startTime'>,
 	at: number = clock.nowMs(),
 	timeZone: string = branding.timezone
 ): boolean {
