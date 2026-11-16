@@ -7,8 +7,8 @@ This file tracks the current milestone, verified evidence, and the work that is 
 - Branch: `design/identity-v2`.
 - Target version: `1.3.0`.
 - Shipped: identity, navigation, evaluations, smart sheet, locations.
-- In flight: smart-sheet correctness (live pool, strict/soft separation, typed warnings, ratings purge moved to the lineup owner).
-- Next: release-blocker polish pass, independent verification, merge, tag, promote.
+- In flight: release-blocker polish pass (season partial/clear, schedule split, balance status, payment gating, row menu, copy glossary).
+- Next: independent verifier, round-3 triple check, merge, tag, promote.
 
 ## Verified milestones
 
@@ -21,6 +21,7 @@ This file tracks the current milestone, verified evidence, and the work that is 
 | `6f7d215` | Smart sheet v1 | `npm run gate` |
 | `9a726a3` | Locations, maps, metrics, migration guard | 211 tests, 28 files |
 | `400855e` | Evaluation save reset, played policy, scoped counts | 235 tests, 29 files |
+| `71605a4` | Smart sheet live pool, strict rules, typed warnings, ratings purge | 289 tests, 33 files |
 | `f681365` | Architecture document corrections | review |
 | `5bbbb46` | Notification links resolve to real routes | 5 tests |
 
