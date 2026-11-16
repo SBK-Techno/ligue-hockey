@@ -527,28 +527,6 @@
 		font-stretch: 108%;
 	}
 
-	/* Perforation de la feuille de match : la carte se détache du bloc. */
-	.tear-line {
-		position: relative;
-		border-top: 1px dashed color-mix(in srgb, var(--color-paper) 32%, transparent);
-	}
-	.tear-line::before,
-	.tear-line::after {
-		content: '';
-		position: absolute;
-		top: -0.45rem;
-		width: 0.9rem;
-		height: 0.9rem;
-		border-radius: var(--radius-pill);
-		background: var(--color-paper);
-	}
-	.tear-line::before {
-		left: 0.3rem;
-	}
-	.tear-line::after {
-		right: 0.3rem;
-	}
-
 	/* Feuille de présence : le numéro de chandail a sa propre gouttière. */
 	.ledger {
 		@apply divide-y divide-line;

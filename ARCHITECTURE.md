@@ -73,7 +73,7 @@ Colour is semantic:
 - `accent` is brick red: the league mark, today, unread and the photo caption. It is a line and fill colour, not ordinary body text.
 - `alert` is a deeper red, reserved for overdue, cancellation, validation and destructive confirmation. `ok` is a restrained green for success only.
 
-`src/routes/layout.css` owns the primitives so a page cannot invent a parallel button or card: `.card`, `.card-flush`, `.btn-*`, `.badge-*`, `.label`, `.input`, `.hint`, `.micro-label`, `.numeric`, `.tear-line`. Focus rings switch to paper on ink surfaces, dialogs lock body scroll, and `prefers-reduced-motion` disables transitions and the card lift.
+`src/routes/layout.css` owns the primitives so a page cannot invent a parallel button or card: `.card`, `.card-flush`, `.btn-*`, `.badge-*`, `.label`, `.input`, `.hint`, `.micro-label`, `.numeric`, `.scoreboard`. Focus rings switch to paper on ink surfaces, dialogs lock body scroll, and `prefers-reduced-motion` disables transitions and the card lift.
 
 Dark surfaces use an opacity ladder on `paper` (55% to 90%) rather than ad-hoc greys; every step was checked against `ink` for 4.5:1 body contrast.
 
