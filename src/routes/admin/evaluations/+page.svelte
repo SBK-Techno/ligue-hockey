@@ -9,7 +9,7 @@
 	let { data }: PageProps = $props();
 </script>
 
-<PageHeader title={t('admin.evaluations')} meta={t('admin.evaluationsHelp')} />
+<PageHeader title={t('rating.title')} meta={t('rating.description')} />
 
 <div class="space-y-4">
 <SectionCard title={t('admin.evaluationsSeason')}>
@@ -22,10 +22,13 @@
 					<RecordRow
 						href="/admin/evaluations/{player.playerId}"
 						title={player.fullName}
-						meta={t('rating.positionCriteria', {
-							done: player.positionCompleted,
-							total: player.positionTotal
-						}) + ' · ' + t(positionDefinition(player.position).labelKey)}
+						meta="{t(positionDefinition(player.position).labelKey)} · {t(
+							'rating.positionCriteria',
+							{
+								done: player.positionCompleted,
+								total: player.positionTotal
+							}
+						)}"
 						trailing={player.overall === null
 							? t('rating.notRated')
 							: formatDecimal(player.overall, 2)}
@@ -57,7 +60,11 @@
 							done: game.rated,
 							total: game.players
 						})}
-						badgeTone={game.players > 0 && game.rated >= game.players ? 'ok' : 'alert'}
+						badgeTone={game.rated === 0
+							? 'neutral'
+							: game.players > 0 && game.rated >= game.players
+								? 'ok'
+								: 'ice'}
 					/>
 				</li>
 			{/each}

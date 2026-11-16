@@ -82,6 +82,7 @@
 	<div class="mx-auto flex h-[3.75rem] w-full max-w-6xl items-center gap-3 px-4">
 		<BrandLockup href="/" size="sm" />
 
+		{#if !inAdmin}
 		<nav class="ml-4 hidden items-center gap-0.5 md:flex" aria-label={t('nav.mainMenu')}>
 			{#each items as item (item.key)}
 				{@const active = isActiveHref(path, item.href)}
@@ -102,6 +103,7 @@
 				</a>
 			{/each}
 		</nav>
+		{/if}
 
 		<div class="ml-auto flex items-center gap-2">
 			<a

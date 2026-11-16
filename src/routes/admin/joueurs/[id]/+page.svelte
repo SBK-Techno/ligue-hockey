@@ -200,10 +200,10 @@
 
 		<section class="card">
 			<div class="section-title">
-				<h2>{t('admin.ratings')}</h2>
+				<h2>{t('rating.title')}</h2>
 				<a class="link text-sm" href="/admin/evaluations/{player.userId}">{t('rating.edit')}</a>
 			</div>
-			<p class="hint mt-1">{t('admin.ratingsHelp', { min: 1, max: 5 })}</p>
+			<p class="hint mt-1">{t('rating.scaleHelp')}</p>
 			<dl class="mt-3 divide-y divide-line">
 				<div class="fact">
 					<dt>{t('rating.overall')}</dt>

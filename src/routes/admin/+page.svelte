@@ -100,11 +100,8 @@
 				href="/admin/soldes"
 				linkLabel={t('admin.balances')}
 			>
-				<p class="border-b border-line px-4 py-2 text-xs text-muted">
-					{t('admin.withoutPlanHelp')}
-				</p>
 				<ul role="list" class="divide-y divide-line">
-					{#each data.withoutPlan.slice(0, 5) as balance (balance.playerId)}
+					{#each data.withoutPlan.slice(0, 3) as balance (balance.playerId)}
 						<li>
 							<RecordRow
 								href="/admin/joueurs/{balance.playerId}#solde"
