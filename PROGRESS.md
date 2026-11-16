@@ -27,7 +27,7 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Confirmed open defects (release blockers)
 
-Tracked in `/tmp/opencode/fixer-polish.md`. The main ones:
+Tracked in `/tmp/opencode/fixer-polish.md` and `/tmp/opencode/recheck-round2.md`. The main ones:
 
 - A season rating sheet cannot save a partial sheet or clear a note.
 - "Pas vu ce match" erases every row with no confirmation.
@@ -42,6 +42,19 @@ Tracked in `/tmp/opencode/fixer-polish.md`. The main ones:
 - Solde clips money at 390 px; several targets are below 44 px.
 - Evaluation saves lose keyboard focus.
 - `#solde` links land at the top of the player page.
+
+## Smart-sheet verifier (confirmed)
+
+- Regeneration bypasses the editable policy: a started `scheduled` game can be regenerated and its ratings purged. Gate `regenerateGame`, `regenerateAsAdmin` and `regenerateUpcomingGeneratedGames` on `isLineupEditable` and future start.
+- The admin edit page never renders persisted warnings, so `rule-limit` is invisible after a manual edit.
+- Warning order has secondary owners: the generator hardcodes keys, the service persists without registry order, and the public page compares literals.
+- The bench is rendered from the snapshot on the public page and from the live pool on the admin page.
+- An unrated bench player is named by the alert but the link opens the game sheet, which only lists dressed players.
+- The generate audit is outside the slot transaction.
+- The smart-sheet test calls `fillSuggestions` with a hand-built pool, not the live pool; `fc.assert` is unseeded.
+- A locked game with a swap prints "already balanced".
+- Dead exports: `isGameWarning`, `gameWarningLabelKey`, `requireCompleteRatings`.
+
 
 ## Deferred to the next milestone
 
