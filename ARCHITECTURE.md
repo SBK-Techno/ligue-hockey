@@ -70,7 +70,7 @@ Colour is semantic:
 
 - `ink` is deep navy and `paper` is warm cream: structure, body text and surfaces, never a cold white dashboard.
 - `ice` is denim blue: every primary action, link, focus ring and selected state.
-- `accent` is brick red: the league mark, today, unread and the photo caption. It is a line and fill colour, not ordinary body text.
+- `accent` is brick red: the league mark, today and unread. It is a line and fill colour, not ordinary body text. The photo caption is `paper` on the ink scrim.
 - `alert` is a deeper red, reserved for overdue, cancellation, validation and destructive confirmation. `ok` is a restrained green for success only.
 
 `src/routes/layout.css` owns the primitives so a page cannot invent a parallel button or card: `.card`, `.card-flush`, `.btn-*`, `.badge-*`, `.label`, `.input`, `.hint`, `.micro-label`, `.numeric`, `.scoreboard`. Focus rings switch to paper on ink surfaces, dialogs lock body scroll, and `prefers-reduced-motion` disables transitions and the card lift.

@@ -107,7 +107,7 @@ function buildOfflinePage(branding: Branding, palette: EmailPalette): string {
 				color: ${palette.surface};
 				text-decoration: none;
 				padding: 13px 22px;
-				border-radius: 2px;
+				border-radius: 12px;
 				font-weight: 600;
 			}
 		</style>

@@ -525,6 +525,7 @@ export const fr = {
     'Tu es remplaçant : tu n’as pas à confirmer. Prends une place quand une s’ouvre.',
 
   'subs.title': 'Remplaçants',
+  'subs.short': 'Rempl.',
   'subs.placeOpen': 'Place ouverte',
   'subs.requestedBy': 'Demandée par {name}',
   'subs.rules':

@@ -33,7 +33,7 @@
 							class="max-w-full truncate text-[10px] font-semibold leading-tight tracking-tight"
 							style="font-stretch: 92%"
 						>
-							{t(item.labelKey)}
+							{t(item.shortLabelKey ?? item.labelKey)}
 						</span>
 					</a>
 				</li>

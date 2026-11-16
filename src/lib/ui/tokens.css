@@ -68,7 +68,7 @@
 
 :root {
 	/* Une seule source pour la barre mobile : hauteur utile + zone sûre iOS. */
-	--bottom-bar-height: 4.25rem;
+	--bottom-bar-height: 4.125rem;
 	--bottom-bar-offset: calc(
 		var(--bottom-bar-height) + max(0.5rem, env(safe-area-inset-bottom))
 	);

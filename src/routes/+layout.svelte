@@ -81,7 +81,7 @@
 		<div class="auth-hero">
 			<img src={branding.authImage} alt="" fetchpriority="high" decoding="async" />
 			<div
-				class="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/20 to-ink/55 lg:bg-gradient-to-r lg:from-ink/90 lg:via-ink/35 lg:to-ink/15"
+				class="absolute inset-0 bg-gradient-to-b from-ink/95 via-ink/85 via-25% to-ink/20 lg:bg-gradient-to-r lg:from-ink/90 lg:via-ink/35 lg:via-50% lg:to-ink/15"
 				aria-hidden="true"
 			></div>
 			<div

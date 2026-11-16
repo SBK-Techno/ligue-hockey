@@ -41,7 +41,7 @@
 			<span
 				class="mt-0.5 block truncate font-mono text-[10px] font-medium uppercase leading-tight tracking-[0.08em] {tone ===
 				'dark'
-					? 'text-paper/60'
+					? 'text-paper/80'
 					: 'text-muted'}"
 			>
 				{t('brand.presentedBy', { name: branding.organisation })}
