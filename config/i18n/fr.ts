@@ -341,6 +341,7 @@ export const fr = {
   'games.generate': 'Générer les équipes',
   'games.regenerate': 'Recalculer les équipes',
   'games.generated': 'Alignement publié',
+  'games.publishedAt': 'Publié le {date}',
   'games.notGenerated': 'Alignement à venir',
   'games.bench': 'Joueurs en surplus',
   'games.unassigned': 'Non assigné',
@@ -379,6 +380,12 @@ export const fr = {
   'availability.savedBumped':
     'Présence enregistrée. Le remplaçant est retiré du match.',
   'availability.locked': 'Les présences sont fermées pour ce match.',
+  'availability.lockedHelp':
+    'Si tu ne peux plus venir, retire ta présence : ta place s’ouvrira à un remplaçant.',
+  'availability.withdraw': 'Je ne peux plus venir',
+  'availability.withdrawConfirm':
+    'Retirer ta présence? Ta place s’ouvrira à un remplaçant et l’alignement sera recalculé.',
+  'availability.absenceSaved': 'Absence enregistrée.',
   'availability.gameClosed': 'Ce match n’accepte plus de présences.',
   'availability.substituteNoConfirm':
     'Les remplaçants n’ont pas à confirmer leur présence.',

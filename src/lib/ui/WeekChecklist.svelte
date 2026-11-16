@@ -3,6 +3,7 @@
 	import type { ChatMessageView } from '#lib/domain/chat/service.ts';
 	import type { BalanceView } from '#lib/domain/finance/service.ts';
 	import { formatCount, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	type StepState = 'done' | 'todo' | 'idle';
@@ -55,8 +56,10 @@
 			list.push({
 				id: 'presence',
 				title: t('home.steps.answer'),
-				state: 'idle',
-				detail: t('availability.locked')
+				state: availability.canWithdraw ? 'done' : 'idle',
+				detail: availability.canWithdraw
+					? t('availability.lockedHelp')
+					: t('availability.locked')
 			});
 		} else if (availability?.canRespond) {
 			const answered = availability.own === 'present' || availability.own === 'absent';
@@ -192,6 +195,19 @@
 
 				<p class="text-sm font-semibold leading-6">{step.title}</p>
 				<p class="mt-0.5 break-words text-sm leading-snug text-muted">{step.detail}</p>
+
+				{#if step.id === 'presence' && availability?.canWithdraw}
+					<form method="POST" action="?/availability" use:progressiveForm class="mt-3">
+						<input type="hidden" name="gameId" value={gameId} />
+						<input type="hidden" name="status" value="absent" />
+						<ConfirmSubmit
+							label={t('availability.withdraw')}
+							question={t('availability.withdrawConfirm')}
+							confirmLabel={t('availability.withdraw')}
+							class="btn-secondary btn-sm w-full"
+						/>
+					</form>
+				{/if}
 
 				{#if step.id === 'presence' && availability?.canRespond}
 					<form

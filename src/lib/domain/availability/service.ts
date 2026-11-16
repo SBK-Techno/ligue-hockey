@@ -47,6 +47,8 @@ export type AvailabilityView = {
 	own: AvailabilityStatus | null;
 	locked: boolean;
 	canRespond: boolean;
+	/** Après la fermeture, un joueur déjà présent peut encore se retirer. */
+	canWithdraw: boolean;
 	substitute: boolean;
 	closesAtLabel: string;
 };
@@ -136,6 +138,12 @@ export function getAvailability(actor: Actor, gameId: string): AvailabilityView 
 		locked,
 		canRespond:
 			game.status === 'scheduled' && !locked && profile !== null && !profile.isSubstitute,
+		canWithdraw:
+			game.status === 'scheduled' &&
+			locked &&
+			profile !== null &&
+			!profile.isSubstitute &&
+			own === 'present',
 		substitute: profile?.isSubstitute ?? false,
 		closesAtLabel: formatTimestamp(closesAtMs(game))
 	};
@@ -156,16 +164,22 @@ export function markAvailability(
 	if (game.status !== 'scheduled') {
 		throw new AppError('CONFLICT', { key: 'availability.gameClosed' });
 	}
-	if (isLocked(game)) {
+	// La date limite ferme l'inscription, pas la sortie : celui qui doit
+	// annuler peut encore le faire et ouvre aussitôt une place de remplaçant.
+	if (isLocked(game) && status === 'present') {
 		throw new AppError('CONFLICT', { key: 'availability.locked' });
 	}
+
+	const previous =
+		listGamePresence(gameId).find((row) => row.playerId === user.userId)?.status ?? null;
 
 	setGamePresence(gameId, user.userId, status, clock.nowMs());
 
 	let bumpedPlayerId: string | null = null;
 	let requestCreated = false;
 	if (status === 'absent') {
-		if (getSettings()['notifications.subRequestOnAbsence']) {
+		// Une place ne s'ouvre que si le joueur était réellement attendu.
+		if (previous === 'present' && getSettings()['notifications.subRequestOnAbsence']) {
 			const request = createAbsenceRequest(actor, game, player);
 			requestCreated = request !== null;
 		}
@@ -185,7 +199,9 @@ export function markAvailability(
 		? 'availability.savedBumped'
 		: requestCreated
 			? 'availability.savedRequested'
-			: 'availability.saved';
+			: status === 'absent'
+				? 'availability.absenceSaved'
+				: 'availability.saved';
 	return {
 		status,
 		requestCreated,

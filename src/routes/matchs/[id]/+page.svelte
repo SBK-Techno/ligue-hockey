@@ -4,8 +4,9 @@
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
-	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import { formatDate, formatTime, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
@@ -106,6 +107,19 @@
 			<a class="btn-secondary btn-sm mt-3" href="/remplacants">{t('home.substituteCta')}</a>
 		{:else if availability?.locked}
 			<p class="mt-3 text-sm font-medium text-muted">{t('availability.locked')}</p>
+			{#if availability.canWithdraw}
+				<p class="hint mt-1">{t('availability.lockedHelp')}</p>
+				<form method="POST" action="?/availability" use:progressiveForm class="mt-3">
+					<input type="hidden" name="gameId" value={game.id} />
+					<input type="hidden" name="status" value="absent" />
+					<ConfirmSubmit
+						label={t('availability.withdraw')}
+						question={t('availability.withdrawConfirm')}
+						confirmLabel={t('availability.withdraw')}
+						class="btn-secondary btn-sm"
+					/>
+				</form>
+			{/if}
 		{:else if availability?.canRespond}
 			<div class="mt-4 flex flex-wrap items-center justify-between gap-4">
 				<div>
@@ -263,7 +277,14 @@
 	{#if game.generated}
 		<section class="mt-6">
 			<div class="flex flex-wrap items-baseline justify-between gap-3">
-				<h2>{t('games.roster')}</h2>
+				<div>
+					<h2>{t('games.roster')}</h2>
+					{#if game.generation}
+						<p class="mt-1 text-xs text-muted">
+							{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
+						</p>
+					{/if}
+				</div>
 				<span class="badge-ok">{t('games.generated')}</span>
 			</div>
 
