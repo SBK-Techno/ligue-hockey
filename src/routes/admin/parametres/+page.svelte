@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { MONEY_INPUT } from '#config/money.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { t } from '#lib/shared/i18n/index.ts';
@@ -47,8 +48,8 @@
 									id={setting.key}
 									name={setting.key}
 									type="number"
-									min="0"
-									step="0.01"
+									min={MONEY_INPUT.min}
+									step={MONEY_INPUT.step}
 									value={data.values[setting.key]}
 								/>
 							{:else if setting.kind === 'number'}

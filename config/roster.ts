@@ -1,20 +1,12 @@
 import { z } from 'zod';
 import { POSITIONS, type Position } from './positions.ts';
-import { SETTINGS, type SettingsValues } from './settings-registry.ts';
+import { settingBound, type SettingsValues } from './settings-registry.ts';
 import { TEAMS, type Team } from './teams.ts';
 
-function rosterBound(key: keyof typeof SETTINGS): number {
-	const max = SETTINGS[key].max;
-	if (typeof max !== 'number') {
-		throw new Error(`Le réglage ${key} doit déclarer un maximum.`);
-	}
-	return max;
-}
-
 export const rosterTemplateSchema = z.object({
-	goaliesPerTeam: z.number().int().min(0).max(rosterBound('roster.goaliesPerTeam')),
-	forwardsPerTeam: z.number().int().min(0).max(rosterBound('roster.forwardsPerTeam')),
-	defensePerTeam: z.number().int().min(0).max(rosterBound('roster.defensePerTeam'))
+	goaliesPerTeam: z.number().int().min(0).max(settingBound('roster.goaliesPerTeam', 'max')),
+	forwardsPerTeam: z.number().int().min(0).max(settingBound('roster.forwardsPerTeam', 'max')),
+	defensePerTeam: z.number().int().min(0).max(settingBound('roster.defensePerTeam', 'max'))
 });
 
 export type RosterTemplate = z.infer<typeof rosterTemplateSchema>;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
 	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
@@ -78,7 +79,7 @@
 					id="location"
 					name="location"
 					value={game.location}
-					maxlength="120"
+					maxlength={GAME_LIMITS.locationMax}
 					required
 					disabled={game.status !== 'scheduled'}
 				/>
@@ -90,7 +91,7 @@
 					id="notes"
 					name="notes"
 					rows="3"
-					maxlength="1000"
+					maxlength={GAME_LIMITS.notesMax}
 					disabled={game.status !== 'scheduled'}>{game.notes ?? ''}</textarea
 				>
 			</div>

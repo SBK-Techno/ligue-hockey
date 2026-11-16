@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { settingBound } from '#config/settings-registry.ts';
 
 export const CHAT_LIMITS = {
-	messageMax: 10_000,
+	messageMax: settingBound('chat.maxMessageLength', 'max'),
 	questionMax: 200,
-	optionMax: 120
+	optionMax: 120,
+	pollOptionsMax: settingBound('chat.maxPollOptions', 'max')
 } as const;
 
 const option = z
@@ -20,7 +22,7 @@ export const pollInputSchema = z.object({
 	question: z.string().trim().min(1).max(CHAT_LIMITS.questionMax),
 	options: z.preprocess(
 		(value) => (Array.isArray(value) ? value : [value]),
-		z.array(option).min(1).max(12)
+		z.array(option).min(1).max(CHAT_LIMITS.pollOptionsMax)
 	)
 });
 

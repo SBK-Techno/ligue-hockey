@@ -1,5 +1,6 @@
 import { redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
+import { INBOX } from '#config/notifications.ts';
 import {
 	listInbox,
 	markInboxRead,
@@ -25,7 +26,7 @@ export const load: ServerLoad = ({ locals }) => {
 	const actor = locals.actor;
 	if (actor.kind !== 'user') return { items: [], unread: 0 };
 	return {
-		items: listInbox(actor, { limit: 50 }),
+		items: listInbox(actor, { limit: INBOX.pageSize }),
 		unread: unreadCount(actor)
 	};
 };

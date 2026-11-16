@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PAYMENT_METHOD_KEYS } from '#config/payment-methods.ts';
+import { settingBound } from '#config/settings-registry.ts';
 import { DATE_PATTERN } from '#config/time.ts';
 import { isRealDate } from '#lib/shared/time/clock.ts';
 
@@ -14,14 +15,22 @@ const optionalDate = z.preprocess(
 );
 
 export const paymentPlanInputSchema = z.object({
-	totalCents: z.coerce.number().int().min(0).max(10_000_000),
-	firstPercent: z.coerce.number().int().min(1).max(99),
+	totalCents: z.coerce
+		.number()
+		.int()
+		.min(settingBound('finance.totalCents', 'min'))
+		.max(settingBound('finance.totalCents', 'max')),
+	firstPercent: z.coerce
+		.number()
+		.int()
+		.min(settingBound('finance.firstInstallmentPercent', 'min'))
+		.max(settingBound('finance.firstInstallmentPercent', 'max')),
 	firstDueDate: optionalDate,
 	secondDueDate: optionalDate
 });
 
 export const paymentInputSchema = z.object({
-	amountCents: z.coerce.number().int().min(1).max(10_000_000),
+	amountCents: z.coerce.number().int().min(1).max(settingBound('finance.totalCents', 'max')),
 	paidAt: z
 		.string()
 		.trim()

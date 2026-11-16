@@ -1,6 +1,6 @@
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
-import { ACCOUNT_LIMITS } from '#config/account.ts';
+import { ACCOUNT_LIMITS, AUTH_POLICY } from '#config/account.ts';
 import type { Position } from '#config/positions.ts';
 import {
 	getOwnAccount,
@@ -31,9 +31,9 @@ import { formatCount, t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
 const passwordSchema = z.object({
-	currentPassword: z.string().min(1).max(128),
-	newPassword: z.string().min(publicEnv.passwordMinLength).max(128),
-	confirm: z.string().min(1).max(128)
+	currentPassword: z.string().min(1).max(ACCOUNT_LIMITS.passwordMax),
+	newPassword: z.string().min(publicEnv.passwordMinLength).max(ACCOUNT_LIMITS.passwordMax),
+	confirm: z.string().min(1).max(ACCOUNT_LIMITS.passwordMax)
 });
 
 const identitySchema = z.object({
@@ -157,7 +157,7 @@ export const actions: Actions = {
 				});
 				clearAttempts(key);
 			} catch (cause) {
-				recordAttempt(key, 60 * 60 * 1000);
+				recordAttempt(key, AUTH_POLICY.passwordWindowSeconds * 1000);
 				const status =
 					(cause as { statusCode?: number; status?: number }).statusCode ??
 					(cause as { status?: number }).status;

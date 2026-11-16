@@ -1,6 +1,6 @@
 import { POSITIONS, type Position } from '#config/positions.ts';
 import type { RosterTemplate, SlotDefinition } from '#config/roster.ts';
-import { TEAMS, type Team } from '#config/teams.ts';
+import { TEAM_GENERATION, TEAMS, type Team } from '#config/teams.ts';
 import type { PairRuleKind } from '#config/rule-modes.ts';
 
 export type GeneratorPlayer = {
@@ -67,7 +67,6 @@ type PositionOption = {
 	age: Record<Team, number>;
 };
 
-const MAX_CANDIDATES = 200_000;
 const [TEAM_A, TEAM_B] = [TEAMS[0].key, TEAMS[1].key] as const;
 
 function zeroTotals(): Record<Team, number> {
@@ -250,7 +249,7 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 		(product, entry) => product * Math.max(1, entry.options.length),
 		1
 	);
-	if (candidateCount > MAX_CANDIDATES) {
+	if (candidateCount > TEAM_GENERATION.maxCandidates) {
 		throw new Error(`Team generation is too complex: ${candidateCount} candidates`);
 	}
 

@@ -67,6 +67,7 @@ export const SETTINGS = {
     kind: 'text',
     schema: z.string().max(120),
     defaultValue: '',
+    max: 120,
     labelKey: 'settings.defaultLocation.label',
     descriptionKey: 'settings.defaultLocation.description'
   }),
@@ -451,6 +452,18 @@ export function defaultSettings(): SettingsValues {
   return Object.fromEntries(
     SETTINGS_KEYS.map((key) => [key, SETTINGS[key].defaultValue])
   ) as SettingsValues;
+}
+
+/**
+ * Les validateurs de formulaire réutilisent la borne déclarée par le réglage
+ * au lieu de recopier le même nombre.
+ */
+export function settingBound(key: SettingsKey, bound: 'min' | 'max'): number {
+  const value = SETTINGS[key][bound];
+  if (typeof value !== 'number') {
+    throw new Error(`Le réglage ${key} doit déclarer une borne ${bound}.`);
+  }
+  return value;
 }
 
 export function parseSettings(

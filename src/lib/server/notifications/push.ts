@@ -1,3 +1,4 @@
+import { PUSH_DELIVERY } from '#config/push.ts';
 import {
 	deletePushSubscription,
 	listPushSubscriptionsForUser
@@ -51,8 +52,8 @@ export async function sendPush(
 	for (const row of subscriptions) {
 		try {
 			await webpush.sendNotification(subscription(row), payload, {
-				TTL: 3600,
-				urgency: 'high'
+				TTL: PUSH_DELIVERY.ttlSeconds,
+				urgency: PUSH_DELIVERY.urgency
 			});
 			delivered += 1;
 		} catch (error) {

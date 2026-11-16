@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ACCOUNT_LIMITS } from '#config/account.ts';
+import { PLAYER_LIMITS } from '#config/players.ts';
 import { DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
 import { identity } from '#lib/domain/auth/identity.ts';
 import { requireUser } from '#lib/domain/auth/policy.ts';
@@ -9,7 +10,7 @@ import { AppError } from '#lib/shared/errors.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 
 const emailSchema = z.object({
-	email: z.string().trim().toLowerCase().email().max(254)
+	email: z.string().trim().toLowerCase().email().max(PLAYER_LIMITS.emailMax)
 });
 
 const displayNameSchema = z.object({

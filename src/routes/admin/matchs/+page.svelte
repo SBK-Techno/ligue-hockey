@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
 	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
@@ -34,11 +35,11 @@
 		</div>
 		<div class="sm:col-span-2">
 			<label class="label" for="location">{t('games.location')}</label>
-			<input class="input" id="location" name="location" value={data.defaults.location} maxlength="120" required />
+			<input class="input" id="location" name="location" value={data.defaults.location} maxlength={GAME_LIMITS.locationMax} required />
 		</div>
 		<div class="sm:col-span-2">
 			<label class="label" for="notes">{t('games.notes')}</label>
-			<textarea class="input" id="notes" name="notes" rows="2" maxlength="1000"></textarea>
+			<textarea class="input" id="notes" name="notes" rows="2" maxlength={GAME_LIMITS.notesMax}></textarea>
 		</div>
 		<div class="sm:col-span-2">
 			<button class="btn-primary" type="submit">{t('games.adminCreate')}</button>

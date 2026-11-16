@@ -6,6 +6,7 @@ import type { Role as AccessRole } from 'better-auth/plugins/access';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { building } from '$app/env';
 import { getRequestEvent } from '$app/server';
+import { ACCOUNT_LIMITS, AUTH_POLICY } from '#config/account.ts';
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '#config/roles.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { env } from '#lib/shared/config/env.ts';
@@ -33,7 +34,7 @@ export const auth = betterAuth({
 		disableSignUp: true,
 		requireEmailVerification: false,
 		minPasswordLength: publicEnv.passwordMinLength,
-		maxPasswordLength: 128,
+		maxPasswordLength: ACCOUNT_LIMITS.passwordMax,
 		resetPasswordTokenExpiresIn: env.security.inviteDays * 24 * 60 * 60,
 		revokeSessionsOnPasswordReset: true,
 		sendResetPassword: async ({ user, url }) => {
@@ -69,19 +70,19 @@ export const auth = betterAuth({
 	},
 	session: {
 		expiresIn: env.security.sessionDays * 24 * 60 * 60,
-		updateAge: 24 * 60 * 60
+		updateAge: AUTH_POLICY.sessionRefreshHours * 60 * 60
 	},
 	rateLimit: {
 		enabled: true,
-		window: 10,
-		max: 100,
+		window: AUTH_POLICY.rateLimitWindowSeconds,
+		max: AUTH_POLICY.rateLimitMax,
 		customRules: {
 			'/sign-in/email': {
 				window: env.security.loginWindowMinutes * 60,
 				max: env.security.maxLoginAttempts
 			},
 			'/request-password-reset': {
-				window: 60 * 60,
+				window: AUTH_POLICY.passwordWindowSeconds,
 				max: env.security.resetRequestsPerHour
 			}
 		}

@@ -1,5 +1,7 @@
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
+import { ACCOUNT_LIMITS } from '#config/account.ts';
+import { PLAYER_LIMITS } from '#config/players.ts';
 import { auth } from '#lib/server/auth.ts';
 import { actionError } from '#lib/server/action.ts';
 import {
@@ -12,8 +14,8 @@ import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
 const loginSchema = z.object({
-	email: z.string().trim().toLowerCase().email().max(254),
-	password: z.string().min(1).max(128),
+	email: z.string().trim().toLowerCase().email().max(PLAYER_LIMITS.emailMax),
+	password: z.string().min(1).max(ACCOUNT_LIMITS.passwordMax),
 	next: z.string().trim().max(2048).optional()
 });
 

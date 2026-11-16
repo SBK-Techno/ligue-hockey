@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { MONEY_INPUT } from '#config/money.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { PAYMENT_METHODS, paymentDefinition } from '#config/payment-methods.ts';
@@ -278,7 +279,7 @@
 					<label class="label" for="total">{t('balance.totalCents')}</label>
 					<div class="relative">
 						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
-						<input class="input pl-7" id="total" name="total" type="number" inputmode="decimal" min="0" step="0.01" value={data.plan?.total} required />
+						<input class="input pl-7" id="total" name="total" type="number" inputmode="decimal" min={MONEY_INPUT.min} step={MONEY_INPUT.step} value={data.plan?.total} required />
 					</div>
 				</div>
 				<div>
@@ -318,7 +319,7 @@
 						<label class="label" for="amount">{t('balance.amount')}</label>
 						<div class="relative">
 							<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
-							<input class="input pl-7" id="amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" value={data.plan?.amount} required />
+							<input class="input pl-7" id="amount" name="amount" type="number" inputmode="decimal" min={MONEY_INPUT.positiveMin} step={MONEY_INPUT.step} value={data.plan?.amount} required />
 						</div>
 					</div>
 					<div>
