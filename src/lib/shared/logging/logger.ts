@@ -15,10 +15,6 @@ const REDACTED = '[redacted]';
 const SENSITIVE_KEY =
 	/password|secret|token|cookie|authorization|vapid|smtp|session/i;
 
-export function redactPath(path: string): string {
-	return path.replace(/^(\/api\/auth\/reset-password\/)[^/]+/, '$1[redacted]');
-}
-
 function sanitize(value: unknown, seen: WeakSet<object>, depth = 0): unknown {
 	if (depth > 5) return '[depth]';
 	if (value === null || value === undefined) return value;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { redactPath } from './logger.ts';
+import { redactPath } from './redact.ts';
 
 describe('log path redaction', () => {
 	it('removes a password-reset token from the logged path', () => {

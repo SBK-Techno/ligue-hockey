@@ -7,7 +7,8 @@ import { startup } from '#lib/server/startup.ts';
 import { isAppError } from '#lib/shared/errors.ts';
 import { t, type I18nKey } from '#lib/shared/i18n/index.ts';
 import { newId } from '#lib/shared/ids/id.ts';
-import { logger, redactPath } from '#lib/shared/logging/logger.ts';
+import { logger } from '#lib/shared/logging/logger.ts';
+import { redactPath } from '#lib/shared/logging/redact.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 
 const SECURITY_HEADERS: Record<string, string> = {
