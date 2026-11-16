@@ -25,7 +25,7 @@
 						href={item.href}
 						class="flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-control px-0.5 py-1.5 text-center no-underline transition-colors {active
 							? 'bg-ice-soft text-ice-deep'
-							: 'text-muted hover:bg-ice-soft/50 hover:text-ice-deep'}"
+							: 'text-muted hover:bg-ice-soft/60 hover:text-ice-deep'}"
 						aria-current={active ? 'page' : undefined}
 					>
 						<NavIcon icon={item.icon} class="h-5 w-5" />

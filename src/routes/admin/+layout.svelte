@@ -59,7 +59,7 @@
 
 	<div class="min-w-0">
 		<div
-			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-paper/95 px-4 py-2 backdrop-blur lg:hidden"
+			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-paper px-4 py-2 lg:hidden"
 		>
 			<a
 				href="/"
