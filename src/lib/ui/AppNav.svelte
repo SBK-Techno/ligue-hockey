@@ -164,7 +164,7 @@
 						<nav class="mt-1 flex flex-col" aria-label={t('nav.accountMenu')}>
 							{#if account}
 								<a
-									class="flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-body font-medium no-underline hover:bg-ice-soft"
+									class="flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-body font-medium no-underline hover:bg-ice-soft/60"
 									href={account.href}
 									onclick={() => (open = false)}
 								>
@@ -173,7 +173,7 @@
 								</a>
 							{/if}
 							<a
-								class="flex min-h-11 items-center rounded-control px-2.5 pl-10 text-body font-medium no-underline hover:bg-ice-soft"
+								class="flex min-h-11 items-center rounded-control px-2.5 pl-10 text-body font-medium no-underline hover:bg-ice-soft/60"
 								href="/solde"
 								onclick={() => (open = false)}
 							>
@@ -182,7 +182,7 @@
 						</nav>
 						<form method="POST" action="/deconnexion" class="mt-1 border-t border-line pt-1">
 							<button
-								class="flex min-h-11 w-full items-center px-2.5 text-left text-body font-medium text-muted transition-colors hover:bg-ice-soft hover:text-ink"
+								class="flex min-h-11 w-full items-center px-2.5 text-left text-body font-medium text-muted transition-colors hover:bg-ice-soft/60 hover:text-ink"
 								type="submit"
 							>
 								{t('nav.logout')}

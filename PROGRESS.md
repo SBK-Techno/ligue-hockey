@@ -4,12 +4,13 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `fix/1.3.3`.
-- Target version: `1.3.3`.
-- Shipped: identity, navigation, evaluations, smart sheet, locations, `1.3.0`; initial-paint fix, `1.3.1`; natural rink, auth hero, shared Black/White sheet, `1.3.2` (live).
-- In flight: `/remplacants` inline create and manage actions, the warm blue/white/red rounded theme, the dressing-room login hero, the account profile destination on mobile, the admin 320 grid and the record-row order.
-- Verification: `npm run gate` is green with 350 tests in 43 files, 225 architecture files, generated assets, documentation and the production build.
-- Next: PR, merge, tag `v1.3.3`, release, promote and verify health.
+- Branch: `feat/home-1.4.0`.
+- Target version: `1.4.0`.
+- Shipped: identity, navigation, evaluations, smart sheet, locations, `1.3.0`; initial-paint fix, `1.3.1`; natural rink, auth hero, shared Black/White sheet, `1.3.2`; warm blue-white-red theme, dressing-room login, inline substitute actions, `1.3.3` (live).
+- In flight: the home situation board and month calendar, plus one shared UI system across every route: one page header, one section body, one type scale, one chip, one empty state, one sticky bar, one row rhythm.
+- Next: the phase-aware match sheet and rink lineup board (`1.5.0`); avatars, evaluation redesign and the real-ice material pass (`1.6.0`).
+- Verification: `npm run gate` green at `e202dd6`, 393 tests in 46 files, 242 architecture files, generated assets and the documentation site; the admin surface migration lands on top and runs the gate again.
+- Next release step: final gate, PR, merge, tag `v1.4.0`, release, promote and verify health.
 
 ## Verified milestones
 

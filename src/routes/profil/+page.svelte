@@ -256,7 +256,7 @@
 						href="#{item.id}"
 						class="flex min-h-11 items-center border-l-[3px] px-2.5 text-body font-medium no-underline transition-colors {current
 							? 'border-ice bg-ice-soft text-ice-deep'
-							: 'border-transparent text-muted hover:bg-ice-soft hover:text-ink'}"
+							: 'border-transparent text-muted hover:bg-ice-soft/60 hover:text-ink'}"
 						aria-current={current ? 'location' : undefined}
 					>
 						{item.label}

@@ -3,6 +3,7 @@
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import StickySaveBar from '#lib/ui/StickySaveBar.svelte';
 	import { currencySymbol, formatCount, t } from '#lib/shared/i18n/index.ts';
 	import { tick } from 'svelte';
 	import type { PageProps } from './$types';
@@ -37,7 +38,7 @@
 	method="POST"
 	action="?/save"
 	use:progressiveForm
-	class="space-y-5 pb-20"
+	class="space-y-4"
 	oninvalidcapture={revealInvalid}
 >
 	{#each data.groups as group, index (group.key)}
@@ -49,7 +50,7 @@
 			<summary
 				class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2"
 			>
-				<h2 class="text-lg">{t(group.labelKey)}</h2>
+				<h2>{t(group.labelKey)}</h2>
 				<span class="flex items-center gap-2">
 					<span class="serial"
 						>{formatCount(group.settings.length, 'admin.settingCount.one', 'admin.settingCount.many')}</span
@@ -164,13 +165,11 @@
 		</details>
 	{/each}
 
-	<div
-		class="sticky bottom-0 z-10 -mx-4 border-t border-line bg-paper/95 px-4 sticky-action-bar backdrop-blur"
-	>
+	<StickySaveBar>
 		<FormFeedback {form} />
 		<div class="mt-1 flex flex-wrap items-center justify-between gap-2">
 			<p class="text-caption text-muted">{t('admin.settingsSaveHint')}</p>
 			<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
 		</div>
-	</div>
+	</StickySaveBar>
 </form>

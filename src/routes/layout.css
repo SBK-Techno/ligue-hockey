@@ -72,7 +72,8 @@
 		outline: none;
 	}
 	/* Sur une surface encre, l'anneau de focus passe au papier. */
-	.bg-ink :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+	.bg-ink :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+	.scoreboard :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
 		outline-color: var(--color-paper);
 	}
 	/* Un dialogue modal ne laisse pas la page défiler derrière lui. */
@@ -203,6 +204,22 @@
 		border-color: var(--color-ice);
 		background: var(--color-ice);
 		color: var(--color-on-brand);
+	}
+	/* La même pastille sur une surface encre. */
+	.chip-on-ink {
+		border-color: color-mix(in srgb, var(--color-paper) 40%, transparent);
+		background: transparent;
+		color: var(--color-paper);
+	}
+	.chip-on-ink:hover {
+		border-color: var(--color-paper);
+		background: color-mix(in srgb, var(--color-paper) 15%, transparent);
+		color: var(--color-paper);
+	}
+	.chip-on-ink[aria-pressed='true'] {
+		border-color: var(--color-paper);
+		background: var(--color-paper);
+		color: var(--color-ink);
 	}
 	/* Un état vide est une surface, pas une phrase perdue. */
 	.empty-state {

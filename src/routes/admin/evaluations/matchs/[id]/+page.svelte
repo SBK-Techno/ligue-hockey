@@ -68,101 +68,101 @@
 	back={{ href: '/admin/evaluations', label: t('admin.evaluationBack') }}
 />
 
-<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-	<p class="font-mono text-meta text-muted">
-		{formatCount(
-			assessment.ratedPlayers,
-			'rating.ratedPlayers.one',
-			'rating.ratedPlayers.many',
-			{ total: assessment.totalPlayers }
-		)}
-	</p>
-	<p class="text-caption text-muted">{t('rating.gameHelp')}</p>
-</div>
+<div class="page-stack">
+	<div class="flex flex-wrap items-center justify-between gap-2">
+		<p class="text-meta text-muted">
+			{formatCount(
+				assessment.ratedPlayers,
+				'rating.ratedPlayers.one',
+				'rating.ratedPlayers.many',
+				{ total: assessment.totalPlayers }
+			)}
+		</p>
+		<p class="text-meta text-muted">{t('rating.gameHelp')}</p>
+	</div>
 
-<FormFeedback {form} class="mb-4" />
+	<FormFeedback {form} />
 
-{#if !assessment.canRate}
-	<div class="notice mb-4">{t('rating.gameNotPlayed')}</div>
-{/if}
+	{#if !assessment.canRate}
+		<div class="notice">{t('rating.gameNotPlayed')}</div>
+	{/if}
 
-<div class="space-y-2">
-	{#each assessment.players as player (player.playerId)}
-		{@const attributes = gameRatingAttributes(player.position)}
-		<details
-			id="assessment-{player.playerId}"
-			class="sheet group"
-			name="assessment"
-			open={player.playerId === firstUnrated}
-		>
-			<summary
-				class="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-2.5"
+	<div class="space-y-2">
+		{#each assessment.players as player (player.playerId)}
+			{@const attributes = gameRatingAttributes(player.position)}
+			<details
+				id="assessment-{player.playerId}"
+				class="sheet group"
+				name="assessment"
+				open={player.playerId === firstUnrated}
 			>
-				<span class="jersey">{player.jerseyNumber ?? '-'}</span>
-				<span class="min-w-0 flex-1">
-					<span class="block truncate text-body font-semibold">{player.fullName}</span>
-					<span class="mt-0.5 block text-meta text-muted">
-						{t(positionDefinition(player.position).labelKey)}
+				<summary class="section-row flex min-h-14 cursor-pointer list-none items-center gap-3">
+					<span class="jersey">{player.jerseyNumber ?? '-'}</span>
+					<span class="min-w-0 flex-1">
+						<span class="block truncate text-body font-semibold">{player.fullName}</span>
+						<span class="mt-0.5 block text-meta text-muted">
+							{t(positionDefinition(player.position).labelKey)}
+						</span>
 					</span>
-				</span>
-				{#if form?.ok && form.playerId === player.playerId}
-					<span class="badge-ok" role="status">{t('rating.saved')}</span>
-				{:else}
-					<span class="badge {player.complete ? 'badge-ok' : ''}">
-						{player.rated}/{player.total}
-					</span>
-				{/if}
-				<svg
-					viewBox="0 0 24 24"
-					class="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					aria-hidden="true"
-				>
-					<path d="m6 9 6 6 6-6" />
-				</svg>
-			</summary>
-
-			{#key `${player.version}:${JSON.stringify(player.values)}:${
-				form?.playerId === player.playerId ? (form.revision ?? '') : ''
-			}`}
-				<form
-					method="POST"
-					action="?/save"
-					use:progressiveForm={{ reset: false }}
-					class="border-t border-line px-4 py-2"
-				>
-					<input type="hidden" name="playerId" value={player.playerId} />
-					<fieldset class="contents" disabled={!assessment.canRate}>
-						{#each attributes as attribute (attribute.key)}
-							<RatingScale
-								name={attribute.key}
-								label={t(attribute.labelKey)}
-								help={t(attribute.helpKey)}
-								value={player.values[attribute.key]}
-								clearable={assessment.canRate}
-								disabled={!assessment.canRate}
-							/>
-						{/each}
-					</fieldset>
-					{#if assessment.canRate}
-						<div class="mt-3 flex flex-wrap gap-2">
-							<button class="btn-primary btn-sm" type="submit">
-								{t('rating.saveNext')}
-							</button>
-							<ConfirmSubmit
-								label={t('rating.notSeenGame')}
-								question={t('rating.notSeenGameConfirm', { name: player.fullName })}
-								confirmLabel={t('rating.notSeenGame')}
-								class="btn-ghost btn-sm"
-								submitName="clear"
-								submitValue="1"
-							/>
-						</div>
+					{#if form?.ok && form.playerId === player.playerId}
+						<span class="badge-ok" role="status">{t('rating.saved')}</span>
+					{:else}
+						<span class={player.complete ? 'badge-ok' : 'badge'}>
+							{player.rated}/{player.total}
+						</span>
 					{/if}
-				</form>
-			{/key}
-		</details>
-	{/each}
+					<svg
+						viewBox="0 0 24 24"
+						class="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"
+					>
+						<path d="m6 9 6 6 6-6" />
+					</svg>
+				</summary>
+
+				{#key `${player.version}:${JSON.stringify(player.values)}:${
+					form?.playerId === player.playerId ? (form.revision ?? '') : ''
+				}`}
+					<form
+						method="POST"
+						action="?/save"
+						use:progressiveForm={{ reset: false }}
+						class="section-row border-t border-line"
+					>
+						<input type="hidden" name="playerId" value={player.playerId} />
+						<fieldset class="contents" disabled={!assessment.canRate}>
+							{#each attributes as attribute (attribute.key)}
+								<RatingScale
+									name={attribute.key}
+									label={t(attribute.labelKey)}
+									help={t(attribute.helpKey)}
+									value={player.values[attribute.key]}
+									clearable={assessment.canRate}
+									disabled={!assessment.canRate}
+								/>
+							{/each}
+						</fieldset>
+						{#if assessment.canRate}
+							<div class="mt-3 flex flex-wrap gap-2">
+								<button class="btn-primary btn-sm" type="submit">
+									{t('rating.saveNext')}
+								</button>
+								<ConfirmSubmit
+									label={t('rating.notSeenGame')}
+									question={t('rating.notSeenGameConfirm', { name: player.fullName })}
+									confirmLabel={t('rating.notSeenGame')}
+									class="btn-ghost btn-sm"
+									submitName="clear"
+									submitValue="1"
+								/>
+							</div>
+						{/if}
+					</form>
+				{/key}
+			</details>
+		{/each}
+	</div>
 </div>

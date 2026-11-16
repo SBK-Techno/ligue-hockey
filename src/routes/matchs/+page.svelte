@@ -63,7 +63,7 @@
 			{#if archivedPast.length > 0}
 				<details class="group border-t border-line" bind:open={archiveOpen}>
 					<summary
-						class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-body font-medium text-muted transition-colors hover:bg-ice-soft/50 hover:text-ink"
+						class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-body font-medium text-muted transition-colors hover:bg-ice-soft/60 hover:text-ink"
 					>
 						{archiveOpen
 							? t('games.hideArchive')

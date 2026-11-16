@@ -36,7 +36,7 @@
 						href={tab.href}
 						class="relative flex min-h-11 items-center border-l-[3px] px-2.5 text-meta font-medium no-underline transition-colors {current
 							? 'border-ice bg-ice-soft text-ice-deep'
-							: 'border-transparent text-muted hover:bg-ink/5 hover:text-ink'}"
+							: 'border-transparent text-muted hover:bg-ice-soft/60 hover:text-ice-deep'}"
 						aria-current={current ? 'page' : undefined}
 					>
 						{t(tab.labelKey)}
@@ -46,7 +46,7 @@
 			<div class="mt-3 border-t border-line pt-2">
 				<a
 					href="/"
-					class="flex min-h-11 items-center gap-2 px-2.5 text-body font-medium text-muted no-underline hover:bg-ink/5 hover:text-ink"
+					class="flex min-h-11 items-center gap-2 px-2.5 text-meta font-medium text-muted no-underline hover:bg-ice-soft/60 hover:text-ice-deep"
 				>
 					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 						<path d="m15 6-6 6 6 6" />
@@ -59,7 +59,7 @@
 
 	<div class="min-w-0">
 		<div
-			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-paper/95 px-4 py-2 backdrop-blur lg:hidden"
+			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-paper px-4 py-2 lg:hidden"
 		>
 			<a
 				href="/"

@@ -11,6 +11,8 @@
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import RatingScale from '#lib/ui/RatingScale.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import StatStrip from '#lib/ui/StatStrip.svelte';
+	import StickySaveBar from '#lib/ui/StickySaveBar.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -23,16 +25,12 @@
 	back={{ href: '/admin/evaluations', label: t('admin.evaluationBack') }}
 />
 
-<FormFeedback {form} class="mb-4" />
-
 <form method="POST" action="?/save" use:progressiveForm={{ reset: false }} class="space-y-4">
 	<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
 		<div class="space-y-4">
 			<SectionCard title={t('rating.seasonTitle')}>
-				<div class="border-b border-line px-4 py-2">
-					<p class="text-meta leading-snug text-muted">{t('rating.scaleHelp')}</p>
-				</div>
-				<div class="divide-y divide-line px-4 py-1">
+				<p class="text-meta leading-snug text-muted">{t('rating.scaleHelp')}</p>
+				<div class="mt-2 divide-y divide-line">
 					{#each RATING_ATTRIBUTES as attribute (attribute.key)}
 						<RatingScale
 							name={attribute.key}
@@ -45,7 +43,7 @@
 			</SectionCard>
 
 			<SectionCard title={t('rating.positionTitle')}>
-				<div class="divide-y divide-line px-4 py-1">
+				<div class="divide-y divide-line">
 					{#each data.attributes as attribute (attribute.key)}
 						<RatingScale
 							name={attribute.key}
@@ -60,60 +58,51 @@
 		</div>
 
 		<aside class="space-y-3">
-			<section class="sheet p-4">
-				<p class="serial">{t('rating.overall')}</p>
-				<p class="numeric mt-2 text-4xl">
-					{data.ratings.overall === null
-						? t('rating.notRated')
-						: formatDecimal(data.ratings.overall, 2)}
-				</p>
-				<p class="mt-2 text-meta text-muted">{t('rating.overallHelp')}</p>
-			</section>
+			<StatStrip
+				cells={[
+					{
+						value:
+							data.ratings.overall === null
+								? '-'
+								: formatDecimal(data.ratings.overall, 2),
+						label: t('rating.overall')
+					},
+					{
+						value:
+							data.ratings.positionOverall === null
+								? '-'
+								: formatDecimal(data.ratings.positionOverall, 2),
+						label: t('rating.positionOverall')
+					},
+					{
+						value:
+							data.ratings.form.average === null
+								? '-'
+								: formatDecimal(data.ratings.form.average, 2),
+						label: t('rating.form')
+					}
+				]}
+			/>
 
-			<section class="sheet p-4">
-				<div class="flex items-start justify-between gap-2">
-					<p class="serial">{t('rating.positionOverall')}</p>
+			<div class="space-y-2 px-1">
+				<p class="text-meta leading-relaxed text-muted">{t('rating.overallHelp')}</p>
+				<div class="flex flex-wrap items-center gap-2">
+					<p class="text-meta text-muted">
+						{t('rating.positionCriteria', {
+							done: Object.keys(data.ratings.positionValues).length,
+							total: data.ratings.positionTotal
+						})}
+					</p>
 					{#if !data.ratings.positionComplete && data.ratings.positionOverall !== null}
 						<span class="badge">{t('rating.partial')}</span>
 					{/if}
 				</div>
-				<p class="numeric mt-2 text-2xl">
-					{data.ratings.positionOverall === null
-						? t('rating.notAvailable')
-						: formatDecimal(data.ratings.positionOverall, 2)}
+				<p class="text-meta leading-relaxed text-muted">{t('rating.positionDescriptive')}</p>
+				<p class="text-meta text-muted">
+					{t('rating.gamesCount')} : {data.ratings.form.games}
 				</p>
-				<p class="mt-2 text-meta text-muted">{t('rating.positionDescriptive')}</p>
-				<p class="mt-1 text-meta text-muted">
-					{t('rating.positionCriteria', {
-						done: Object.keys(data.ratings.positionValues).length,
-						total: data.ratings.positionTotal
-					})}
-				</p>
-			</section>
-
-			<section class="sheet p-4">
-				<dl class="divide-y divide-line">
-					<div class="fact">
-						<dt>{t('rating.form')}</dt>
-						<dd>
-							{data.ratings.form.average === null
-								? t('rating.notAvailable')
-								: formatDecimal(data.ratings.form.average, 2)}
-						</dd>
-					</div>
-					<div class="fact">
-						<dt>{t('rating.gamesCount')}</dt>
-						<dd>{data.ratings.form.games}</dd>
-					</div>
-					{#if data.ratings.updatedAt}
-						<div class="fact">
-							<dt>{t('rating.lastUpdated')}</dt>
-							<dd>{formatTimestamp(data.ratings.updatedAt)}</dd>
-						</div>
-					{/if}
-				</dl>
 				{#if data.ratings.form.games > 0}
-					<p class="mt-2 text-meta text-muted">
+					<p class="text-meta text-muted">
 						{formatCount(
 							data.ratings.form.games,
 							'rating.formHelp.one',
@@ -121,11 +110,17 @@
 						)}
 					</p>
 				{/if}
-			</section>
+				{#if data.ratings.updatedAt}
+					<p class="text-meta text-muted">
+						{t('rating.lastUpdated')} · {formatTimestamp(data.ratings.updatedAt)}
+					</p>
+				{/if}
+			</div>
 		</aside>
 	</div>
 
-	<div class="sticky bottom-0 z-10 -mx-4 border-t border-line bg-paper/95 px-4 sticky-action-bar backdrop-blur">
+	<StickySaveBar>
+		<FormFeedback {form} />
 		<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
-	</div>
+	</StickySaveBar>
 </form>

@@ -12,7 +12,7 @@
 			<dt class="min-h-8 text-caption leading-tight text-muted [overflow-wrap:anywhere]">
 				{cell.label}
 			</dt>
-			<dd class="numeric order-first mt-1 min-w-0 text-[length:var(--text-metric)] [overflow-wrap:anywhere] {cell.tone === 'alert' ? 'text-alert' : 'text-ink'}">
+			<dd class="numeric order-first mt-1 min-w-0 whitespace-normal text-[length:var(--text-metric)] leading-tight [overflow-wrap:anywhere] {cell.tone === 'alert' ? 'text-alert' : 'text-ink'}">
 				{cell.value}
 			</dd>
 		</div>
