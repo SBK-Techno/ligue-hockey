@@ -13,6 +13,7 @@
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import StatStrip from '#lib/ui/StatStrip.svelte';
 	import TeamLineup from '#lib/ui/TeamLineup.svelte';
 	import { playerAssessmentHref } from '#lib/ui/nav.ts';
@@ -84,275 +85,274 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if missingRatingLinks.length > 0 || otherUnratedNames.length > 0}
-		<div class="alert mb-4">
-			<p class="font-semibold">{t('games.ratingsMissing')}</p>
-			{#if missingRatingLinks.length > 0}
-				<ul role="list" class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-body">
-					{#each missingRatingLinks as player (player.playerId)}
-						<li>
-							<a class="link font-medium" href={playerAssessmentHref(player.playerId)}>
-								{player.fullName}
-							</a>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-			{#if otherUnratedNames.length > 0}
-				<p class="mt-1 text-body">
-					{t('games.ratingsMissingNames', { names: otherUnratedNames.join(', ') })}
-				</p>
-			{/if}
-			<p class="mt-1 text-body">{t('games.ratingsMissingHelp')}</p>
-		</div>
-	{/if}
-
-	{#if game.status === 'cancelled'}
-		<div class="alert mb-4">
-			<p class="font-semibold">{t('games.cancelledNotice')}</p>
-		</div>
-	{:else if game.status !== 'scheduled'}
-		<div class="notice mb-4">{t('admin.gameNotScheduled')}</div>
-	{:else if !data.editable}
-		<div class="notice mb-4">{t('games.lineupLocked')}</div>
-	{/if}
-
-	<section class="card mb-4">
-		<h2 class="mb-3">{t('games.details')}</h2>
-		{#if game.status === 'scheduled'}
-			<form method="POST" action="?/update" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
-				<div>
-					<label class="label" for="gameDate">{t('games.date')}</label>
-					<input class="input" id="gameDate" name="gameDate" type="date" value={game.gameDate} required />
-				</div>
-				<div>
-					<label class="label" for="startTime">{t('games.time')}</label>
-					<input class="input" id="startTime" name="startTime" type="time" value={game.startTime} required />
-				</div>
-				<div class="sm:col-span-2">
-					<label class="label" for="locationId">{t('games.location')}</label>
-					<select class="input" id="locationId" name="locationId" value={game.locationId} required>
-						{#each data.locations as location (location.id)}
-							<option value={location.id}>{location.name}</option>
+	<div class="page-stack">
+		{#if missingRatingLinks.length > 0 || otherUnratedNames.length > 0}
+			<div class="alert">
+				<p class="font-semibold">{t('games.ratingsMissing')}</p>
+				{#if missingRatingLinks.length > 0}
+					<ul role="list" class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-body">
+						{#each missingRatingLinks as player (player.playerId)}
+							<li>
+								<a class="link font-medium" href={playerAssessmentHref(player.playerId)}>
+									{player.fullName}
+								</a>
+							</li>
 						{/each}
-					</select>
-				</div>
-				<div class="sm:col-span-2">
-					<label class="label" for="notes">{t('games.notes')}</label>
-					<textarea
-						class="input"
-						id="notes"
-						name="notes"
-						rows="3"
-						maxlength={GAME_LIMITS.notesMax}>{game.notes ?? ''}</textarea
-					>
-				</div>
-				<div class="flex flex-wrap gap-2 sm:col-span-2">
-					<button class="btn-primary" type="submit">{t('common.save')}</button>
-				</div>
-			</form>
-		{:else}
-			<dl class="mt-3 divide-y divide-line">
-				<div class="fact"><dt>{t('games.date')}</dt><dd>{formatDate(game.gameDate)}</dd></div>
-				<div class="fact"><dt>{t('games.time')}</dt><dd>{formatTime(game.startTime)}</dd></div>
-				<div class="fact"><dt>{t('games.location')}</dt><dd>{game.location}</dd></div>
-				{#if game.notes}
-					<div class="fact">
-						<dt>{t('games.notes')}</dt>
-						<dd class="whitespace-pre-wrap break-words text-right">{game.notes}</dd>
-					</div>
+					</ul>
 				{/if}
-			</dl>
-		{/if}
-	</section>
-
-	<section class="card mb-4">
-		<div class="section-title">
-			<h2>{t('games.roster')}</h2>
-			{#if game.generated}
-				<span class="badge-ice">{t('games.generated')}</span>
-			{:else}
-				<span class="badge">{t('games.notGenerated')}</span>
-			{/if}
-		</div>
-
-		{#if game.generated && intelligence}
-			<div class="mt-4 flex flex-wrap items-start justify-between gap-4">
-				<StatStrip cells={statCells} />
-				<FormFeedback {form} />
-			</div>
-
-			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line/70 pt-3">
-				{#each TEAMS as team (team.key)}
-					<p class="text-body text-muted">
-						{t('games.teamSize', {
-							team: t(teamDefinition(team.key).labelKey),
-							count: intelligence.sizes[team.key]
-						})}
-					</p>
-				{/each}
-				<p class="text-body text-muted">
-					{formatCount(
-						intelligence.placed,
-						'games.filledPlaces.one',
-						'games.filledPlaces.many'
-					)}
-				</p>
-				<p class="text-body text-muted">{game.openSlotsLabel}</p>
-				<p class="text-body text-muted">
-					{t('games.sizeGap', { count: intelligence.sizeDiff })}
-				</p>
-				<div class="ml-auto flex flex-wrap gap-2">
-					{#if data.editable}
-						<form method="POST" action="?/generate" use:progressiveForm>
-							{#if game.generated}
-								<ConfirmSubmit
-									label={t('games.regenerate')}
-									title={t('games.regenerate')}
-									question={t('games.regenerateConfirm')}
-									confirmLabel={t('games.regenerate')}
-									cancelLabel={t('common.cancel')}
-									tone="neutral"
-									class="btn-secondary btn-sm"
-								/>
-							{:else}
-								<button class="btn-primary btn-sm" type="submit">{t('games.generate')}</button>
-							{/if}
-						</form>
-					{/if}
-				</div>
-			</div>
-
-			<TeamLineup
-				slots={game.slots}
-				actorId={data.actor.kind === 'user' ? data.actor.userId : null}
-			/>
-
-			{#if generation}
-				<p class="mt-2 text-meta text-muted">
-					{t('games.publishedAt', { date: formatTimestamp(generation.generatedAt) })}
-				</p>
-			{/if}
-
-			{#if !intelligence.complete}
-				<div class="notice mt-4">
-					<p class="font-semibold">{t('games.rosterIncomplete')}</p>
-					<p class="mt-1 text-body leading-snug">{t('games.incomplete')}</p>
+				{#if otherUnratedNames.length > 0}
 					<p class="mt-1 text-body">
+						{t('games.ratingsMissingNames', { names: otherUnratedNames.join(', ') })}
+					</p>
+				{/if}
+				<p class="mt-1 text-body">{t('games.ratingsMissingHelp')}</p>
+			</div>
+		{/if}
+
+		{#if game.status === 'cancelled'}
+			<div class="alert">
+				<p class="font-semibold">{t('games.cancelledNotice')}</p>
+			</div>
+		{:else if game.status !== 'scheduled'}
+			<div class="notice">{t('admin.gameNotScheduled')}</div>
+		{:else if !data.editable}
+			<div class="notice">{t('games.lineupLocked')}</div>
+		{/if}
+
+		<SectionCard title={t('games.details')}>
+			{#if game.status === 'scheduled'}
+				<form method="POST" action="?/update" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
+					<div>
+						<label class="label" for="gameDate">{t('games.date')}</label>
+						<input class="input" id="gameDate" name="gameDate" type="date" value={game.gameDate} required />
+					</div>
+					<div>
+						<label class="label" for="startTime">{t('games.time')}</label>
+						<input class="input" id="startTime" name="startTime" type="time" value={game.startTime} required />
+					</div>
+					<div class="sm:col-span-2">
+						<label class="label" for="locationId">{t('games.location')}</label>
+						<select class="input" id="locationId" name="locationId" value={game.locationId} required>
+							{#each data.locations as location (location.id)}
+								<option value={location.id}>{location.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="sm:col-span-2">
+						<label class="label" for="notes">{t('games.notes')}</label>
+						<textarea
+							class="input"
+							id="notes"
+							name="notes"
+							rows="3"
+							maxlength={GAME_LIMITS.notesMax}>{game.notes ?? ''}</textarea
+						>
+					</div>
+					<div class="flex flex-wrap gap-2 sm:col-span-2">
+						<button class="btn-primary" type="submit">{t('common.save')}</button>
+					</div>
+				</form>
+			{:else}
+				<dl class="divide-y divide-line">
+					<div class="fact"><dt>{t('games.date')}</dt><dd>{formatDate(game.gameDate)}</dd></div>
+					<div class="fact"><dt>{t('games.time')}</dt><dd>{formatTime(game.startTime)}</dd></div>
+					<div class="fact"><dt>{t('games.location')}</dt><dd>{game.location}</dd></div>
+					{#if game.notes}
+						<div class="fact">
+							<dt>{t('games.notes')}</dt>
+							<dd class="whitespace-pre-wrap break-words text-right">{game.notes}</dd>
+						</div>
+					{/if}
+				</dl>
+			{/if}
+		</SectionCard>
+
+		<SectionCard title={t('games.roster')}>
+			<div class="mb-3 flex justify-end">
+				{#if game.generated}
+					<span class="badge-ice">{t('games.generated')}</span>
+				{:else}
+					<span class="badge">{t('games.notGenerated')}</span>
+				{/if}
+			</div>
+
+			{#if game.generated && intelligence}
+				<div class="space-y-3">
+					<StatStrip cells={statCells} />
+					<FormFeedback {form} />
+				</div>
+
+				<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-3">
+					{#each TEAMS as team (team.key)}
+						<p class="text-body text-muted">
+							{t('games.teamSize', {
+								team: t(teamDefinition(team.key).labelKey),
+								count: intelligence.sizes[team.key]
+							})}
+						</p>
+					{/each}
+					<p class="text-body text-muted">
+						{formatCount(
+							intelligence.placed,
+							'games.filledPlaces.one',
+							'games.filledPlaces.many'
+						)}
+					</p>
+					<p class="text-body text-muted">{game.openSlotsLabel}</p>
+					<p class="text-body text-muted">
 						{t('games.sizeGap', { count: intelligence.sizeDiff })}
 					</p>
+					<div class="ml-auto flex flex-wrap gap-2">
+						{#if data.editable}
+							<form method="POST" action="?/generate" use:progressiveForm>
+								{#if game.generated}
+									<ConfirmSubmit
+										label={t('games.regenerate')}
+										title={t('games.regenerate')}
+										question={t('games.regenerateConfirm')}
+										confirmLabel={t('games.regenerate')}
+										cancelLabel={t('common.cancel')}
+										tone="neutral"
+										class="btn-secondary btn-sm"
+									/>
+								{:else}
+									<button class="btn-primary btn-sm" type="submit">{t('games.generate')}</button>
+								{/if}
+							</form>
+						{/if}
+					</div>
 				</div>
-			{:else if data.editable && intelligence.swap}
-				<div class="notice mt-4">
-					<p class="font-semibold">{t('games.bestSwap')}</p>
-					<p class="mt-1 text-body leading-snug">
-						{t('games.bestSwapHelp', {
-							a: intelligence.swap.nameA,
-							b: intelligence.swap.nameB,
-							before: formatDecimal(intelligence.swap.skillDiffBefore, 2),
-							after: formatDecimal(intelligence.swap.skillDiffAfter, 2)
-						})}
+
+				<TeamLineup
+					slots={game.slots}
+					actorId={data.actor.kind === 'user' ? data.actor.userId : null}
+				/>
+
+				{#if generation}
+					<p class="mt-2 text-meta text-muted">
+						{t('games.publishedAt', { date: formatTimestamp(generation.generatedAt) })}
 					</p>
-					<p class="mt-1 text-body">
-						{t('games.bestSwapAge', {
-							before: formatDecimal(intelligence.swap.ageDiffBefore, 1),
-							after: formatDecimal(intelligence.swap.ageDiffAfter, 1)
-						})}
-					</p>
-					<form method="POST" action="?/swap" use:progressiveForm class="mt-2">
-						<ConfirmSubmit
-							label={t('games.applySwap')}
-							title={t('games.bestSwap')}
-							question={t('games.swapConfirm', {
+				{/if}
+
+				{#if !intelligence.complete}
+					<div class="notice mt-4">
+						<p class="font-semibold">{t('games.rosterIncomplete')}</p>
+						<p class="mt-1 text-body leading-snug">{t('games.incomplete')}</p>
+						<p class="mt-1 text-body">
+							{t('games.sizeGap', { count: intelligence.sizeDiff })}
+						</p>
+					</div>
+				{:else if data.editable && intelligence.swap}
+					<div class="notice mt-4">
+						<p class="font-semibold">{t('games.bestSwap')}</p>
+						<p class="mt-1 text-body leading-snug">
+							{t('games.bestSwapHelp', {
 								a: intelligence.swap.nameA,
 								b: intelligence.swap.nameB,
 								before: formatDecimal(intelligence.swap.skillDiffBefore, 2),
-								after: formatDecimal(intelligence.swap.skillDiffAfter, 2),
-								ageBefore: formatDecimal(intelligence.swap.ageDiffBefore, 1),
-								ageAfter: formatDecimal(intelligence.swap.ageDiffAfter, 1)
+								after: formatDecimal(intelligence.swap.skillDiffAfter, 2)
 							})}
-							confirmLabel={t('games.applySwap')}
-							cancelLabel={t('common.cancel')}
-							tone="neutral"
-							class="btn-secondary btn-sm"
-						/>
-					</form>
-				</div>
-			{:else if !data.editable && intelligence.swap}
-				<p class="hint mt-3">{t('games.lineupLocked')}</p>
+						</p>
+						<p class="mt-1 text-body">
+							{t('games.bestSwapAge', {
+								before: formatDecimal(intelligence.swap.ageDiffBefore, 1),
+								after: formatDecimal(intelligence.swap.ageDiffAfter, 1)
+							})}
+						</p>
+						<form method="POST" action="?/swap" use:progressiveForm class="mt-2">
+							<ConfirmSubmit
+								label={t('games.applySwap')}
+								title={t('games.bestSwap')}
+								question={t('games.swapConfirm', {
+									a: intelligence.swap.nameA,
+									b: intelligence.swap.nameB,
+									before: formatDecimal(intelligence.swap.skillDiffBefore, 2),
+									after: formatDecimal(intelligence.swap.skillDiffAfter, 2),
+									ageBefore: formatDecimal(intelligence.swap.ageDiffBefore, 1),
+									ageAfter: formatDecimal(intelligence.swap.ageDiffAfter, 1)
+								})}
+								confirmLabel={t('games.applySwap')}
+								cancelLabel={t('common.cancel')}
+								tone="neutral"
+								class="btn-secondary btn-sm"
+							/>
+						</form>
+					</div>
+				{:else if !data.editable && intelligence.swap}
+					<p class="hint mt-3">{t('games.lineupLocked')}</p>
+				{:else}
+					<p class="hint mt-3">{t('games.alreadyBalanced')}</p>
+				{/if}
+
+				{#if data.editable && intelligence.fills.count > 0}
+					<div class="mt-3 border-t border-line pt-3">
+						<p class="text-body font-semibold">{t('games.fillSlots')}</p>
+						<p class="hint mt-1">
+							{formatCount(
+								intelligence.fills.count,
+								'games.fillSlotsHelp.one',
+								'games.fillSlotsHelp.many'
+							)}
+							{intelligence.fills.names.join(', ')}
+						</p>
+						<form method="POST" action="?/fill" use:progressiveForm class="mt-2">
+							<button class="btn-secondary btn-sm" type="submit">{t('games.fillSlots')}</button>
+						</form>
+					</div>
+				{/if}
+
+				{#if generation}
+				{#each gameWarningsInOrder(generation.warnings) as warning (warning)}
+					{@const definition = gameWarningDefinition(warning)}
+					<div class={definition.tone === 'alert' ? 'alert mt-3' : 'notice mt-3'}>
+						<p class="font-semibold">{t(gameWarningLabelKey(warning))}</p>
+						{#if definition.helpKey}
+							<p class="mt-1">{t(definition.helpKey)}</p>
+						{/if}
+						{#if definition.detail === 'open-slots'}
+							<p class="mt-1 text-body">{game.openSlotsLabel}</p>
+						{/if}
+					</div>
+				{/each}
+
+				{#if generation.bench.length > 0}
+					<p class="micro-label mt-4">{t('games.bench')}</p>
+					<ul role="list" class="mt-1 flex flex-wrap gap-2">
+						{#each generation.bench as entry (entry.playerId)}
+							<li class="badge">
+								{#if entry.jerseyNumber}<span class="numeric">{entry.jerseyNumber}</span>{/if}
+								{entry.fullName} · {t(positionDefinition(entry.position).shortLabelKey)}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				{#if availableBench.length > 0}
+					<p class="micro-label mt-4">{t('games.benchAvailable')}</p>
+					<p class="mt-1 text-body text-muted">{availableBench.join(', ')}</p>
+				{/if}
+				{/if}
 			{:else}
-				<p class="hint mt-3">{t('games.alreadyBalanced')}</p>
-			{/if}
-
-			{#if data.editable && intelligence.fills.count > 0}
-				<div class="mt-3 border border-line p-3">
-					<p class="text-body font-semibold">{t('games.fillSlots')}</p>
-					<p class="hint mt-1">
-						{formatCount(
-							intelligence.fills.count,
-							'games.fillSlotsHelp.one',
-							'games.fillSlotsHelp.many'
-						)}
-						{intelligence.fills.names.join(', ')}
-					</p>
-					<form method="POST" action="?/fill" use:progressiveForm class="mt-2">
-						<button class="btn-secondary btn-sm" type="submit">{t('games.fillSlots')}</button>
+				<p class="text-body text-muted">{t('games.lineupSoon')}</p>
+				{#if data.editable}
+					<form method="POST" action="?/generate" use:progressiveForm class="mt-3">
+						<button class="btn-primary" type="submit">{t('games.generate')}</button>
 					</form>
-				</div>
+				{/if}
 			{/if}
+		</SectionCard>
 
-			{#if generation}
-			{#each gameWarningsInOrder(generation.warnings) as warning (warning)}
-				{@const definition = gameWarningDefinition(warning)}
-				<div class={definition.tone === 'alert' ? 'alert mt-3' : 'notice mt-3'}>
-					<p class="font-semibold">{t(gameWarningLabelKey(warning))}</p>
-					{#if definition.helpKey}
-						<p class="mt-1">{t(definition.helpKey)}</p>
-					{/if}
-					{#if definition.detail === 'open-slots'}
-						<p class="mt-1 text-body">{game.openSlotsLabel}</p>
-					{/if}
-				</div>
-			{/each}
-
-			{#if generation.bench.length > 0}
-				<p class="micro-label mt-4">{t('games.bench')}</p>
-				<ul role="list" class="mt-1 flex flex-wrap gap-2">
-					{#each generation.bench as entry (entry.playerId)}
-						<li class="badge">
-							{#if entry.jerseyNumber}<span class="numeric">{entry.jerseyNumber}</span>{/if}
-							{entry.fullName} · {t(positionDefinition(entry.position).shortLabelKey)}
-						</li>
-					{/each}
-				</ul>
-			{/if}
-			{#if availableBench.length > 0}
-				<p class="micro-label mt-4">{t('games.benchAvailable')}</p>
-				<p class="mt-1 text-body text-muted">{availableBench.join(', ')}</p>
-			{/if}
-			{/if}
-		{:else}
-			<p class="mt-2 text-body text-muted">{t('games.lineupSoon')}</p>
-			{#if data.editable}
-				<form method="POST" action="?/generate" use:progressiveForm class="mt-3">
-					<button class="btn-primary" type="submit">{t('games.generate')}</button>
+		{#if game.status === 'scheduled'}
+			<SectionCard title={t('admin.dangerZone')}>
+				<p class="text-body text-muted">{t('admin.cancelHelp')}</p>
+				<form method="POST" action="?/cancel" use:progressiveForm class="mt-4">
+					<ConfirmSubmit
+						label={t('games.adminCancel')}
+						question={t('admin.cancelGameQuestion', { date: formatDate(game.gameDate) })}
+						confirmLabel={t('games.adminCancel')}
+						cancelLabel={t('common.cancel')}
+					/>
 				</form>
-			{/if}
+			</SectionCard>
 		{/if}
-	</section>
-
-	{#if game.status === 'scheduled'}
-		<section class="card border-alert/30">
-			<h2 class="text-alert">{t('admin.dangerZone')}</h2>
-			<p class="mt-1 text-body text-muted">{t('admin.cancelHelp')}</p>
-			<form method="POST" action="?/cancel" use:progressiveForm class="mt-4">
-				<ConfirmSubmit
-					label={t('games.adminCancel')}
-					question={t('admin.cancelGameQuestion', { date: formatDate(game.gameDate) })}
-					confirmLabel={t('games.adminCancel')}
-					cancelLabel={t('common.cancel')}
-				/>
-			</form>
-		</section>
-	{/if}
+	</div>
 {/if}
