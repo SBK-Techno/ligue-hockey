@@ -497,7 +497,9 @@
 				</div>
 			</section>
 
-			<InstallPrompt variant="full" />
+			<div class="lg:hidden">
+				<InstallPrompt variant="full" />
+			</div>
 
 			<section id="securite" class="card scroll-mt-24">
 				<h2>{t('profile.security')}</h2>
