@@ -383,7 +383,6 @@
 			<section class="card mt-6">
 				<div class="section-title">
 					<h2>{t('team.balance')}</h2>
-					<a class="link text-sm" href="/admin/matchs/{game.id}">{t('home.manageGame')}</a>
 				</div>
 				<p class="mt-2 text-sm text-muted">
 					{t('games.teamBalance', {

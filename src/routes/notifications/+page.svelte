@@ -45,9 +45,6 @@
 		<p class="hint">
 			{isManager ? t('notifications.emptyHelpAdmin') : t('notifications.emptyHelp')}
 		</p>
-		<a class="btn-secondary btn-sm mt-3" href="/profil#notifications">
-			{t('notifications.settings')}
-		</a>
 	</div>
 {:else}
 	<div class="card-flush overflow-hidden">

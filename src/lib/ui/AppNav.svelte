@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
-	import { can } from '#lib/domain/auth/policy.ts';
 	import { mobileSurfaces, primarySurfaces } from '#lib/domain/auth/surfaces.ts';
 	import type { UserActor } from '#lib/domain/auth/types.ts';
 	import { roleDefinition } from '#config/roles.ts';
@@ -16,7 +15,6 @@
 	const items = $derived(primarySurfaces(actor));
 	const mobileItems = $derived(mobileSurfaces(actor));
 	const inAdmin = $derived(path.startsWith('/admin'));
-	const canManageSettings = $derived(can(actor, 'manageSettings'));
 
 	const unreadBadge = $derived(
 		unread > ACCOUNT_LIMITS.unreadBadgeMax
@@ -171,37 +169,11 @@
 						<nav class="mt-1 flex flex-col" aria-label={t('nav.accountMenu')}>
 							<a
 								class="flex min-h-11 items-center px-2.5 text-sm font-medium no-underline hover:bg-ink/5"
-								href="/profil"
-								onclick={() => (open = false)}
-							>
-								{t('nav.profile')}
-							</a>
-							<a
-								class="flex min-h-11 items-center justify-between gap-2 px-2.5 text-sm font-medium no-underline hover:bg-ink/5"
-								href="/notifications"
-								onclick={() => (open = false)}
-							>
-								<span>{t('notifications.title')}</span>
-								{#if unread > 0}
-									<span class="badge-alert">{unreadBadge}</span>
-								{/if}
-							</a>
-							<a
-								class="flex min-h-11 items-center px-2.5 text-sm font-medium no-underline hover:bg-ink/5"
 								href="/solde"
 								onclick={() => (open = false)}
 							>
 								{t('balance.title')}
 							</a>
-							{#if canManageSettings}
-								<a
-									class="flex min-h-11 items-center px-2.5 text-sm font-medium no-underline hover:bg-ink/5"
-									href="/admin/parametres"
-									onclick={() => (open = false)}
-								>
-									{t('admin.settings')}
-								</a>
-							{/if}
 						</nav>
 						<form method="POST" action="/deconnexion" class="mt-1 border-t border-line pt-1">
 							<button

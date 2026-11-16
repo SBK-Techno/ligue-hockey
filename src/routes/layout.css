@@ -308,7 +308,7 @@
 		@apply border-alert/25 border-l-alert bg-alert-soft font-medium text-alert;
 	}
 	.notice {
-		@apply border-ice/20 border-l-ice bg-ice-soft text-ice-deep;
+		@apply border-line border-l-ochre bg-paper-deep text-ink;
 	}
 	.success {
 		@apply border-ok/20 border-l-ok bg-ok-soft font-medium text-ok;
@@ -378,6 +378,28 @@
 	/* Feuille de présence : le numéro de chandail a sa propre gouttière. */
 	.ledger {
 		@apply divide-y divide-line;
+	}
+	/* Une paire libellé/valeur sur une seule ligne, comme une fiche imprimée. */
+	.fact {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+		min-height: 2.75rem;
+		padding: 0.375rem 0;
+		border-bottom: 1px solid var(--color-line);
+	}
+	.fact:last-child {
+		border-bottom: 0;
+	}
+	.fact :is(dt, .fact-label) {
+		color: var(--color-muted);
+		font-size: var(--text-meta);
+	}
+	.fact :is(dd, .fact-value) {
+		font-weight: 600;
+		text-align: right;
+		overflow-wrap: anywhere;
 	}
 	.record-row {
 		display: flex;

@@ -88,19 +88,9 @@
 					{/each}
 				</ul>
 			{:else}
-				<div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-					<p class="text-sm text-muted">
-						{data.withoutPlan.length > 0 ? t('admin.noUnpaid') : t('admin.nothingTodo')}
-					</p>
-					<div class="flex flex-wrap gap-2">
-						{#if data.permissions.balances}
-							<a class="btn-secondary btn-sm" href="/admin/soldes">{t('admin.balances')}</a>
-						{/if}
-						{#if data.permissions.games}
-							<a class="btn-secondary btn-sm" href="/admin/matchs">{t('admin.games')}</a>
-						{/if}
-					</div>
-				</div>
+				<p class="px-4 py-3 text-sm text-muted">
+					{data.withoutPlan.length > 0 ? t('admin.noUnpaid') : t('admin.nothingTodo')}
+				</p>
 			{/if}
 		</SectionCard>
 

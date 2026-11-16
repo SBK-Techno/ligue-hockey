@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { managementTabs } from '#lib/domain/auth/destinations.ts';
 	import { positionDefinition } from '#config/positions.ts';
 	import { teamDefinition } from '#config/teams.ts';
 	import { gameStatus } from '#config/game-status.ts';
@@ -18,7 +17,6 @@
 
 	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
 	const isManager = $derived(actor !== null && can(actor, 'manageGames'));
-	const managementLinks = $derived(actor ? managementTabs(actor) : []);
 	const hasProfile = $derived(data.hasPlayerProfile);
 	const ownSlot = $derived(
 		actor ? data.game?.slots.find((slot) => slot.player?.playerId === actor.userId) : undefined
@@ -62,9 +60,7 @@
 		<p class="text-sm text-muted">{t('home.greeting', { name: actor?.name.split(' ')[0] ?? '' })}</p>
 		<h1 class="mt-0.5">{t('admin.thisWeek')}</h1>
 	</div>
-	<a class="link -my-2 hidden min-h-11 items-center text-sm sm:inline-flex" href="/matchs"
-		>{t('home.allGames')}</a
-	>
+
 </header>
 
 {#if data.game}
@@ -197,31 +193,6 @@
 							</details>
 						{/if}
 					</div>
-				</SectionCard>
-			{/if}
-
-			{#if hasProfile && managementLinks.length > 0}
-				<SectionCard title={t('home.management')} href="/admin" linkLabel={t('common.seeAll')}>
-					<nav class="flex flex-col divide-y divide-line" aria-label={t('home.management')}>
-						{#each managementLinks as link (link.href)}
-							<a
-								class="flex min-h-11 items-center justify-between gap-3 px-4 py-2 text-sm font-medium no-underline hover:bg-ink/[0.03]"
-								href={link.href}
-							>
-								{t(link.labelKey)}
-								<svg
-									viewBox="0 0 24 24"
-									class="h-4 w-4 shrink-0 text-muted"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									aria-hidden="true"
-								>
-									<path d="m9 6 6 6-6 6" />
-								</svg>
-							</a>
-						{/each}
-					</nav>
 				</SectionCard>
 			{/if}
 

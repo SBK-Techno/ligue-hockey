@@ -42,7 +42,8 @@ export const load: ServerLoad = ({ locals }) => {
 			}))
 		})),
 		values: settingsFormValues(values),
-		descriptions
+		descriptions,
+		currency: values['finance.currency']
 	};
 };
 

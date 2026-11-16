@@ -114,6 +114,14 @@ export function formatDateTime(date: string, time: string): string {
 	return `${formatDate(date)} · ${formatTime(time)}`;
 }
 
+export function currencySymbol(currency: string): string {
+	const parts = new Intl.NumberFormat(branding.locale, {
+		style: 'currency',
+		currency
+	}).formatToParts(0);
+	return parts.find((part) => part.type === 'currency')?.value ?? currency;
+}
+
 export function formatMoney(cents: number, currency: string): string {
 	return new Intl.NumberFormat(branding.locale, {
 		style: 'currency',
