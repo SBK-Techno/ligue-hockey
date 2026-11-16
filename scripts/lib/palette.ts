@@ -8,6 +8,7 @@ export const PALETTE_KEYS = [
 	'paper',
 	'surface',
 	'line',
+	'line-strong',
 	'muted',
 	'ice',
 	'ice-deep',

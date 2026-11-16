@@ -5,11 +5,14 @@
 		label,
 		question,
 		confirmLabel = t('common.confirm'),
-		class: className = 'btn-danger btn-sm'
+		tone = 'danger',
+		class: className = tone === 'danger' ? 'btn-danger btn-sm' : 'btn-secondary btn-sm'
 	}: {
 		label: string;
 		question: string;
 		confirmLabel?: string;
+		/** Une confirmation destructive porte le rouge; une action neutre garde l'encre. */
+		tone?: 'danger' | 'neutral';
 		class?: string;
 	} = $props();
 
@@ -43,7 +46,10 @@
 			<button class="btn-secondary" type="button" onclick={() => dialog?.close()}>
 				{t('common.cancel')}
 			</button>
-			<button class="btn-danger" type="button" onclick={confirm}>{confirmLabel}</button>
+			<button
+				class={tone === 'danger' ? 'btn-danger' : 'btn-primary'}
+				type="button"
+				onclick={confirm}>{confirmLabel}</button>
 		</div>
 	</div>
 </dialog>

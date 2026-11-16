@@ -65,6 +65,15 @@ export function formatDate(
 	return formatter.format(dateOnlyToDate(date));
 }
 
+const weekdayShortFormat = new Intl.DateTimeFormat(branding.locale, {
+	weekday: 'short',
+	timeZone: branding.timezone
+});
+
+export function formatWeekdayShort(date: string): string {
+	return weekdayShortFormat.format(dateOnlyToDate(date));
+}
+
 const timestampFormat = new Intl.DateTimeFormat(branding.locale, {
 	day: 'numeric',
 	month: 'short',

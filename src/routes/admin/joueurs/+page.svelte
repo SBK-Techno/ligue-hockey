@@ -163,7 +163,7 @@
 					type="button"
 					class="min-h-11 rounded-control border px-2.5 text-[13px] font-medium transition-colors {filter ===
 					option.key
-						? 'border-ice bg-ice-soft text-ice-deep'
+						? 'border-ochre bg-ochre/10 text-ink'
 						: 'border-line-strong bg-surface text-muted hover:bg-paper'}"
 					aria-pressed={filter === option.key}
 					onclick={() => (filter = option.key)}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { gameStatus, gameStatusClass } from '#config/game-status.ts';
+	import { gameStatus } from '#config/game-status.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
@@ -64,7 +64,7 @@
 		back={{ href: '/matchs', label: t('games.title') }}
 	>
 		{#snippet actions()}
-			<span class={gameStatusClass(game.status)}>{t(gameStatus(game.status).labelKey)}</span>
+			<span class={badgeClass(gameStatus(game.status).tone)}>{t(gameStatus(game.status).labelKey)}</span>
 			{#if ownTeam}
 				<span class="badge-ice">
 					{t('home.team')} · {t(teamDefinition(ownTeam).labelKey)}
@@ -136,7 +136,7 @@
 					<button
 						class="min-h-11 rounded-control border px-4 text-sm font-semibold transition-colors sm:border-0 {availability.own ===
 						'present'
-							? 'border-ice bg-ice text-on-brand'
+							? 'border-ink bg-ink text-paper'
 							: 'border-line-strong bg-surface text-ink hover:bg-paper sm:bg-transparent sm:text-muted sm:hover:bg-ink/5 sm:hover:text-ink'}"
 						name="status"
 						value="present"
@@ -193,7 +193,7 @@
 								aria-hidden="true"
 								class="absolute inset-y-2 left-0 w-0.5 rounded-full {request.status ===
 								'open'
-									? 'bg-ice'
+									? 'bg-ochre'
 									: 'bg-ok'}"
 							></span>
 							<div class="flex flex-wrap items-center justify-between gap-3">
@@ -245,7 +245,7 @@
 				{#if filledRequests.length > 0}
 					<details class="group mt-3 border-t border-line/70 pt-1">
 						<summary
-							class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-ice marker:content-none"
+							class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm marker:content-none"
 						>
 							<svg
 								viewBox="0 0 24 24"
@@ -329,26 +329,19 @@
 				<span class="badge-ok">{t('games.generated')}</span>
 			</div>
 
-			<div class="relative mt-4 grid gap-8 sm:grid-cols-2 sm:gap-12">
-				<span
-					aria-hidden="true"
-					class="absolute inset-y-0 left-1/2 hidden w-0.5 -translate-x-1/2 bg-ice sm:block"
-				></span>
+			<div class="mt-4 grid gap-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-line">
 
 				{#each orderedTeams as team (team.key)}
-					<div class="min-w-0 overflow-hidden rounded-sheet border border-line">
+					<div class="min-w-0 overflow-hidden border border-line">
 						<div
-							class="flex items-center justify-between gap-2 px-3 py-2 {team.tone === 'black'
-								? 'bg-ink text-paper'
-								: 'bg-surface text-ink'}"
+							class="flex items-center justify-between gap-2 border-t-[6px] px-3 py-2 {team.tone ===
+							'black'
+								? 'border-ink bg-surface'
+								: 'border-line-strong bg-surface'}"
 						>
-							<h3 class="text-base font-semibold {team.tone === 'black' ? 'text-paper' : ''}">
-								{t(team.labelKey)}
-							</h3>
+							<h3 class="text-base font-semibold">{t(team.labelKey)}</h3>
 							{#if ownTeam === team.key}
-								<span class="text-[11px] font-medium {team.tone === 'black'
-									? 'text-paper/70'
-									: 'text-muted'}">{t('home.team')}</span>
+								<span class="stamp border-ochre bg-ochre/10 text-ink">{t('home.team')}</span>
 							{/if}
 						</div>
 
@@ -359,33 +352,22 @@
 								<ul role="list">
 									{#each rows as slot (slot.slotIndex)}
 										{@const isMe = slot.player?.playerId === actor?.userId}
-										<li
-											class="flex min-h-9 items-center gap-3 border-b border-line/60 px-3 py-1 last:border-b-0"
-										>
-											<span
-												class="numeric w-7 shrink-0 text-right text-sm {isMe
-													? 'text-ice-deep'
-													: 'text-muted'}"
-											>
-												{slot.player?.jerseyNumber ?? ''}
-											</span>
+										<li class="ledger-row border-b border-line/70 last:border-b-0" data-you={isMe}>
+											<span class="jersey">{slot.player?.jerseyNumber ?? '–'}</span>
 											{#if slot.player}
-												<span
-													class="min-w-0 flex-1 truncate text-sm {isMe
-														? 'font-semibold text-ice-deep'
-														: 'text-ink'}"
-												>
+												<span class="min-w-0 truncate text-sm {isMe ? 'font-semibold' : ''}">
 													{slot.player.fullName}
 												</span>
 												{#if isMe}
-													<span class="badge-ice shrink-0">{t('common.you')}</span>
+													<span class="stamp border-ochre bg-ochre/10 text-ink">{t('common.you')}</span>
 												{:else if slot.player.kind === 'sub'}
 													<span class="badge shrink-0">{t('games.substitutes')}</span>
+												{:else}
+													<span></span>
 												{/if}
 											{:else}
-												<span class="min-w-0 flex-1 truncate text-sm text-muted">
-													{t('games.unassigned')}
-												</span>
+												<span class="min-w-0 truncate text-sm text-muted">{t('games.unassigned')}</span>
+												<span></span>
 											{/if}
 										</li>
 									{/each}

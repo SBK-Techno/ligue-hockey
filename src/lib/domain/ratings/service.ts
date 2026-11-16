@@ -9,8 +9,9 @@ import { recordAudit } from '#lib/domain/audit/service.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
 import { getPlayer } from '#lib/domain/players/service.ts';
 import { clock } from '#lib/shared/time/clock.ts';
+import { parseSchema } from '#lib/shared/validation.ts';
 import { listRatings, upsertRatings } from './queries.ts';
-import type { RatingsInput } from './validators.ts';
+import { ratingsInputSchema, type RatingsInput } from './validators.ts';
 
 export type RatingsView = {
 	playerId: string;
@@ -53,8 +54,9 @@ export function setRatings(
 ): RatingsView {
 	const user = requirePermission(actor, 'editRatings');
 	getPlayer(actor, playerId);
+	const values = parseSchema(ratingsInputSchema, input);
 
-	upsertRatings(playerId, input, clock.nowMs(), user.userId);
+	upsertRatings(playerId, values, clock.nowMs(), user.userId);
 	recordAudit(actor, {
 		action: 'ratings.update',
 		entityType: 'player',

@@ -39,7 +39,7 @@ export const load: ServerLoad = ({ locals }) => {
 	const openRequests = listOpenRequests(actor);
 
 	return {
-		games: upcoming.slice(0, 3),
+		games: upcoming,
 		game,
 		availability,
 		balance: getMyBalance(actor),

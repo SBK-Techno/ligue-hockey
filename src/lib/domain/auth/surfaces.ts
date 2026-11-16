@@ -12,6 +12,12 @@ export function primarySurfaces(actor: Actor): readonly Surface[] {
   return visibleSurfaces(actor).filter((surface) => surface.placement === 'primary');
 }
 
-export function accountSurfaces(actor: Actor): readonly Surface[] {
-  return visibleSurfaces(actor).filter((surface) => surface.placement === 'account');
+/**
+ * La barre mobile garde cinq places. Gestion passe avant le profil pour un
+ * responsable, donc l'administration reste à un tap de n'importe quel écran.
+ */
+export function mobileSurfaces(actor: Actor): readonly Surface[] {
+  return [...primarySurfaces(actor)]
+    .sort((a, b) => a.mobilePriority - b.mobilePriority)
+    .slice(0, 5);
 }

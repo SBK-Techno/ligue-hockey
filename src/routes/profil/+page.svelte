@@ -267,10 +267,10 @@
 			<div class="hidden lg:block">
 				<p class="micro-label mb-1">{t('profile.quickLinks')}</p>
 				<ul role="list" class="text-sm">
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/matchs">{t('nav.games')}</a></li>
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/remplacants">{t('subs.title')}</a></li>
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/discussion">{t('nav.chat')}</a></li>
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/notifications">{t('profile.inbox')}</a></li>
+					<li><a class="link flex min-h-11 items-center" href="/matchs">{t('nav.games')}</a></li>
+					<li><a class="link flex min-h-11 items-center" href="/remplacants">{t('subs.title')}</a></li>
+					<li><a class="link flex min-h-11 items-center" href="/discussion">{t('nav.chat')}</a></li>
+					<li><a class="link flex min-h-11 items-center" href="/notifications">{t('profile.inbox')}</a></li>
 				</ul>
 			</div>
 		</aside>
@@ -408,7 +408,7 @@
 							<div class="flex flex-wrap gap-2">
 								{#each POSITIONS as position (position.key)}
 									<label
-										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
+										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ochre has-[:checked]:bg-ochre/10"
 									>
 										<input
 											type="checkbox"

@@ -37,6 +37,7 @@
 		title: string;
 		state: StepState;
 		detail?: string;
+		label?: string;
 		action?: { href: string; label: string };
 	};
 
@@ -77,6 +78,7 @@
 			id: 'team',
 			title: t('home.steps.team'),
 			state: line ? 'done' : 'idle',
+			label: !line && generated ? '—' : undefined,
 			detail: line ?? (generated ? t('home.steps.notInLineup') : t('home.steps.teamWaiting')),
 			action: { href: `/matchs/${gameId}`, label: t('home.steps.viewLineup') }
 		});
@@ -120,7 +122,8 @@
 		list.push({
 			id: 'discussion',
 			title: t('home.steps.discussion'),
-			state: latest ? 'done' : 'idle',
+			state: 'idle',
+			label: t('home.steps.info'),
 			detail: latest
 				? latest.deleted
 					? t('chat.deleted')
@@ -134,119 +137,123 @@
 		return list;
 	});
 
-	const firstOpen = $derived(steps.findIndex((step) => step.state !== 'done'));
-	const filledTo = $derived(firstOpen === -1 ? steps.length : firstOpen);
+	function stateLabel(state: StepState): string {
+		return state === 'done'
+			? t('home.steps.done')
+			: state === 'todo'
+				? t('home.steps.todo')
+				: t('home.steps.waiting');
+	}
+
+	function stateClass(state: StepState): string {
+		return state === 'done'
+			? 'border-ok/40 bg-ok-soft text-ok'
+			: state === 'todo'
+				? 'border-ochre bg-ochre/10 text-ink'
+				: 'border-line text-muted';
+	}
+
+	const doneCount = $derived(steps.filter((step) => step.state === 'done').length);
 
 	function isSelected(status: 'present' | 'absent'): boolean {
 		return availability?.own === status;
 	}
 </script>
 
-<section class="card" aria-labelledby="semaine-titre">
-	<div class="flex items-baseline justify-between gap-3">
+<section class="sheet" aria-labelledby="semaine-titre">
+	<header class="flex items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
 		<h2 id="semaine-titre">{t('home.steps.title')}</h2>
-	</div>
-	<ol role="list" class="mt-4">
-		{#each steps as step, index (step.id)}
+		<span class="serial">{doneCount} / {steps.length}</span>
+	</header>
+	<ol role="list" class="divide-y divide-line">
+		{#each steps as step (step.id)}
 			<!-- cible du lien « Répondre » : on veut y déplacer le focus, pas en faire un contrôle -->
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 			<li
-				class="relative scroll-mt-[var(--anchor-offset)] pb-4 pl-9 last:pb-0"
+				class="flex scroll-mt-[var(--anchor-offset)] gap-3 px-4 py-2.5"
 				id={step.id === 'presence' ? 'presence' : undefined}
 				tabindex={step.id === 'presence' ? -1 : undefined}
 			>
-				{#if index < steps.length - 1}
-					<span
-						aria-hidden="true"
-						class="absolute left-[9px] top-5 h-[calc(100%-0.75rem)] w-px {index < filledTo
-							? 'bg-ice'
-							: 'bg-line'}"
-					></span>
-				{/if}
-
-				<span
-					aria-hidden="true"
-					class="absolute left-0 top-0 grid h-5 w-5 place-items-center rounded-full border text-[11px] font-bold {step.state ===
-					'done'
-						? 'border-ink bg-ink text-paper'
-						: step.state === 'todo'
-							? 'border-ice bg-ice text-paper'
-							: 'border-line-strong bg-surface text-muted'}"
-				>
-					{index + 1}
+				<span class="stamp mt-0.5 h-fit w-[4.5rem] shrink-0 justify-center {stateClass(step.state)}">
+					{step.label ?? stateLabel(step.state)}
 				</span>
 
-				<div class="flex items-baseline justify-between gap-3">
-					<p class="text-sm font-semibold leading-6">{step.title}</p>
-					{#if step.action && step.id !== 'presence'}
-						<a class="link -my-2 inline-flex min-h-11 shrink-0 items-center text-sm" href={step.action.href}>
-							{step.action.label}
-						</a>
+				<div class="min-w-0 flex-1">
+					<div class="flex items-baseline justify-between gap-2">
+						<p class="text-sm font-semibold leading-5">{step.title}</p>
+						{#if step.action && step.id !== 'presence'}
+							<a
+								class="link -my-2 inline-flex min-h-11 shrink-0 items-center text-xs"
+								href={step.action.href}
+							>
+								{step.action.label}
+							</a>
+						{/if}
+					</div>
+					<p
+						class="mt-0.5 break-words text-xs leading-snug {step.id === 'balance' && balance?.isOverdue
+							? 'font-medium text-alert'
+							: 'text-muted'}"
+					>
+						{step.detail}
+					</p>
+
+					{#if step.id === 'presence' && availability?.canWithdraw}
+						<form method="POST" action="?/availability" use:progressiveForm class="mt-2">
+							<input type="hidden" name="gameId" value={gameId} />
+							<input type="hidden" name="status" value="absent" />
+							<ConfirmSubmit
+								label={t('availability.withdraw')}
+								question={t('availability.withdrawConfirm')}
+								confirmLabel={t('availability.withdraw')}
+								class="btn-secondary btn-sm w-full"
+							/>
+						</form>
+					{/if}
+
+					{#if step.id === 'presence' && availability?.canRespond}
+						<form
+							method="POST"
+							action="?/availability"
+							use:progressiveForm
+							class="mt-2 grid grid-cols-2 gap-2"
+						>
+							<input type="hidden" name="gameId" value={gameId} />
+							<button
+								class="min-h-11 border px-1.5 text-xs font-semibold transition-colors {isSelected(
+									'present'
+								)
+									? 'border-ink bg-ink text-paper'
+									: 'border-line-strong bg-surface text-ink hover:border-ink'}"
+								name="status"
+								value="present"
+								type="submit"
+								aria-pressed={isSelected('present')}
+							>
+								{t('availability.markPresent')}
+							</button>
+							<button
+								class="min-h-11 border px-1.5 text-xs font-semibold transition-colors {isSelected(
+									'absent'
+								)
+									? 'border-ink bg-ink text-paper'
+									: 'border-line-strong bg-surface text-ink hover:border-ink'}"
+								name="status"
+								value="absent"
+								type="submit"
+								aria-pressed={isSelected('absent')}
+							>
+								{t('availability.markAbsent')}
+							</button>
+						</form>
+					{/if}
+
+					{#if step.id === 'discussion' && latest}
+						<p class="mt-1 text-[11px] text-muted">
+							{latest.authorName} · {formatTimestamp(latest.createdAt)}
+						</p>
 					{/if}
 				</div>
-				<p
-					class="mt-0.5 break-words text-sm leading-snug {step.id === 'balance' && balance?.isOverdue
-						? 'font-medium text-alert'
-						: 'text-muted'}"
-				>
-					{step.detail}
-				</p>
-
-				{#if step.id === 'presence' && availability?.canWithdraw}
-					<form method="POST" action="?/availability" use:progressiveForm class="mt-3">
-						<input type="hidden" name="gameId" value={gameId} />
-						<input type="hidden" name="status" value="absent" />
-						<ConfirmSubmit
-							label={t('availability.withdraw')}
-							question={t('availability.withdrawConfirm')}
-							confirmLabel={t('availability.withdraw')}
-							class="btn-secondary btn-sm w-full"
-						/>
-					</form>
-				{/if}
-
-				{#if step.id === 'presence' && availability?.canRespond}
-					<form
-						method="POST"
-						action="?/availability"
-						use:progressiveForm
-						class="mt-3 grid grid-cols-2 gap-2"
-					>
-						<input type="hidden" name="gameId" value={gameId} />
-						<button
-							class="min-h-11 whitespace-nowrap rounded-control border px-1.5 text-[13px] font-semibold transition-colors {isSelected(
-								'present'
-							)
-								? 'border-ice bg-ice text-on-brand'
-								: 'border-line-strong bg-surface text-ink hover:bg-paper'}"
-							name="status"
-							value="present"
-							type="submit"
-							aria-pressed={isSelected('present')}
-						>
-							{t('availability.markPresent')}
-						</button>
-						<button
-							class="min-h-11 whitespace-nowrap rounded-control border px-1.5 text-[13px] font-semibold transition-colors {isSelected(
-								'absent'
-							)
-								? 'border-ink bg-ink text-paper'
-								: 'border-line-strong bg-surface text-ink hover:bg-paper'}"
-							name="status"
-							value="absent"
-							type="submit"
-							aria-pressed={isSelected('absent')}
-						>
-							{t('availability.markAbsent')}
-						</button>
-					</form>
-				{/if}
-
-				{#if step.id === 'discussion' && latest}
-					<p class="mt-1 text-xs text-muted">
-						{latest.authorName} · {formatTimestamp(latest.createdAt)}
-					</p>
-				{/if}
 			</li>
 		{/each}
 	</ol>
