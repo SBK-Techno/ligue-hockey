@@ -20,3 +20,4 @@ vite.config.ts.timestamp-*
 # SQLite and local mail outbox (contains account tokens)
 *.db
 /data
+!.env.test
