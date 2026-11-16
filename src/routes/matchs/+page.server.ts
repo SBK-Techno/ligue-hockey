@@ -22,6 +22,5 @@ export const load: ServerLoad = ({ locals }) => {
 					(game.status === 'completed' && game.gameDate === today)
 			)
 			.reverse()
-			.slice(0, 10)
 	};
 };

@@ -406,6 +406,8 @@ export const fr = {
   'games.next': 'Prochain',
   'games.upcoming': 'À venir',
   'games.past': 'Passés',
+  'games.showArchive': 'Voir les {count} matchs passés',
+  'games.hideArchive': 'Revenir aux derniers matchs',
   'games.location': 'Aréna',
   'games.date': 'Date',
   'games.time': 'Heure',
