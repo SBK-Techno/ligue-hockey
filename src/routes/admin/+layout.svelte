@@ -18,17 +18,17 @@
 	}
 </script>
 
-<div class="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-8">
-	<aside class="hidden lg:sticky lg:top-24 lg:block">
-		<div class="rounded-card border border-line bg-surface p-3 shadow-card">
-			<p class="px-2 pb-2 pt-1 font-display text-sm font-bold">{t('admin.title')}</p>
+<div class="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-8">
+	<aside class="hidden lg:sticky lg:top-[4.75rem] lg:block lg:border-r lg:border-line/80 lg:pr-4">
+		<div class="py-1">
+			<p class="micro-label px-2.5 pb-2">{t('admin.title')}</p>
 			<nav class="flex flex-col gap-0.5" aria-label={t('nav.admin')}>
 				{#each tabs as tab (tab.href)}
 					{@const current = active(tab.href)}
 					<a
 						href={tab.href}
-						class="relative flex min-h-11 items-center rounded-control px-2.5 text-sm font-semibold no-underline transition-colors {current
-							? 'text-ink'
+						class="relative flex min-h-11 items-center rounded-control px-2.5 text-[13px] font-medium no-underline transition-colors {current
+							? 'bg-ink/[0.04] text-ink'
 							: 'text-muted hover:bg-ink/5 hover:text-ink'}"
 						aria-current={current ? 'page' : undefined}
 					>
@@ -36,7 +36,7 @@
 						{#if current}
 							<span
 								aria-hidden="true"
-								class="absolute inset-y-2 left-0 w-0.5 rounded-full bg-ice"
+								class="absolute inset-y-2 left-0 w-[2px] rounded-full bg-ochre"
 							></span>
 						{/if}
 					</a>
@@ -58,14 +58,14 @@
 
 	<div class="min-w-0">
 		<nav
-			class="mb-6 flex flex-wrap gap-1 border-b border-line/80 pb-2 lg:hidden"
+			class="sticky top-[3.75rem] z-20 -mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-line/80 bg-paper/95 px-4 py-1.5 backdrop-blur [mask-image:linear-gradient(to_right,#000_calc(100%-1.5rem),transparent)] lg:hidden"
 			aria-label={t('nav.admin')}
 		>
 			{#each tabs as tab (tab.href)}
 				{@const current = active(tab.href)}
 				<a
 					href={tab.href}
-					class="relative flex min-h-11 items-center whitespace-nowrap rounded-control px-3 text-sm font-semibold no-underline transition-colors {current
+					class="relative flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-control px-3 text-[13px] font-medium no-underline transition-colors {current
 						? 'text-ink'
 						: 'text-muted hover:bg-ink/5 hover:text-ink'}"
 					aria-current={current ? 'page' : undefined}
@@ -74,11 +74,17 @@
 					{#if current}
 						<span
 							aria-hidden="true"
-							class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-ice"
+							class="absolute inset-x-3 bottom-0 h-[2px] rounded-full bg-ochre"
 						></span>
 					{/if}
 				</a>
 			{/each}
+			<a
+				href="/"
+				class="flex min-h-11 shrink-0 items-center px-3 text-[13px] font-medium text-muted no-underline"
+			>
+				{t('nav.backToLeague')}
+			</a>
 		</nav>
 		{@render children()}
 	</div>

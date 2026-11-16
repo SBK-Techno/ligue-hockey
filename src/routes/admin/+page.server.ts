@@ -1,7 +1,7 @@
 import type { ServerLoad } from '@sveltejs/kit';
 import { branding } from '#lib/generated/branding.ts';
 import { listBalances } from '#lib/domain/finance/service.ts';
-import { listSchedule } from '#lib/domain/games/service.ts';
+import { getGame, listSchedule } from '#lib/domain/games/service.ts';
 import { listAdminPlayers } from '#lib/domain/players/service.ts';
 import { listOpenRequests } from '#lib/domain/roster/service.ts';
 import { can } from '#lib/domain/auth/policy.ts';
@@ -15,6 +15,7 @@ export const load: ServerLoad = ({ locals }) => {
 			balances: [],
 			requests: [],
 			nextGame: null,
+			upcoming: [],
 			permissions: { players: false, balances: false, games: false, subs: false },
 			counts: { active: 0, subs: 0, overdue: 0, openRequests: 0 }
 		};
@@ -30,17 +31,24 @@ export const load: ServerLoad = ({ locals }) => {
 	const balances = permissions.balances ? listBalances(actor) : [];
 	const requests = permissions.subs ? listOpenRequests(actor) : [];
 	const today = todayInZone(branding.timezone, clock.nowMs());
-	const nextGame = permissions.games
+	const next = permissions.games
 		? (listSchedule(actor).find(
 				(game) => game.status === 'scheduled' && game.gameDate >= today
 			) ?? null)
 		: null;
+	const nextGame = next ? getGame(actor, next.id) : null;
+	const upcoming = permissions.games
+		? listSchedule(actor)
+				.filter((game) => game.status === 'scheduled' && game.gameDate >= today)
+				.slice(1, 4)
+		: [];
 
 	return {
 		players,
 		balances,
 		requests,
 		nextGame,
+		upcoming,
 		permissions,
 		counts: {
 			active: players.filter((player) => player.active).length,

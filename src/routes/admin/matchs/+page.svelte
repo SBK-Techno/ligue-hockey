@@ -1,23 +1,33 @@
 <script lang="ts">
-	import { gameStatus } from '#config/game-status.ts';
-	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
+		import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
-
+	let showCreate = $state(false);
 </script>
 
 <FormFeedback {form} class="mb-4" />
 
-<div class="mb-5">
-	<h1>{t('admin.games')}</h1>
-	<p class="mt-1.5 text-sm text-muted">{t('admin.gamesHelp')}</p>
-</div>
+<PageHeader title={t('admin.games')} meta={t('admin.gamesHelp')}>
+	{#snippet actions()}
+		<button
+			class="btn-primary btn-sm"
+			type="button"
+			aria-expanded={showCreate}
+			aria-controls="create-game"
+			onclick={() => (showCreate = !showCreate)}
+		>
+			{showCreate ? t('common.close') : t('games.adminCreate')}
+		</button>
+	{/snippet}
+</PageHeader>
 
-<section class="card mb-5">
+{#if showCreate}
+<section class="card mb-5" id="create-game">
 	<h2 class="mb-3">{t('games.adminCreate')}</h2>
 	<form method="POST" action="?/create" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
 		<div>
@@ -41,6 +51,7 @@
 		</div>
 	</form>
 </section>
+{/if}
 
 {#if data.games.length === 0}
 	<div class="card">
@@ -48,31 +59,47 @@
 		<p class="hint">{t('games.emptyHelp')}</p>
 	</div>
 {:else}
-	<ul role="list" class="space-y-2">
-		{#each data.games as game (game.id)}
-			<li>
-				<a href="/admin/matchs/{game.id}" class="card card-link flex flex-wrap items-center justify-between gap-3 py-3.5">
-					<div>
-						<p class="font-semibold capitalize text-ink">{formatDate(game.gameDate)}</p>
-						<p class="mt-0.5 text-sm text-muted">{formatTime(game.startTime)} · {game.location}</p>
-					</div>
-					<div class="flex flex-wrap items-center gap-2">
-						{#if game.status === 'cancelled'}
-							<span class="badge-alert">{t('games.status.cancelled')}</span>
-						{:else}
-							<span class="badge">{t(gameStatus(game.status).labelKey)}</span>
-						{/if}
-						{#if game.generated}
-							<span class="badge-ice">{t('games.generated')}</span>
-						{:else if game.status === 'scheduled'}
-							<span class="badge">{t('games.notGenerated')}</span>
-						{/if}
-						{#if game.generated && game.openSlots > 0}
-							<span class="badge-alert">{game.openSlotsLabel}</span>
-						{/if}
-					</div>
-				</a>
-			</li>
-		{/each}
-	</ul>
+	<div class="card-flush overflow-hidden">
+		<ul role="list" class="divide-y divide-line/70">
+			{#each data.games as game (game.id)}
+				<li>
+					<a
+						class="flex min-h-14 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-ink/[0.03]"
+						href="/admin/matchs/{game.id}"
+					>
+						<span class="w-16 shrink-0 whitespace-nowrap font-mono text-xs text-muted">
+							{formatDate(game.gameDate, 'short')}
+						</span>
+						<span class="min-w-0 flex-1">
+							<span class="block truncate text-sm font-semibold">
+								{formatTime(game.startTime)} · {game.location}
+							</span>
+							<span class="mt-0.5 flex flex-wrap items-center gap-1.5">
+								{#if game.status === 'cancelled'}
+									<span class="badge-alert">{t('games.status.cancelled')}</span>
+								{:else if game.generated}
+									<span class="badge-ice">{t('games.generated')}</span>
+								{:else}
+									<span class="badge">{t('games.notGenerated')}</span>
+								{/if}
+								{#if game.generated && game.openSlots > 0}
+									<span class="badge-alert">{game.openSlotsLabel}</span>
+								{/if}
+							</span>
+						</span>
+						<svg
+							viewBox="0 0 24 24"
+							class="h-4 w-4 shrink-0 text-muted"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							aria-hidden="true"
+						>
+							<path d="m9 6 6 6-6 6" />
+						</svg>
+					</a>
+				</li>
+			{/each}
+		</ul>
+	</div>
 {/if}

@@ -18,60 +18,63 @@
 	const cancelled = $derived(game.status === 'cancelled');
 </script>
 
-<section class="overflow-hidden rounded-sheet bg-ink text-paper shadow-lift">
-	<a class="block px-5 pb-6 pt-6 no-underline sm:px-7 sm:pb-8 sm:pt-8" href="/matchs/{game.id}">
-		<div class="flex flex-wrap items-start justify-between gap-x-8 gap-y-6">
-			<div class="min-w-0">
-				<h2 class="micro-label font-sans text-paper/65">{t('home.nextGame')}</h2>
-				<p class="numeric mt-3 text-4xl capitalize text-paper sm:text-5xl">
-					{formatWeekday(game.gameDate)}
-				</p>
-				<p class="mt-2 text-base font-semibold text-paper/80">
-					{formatDayMonth(game.gameDate)}
-				</p>
-			</div>
-
-			<div class="min-w-0 sm:text-right">
-				<p class="flex items-start gap-2 sm:justify-end">
-					<span class="sr-only">{formatTime(game.startTime)}</span>
-					<span aria-hidden="true" class="numeric numeric-lg text-paper sm:text-[2.75rem]">
-						{time.hour}
-					</span>
-					<span aria-hidden="true" class="mt-1 h-7 w-px bg-paper/25 sm:h-9"></span>
-					<span aria-hidden="true" class="numeric numeric-lg text-paper/80 sm:text-[2.75rem]">
-						{time.minute}
-					</span>
-				</p>
-				<p class="mt-3 max-w-56 text-sm leading-snug text-paper/65 sm:ml-auto">
-					{game.location}
-				</p>
-			</div>
-		</div>
-
-		{#if cancelled || teamName}
-			<div class="mt-6 flex flex-wrap items-center gap-2">
+<section class="relative rounded-sheet bg-ink text-paper shadow-lift">
+	<a
+		class="block px-5 pb-5 pt-4 no-underline focus-visible:outline-offset-[-3px] sm:px-6"
+		href="/matchs/{game.id}"
+	>
+		<div class="flex items-center justify-between gap-3">
+			<p class="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-paper/55">
+				{t('home.nextGame')}
+			</p>
+			<div class="flex flex-wrap items-center justify-end gap-1.5">
 				{#if cancelled}
 					<span class="badge-alert">{t(gameStatus(game.status).labelKey)}</span>
 				{/if}
 				{#if teamName}
 					<span
-						class="rounded-[0.3rem] border border-paper/25 px-2 py-0.5 text-xs font-semibold text-paper/80"
+						class="rounded-[0.2rem] border border-paper/30 px-1.5 py-0.5 text-[11px] font-medium text-paper/80"
 					>
 						{teamName}
 					</span>
 				{/if}
 			</div>
-		{/if}
+		</div>
+
+		<div class="mt-3 flex items-end justify-between gap-4">
+			<div class="min-w-0">
+				<p class="font-display text-[2.35rem] leading-[0.95] text-paper sm:text-[2.9rem]">
+					{formatWeekday(game.gameDate)}
+				</p>
+				<p class="mt-1.5 font-mono text-[13px] text-paper/70">{formatDayMonth(game.gameDate)}</p>
+			</div>
+
+			<div class="shrink-0 text-right">
+				<p class="flex items-baseline justify-end">
+					<span class="sr-only">{formatTime(game.startTime)}</span>
+					<span aria-hidden="true" class="numeric text-[2.4rem] text-paper sm:text-[2.9rem]">
+						{time.hour}
+					</span>
+					<span aria-hidden="true" class="mx-1 font-display text-[1.8rem] text-paper/35">:</span>
+					<span aria-hidden="true" class="numeric text-[2.4rem] text-paper/85 sm:text-[2.9rem]">
+						{time.minute}
+					</span>
+				</p>
+				<p class="mt-1.5 max-w-44 text-sm leading-snug text-paper/65 sm:max-w-56">
+					{game.location}
+				</p>
+			</div>
+		</div>
 	</a>
 
-	<div
-		class="flex flex-wrap items-center justify-between gap-3 border-t border-paper/10 bg-paper/[0.06] px-5 py-4 sm:px-7"
-	>
+	<div class="tear-line"></div>
+
+	<div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 sm:px-6">
 		<div class="min-w-0">
 			{#if availability?.substitute}
 				<p class="text-sm text-paper/70">{t('availability.substituteHint')}</p>
 			{:else if availability}
-				<p class="text-sm font-semibold text-paper/90">{availability.summary}</p>
+				<p class="font-mono text-[11px] text-paper/85">{availability.summary}</p>
 				{#if availability.canRespond}
 					<p class="mt-0.5 text-xs text-paper/55">
 						{t('home.deadline', { date: availability.closesAtLabel })}

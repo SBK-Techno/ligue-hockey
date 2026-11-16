@@ -112,6 +112,7 @@
 	{/if}
 </section>
 
+{#if isManager}
 <section>
 	<div class="mb-3">
 		<div class="section-title">
@@ -144,3 +145,4 @@
 		</div>
 	{/if}
 </section>
+{/if}

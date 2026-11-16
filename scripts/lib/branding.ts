@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { fr } from '#config/i18n/fr.ts';
@@ -31,6 +31,7 @@ function sha256(contents: Buffer | string): string {
 async function renderIcon(
 	svg: Buffer,
 	branding: Branding,
+	palette: EmailPalette,
 	size: number,
 	maskable: boolean
 ): Promise<Buffer> {
@@ -42,7 +43,7 @@ async function renderIcon(
 				width: size,
 				height: size,
 				channels: 4,
-				background: branding.themeColor
+				background: palette.ink
 			}
 		})
 			.composite([{ input: inner, gravity: 'center' }])
@@ -52,7 +53,7 @@ async function renderIcon(
 
 	return sharp(svg)
 		.resize(size, size)
-		.flatten({ background: branding.themeColor })
+		.flatten({ background: palette.ink })
 		.png({ compressionLevel: 9 })
 		.toBuffer();
 }
@@ -73,7 +74,7 @@ function buildOfflinePage(branding: Branding, palette: EmailPalette): string {
 				place-items: center;
 				background: ${palette.paper};
 				color: ${palette.ink};
-				font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+				font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
 				padding: 24px;
 			}
 			main {
@@ -101,7 +102,7 @@ function buildOfflinePage(branding: Branding, palette: EmailPalette): string {
 				color: ${palette.surface};
 				text-decoration: none;
 				padding: 13px 22px;
-				border-radius: 12px;
+				border-radius: 8px;
 				font-weight: 600;
 			}
 		</style>
@@ -163,7 +164,7 @@ ${rule}
 `;
 }
 
-function buildManifest(branding: Branding, icons: Record<IconRole, string>) {
+function buildManifest(branding: Branding, icons: Record<IconRole, string>, palette: EmailPalette) {
 	return `${JSON.stringify(
 		{
 			id: branding.startUrl,
@@ -175,8 +176,8 @@ function buildManifest(branding: Branding, icons: Record<IconRole, string>) {
 			start_url: branding.startUrl,
 			scope: branding.scope,
 			display: branding.display,
-			background_color: branding.backgroundColor,
-			theme_color: branding.themeColor,
+			background_color: palette.paper,
+			theme_color: palette.ink,
 			categories: branding.categories,
 			icons: [
 				{
@@ -220,8 +221,8 @@ function buildBrandingModule(
 		scope: branding.scope,
 		display: branding.display,
 		indexable: branding.indexable,
-		themeColor: branding.themeColor,
-		backgroundColor: branding.backgroundColor,
+		themeColor: palette.ink,
+		backgroundColor: palette.paper,
 		emailPalette: palette,
 		socialImage: branding.socialImage,
 		manifestPath: MANIFEST_PATH,
@@ -303,14 +304,14 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 
 	for (const { role, slug, sizeKey } of ICON_ROLES) {
 		const size = branding.icons[sizeKey];
-		const contents = await renderIcon(svg, branding, size, role === 'maskable');
+		const contents = await renderIcon(svg, branding, palette, size, role === 'maskable');
 		const digest = sha256(contents).slice(0, 12);
 		const publicPath = `/icons/${slug}-${size}.${digest}.png`;
 		icons[role] = publicPath;
 		files.push({ path: `static${publicPath}`, contents });
 	}
 
-	const manifest = buildManifest(branding, icons);
+	const manifest = buildManifest(branding, icons, palette);
 	files.push({ path: `static${MANIFEST_PATH}`, contents: manifest });
 
 	files.push({ path: 'src/app.html', contents: buildAppShell(branding) });
@@ -349,6 +350,17 @@ export async function writeGeneratedFiles(
 		const target = path.join(root, file.path);
 		await mkdir(path.dirname(target), { recursive: true });
 		await writeFile(target, file.contents);
+	}
+
+	// Les icônes sont nommées par contenu : une régénération laisse sinon des
+	// fichiers orphelins que le service worker précacherait pour rien.
+	const expected = new Set(files.map((file) => file.path.split(path.sep).join('/')));
+	const iconDir = path.join(root, 'static/icons');
+	for (const name of await readdir(iconDir).catch(() => [])) {
+		const relative = `static/icons/${name}`;
+		if (name.endsWith('.png') && !expected.has(relative)) {
+			await unlink(path.join(iconDir, name));
+		}
 	}
 }
 

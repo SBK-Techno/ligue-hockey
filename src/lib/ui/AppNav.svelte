@@ -99,7 +99,7 @@
 <header
 	class="sticky top-0 z-30 border-b border-line/80 bg-paper/92 pt-[env(safe-area-inset-top)] backdrop-blur-md"
 >
-	<div class="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4">
+	<div class="mx-auto flex h-[3.75rem] w-full max-w-6xl items-center gap-3 px-4">
 		<BrandLockup href="/" size="sm" />
 
 		<nav class="ml-3 hidden items-center gap-1 md:flex" aria-label={t('nav.mainMenu')}>
@@ -107,7 +107,7 @@
 				{@const active = isActive(item.href)}
 				<a
 					href={item.href}
-					class="relative flex h-11 items-center whitespace-nowrap rounded-control px-3 text-sm font-semibold no-underline transition-colors {active
+					class="relative flex h-11 items-center whitespace-nowrap rounded-control px-2.5 text-[0.8125rem] font-medium no-underline transition-colors {active
 						? 'text-ink'
 						: 'text-muted hover:bg-ink/5 hover:text-ink'}"
 					aria-current={active ? 'page' : undefined}
@@ -116,7 +116,7 @@
 					{#if active}
 						<span
 							aria-hidden="true"
-							class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-ice"
+							class="absolute inset-x-2.5 bottom-0 h-[2px] rounded-full bg-ochre"
 						></span>
 					{/if}
 				</a>
@@ -171,7 +171,7 @@
 					onclick={() => (open = !open)}
 				>
 					<span
-						class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink font-display text-[11px] font-bold tracking-wide text-paper"
+						class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-[11px] font-semibold tracking-wide text-paper"
 					>
 						{initials}
 					</span>
@@ -260,18 +260,18 @@
 			<li class="flex-1">
 				<a
 					href={item.href}
-					class="relative flex min-h-[4.5rem] flex-col items-center justify-center gap-1 px-0.5 py-2 text-center text-xs font-semibold leading-tight no-underline {active
+					class="relative flex min-h-[4rem] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center text-xs font-semibold leading-tight no-underline {active
 						? 'text-ink'
 						: 'text-muted'}"
 					aria-current={active ? 'page' : undefined}
 				>
 					{#if active}
-						<span class="absolute inset-x-3 top-0 h-0.5 rounded-full bg-ice"></span>
+						<span class="absolute inset-x-3 top-0 h-[2px] rounded-full bg-ochre"></span>
 					{/if}
 					<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8">
 						<path d={iconPath(item.icon)} />
 					</svg>
-					<span class="text-[11px] leading-tight tracking-tight">{t(item.labelKey)}</span>
+					<span class="text-[10px] leading-tight tracking-tight">{t(item.labelKey)}</span>
 				</a>
 			</li>
 		{/each}

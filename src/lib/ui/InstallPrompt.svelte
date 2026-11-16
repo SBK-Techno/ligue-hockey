@@ -62,11 +62,28 @@
 			{/if}
 		</div>
 		{#if variant === 'full'}
-			<ul class="mt-3 space-y-1.5 text-sm text-muted">
-				<li>{t('install.ios')}</li>
-				<li>{t('install.android')}</li>
-				<li>{t('install.desktop')}</li>
-			</ul>
+			<details class="group mt-3 border-t border-line/70 pt-2">
+				<summary
+					class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-ice marker:content-none"
+				>
+					<svg
+						viewBox="0 0 24 24"
+						class="h-3.5 w-3.5 transition-transform group-open:rotate-90"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"
+					>
+						<path d="m9 6 6 6-6 6" />
+					</svg>
+					{t('install.how')}
+				</summary>
+				<ul class="mt-1 space-y-1.5 pb-1 text-sm text-muted">
+					<li>{t('install.ios')}</li>
+					<li>{t('install.android')}</li>
+					<li>{t('install.desktop')}</li>
+				</ul>
+			</details>
 		{:else if isIos}
 			<p class="mt-2 text-xs text-muted">{t('install.ios')}</p>
 		{/if}

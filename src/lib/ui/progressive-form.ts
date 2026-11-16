@@ -16,6 +16,7 @@ export function progressiveForm(node: HTMLFormElement) {
 
 		pending = true;
 		node.setAttribute('aria-busy', 'true');
+		const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		const buttons = Array.from(node.querySelectorAll<HTMLButtonElement>('button'));
 		const wasDisabled = buttons.map((button) => button.disabled);
 		for (const button of buttons) button.disabled = true;
@@ -29,6 +30,7 @@ export function progressiveForm(node: HTMLFormElement) {
 				buttons.forEach((button, index) => {
 					button.disabled = wasDisabled[index] ?? false;
 				});
+				if (active && document.contains(active)) active.focus({ preventScroll: true });
 			}
 		};
 	});

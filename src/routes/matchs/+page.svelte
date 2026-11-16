@@ -32,8 +32,8 @@
 		{#each data.upcoming as game, index (game.id)}
 			<li>
 				<a href="/matchs/{game.id}" class="card card-link flex items-center gap-4 py-3.5">
-					<span class="w-14 shrink-0 border-r border-line pr-3">
-						<span class="block text-xs font-semibold capitalize text-muted">
+					<span class="w-[4.5rem] shrink-0 whitespace-nowrap border-r border-line pr-3">
+						<span class="block whitespace-nowrap text-xs font-medium text-muted">
 							{formatWeekday(game.gameDate)}
 						</span>
 						<span class="numeric mt-0.5 block text-lg text-ink">

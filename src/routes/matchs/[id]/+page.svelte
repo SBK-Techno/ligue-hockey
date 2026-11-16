@@ -6,6 +6,7 @@
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
 	import { formatDate, formatTime, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
+	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
@@ -37,11 +38,6 @@
 	const filledRequests = $derived(
 		data.requests.filter((request) => request.status === 'filled')
 	);
-	const badgeClass = {
-		ok: 'badge-ok',
-		alert: 'badge-alert',
-		ice: 'badge-ice'
-	} as const;
 	const orderedTeams = $derived(
 		ownTeam
 			? [...TEAMS].sort((a, b) => (a.key === ownTeam ? -1 : b.key === ownTeam ? 1 : 0))
@@ -91,15 +87,10 @@
 	{/if}
 
 	<section class="card">
-		<div class="flex flex-wrap items-center justify-between gap-2">
-			<h2>{hasProfile ? t('home.availability') : t('home.attendance')}</h2>
-			{#if availability}
-				<span class="text-sm text-muted">{availability.summary}</span>
-			{/if}
-		</div>
+		<h2>{hasProfile ? t('home.availability') : t('home.attendance')}</h2>
 
 		{#if game.status === 'cancelled'}
-			<p class="mt-3 text-sm text-muted">{t('games.cancelledNotice')}</p>
+			<p class="mt-2 text-sm text-muted">{t('games.cancelledNotice')}</p>
 		{:else if isManager && !hasProfile}
 			<p class="mt-3 text-sm text-muted">{t('home.adminHero')}</p>
 		{:else if availability?.substitute}
@@ -174,7 +165,7 @@
 		{/if}
 
 		{#if availability && availability.rows.length + availability.pending.length > 0}
-			<div class="mt-5 border-t border-line/80 pt-5">
+			<div class="mt-4">
 				<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
 			</div>
 		{/if}
@@ -193,8 +184,8 @@
 			{#if data.requests.length === 0}
 				<p class="mt-3 text-sm text-muted">{t('subs.noneOpen')}</p>
 			{:else}
-				<ul role="list" class="mt-4 space-y-2">
-					{#each [...openRequests, ...filledRequests] as request (request.id)}
+				<ul role="list" class="mt-3 space-y-2">
+					{#each openRequests as request (request.id)}
 						<li
 							class="relative rounded-control border border-line bg-paper px-3 py-3 pl-4"
 						>
@@ -251,6 +242,56 @@
 						</li>
 					{/each}
 				</ul>
+				{#if filledRequests.length > 0}
+					<details class="group mt-3 border-t border-line/70 pt-1">
+						<summary
+							class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-ice marker:content-none"
+						>
+							<svg
+								viewBox="0 0 24 24"
+								class="h-3.5 w-3.5 transition-transform group-open:rotate-90"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								aria-hidden="true"
+							>
+								<path d="m9 6 6 6-6 6" />
+							</svg>
+							{t('subs.filledHistory', { count: filledRequests.length })}
+						</summary>
+						<ul role="list" class="mt-1 space-y-2">
+							{#each filledRequests as request (request.id)}
+								<li class="rounded-control border border-line bg-paper px-3 py-2.5">
+									<div class="flex flex-wrap items-center justify-between gap-2">
+										<div class="min-w-0">
+											<p class="text-sm font-semibold">
+												{t(positionDefinition(request.position).labelKey)}
+											</p>
+											<p class="mt-0.5 text-xs text-muted">
+												{#if request.filledByName}
+													{t('subs.filledBy', { name: request.filledByName })}
+												{:else if request.requestedByName}
+													{t('subs.requestedBy', { name: request.requestedByName })}
+												{:else}
+													{t('subs.placeOpen')}
+												{/if}
+											</p>
+										</div>
+										<div class="flex flex-wrap items-center gap-2">
+											<span class="badge-ok">{t('subs.status.filled')}</span>
+											{#if actor && request.filledByPlayerId === actor.userId}
+												<form method="POST" action="?/release" use:progressiveForm>
+													<input type="hidden" name="requestId" value={request.id} />
+													<button class="btn-secondary btn-sm" type="submit">{t('subs.release')}</button>
+												</form>
+											{/if}
+										</div>
+									</div>
+								</li>
+							{/each}
+						</ul>
+					</details>
+				{/if}
 			{/if}
 
 			{#if data.canManage}
@@ -295,33 +336,34 @@
 				></span>
 
 				{#each orderedTeams as team (team.key)}
-					<div class="min-w-0">
-						<div class="flex items-center justify-between gap-2">
-							<div class="flex items-center gap-2.5">
-								<span
-									class="h-3.5 w-3.5 rounded-full border {team.tone === 'black'
-										? 'border-ink bg-ink'
-										: 'border-line-strong bg-surface'}"
-								></span>
-								<h3 class="font-display text-lg font-bold">{t(team.labelKey)}</h3>
-							</div>
+					<div class="min-w-0 overflow-hidden rounded-sheet border border-line">
+						<div
+							class="flex items-center justify-between gap-2 px-3 py-2 {team.tone === 'black'
+								? 'bg-ink text-paper'
+								: 'bg-surface text-ink'}"
+						>
+							<h3 class="text-base font-semibold {team.tone === 'black' ? 'text-paper' : ''}">
+								{t(team.labelKey)}
+							</h3>
 							{#if ownTeam === team.key}
-								<span class="badge-ice">{t('home.team')}</span>
+								<span class="text-[11px] font-medium {team.tone === 'black'
+									? 'text-paper/70'
+									: 'text-muted'}">{t('home.team')}</span>
 							{/if}
 						</div>
 
 						{#each POSITIONS as position (position.key)}
 							{@const rows = slotsFor(team.key, position.key)}
 							{#if rows.length > 0}
-								<p class="micro-label mt-5">{t(position.labelKey)}</p>
-								<ul role="list" class="mt-1">
+								<p class="micro-label mt-3 px-3 first:mt-2">{t(position.labelKey)}</p>
+								<ul role="list">
 									{#each rows as slot (slot.slotIndex)}
 										{@const isMe = slot.player?.playerId === actor?.userId}
 										<li
-											class="flex min-h-11 items-center gap-3 border-b border-line/60 py-1.5"
+											class="flex min-h-9 items-center gap-3 border-b border-line/60 px-3 py-1 last:border-b-0"
 										>
 											<span
-												class="numeric w-8 shrink-0 text-right text-base {isMe
+												class="numeric w-7 shrink-0 text-right text-sm {isMe
 													? 'text-ice-deep'
 													: 'text-muted'}"
 											>
@@ -355,21 +397,18 @@
 			</div>
 		</section>
 
-		{#if game.generation}
+		{#if game.generation && data.canManage}
 			<section class="card mt-6">
 				<div class="section-title">
 					<h2>{t('team.balance')}</h2>
+					<a class="link text-sm" href="/admin/matchs/{game.id}">{t('home.manageGame')}</a>
 				</div>
-				{#if data.canManage}
-					<p class="mt-2 text-sm text-muted">
-						{t('games.teamBalance', {
-							skill: game.generation.skillDiffLabel ?? '',
-							age: game.generation.ageDiffLabel ?? ''
-						})}
-					</p>
-				{:else}
-					<p class="mt-2 text-sm text-muted">{t('games.balanceNote')}</p>
-				{/if}
+				<p class="mt-2 text-sm text-muted">
+					{t('games.teamBalance', {
+						skill: game.generation.skillDiffLabel ?? '',
+						age: game.generation.ageDiffLabel ?? ''
+					})}
+				</p>
 				{#if data.canManage && game.generation.warnings.includes('rule-limit')}
 					<div class="alert mt-3">
 						<p class="font-semibold">{t('games.limitConflict')}</p>
@@ -393,7 +432,7 @@
 									ruleModeFor(violation.kind, violation.strict)
 								)}
 								<li class="flex flex-wrap items-center gap-2">
-									<span class="badge {mode ? badgeClass[mode.tone] : ''}">
+									<span class={badgeClass(mode?.tone)}>
 										{mode ? t(mode.shortLabelKey) : ''}
 									</span>
 									<span>{violation.names[0]} · {violation.names[1]}</span>

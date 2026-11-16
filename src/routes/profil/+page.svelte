@@ -162,7 +162,7 @@
 	);
 
 	const sections = $derived([
-		{ id: 'compte', label: t('profile.tab.account') },
+		...(!profile ? [{ id: 'compte', label: t('profile.tab.account') }] : []),
 		...(profile ? [{ id: 'joueur', label: t('profile.tab.player') }] : []),
 		{ id: 'notifications', label: t('profile.tab.notifications') },
 		{ id: 'securite', label: t('profile.tab.security') },
@@ -181,7 +181,7 @@
 {:else}
 	<div class="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
 		<aside
-			class="space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1"
+			class="space-y-4 lg:sticky lg:top-[4.75rem]"
 		>
 			<section class="relative overflow-hidden rounded-card bg-ink p-5 text-paper">
 				<svg
@@ -201,12 +201,12 @@
 
 				<div class="relative flex items-start gap-4">
 					<span
-						class="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-paper/25 bg-paper/10 font-display text-2xl font-bold tracking-tight"
+						class="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-paper/25 bg-paper/10 text-2xl font-semibold tracking-tight"
 					>
 						{initials}
 					</span>
 					<div class="min-w-0">
-						<p class="break-words font-display text-2xl font-bold leading-tight">
+						<p class="break-words font-display text-2xl font-semibold leading-tight">
 							{account.name}
 						</p>
 						<p class="mt-1 break-all text-sm text-paper/65">{account.email}</p>
@@ -214,11 +214,11 @@
 				</div>
 
 				<div class="relative mt-4 flex flex-wrap gap-2">
-					<span class="rounded-full border border-paper/25 px-2.5 py-1 text-[11px] font-semibold">
+					<span class="rounded-[0.2rem] border border-paper/25 px-2 py-0.5 text-[11px] font-medium">
 						{roleLabel}
 					</span>
 					{#if profile}
-						<span class="rounded-full border border-paper/25 px-2.5 py-1 text-[11px] font-semibold">
+						<span class="rounded-[0.2rem] border border-paper/25 px-2 py-0.5 text-[11px] font-medium">
 							{t(positionDefinition(profile.position).labelKey)}
 							{#if profile.jerseyNumber}
 								· #{profile.jerseyNumber}
@@ -236,7 +236,7 @@
 				<a href="/solde" class="card card-link flex items-center justify-between gap-3">
 					<div class="min-w-0">
 						<p class="text-xs font-semibold text-muted">{t('profile.balance')}</p>
-						<p class="mt-1 font-display text-2xl font-bold leading-none text-ink">
+						<p class="numeric mt-1 text-2xl text-ink">
 							{formatMoney(data.balance.outstandingCents, data.balance.currency)}
 						</p>
 					</div>
@@ -250,11 +250,14 @@
 				</a>
 			{/if}
 
-			<nav aria-label={t('profile.sections')} class="flex flex-wrap gap-1 pb-1 lg:flex-col lg:pb-0">
+			<nav
+				aria-label={t('profile.sections')}
+				class="-mx-4 flex gap-1 overflow-x-auto border-y border-line/80 bg-paper/95 px-4 py-1.5 lg:mx-0 lg:flex-col lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0 lg:pb-0"
+			>
 				{#each sections as section (section.id)}
 					<a
 						href="#{section.id}"
-						class="whitespace-nowrap rounded-control px-3 py-2 text-sm font-semibold text-muted no-underline transition-colors hover:bg-ink/5 hover:text-ink"
+						class="flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-control px-3 text-sm font-medium text-muted no-underline transition-colors hover:bg-ink/5 hover:text-ink"
 					>
 						{section.label}
 					</a>
@@ -262,20 +265,19 @@
 			</nav>
 
 			<div class="hidden lg:block">
-				<p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-					{t('profile.quickLinks')}
-				</p>
-				<ul role="list" class="space-y-1 text-sm">
-					<li><a class="link" href="/matchs">{t('nav.games')}</a></li>
-					<li><a class="link" href="/remplacants">{t('subs.title')}</a></li>
-					<li><a class="link" href="/discussion">{t('nav.chat')}</a></li>
-					<li><a class="link" href="/notifications">{t('profile.inbox')}</a></li>
+				<p class="micro-label mb-1">{t('profile.quickLinks')}</p>
+				<ul role="list" class="text-sm">
+					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/matchs">{t('nav.games')}</a></li>
+					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/remplacants">{t('subs.title')}</a></li>
+					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/discussion">{t('nav.chat')}</a></li>
+					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/notifications">{t('profile.inbox')}</a></li>
 				</ul>
 			</div>
 		</aside>
 
 		<div class="mt-4 space-y-4 lg:mt-0">
-			<section id="compte" class="card scroll-mt-24">
+			{#if !profile}
+			<section id="compte" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.account')}</h2>
 				<p class="hint mt-1">{t('profile.accountHelp')}</p>
 
@@ -315,9 +317,10 @@
 					</form>
 				{/if}
 			</section>
+			{/if}
 
 			{#if profile}
-				<section id="joueur" class="card scroll-mt-24">
+				<section id="joueur" class="card scroll-mt-[var(--anchor-offset)]">
 					<h2>{t('profile.playerSection')}</h2>
 					<p class="hint mt-1">{t('profile.playerSectionHelp')}</p>
 					<form method="POST" action="?/profile" use:progressiveForm class="mt-5 grid gap-4 sm:grid-cols-2">
@@ -424,7 +427,7 @@
 				{/if}
 			{/if}
 
-			<section id="notifications" class="card scroll-mt-24">
+			<section id="notifications" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.notifications')}</h2>
 				<p class="hint mt-1">{t('profile.notificationsHelp')}</p>
 				<form method="POST" action="?/notifications" use:progressiveForm class="mt-4 space-y-3">
@@ -457,7 +460,7 @@
 					{:else if isIos}
 						<p class="hint">{t('profile.pushIosInstall')}</p>
 					{:else if pushStatus === 'denied'}
-						<p class="alert">{t('profile.pushDenied')}</p>
+						<p class="notice">{t('profile.pushDenied')}</p>
 					{:else if pushStatus === 'on'}
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="badge-ok">{t('profile.pushEnabled')}</span>
@@ -473,7 +476,7 @@
 						<p class="hint">{t('common.loading')}</p>
 					{/if}
 					{#if pushError}
-						<p class="field-error">{pushError}</p>
+						<p class="field-error" role="alert">{pushError}</p>
 					{/if}
 				</div>
 
@@ -489,7 +492,7 @@
 				<InstallPrompt variant="full" />
 			</div>
 
-			<section id="securite" class="card scroll-mt-24">
+			<section id="securite" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.security')}</h2>
 				<p class="hint mt-1">{t('profile.securityHelp')}</p>
 
@@ -585,7 +588,7 @@
 			{/if}
 
 			{#if isManager}
-				<section id="administration" class="card scroll-mt-24">
+				<section id="administration" class="card scroll-mt-[var(--anchor-offset)]">
 					<h2>{t('profile.adminSection')}</h2>
 					<p class="hint mt-1">{t('profile.adminHelp')}</p>
 					<div class="mt-4 grid gap-2 sm:grid-cols-2">

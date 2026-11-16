@@ -22,7 +22,7 @@
 <svelte:element
 	this={href ? 'a' : 'div'}
 	{href}
-	class="group flex min-w-0 items-center gap-3 no-underline"
+	class="group flex min-h-11 min-w-0 items-center gap-3 no-underline"
 >
 	<img
 		src={branding.icons.icon192}
@@ -38,15 +38,15 @@
 				: 'text-ink'} {size === 'lg'
 				? 'text-xl'
 				: size === 'sm'
-					? 'text-[13px]'
-					: 'text-sm'}"
+					? 'text-[15px]'
+					: 'text-base'}"
 		>
 			<span class="sm:hidden">{branding.shortName}</span>
 			<span class="hidden sm:inline">{branding.name}</span>
 		</span>
 		{#if caption}
 			<span
-				class="mt-0.5 block truncate text-[10px] font-semibold leading-tight sm:text-[11px] {tone ===
+				class="mt-0.5 block truncate font-mono text-[9px] font-medium uppercase leading-tight tracking-[0.08em] {tone ===
 				'dark'
 					? 'text-paper/60'
 					: 'text-muted'}"

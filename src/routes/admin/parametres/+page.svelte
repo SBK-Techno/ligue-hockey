@@ -2,28 +2,46 @@
 	import { MONEY_INPUT } from '#config/money.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 </script>
 
+<PageHeader title={t('admin.settings')} meta={t('admin.settingsHelp')}>
+	{#snippet actions()}
+		<button class="btn-primary btn-sm" type="submit" form="settings-form">
+			{t('common.save')}
+		</button>
+	{/snippet}
+</PageHeader>
+
 <FormFeedback {form} class="mb-4" />
 
-<div class="mb-5">
-	<h1>{t('admin.settings')}</h1>
-	<p class="mt-1.5 text-sm text-muted">{t('admin.settingsHelp')}</p>
-</div>
-
-<form method="POST" action="?/save" use:progressiveForm class="space-y-5">
+<nav class="mb-5 flex gap-1 overflow-x-auto pb-1" aria-label={t('admin.settingsJump')}>
 	{#each data.groups as group (group.key)}
-		<section class="card">
-			<h2 class="mb-4">{t(group.labelKey)}</h2>
-			<div class="grid gap-5 sm:grid-cols-2">
+		<a
+			class="flex min-h-11 shrink-0 items-center rounded-control border border-line-strong bg-surface px-3 text-[13px] font-medium text-muted no-underline hover:bg-paper hover:text-ink"
+			href="#groupe-{group.key}"
+		>
+			{t(group.labelKey)}
+		</a>
+	{/each}
+</nav>
+
+<form id="settings-form" method="POST" action="?/save" use:progressiveForm class="space-y-6">
+	{#each data.groups as group (group.key)}
+		<section
+			id="groupe-{group.key}"
+			class="scroll-mt-[var(--anchor-offset)] border-t border-line pt-4"
+		>
+			<h2 class="text-xl">{t(group.labelKey)}</h2>
+			<div class="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
 				{#each group.settings as setting (setting.key)}
 					<div class={setting.kind === 'boolean' ? 'sm:col-span-2' : ''}>
 						{#if setting.kind === 'boolean'}
-							<label class="flex items-center gap-3 text-sm font-semibold">
+							<label class="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium">
 								<input
 									type="checkbox"
 									name={setting.key}
@@ -43,21 +61,26 @@
 									{/each}
 								</select>
 							{:else if setting.kind === 'money'}
-								<input
-									class="input"
-									id={setting.key}
-									name={setting.key}
-									type="number"
-									min={MONEY_INPUT.min}
-									step={MONEY_INPUT.step}
-									value={data.values[setting.key]}
-								/>
+								<div class="relative">
+									<input
+										class="input pr-8"
+										id={setting.key}
+										name={setting.key}
+										type="number"
+										inputmode="decimal"
+										min={MONEY_INPUT.min}
+										step={MONEY_INPUT.step}
+										value={data.values[setting.key]}
+									/>
+									<span class="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-sm text-muted">$</span>
+								</div>
 							{:else if setting.kind === 'number'}
 								<input
 									class="input"
 									id={setting.key}
 									name={setting.key}
 									type="number"
+									inputmode="numeric"
 									min={setting.min}
 									max={setting.max}
 									step={setting.step ?? 1}
@@ -98,7 +121,8 @@
 		</section>
 	{/each}
 
-	<div class="sticky bottom-[var(--bottom-bar-offset)] z-20 rounded-card border border-line bg-paper/95 p-2 shadow-card backdrop-blur lg:bottom-4">
+	<div class="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
+		<p class="text-xs text-muted">{t('admin.settingsSaveHint')}</p>
 		<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
 	</div>
 </form>

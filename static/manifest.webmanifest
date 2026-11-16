@@ -8,8 +8,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F5F0",
-  "theme_color": "#121A21",
+  "background_color": "#f5f2ea",
+  "theme_color": "#101a22",
   "categories": [
     "sports",
     "productivity"
@@ -28,7 +28,7 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/maskable-512-512.91d68c680b54.png",
+      "src": "/icons/maskable-512-512.28f891c1c4ec.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

@@ -17,8 +17,7 @@
 		openCount,
 		ownRequest,
 		showSubs,
-		chat,
-		hasProfile
+		chat
 	}: {
 		gameId: string;
 		availability: AvailabilityView | null;
@@ -29,7 +28,6 @@
 		ownRequest: boolean;
 		showSubs: boolean;
 		chat: ChatMessageView[];
-		hasProfile: boolean;
 	} = $props();
 
 	const latest = $derived(chat[0] ?? null);
@@ -45,14 +43,7 @@
 	const steps = $derived.by<Step[]>(() => {
 		const list: Step[] = [];
 
-		if (!hasProfile) {
-			list.push({
-				id: 'presence',
-				title: t('home.steps.answer'),
-				state: 'idle',
-				detail: t('home.noPlayerProfile')
-			});
-		} else if (availability?.locked) {
+		if (availability?.locked) {
 			list.push({
 				id: 'presence',
 				title: t('home.steps.answer'),
@@ -86,13 +77,7 @@
 			id: 'team',
 			title: t('home.steps.team'),
 			state: line ? 'done' : 'idle',
-			detail: line
-				? line
-				: !hasProfile
-					? t('home.steps.noProfile')
-					: generated
-						? t('home.steps.notInLineup')
-						: t('home.steps.teamWaiting'),
+			detail: line ?? (generated ? t('home.steps.notInLineup') : t('home.steps.teamWaiting')),
 			action: { href: `/matchs/${gameId}`, label: t('home.steps.viewLineup') }
 		});
 
@@ -161,14 +146,12 @@
 	<div class="flex items-baseline justify-between gap-3">
 		<h2 id="semaine-titre">{t('home.steps.title')}</h2>
 	</div>
-	<p class="mt-1 text-sm text-muted">{t('home.steps.help')}</p>
-
-	<ol role="list" class="mt-5">
+	<ol role="list" class="mt-4">
 		{#each steps as step, index (step.id)}
 			<!-- cible du lien « Répondre » : on veut y déplacer le focus, pas en faire un contrôle -->
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 			<li
-				class="relative scroll-mt-24 pb-5 pl-9 last:pb-0"
+				class="relative scroll-mt-[var(--anchor-offset)] pb-4 pl-9 last:pb-0"
 				id={step.id === 'presence' ? 'presence' : undefined}
 				tabindex={step.id === 'presence' ? -1 : undefined}
 			>
@@ -193,8 +176,21 @@
 					{index + 1}
 				</span>
 
-				<p class="text-sm font-semibold leading-6">{step.title}</p>
-				<p class="mt-0.5 break-words text-sm leading-snug text-muted">{step.detail}</p>
+				<div class="flex items-baseline justify-between gap-3">
+					<p class="text-sm font-semibold leading-6">{step.title}</p>
+					{#if step.action && step.id !== 'presence'}
+						<a class="link -my-2 inline-flex min-h-11 shrink-0 items-center text-sm" href={step.action.href}>
+							{step.action.label}
+						</a>
+					{/if}
+				</div>
+				<p
+					class="mt-0.5 break-words text-sm leading-snug {step.id === 'balance' && balance?.isOverdue
+						? 'font-medium text-alert'
+						: 'text-muted'}"
+				>
+					{step.detail}
+				</p>
 
 				{#if step.id === 'presence' && availability?.canWithdraw}
 					<form method="POST" action="?/availability" use:progressiveForm class="mt-3">
@@ -218,7 +214,7 @@
 					>
 						<input type="hidden" name="gameId" value={gameId} />
 						<button
-							class="min-h-11 rounded-control border px-2 text-sm font-semibold transition-colors {isSelected(
+							class="min-h-11 whitespace-nowrap rounded-control border px-1.5 text-[13px] font-semibold transition-colors {isSelected(
 								'present'
 							)
 								? 'border-ice bg-ice text-on-brand'
@@ -231,7 +227,7 @@
 							{t('availability.markPresent')}
 						</button>
 						<button
-							class="min-h-11 rounded-control border px-2 text-sm font-semibold transition-colors {isSelected(
+							class="min-h-11 whitespace-nowrap rounded-control border px-1.5 text-[13px] font-semibold transition-colors {isSelected(
 								'absent'
 							)
 								? 'border-ink bg-ink text-paper'
@@ -244,12 +240,6 @@
 							{t('availability.markAbsent')}
 						</button>
 					</form>
-				{/if}
-
-				{#if step.action && step.id !== 'presence'}
-					<a class="link mt-2 inline-flex min-h-11 items-center text-sm" href={step.action.href}>
-						{step.action.label}
-					</a>
 				{/if}
 
 				{#if step.id === 'discussion' && latest}

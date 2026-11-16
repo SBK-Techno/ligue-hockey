@@ -24,7 +24,7 @@ export const RULE_MODES = [
     labelKey: 'ruleMode.apart',
     descriptionKey: 'ruleMode.apartHelp',
     shortLabelKey: 'ruleMode.apartShort',
-    tone: 'alert'
+    tone: 'neutral'
   },
   {
     key: 'preferTogether',
@@ -51,7 +51,7 @@ export const RULE_MODES = [
   labelKey: I18nKey;
   descriptionKey: I18nKey;
   shortLabelKey: I18nKey;
-  tone: 'ok' | 'alert' | 'ice';
+  tone: 'neutral' | 'ok' | 'ice';
 }[];
 
 export type RuleMode = (typeof RULE_MODES)[number]['key'];

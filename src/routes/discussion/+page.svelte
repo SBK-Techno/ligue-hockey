@@ -10,7 +10,6 @@
 
 	let { data, form }: PageProps = $props();
 	let showPoll = $state(false);
-	let bottom: HTMLDivElement | undefined = $state();
 	// Seeded once from the server limits; the user owns the list afterwards.
 	// svelte-ignore state_referenced_locally
 	let pollOptions = $state<string[]>(
@@ -29,8 +28,19 @@
 		return () => clearInterval(timer);
 	});
 
+	// La page doit s'ouvrir sur le dernier message, juste au-dessus du champ
+	// de réponse. On recale après le chargement des polices, qui change la hauteur.
+	const scrollToLatest = () => window.scrollTo({ top: document.documentElement.scrollHeight });
+
 	onMount(() => {
-		bottom?.scrollIntoView({ block: 'end' });
+		void document.fonts.ready.then(() => requestAnimationFrame(scrollToLatest));
+	});
+
+	let previousCount = 0;
+	$effect(() => {
+		const count = messages.length;
+		if (count > previousCount) scrollToLatest();
+		previousCount = count;
 	});
 
 	function addOption() {
@@ -127,9 +137,10 @@
 		<p class="hint">{t('chat.emptyHelp')}</p>
 	</div>
 {:else}
-	<ul role="list" class="mx-auto w-full max-w-3xl space-y-3">
+	<div class="card-flush mx-auto w-full max-w-3xl overflow-hidden">
+	<ul role="list" class="divide-y divide-line/70">
 		{#each messages as message (message.id)}
-			<li class="card">
+			<li class="px-4 py-3.5">
 				<div class="flex items-start justify-between gap-3">
 					<div class="min-w-0">
 						<p class="text-sm font-semibold">{message.authorName}</p>
@@ -148,9 +159,9 @@
 				</div>
 
 				{#if message.deleted}
-					<p class="mt-3 text-sm italic text-muted">{t('chat.deleted')}</p>
+					<p class="mt-1.5 text-sm italic text-muted">{t('chat.deleted')}</p>
 				{:else if message.poll}
-					<div class="mt-3">
+					<div class="mt-2">
 						<p class="break-words font-semibold">{message.poll.question}</p>
 						{#if message.poll.closed}
 							<p class="badge mt-2">{t('chat.pollClosed')}</p>
@@ -190,14 +201,14 @@
 						{/if}
 					</div>
 				{:else}
-					<p class="mt-3 whitespace-pre-wrap break-words text-sm">{message.body}</p>
+					<p class="mt-1.5 whitespace-pre-wrap break-words text-sm">{message.body}</p>
 				{/if}
 			</li>
 		{/each}
 	</ul>
+	</div>
 {/if}
 
-<div bind:this={bottom}></div>
 
 <form
 	method="POST"
@@ -206,7 +217,7 @@
 	class="sticky bottom-[var(--bottom-bar-offset)] mx-auto mt-4 w-full max-w-3xl lg:bottom-4"
 >
 	<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
-	<div class="flex items-end gap-2 rounded-2xl border border-line-strong bg-surface p-2 shadow-card">
+	<div class="flex items-end gap-2 rounded-sheet border border-line-strong bg-surface p-1.5 shadow-lift">
 		<textarea
 			id="chat-body"
 			class="min-h-11 flex-1 resize-none rounded-control border-0 bg-transparent px-2 py-2 text-base text-ink outline-none placeholder:text-muted focus-visible:ring-2 focus-visible:ring-ice"

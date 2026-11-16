@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../routes/layout.css';
+	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
@@ -39,6 +40,11 @@
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
 	const openGraphLocale = $derived(branding.locale.replace('-', '_'));
 	const crawlDirective = $derived(branding.indexable ? 'index,follow' : 'noindex,nofollow');
+
+	afterNavigate(({ from, to }) => {
+		if (!from || !to || from.url.pathname === to.url.pathname) return;
+		document.getElementById('contenu')?.focus({ preventScroll: true });
+	});
 </script>
 
 <svelte:head>
@@ -106,8 +112,9 @@
 {:else}
 	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
 	<AppNav actor={data.actor} unread={data.unread} />
-	<main id="contenu" tabindex="-1" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-5 sm:pt-8 lg:pb-12">
+	<main id="contenu" tabindex="-1" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 sm:pt-8 lg:pb-12">
 		{@render children()}
+		<div aria-live="polite" class="sr-only">{pageTitle}</div>
 	</main>
 	<footer class="mx-auto w-full max-w-6xl px-4 pb-[calc(var(--bottom-bar-offset)+0.5rem)] pt-2 lg:pb-8">
 		<div

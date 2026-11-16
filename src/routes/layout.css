@@ -1,6 +1,7 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/archivo/wdth.css';
-@import '@fontsource-variable/instrument-sans/wght.css';
+@import '@fontsource-variable/fraunces/full.css';
+@import '@fontsource-variable/ibm-plex-sans';
+@import '@fontsource/ibm-plex-mono/500.css';
 @import '../lib/ui/tokens.css';
 
 @layer base {
@@ -19,26 +20,39 @@
 			color-mix(in srgb, var(--color-ink) 2.4%, transparent) 1px,
 			transparent 1px
 		);
-		background-size: 100% 28px;
-		font-feature-settings: 'ss01' 1;
+		background-size: 100% 32px;
+		font-feature-settings: 'kern' 1, 'liga' 1;
 	}
 	h1,
 	h2,
 	h3 {
 		@apply font-display tracking-tight text-ink;
 		text-wrap: balance;
+		overflow-wrap: anywhere;
 	}
 	h1 {
-		@apply text-[2rem] font-bold leading-[1.05] sm:text-[2.6rem];
-		letter-spacing: -0.035em;
-		font-stretch: 104%;
+		font-size: clamp(2rem, 1.45rem + 2.1vw, 2.9rem);
+		font-weight: 500;
+		line-height: 1.08;
+		letter-spacing: -0.025em;
+		font-optical-sizing: auto;
+		font-variation-settings:
+			'SOFT' 25,
+			'WONK' 0;
 	}
 	h2 {
-		@apply text-xl font-bold leading-tight sm:text-2xl;
-		letter-spacing: -0.02em;
+		font-size: clamp(1.3rem, 1.1rem + 0.7vw, 1.7rem);
+		font-weight: 600;
+		line-height: 1.1;
+		letter-spacing: -0.015em;
+		font-optical-sizing: auto;
+		font-variation-settings:
+			'SOFT' 20,
+			'WONK' 0;
 	}
 	h3 {
-		@apply text-base font-semibold leading-snug;
+		@apply font-sans text-base font-semibold leading-snug;
+		letter-spacing: -0.01em;
 	}
 	p {
 		text-wrap: pretty;
@@ -50,6 +64,19 @@
 	:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
 		outline: 2px solid var(--color-ice);
 		outline-offset: 2px;
+	}
+	/* La cible du lien d'évitement reçoit le focus sans encadrer toute la page. */
+	main:focus,
+	main:focus-visible {
+		outline: none;
+	}
+	/* Sur une surface encre, l'anneau de focus passe au papier. */
+	.bg-ink :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+		outline-color: var(--color-paper);
+	}
+	/* Un dialogue modal ne laisse pas la page défiler derrière lui. */
+	body:has(dialog[open]) {
+		overflow: hidden;
 	}
 	input,
 	select,
@@ -104,15 +131,14 @@
 
 	/* Chiffres de tableau : larges, alignés, stables d'un écran à l'autre. */
 	.numeric {
-		font-family: var(--font-display);
+		font-family: var(--font-sans);
 		font-variant-numeric: tabular-nums lining-nums;
-		font-stretch: 108%;
-		font-weight: 700;
-		letter-spacing: -0.02em;
+		font-weight: 600;
+		letter-spacing: -0.01em;
 		line-height: 1;
 	}
 	.numeric-xl {
-		font-size: clamp(2.75rem, 8vw, 4.25rem);
+		font-size: clamp(2.5rem, 7vw, 3.75rem);
 	}
 	.numeric-lg {
 		font-size: 2rem;
@@ -122,8 +148,9 @@
 	}
 
 	.micro-label {
-		@apply text-xs font-semibold text-muted;
-		letter-spacing: 0.05em;
+		@apply text-[0.6875rem] font-medium text-muted;
+		font-family: var(--font-mono);
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 	.measure {
@@ -207,11 +234,10 @@
 		box-shadow: var(--shadow-card);
 	}
 	.stat-value {
-		font-family: var(--font-display);
+		font-family: var(--font-sans);
 		font-variant-numeric: tabular-nums lining-nums;
-		font-stretch: 108%;
-		font-weight: 700;
-		letter-spacing: -0.02em;
+		font-weight: 600;
+		letter-spacing: -0.03em;
 		line-height: 1;
 		font-size: 1.75rem;
 	}
@@ -258,8 +284,34 @@
 		}
 	}
 	.wordmark {
-		font-stretch: 112%;
-		letter-spacing: -0.045em;
+		letter-spacing: -0.015em;
+		font-weight: 600;
+		font-optical-sizing: auto;
+		font-variation-settings:
+			'SOFT' 40,
+			'WONK' 1;
+	}
+
+	/* Perforation de la feuille de match : la carte se détache du bloc. */
+	.tear-line {
+		position: relative;
+		border-top: 1px dashed color-mix(in srgb, var(--color-paper) 28%, transparent);
+	}
+	.tear-line::before,
+	.tear-line::after {
+		content: '';
+		position: absolute;
+		top: -0.4rem;
+		width: 0.8rem;
+		height: 0.8rem;
+		border-radius: 999px;
+		background: var(--color-paper);
+	}
+	.tear-line::before {
+		left: 0.3rem;
+	}
+	.tear-line::after {
+		right: 0.3rem;
 	}
 }
 

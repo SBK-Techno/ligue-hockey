@@ -25,7 +25,8 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Fact | Owner | Consumers | Gate |
 |---|---|---|---|
 | App name, manifest colours, icons, locale, timezone, social image, crawl policy | `config/branding.json` | manifest, icons, app shell, robots, layout, emails, OG metadata, offline page, service-worker cache | `verify:generated` |
-| Application palette | `src/lib/ui/tokens.css` | every component, emails, docs, social image, offline page | `verify:architecture` + `verify:generated` |
+| Application palette, type families, radii, shadows, spacing | `src/lib/ui/tokens.css` | every component, emails, docs, social image, offline page | `verify:architecture` + `verify:generated` |
+| Global type scale and primitive classes (card, button, badge, list, field, stat, tear line) | `src/routes/layout.css` | every route and UI component | `verify:architecture` |
 | League-editable settings (roster, fees, lead times, limits) | `config/settings-registry.ts` | settings service, admin form, services | registry test + `verify` |
 | Positions | `config/positions.ts` | schema checks, forms, roster templates, notifications | architecture check |
 | Roles and capabilities | `config/capabilities.ts`, `config/roles.ts` | policy, navigation, admin role editor | policy tests |
@@ -52,6 +53,27 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 - `src/lib/server/`: infrastructure only: database client, migrations, adapters.
 - `src/routes/`: transport. Load functions produce view models; form actions parse input with the module's schema, call one service, map `AppError` to a message. No business rules.
 - `src/lib/ui/`: presentational components. They receive props, emit events, and read only i18n + tokens.
+
+## Visual system
+
+The interface is a printed arena match sheet, not a dashboard. It carries its own identity through three type voices and one restrained accent:
+
+- **Display: Fraunces Variable** for page titles, the wordmark, the match-sheet date and section headings. Soft serif, optical sizing on, `SOFT` around 20 to 40, `WONK 1` only on the wordmark. Never used for figures, because its digits are proportional.
+- **Text: IBM Plex Sans Variable** for body, labels, buttons and every numeral. Its digits are tabular by default, so money, clock times, jersey numbers and counts align without extra rules. `.numeric` and `.stat-value` are the only numeral classes.
+- **Data: IBM Plex Mono** for measured stamps only: micro-labels, dates in ruled lists, jersey plates. Never for body copy.
+
+Surfaces are sheets: `--radius-card` 0.5rem, `--radius-sheet` 0.375rem, `--radius-control` 0.375rem, a 1px border and a single low shadow. Lists are ruled with `divide-y`; card stacks are reserved for genuinely separate objects. The background is a faint 32px paper rule.
+
+Colour is semantic:
+
+- `ink` and `paper` carry structure.
+- `ice` is the rink mark: links, focus, selected state, the centre line between the two teams.
+- `ochre` (`#a9700f`) is the league mark and appears once per viewport: the active navigation rail, the mobile tab underline. It is a line and fill colour, not a text colour.
+- `alert` is reserved for overdue, cancellation and destructive confirmation. No decorative red.
+
+`src/routes/layout.css` owns the primitives so a page cannot invent a parallel button or card: `.card`, `.card-flush`, `.btn-*`, `.badge-*`, `.label`, `.input`, `.hint`, `.micro-label`, `.numeric`, `.tear-line`. Focus rings switch to paper on ink surfaces, dialogs lock body scroll, and `prefers-reduced-motion` disables transitions and the card lift.
+
+Dark surfaces use an opacity ladder on `paper` (55% to 90%) rather than ad-hoc greys; every step was checked against `ink` for 4.5:1 body contrast.
 
 ## Configuration
 
@@ -96,7 +118,7 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 - Input validated by schema: players (id, position, age, overall), slot template, pair rules, objective settings.
 - Hard constraints: slot counts, one player per slot, strict pair rules.
 - Preferences: non-strict pair rules do not block a better distribution; they break ties once size and skill are equal.
-- League limits (settings, 0 = no limit): maximum average skill spread, age spread, and player-count spread. Candidates outside a limit are excluded; when none qualify, the best effort is returned with a `rule-limit` warning.
+- League limits (settings, 0 = no limit): maximum combined-overall spread, cumulative-age spread, and player-count spread. Age is compared as the sum of the team's ages, never as an average, so one very young player cannot mask an older roster. Candidates outside a limit are excluded; when none qualify, the best effort is returned with a `rule-limit` warning.
 - Objective: minimise combined-overall difference; within `skillTolerance`, minimise combined-age difference; then unmet preferences; deterministic tie-break by stable player id.
 - Exhaustive over position-scoped combinations. The search space is bounded by the roster cap in settings; the cap is enforced before generation.
 - If the strict pair rules make the roster infeasible, return `violations` naming the rules. Hard violations produce `rule-conflict`; unmet preferences produce `rule-preference`, a warning rather than a conflict.
@@ -130,6 +152,8 @@ CI runs `npm run gate`, which is the same verify plus `npm run build`. The `requ
 
 - SQLite in WAL mode, foreign keys on, busy timeout from deployment config.
 - Drizzle schema is the database owner; `drizzle-kit generate` produces SQL migrations. Migrations run once at startup through one module-level promise.
+- `src/lib/server/db/migrations.spec.ts` is the drift guard. It applies the committed migrations to an in-memory SQLite database, compares every registry-backed `CHECK` constraint with `config/settings-registry.ts`, proves every setting key can be inserted, and replays the latest migration against data seeded from the previous schema. A setting added to code without its migration, a stale `CHECK`, or a migration that loses rows fails the suite, not production.
+- Adding or removing a setting therefore requires three edits in one change: the registry entry, the Drizzle schema, and a generated migration. The guard rejects any partial state.
 - Every mutation that spans rows uses a transaction. Slot claims use a conditional update so two substitutes cannot claim the same slot.
 - Timestamps are epoch milliseconds from the clock; game dates are local `YYYY-MM-DD` + `HH:mm` in the league timezone, never derived from the server's zone.
 

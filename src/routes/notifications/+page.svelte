@@ -50,33 +50,41 @@
 		</a>
 	</div>
 {:else}
-	<ul role="list" class="space-y-2">
-		{#each data.items as item (item.id)}
-			<li>
-				<form method="POST" action="?/open" use:progressiveForm>
-					<input type="hidden" name="id" value={item.id} />
-					<button
-						type="submit"
-						class="block w-full rounded-control border px-4 py-3 text-left transition-colors {item.readAt ===
-						null
-							? 'border-ice/25 bg-ice-soft hover:border-ice/50'
-							: 'border-line bg-surface hover:border-ink/25'}"
-					>
-						<span class="flex items-start justify-between gap-3">
-							<span class="block min-w-0">
-								<span class="block break-words text-sm font-semibold text-ink">{item.title}</span>
-								<span class="mt-1 block break-words text-sm leading-relaxed text-ink/80">
+	<div class="card-flush overflow-hidden">
+		<ul role="list" class="divide-y divide-line/70">
+			{#each data.items as item (item.id)}
+				<li>
+					<form method="POST" action="?/open" use:progressiveForm>
+						<input type="hidden" name="id" value={item.id} />
+						<button
+							type="submit"
+							class="flex min-h-14 w-full items-start gap-3 px-4 py-3 text-left transition-colors {item.readAt ===
+							null
+								? 'bg-ice-soft/60 hover:bg-ice-soft'
+								: 'bg-surface hover:bg-paper'}"
+						>
+							<span
+								aria-hidden="true"
+								class="mt-1.5 h-2 w-2 shrink-0 rounded-full {item.readAt === null
+									? 'bg-ice'
+									: 'bg-line-strong'}"
+							></span>
+							<span class="block min-w-0 flex-1">
+								<span class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+									<span class="break-words text-sm font-semibold text-ink">{item.title}</span>
+									<span class="text-[11px] text-muted">{formatTimestamp(item.createdAt)}</span>
+								</span>
+								<span class="mt-0.5 line-clamp-2 break-words text-sm leading-snug text-ink/75">
 									{item.body}
 								</span>
 							</span>
 							{#if item.readAt === null}
-								<span class="badge-ice shrink-0">{t('notifications.unread')}</span>
+								<span class="sr-only">{t('notifications.unread')}</span>
 							{/if}
-						</span>
-						<span class="mt-2 block text-xs text-muted">{formatTimestamp(item.createdAt)}</span>
-					</button>
-				</form>
-			</li>
-		{/each}
-	</ul>
+						</button>
+					</form>
+				</li>
+			{/each}
+		</ul>
+	</div>
 {/if}
