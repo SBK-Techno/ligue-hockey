@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
@@ -82,6 +82,14 @@ export type SaveAssignmentsOptions = {
 	audits?: readonly AuditEntry[];
 	/** Joueurs sortis de l'alignement dont les notes de match sont purgées. */
 	removedRatedPlayerIds?: readonly string[];
+	/**
+	 * Jeton de concurrence : la génération enregistrée doit encore être celle
+	 * que l'appelant a lue. Absent, aucune condition n'est posée; null exige
+	 * l'absence de toute génération.
+	 */
+	expectedGeneratedAt?: number | null;
+	/** Date de l'alignement manuel; null efface le drapeau. Absent, inchangé. */
+	manualAt?: number | null;
 };
 
 export function saveAssignments(
@@ -91,22 +99,52 @@ export function saveAssignments(
 	generationJson: string,
 	updatedAt: number,
 	options: SaveAssignmentsOptions = {}
-): void {
+): boolean {
 	const written = new Set(assignments.map((assignment) => assignment.playerId));
 	for (const playerId of options.removedRatedPlayerIds ?? []) {
 		if (written.has(playerId)) {
 			throw new Error(`Cannot purge ratings for a dressed player: ${playerId}`);
 		}
 	}
+	const hasCondition = 'expectedGeneratedAt' in options;
 
-	db.transaction((tx) => {
+	return db.transaction((tx) => {
+		const generation = {
+			generatedAt,
+			generationJson,
+			updatedAt,
+			...(options.manualAt !== undefined
+				? { lineupManualAt: options.manualAt }
+				: {})
+		};
+
+		// Le jeton se vérifie avant toute écriture de place : une lecture
+		// périmée ne doit jamais laisser un alignement à moitié remplacé.
+		if (hasCondition) {
+			const expected = options.expectedGeneratedAt ?? null;
+			const claimed = tx
+				.update(games)
+				.set(generation)
+				.where(
+					and(
+						eq(games.id, gameId),
+						expected === null
+							? isNull(games.generatedAt)
+							: eq(games.generatedAt, expected)
+					)
+				)
+				.run();
+			if (claimed.changes !== 1) return false;
+		}
+
 		tx.update(gameSlots)
 			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt })
 			.where(eq(gameSlots.gameId, gameId))
 			.run();
 
 		for (const assignment of assignments) {
-			tx.update(gameSlots)
+			const writtenSlot = tx
+				.update(gameSlots)
 				.set({
 					assignedPlayerId: assignment.playerId,
 					assignmentKind: assignment.kind,
@@ -121,17 +159,45 @@ export function saveAssignments(
 					)
 				)
 				.run();
+			if (writtenSlot.changes !== 1) {
+				throw new Error(
+					`Unknown alignment slot: ${assignment.team}:${assignment.position}:${assignment.slotIndex}`
+				);
+			}
 		}
 
-		tx.update(games)
-			.set({ generatedAt, generationJson, updatedAt })
-			.where(eq(games.id, gameId))
-			.run();
+		if (!hasCondition) {
+			tx.update(games).set(generation).where(eq(games.id, gameId)).run();
+		}
 
 		deleteGameRatingsForPlayers(gameId, options.removedRatedPlayerIds ?? [], tx);
 		for (const audit of options.audits ?? []) {
 			insertAudit(audit, tx);
 		}
+
+		return true;
+	});
+}
+
+/**
+ * Termine un match encore programmé. La condition sur le statut rend l'action
+ * atomique : deux finalisations concurrentes ne peuvent pas réussir toutes les
+ * deux, et l'audit entre dans la même transaction.
+ */
+export function completeGame(
+	gameId: string,
+	at: number,
+	audit: AuditEntry
+): boolean {
+	return db.transaction((tx) => {
+		const result = tx
+			.update(games)
+			.set({ status: 'completed', completedAt: at, updatedAt: at })
+			.where(and(eq(games.id, gameId), eq(games.status, 'scheduled')))
+			.run();
+		if (result.changes !== 1) return false;
+		insertAudit(audit, tx);
+		return true;
 	});
 }
 

@@ -20,6 +20,25 @@ function startsAt(
 	return zonedDateTimeToMs(game.gameDate, game.startTime, timeZone);
 }
 
+/**
+ * Instant de mise au jeu. Une seule conversion décide du début d'un match,
+ * pour la note, l'alignement et la feuille de match.
+ */
+export function gameStartsAt(
+	game: Pick<PlayableGame, 'gameDate' | 'startTime'>,
+	timeZone: string = branding.timezone
+): number {
+	return startsAt(game, timeZone);
+}
+
+export function isGameStarted(
+	game: Pick<PlayableGame, 'gameDate' | 'startTime'>,
+	at: number = clock.nowMs(),
+	timeZone: string = branding.timezone
+): boolean {
+	return startsAt(game, timeZone) <= at;
+}
+
 export function isGamePlayable(
 	game: PlayableGame,
 	at: number = clock.nowMs(),

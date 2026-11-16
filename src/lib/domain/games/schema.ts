@@ -34,6 +34,10 @@ export const games = sqliteTable(
 		location: text('location').notNull(),
 		notes: text('notes'),
 		status: text('status').$type<GameStatus>().notNull().default('scheduled'),
+		/** Un match n'est terminé qu'avec cette estampille, jamais par le statut seul. */
+		completedAt: integer('completed_at'),
+		/** Alignement enregistré à la main : la régénération automatique ne le remplace pas. */
+		lineupManualAt: integer('lineup_manual_at'),
 		rosterTemplateJson: text('roster_template_json').notNull(),
 		generatedAt: integer('generated_at'),
 		generationJson: text('generation_json'),

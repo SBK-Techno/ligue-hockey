@@ -39,6 +39,11 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Alignment rule modes | `config/rule-modes.ts` | rule form, rule list, generator, badges | mode round-trip test |
 | Rating attributes, position criteria and game criteria | `config/rating-attributes.ts` | ratings service, evaluation sheets, overall calculation | registry test |
 | Recent-form window | `config/ratings.ts` | ratings service | rating tests |
+| Penalty infractions and default minutes | `config/infractions.ts` | schema checks, game sheet form, totals | migration test |
+| Periods and overtime label | `config/periods.ts` | game sheet, game detail | typecheck |
+| Rink geometry and the six presentation roles | `config/rink.ts` | rink lineup, future admin board | rink test |
+| Game sheet goals, penalties and totals | `src/lib/domain/gamesheet/` | match sheet, game detail | service tests + migration test |
+| Manual lineup marker and CAS token | `games.lineup_manual_at`, `games.generated_at` | regeneration policy, lineup editor | lineup tests |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
@@ -115,6 +120,14 @@ A location is a reusable league entity in `locations`: name, optional address, o
 `games.location` remains on the row as a historical snapshot label. It is written from the location name when a game is created or its location changes, and it is never edited independently. Renaming a location changes future pickers and map links, but it does not rewrite past game labels or notification payloads.
 
 Map links come from `config/maps.ts`: an explicit location map URL wins, otherwise the address fills the provider-agnostic search template, otherwise there is no link. Location metrics (game count, completed count, next and last game dates) are one grouped query in `locations/queries.ts`; the admin screen reads that result and never queries per row.
+
+## Game sheet
+
+A game is completed only when `games.completed_at` is set; the `completed` status alone is not the record. Goals and penalties live in `game_goals` and `game_penalties`, written with a manager capability once the game has started. Each row keeps the player name and jersey as a snapshot, so renaming or deleting an account never rewrites a played sheet. An own goal is recorded with the team credited with the goal and the last attacking player as scorer; it counts for that team in the score. Player totals are derived on read from the dressed slots: one row per dressed player, zeros included.
+
+## Manual lineup
+
+The lineup editor sends `expectedGeneratedAt`, the `games.generated_at` value it read. `saveAssignments` performs the conditional update first and aborts before touching a slot when the token no longer matches, so two managers cannot overwrite each other. A manual save sets `games.lineup_manual_at` and the same snapshot builder as automatic generation. `regenerateIfGenerated` and `regenerateUpcomingGeneratedGames` skip a manual lineup; an explicit `regenerateGame` clears the flag. Swaps and slot filling are user actions, so they also set it.
 
 ## Notifications
 

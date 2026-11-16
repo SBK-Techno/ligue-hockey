@@ -22,6 +22,8 @@ export function regenerateUpcomingGeneratedGames(): UpcomingRegeneration {
 
 	for (const game of listGames()) {
 		if (game.generatedAt === null) continue;
+		// Un alignement manuel n'est jamais écrasé par un recalcul automatique.
+		if (game.lineupManualAt !== null) continue;
 		// Un match commencé, terminé ou annulé ne se recalcule jamais : son
 		// alignement publié est figé.
 		if (

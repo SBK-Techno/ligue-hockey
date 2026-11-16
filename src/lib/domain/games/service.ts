@@ -4,7 +4,7 @@ import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts'
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
 import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
-import { isLineupEditable } from './playability.ts';
+import { isGameStarted, isLineupEditable } from './playability.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
@@ -24,6 +24,7 @@ import { parseSchema } from '#lib/shared/validation.ts';
 
 import {
 	cancelGame as cancelGameRow,
+	completeGame as completeGameRow,
 	findGame,
 	insertGameWithSlots,
 	listAvailability,
@@ -50,6 +51,8 @@ export type GameView = GameSummary & {
 	locationMapUrl: string | null;
 	slots: GameSlotView[];
 	generation: GameGenerationView | null;
+	completedAt: number | null;
+	lineupManualAt: number | null;
 	openSlots: number;
 	openSlotsLabel: string;
 	generated: boolean;
@@ -182,6 +185,8 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		locationMapUrl: location.mapUrl,
 		slots,
 		generation: generationView(row, names, can(actor, 'manageGames')),
+		completedAt: row.completedAt,
+		lineupManualAt: row.lineupManualAt,
 		openSlots,
 		openSlotsLabel: formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many'),
 		generated: snapshot !== null
@@ -406,6 +411,7 @@ export function regenerateGame(
 	// L'audit du calcul entre dans la même transaction que les places : une
 	// écriture échouée ne laisse ni alignement publié ni trace partielle.
 	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt, {
+		manualAt: null,
 		removedRatedPlayerIds,
 		audits: [
 			...(removedRatedPlayerIds.length > 0
@@ -486,6 +492,41 @@ export function listGamePresence(gameId: string) {
 	return listAvailability(gameId);
 }
 
+/**
+ * Termine un match commencé. Le statut et l'estampille sont écrits ensemble :
+ * un match terminé se reconnaît à `completed_at`, jamais au statut seul.
+ */
+export function completeGame(actor: Actor, gameId: string): void {
+	requirePermission(actor, 'manageGames');
+	const row = findGame(gameId);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
+	}
+	if (row.status === 'cancelled') {
+		throw new AppError('CONFLICT', { key: 'games.cannotFinalizeCancelled' });
+	}
+	if (row.status === 'completed' || row.completedAt !== null) {
+		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
+	}
+	if (!isGameStarted(row)) {
+		throw new AppError('CONFLICT', { key: 'games.notStarted' });
+	}
+
+	const at = clock.nowMs();
+	const finalized = completeGameRow(
+		gameId,
+		at,
+		auditEntry(actor, {
+			action: 'game.finalized',
+			entityType: 'game',
+			entityId: gameId
+		})
+	);
+	if (!finalized) {
+		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
+	}
+}
+
 export function setGamePresence(
 	gameId: string,
 	playerId: string,
@@ -501,6 +542,9 @@ export function regenerateIfGenerated(gameId: string): {
 } {
 	const row = findGame(gameId);
 	if (!row?.generatedAt) return { regenerated: false };
+	// Un alignement enregistré à la main reste intact tant qu'un gestionnaire
+	// ne demande pas explicitement de le refaire.
+	if (row.lineupManualAt !== null) return { regenerated: false };
 
 	try {
 		regenerateGame(gameId);

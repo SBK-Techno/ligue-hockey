@@ -9,6 +9,9 @@ import { NOTIFICATION_CHANNEL_KEYS } from '#config/notification-channels.ts';
 import { NOTIFICATION_EVENT_KEYS } from '#config/notification-events.ts';
 import { PAYMENT_METHOD_KEYS } from '#config/payment-methods.ts';
 import { POSITION_KEYS } from '#config/positions.ts';
+import { INFRACTION_KEYS, PENALTY_MINUTES } from '#config/infractions.ts';
+import { PERIOD_NUMBERS } from '#config/periods.ts';
+import { GOAL_KIND_KEYS } from '#lib/domain/gamesheet/schema.ts';
 import {
 	RATING_ATTRIBUTE_KEYS,
 	POSITION_RATING_KEYS,
@@ -36,6 +39,8 @@ type Coverage = {
 	table: string;
 	constraint: string;
 	values: readonly string[];
+	/** La contrainte compare des entiers nus, sans apostrophes. */
+	numeric?: boolean;
 };
 
 const COVERAGE: readonly Coverage[] = [
@@ -98,6 +103,51 @@ const COVERAGE: readonly Coverage[] = [
 		table: 'notification_jobs',
 		constraint: 'notification_jobs_event_check',
 		values: NOTIFICATION_EVENT_KEYS
+	},
+	{
+		label: 'game_goals.team',
+		table: 'game_goals',
+		constraint: 'game_goals_team_check',
+		values: TEAM_KEYS
+	},
+	{
+		label: 'game_goals.period',
+		table: 'game_goals',
+		constraint: 'game_goals_period_check',
+		values: PERIOD_NUMBERS.map(String),
+		numeric: true
+	},
+	{
+		label: 'game_goals.kind',
+		table: 'game_goals',
+		constraint: 'game_goals_kind_check',
+		values: GOAL_KIND_KEYS
+	},
+	{
+		label: 'game_penalties.team',
+		table: 'game_penalties',
+		constraint: 'game_penalties_team_check',
+		values: TEAM_KEYS
+	},
+	{
+		label: 'game_penalties.period',
+		table: 'game_penalties',
+		constraint: 'game_penalties_period_check',
+		values: PERIOD_NUMBERS.map(String),
+		numeric: true
+	},
+	{
+		label: 'game_penalties.infraction',
+		table: 'game_penalties',
+		constraint: 'game_penalties_infraction_check',
+		values: INFRACTION_KEYS
+	},
+	{
+		label: 'game_penalties.minutes',
+		table: 'game_penalties',
+		constraint: 'game_penalties_minutes_check',
+		values: PENALTY_MINUTES.map(String),
+		numeric: true
 	}
 ];
 
@@ -128,6 +178,16 @@ function constraintLiterals(ddl: string, constraint: string): string[] {
 	const next = ddl.indexOf('CONSTRAINT "', start + marker.length);
 	const body = ddl.slice(start, next === -1 ? undefined : next);
 	return [...body.matchAll(/'([^']*)'/g)].map((match) => match[1]);
+}
+
+/** Les contraintes numériques comparent des entiers nus, sans apostrophes. */
+function constraintNumbers(ddl: string, constraint: string): string[] {
+	const marker = `CONSTRAINT "${constraint}"`;
+	const start = ddl.indexOf(marker);
+	if (start === -1) return [];
+	const next = ddl.indexOf('CONSTRAINT "', start + marker.length);
+	const body = ddl.slice(start, next === -1 ? undefined : next);
+	return [...body.matchAll(/\b(\d+)\b/g)].map((match) => match[1]);
 }
 
 function migrationTags(): string[] {
@@ -163,7 +223,9 @@ describe('migrations vs registres', () => {
 
 	for (const probe of COVERAGE) {
 		it(`${probe.label} accepte exactement les valeurs du registre`, () => {
-			const literals = constraintLiterals(ddl.get(probe.table) ?? '', probe.constraint);
+			const literals = probe.numeric
+				? constraintNumbers(ddl.get(probe.table) ?? '', probe.constraint)
+				: constraintLiterals(ddl.get(probe.table) ?? '', probe.constraint);
 
 			expect(
 				literals.length,
@@ -172,6 +234,47 @@ describe('migrations vs registres', () => {
 			expect([...new Set(literals)].sort()).toEqual([...probe.values].sort());
 		});
 	}
+
+	it('crée l’inventaire complet des tables', () => {
+		const tables = (
+			sqlite
+				.prepare(
+					"select name from sqlite_master where type = 'table' and name not like 'sqlite_%' order by name"
+				)
+				.all() as { name: string }[]
+		).map((row) => row.name);
+
+		expect(tables).toEqual([
+			'__drizzle_migrations',
+			'account',
+			'audit_log',
+			'chat_messages',
+			'game_availability',
+			'game_goals',
+			'game_penalties',
+			'game_player_ratings',
+			'game_slots',
+			'games',
+			'league_settings',
+			'locations',
+			'notification_jobs',
+			'notification_preferences',
+			'pair_rules',
+			'payment_plans',
+			'payments',
+			'player_ratings',
+			'players',
+			'poll_options',
+			'poll_votes',
+			'polls',
+			'push_subscriptions',
+			'session',
+			'sub_profiles',
+			'sub_requests',
+			'user',
+			'verification'
+		]);
+	});
 
 	it('la dernière migration accepte les données écrites par la précédente', () => {
 		const folder = mkdtempSync(join(tmpdir(), 'lhdm-migrations-'));
@@ -224,9 +327,16 @@ describe('migrations vs registres', () => {
 			const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
 				entries: { tag: string }[];
 			};
+			const locationsIndex = journal.entries.findIndex(
+				(entry) => entry.tag === '0006_known_beast'
+			);
+			if (locationsIndex <= 0) throw new Error('migration locations absente');
 			writeFileSync(
 				journalPath,
-				JSON.stringify({ ...journal, entries: journal.entries.slice(0, -1) })
+				JSON.stringify({
+					...journal,
+					entries: journal.entries.slice(0, locationsIndex)
+				})
 			);
 
 			const previous = new Database(':memory:');
