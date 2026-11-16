@@ -49,7 +49,7 @@
 
 	function dayClass(day: CalendarDay): string {
 		const base =
-			'relative flex h-11 w-full flex-col items-center justify-center gap-0.5 rounded-control text-[13px] leading-none transition-colors';
+			'relative flex h-11 w-full flex-col items-center justify-center gap-0.5 rounded-control text-[length:var(--text-meta)] leading-none transition-colors';
 		if (!day.inMonth) return `${base} text-muted/40`;
 		if (day.gameCount > 0 && !day.isPast) {
 			return `${base} bg-ice text-on-brand hover:bg-ice-deep ${day.isToday ? 'ring-2 ring-inset ring-accent' : ''}`;
@@ -79,7 +79,7 @@
 					{#each weekdays as weekday, index (index)}
 						<th
 							scope="col"
-							class="pb-1 text-center text-[11px] font-semibold uppercase tracking-[0.06em] text-muted"
+							class="pb-1 text-center text-[length:var(--text-stamp)] font-semibold uppercase tracking-[0.06em] text-muted"
 						>
 							{weekday}
 						</th>
@@ -109,7 +109,7 @@
 										</time>
 										{#if day.gameCount > 1}
 											<span
-												class="text-[11px] leading-none text-paper/80"
+												class="text-[length:var(--text-stamp)] leading-none text-paper/80"
 												aria-hidden="true">{day.gameCount}</span>
 										{/if}
 										{#if day.hasCancelled}
@@ -125,7 +125,10 @@
 											{day.dayOfMonth}
 										</time>
 										{#if day.gameCount > 1}
-											<span class="text-[11px] leading-none text-muted" aria-hidden="true">
+											<span
+											class="text-[length:var(--text-stamp)] leading-none text-muted"
+											aria-hidden="true"
+										>
 												{day.gameCount}
 											</span>
 										{/if}

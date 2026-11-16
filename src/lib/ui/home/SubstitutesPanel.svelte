@@ -3,6 +3,7 @@
 	import type { SubRequestWithGame } from '#lib/domain/roster/service.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import { filledRequestLabel } from '#lib/ui/filled-request.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	let {
@@ -53,11 +54,7 @@
 				{formatDate(ownRequest.game.gameDate, 'short')} · {formatTime(ownRequest.game.startTime)}
 			</p>
 			{#if ownRequest.status === 'filled'}
-				<p class="hint">
-					{t('home.absentRequestFilled', {
-						name: ownRequest.filledByName ?? ownRequest.requestedByName ?? ''
-					})}
-				</p>
+				<p class="hint">{filledRequestLabel(ownRequest)}</p>
 			{/if}
 			<a class="action-link text-sm" href="/remplacants">{t('home.actionOwnRequestLink')}</a>
 		</div>

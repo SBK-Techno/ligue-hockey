@@ -6,6 +6,7 @@
 	import type { GameBenchView, GameSlotView } from '#lib/domain/games/types.ts';
 	import type { HeroVariant } from '#lib/domain/home/composition.ts';
 	import type { SubRequestWithGame } from '#lib/domain/roster/service.ts';
+	import { filledRequestLabel } from '#lib/ui/filled-request.ts';
 	import {
 		formatDayMonth,
 		formatTime,
@@ -76,14 +77,12 @@
 			</p>
 			<a class="btn-primary mt-4" href="/profil">{t('home.profileAction')}</a>
 		{:else}
-			<div class="mt-4 flex flex-wrap gap-2">
-				{#if !hasGame}
+			{#if !hasGame}
+				<div class="mt-4 flex flex-wrap gap-2">
 					<a class="btn-primary" href="/admin/matchs">{t('home.createGame')}</a>
-				{/if}
-				<a class={hasGame ? 'btn-primary' : 'btn-secondary'} href="/admin">
-					{t('home.managerAction')}
-				</a>
-			</div>
+					<a class="btn-secondary" href="/admin">{t('home.managerAction')}</a>
+				</div>
+			{/if}
 		{/if}
 	</section>
 {:else if variant === 'no-game'}
@@ -129,7 +128,7 @@
 				</div>
 
 				<p
-					class="mt-3 font-display text-2xl font-semibold leading-tight text-paper sm:text-[1.75rem]"
+					class="mt-3 font-display text-[length:var(--text-figure)] font-semibold leading-tight text-paper"
 				>
 					{formatWeekday(game.gameDate)}
 					{formatDayMonth(game.gameDate)}
@@ -173,9 +172,7 @@
 					</a>
 				{:else if ownRequest?.status === 'filled'}
 					<p class="mt-2 text-sm leading-snug text-paper/80">
-						{t('home.absentRequestFilled', {
-							name: ownRequest.filledByName ?? ownRequest.requestedByName ?? ''
-						})}
+						{filledRequestLabel(ownRequest)}
 					</p>
 				{:else}
 					<p class="mt-2 text-sm leading-snug text-paper/70">{t('home.absentNoRequest')}</p>
@@ -236,11 +233,7 @@
 				{#if ownRequest?.status === 'open'}
 					<p class="mt-1 text-sm text-paper/75">{t('subs.ownRequestOpen')}</p>
 				{:else if ownRequest?.status === 'filled'}
-					<p class="mt-1 text-sm text-paper/75">
-						{t('home.absentRequestFilled', {
-							name: ownRequest.filledByName ?? ownRequest.requestedByName ?? ''
-						})}
-					</p>
+					<p class="mt-1 text-sm text-paper/75">{filledRequestLabel(ownRequest)}</p>
 				{/if}
 				{@render withdrawForm()}
 			{:else if availability?.locked}

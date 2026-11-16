@@ -24,13 +24,6 @@
 	const team = $derived(ownSlot ? teamDefinition(ownSlot.team) : null);
 	const jersey = $derived(ownSlot?.player?.jerseyNumber ?? null);
 	const position = $derived(ownSlot ? positionDefinition(ownSlot.position) : null);
-	const line = $derived.by(() => {
-		if (!ownSlot) return null;
-		if (ownSlot.position === 'goalie') return null;
-		const key =
-			ownSlot.position === 'defense' ? 'home.teamDefensePair' : 'home.teamForwardLine';
-		return t(key, { number: ownSlot.slotIndex + 1 });
-	});
 	const violation = $derived(
 		game.generation?.ruleViolations.find((entry) => entry.playerIds.includes(actorId)) ?? null
 	);
@@ -66,9 +59,6 @@
 						{t(team.labelKey)}
 					</span>
 					<p class="mt-1.5 text-sm font-semibold">{t(position.labelKey)}</p>
-					{#if line}
-						<p class="mt-0.5 text-xs text-muted">{line}</p>
-					{/if}
 				</div>
 			</div>
 			{#if pairNote}
