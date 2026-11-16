@@ -17,6 +17,12 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
+			// Le CSS critique tient sous ce seuil : l'inliner évite le second
+			// aller-retour qui peignait la page avant sa feuille de style.
+			inlineStyleThreshold: 80 * 1024,
+			// Les URL d'actifs restent absolues : le CSS inliné est partagé par
+			// toutes les routes, y compris les routes imbriquées.
+			paths: { relative: false },
 			adapter: adapter()
 		})
 	],

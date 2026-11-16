@@ -4,6 +4,8 @@
 	import { page } from '$app/state';
 	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import anybodyLatin from '@fontsource-variable/anybody/files/anybody-latin-wdth-normal.woff2?url';
+	import splineLatin from '@fontsource-variable/spline-sans-mono/files/spline-sans-mono-latin-wght-normal.woff2?url';
 	import AppNav from '#lib/ui/AppNav.svelte';
 	import AppNavBottom from '#lib/ui/AppNavBottom.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
@@ -59,6 +61,8 @@
 	<link rel="icon" href={branding.icons.favicon} />
 	<link rel="apple-touch-icon" href={branding.icons.appleTouch} />
 	<link rel="manifest" href={branding.manifestPath} />
+	<link rel="preload" href={anybodyLatin} as="font" type="font/woff2" crossorigin="anonymous" />
+	<link rel="preload" href={splineLatin} as="font" type="font/woff2" crossorigin="anonymous" />
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content={branding.name} />
 	<meta property="og:title" content={pageTitle} />
