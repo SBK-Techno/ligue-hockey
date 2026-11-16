@@ -8,7 +8,6 @@ import { isAppError } from '#lib/shared/errors.ts';
 import { t, type I18nKey } from '#lib/shared/i18n/index.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
-import { redactPath } from '#lib/shared/logging/redact.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -55,7 +54,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	logger.info('http.request', {
 		method: event.request.method,
-		path: redactPath(event.url.pathname),
+		path: event.url.pathname,
 		status: response.status,
 		durationMs: clock.nowMs() - startedAt,
 		requestId: event.locals.requestId
@@ -76,14 +75,14 @@ export const handleError: HandleServerError = (input) => {
 	if (isAppError(error)) {
 		logger.warn('http.app_error', {
 			code: error.code,
-			path: redactPath(event.url.pathname),
+			path: event.url.pathname,
 			requestId: event.locals.requestId
 		});
 		return { message: t(error.key), key: error.key, status };
 	}
 
 	logger.error('http.unhandled_error', {
-		path: redactPath(event.url.pathname),
+		path: event.url.pathname,
 		status,
 		requestId: event.locals.requestId,
 		error

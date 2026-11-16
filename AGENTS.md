@@ -27,7 +27,9 @@ Demo data is created through the admin screens; there is no seed command.
 
 ## Integration continue
 
-Gitea exécute `.gitea/workflows/verification.yml` sur chaque demande de fusion et sur `main`. La tâche appelle `npm run gate` dans le conteneur Node déclaré par `scripts/ci/act-runner.yaml`; les deux commandes et le major Node sont vérifiés par `npm run verify:architecture`. Le coureur se gère avec `scripts/ci/runner.sh` (voir `OPERATIONS.md`). Ne dupliquez jamais la suite de vérification dans le workflow.
+Gitea exécute `.gitea/workflows/verification.yml` sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. La tâche installe avec `npm ci` puis appelle `npm run gate`; elle ne copie aucune étape de vérification. La protection de `main` refuse les poussées directes et exige le statut `Vérification`.
+
+`npm run verify:architecture` valide le contrat CI dans `scripts/lib/ci-contract.ts`: déclencheurs, tâche unique `gate`, étape exacte, actions épinglées, scripts `gate` et `verify`, major Node identique dans `package.json`, le coureur et le Dockerfile, et absence du socket Docker ou de volumes hôte dans les conteneurs de tâche. Le coureur se gère avec `scripts/ci/runner.sh` (voir `OPERATIONS.md`).
 
 ## Boundaries
 

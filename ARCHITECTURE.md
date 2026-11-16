@@ -94,10 +94,11 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 1. `svelte-check` — types and Svelte diagnostics.
 2. `eslint` — import boundaries and restricted syntax.
 3. `vitest run` — unit, property, and contract tests.
-4. `verify:architecture` — scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist.
+4. `verify:architecture` — scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the CI contract from `scripts/lib/ci-contract.ts`: workflow triggers, the single `gate` job, the exact `npm run gate` step, pinned actions, the gate and verify scripts, matching Node majors in `package.json`, the runner label, the Dockerfile, and the absence of the host Docker socket or host volumes in job containers.
 5. `verify:generated` — regenerates every branding asset, manifest, social image, and generated module in memory and fails if the checked-in bytes differ. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+6. `verify:shell` — parses `scripts/ci/runner.sh` with `bash -n`.
 
-CI runs the same command plus `npm run build`. A red gate blocks a milestone.
+CI runs `npm run gate`, which is the same verify plus `npm run build`. Branch protection on `main` requires the `Vérification` status check and refuses direct pushes; a red gate blocks the merge. The check runs on the pull request head, not on a merge commit.
 
 ## Web delivery
 
@@ -115,6 +116,6 @@ CI runs the same command plus `npm run build`. A red gate blocks a milestone.
 ## Operations
 
 - `/api/health` reports database reachability, whether migrations are applied, and the scheduler heartbeat.
-- Structured logs only, with redaction of passwords, tokens, VAPID keys, SMTP credentials, and session cookies.
+- Structured logs only. `src/lib/shared/logging/redact.ts` is the single redaction owner: sensitive keys at any depth, password-reset tokens in `path` fields, and stack traces outside production. The logger applies it to every record, so no call site can bypass it.
 - Graceful shutdown stops the scheduler, closes the HTTP server, then closes SQLite.
 - Backups: copy the SQLite file with `sqlite3 .backup` (documented in `OPERATIONS.md`), not by copying a live WAL file.

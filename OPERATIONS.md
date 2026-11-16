@@ -56,22 +56,26 @@ Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, pu
 
 ## Intégration continue
 
-Le dépôt vit sur Gitea à `https://git.localserver.ca/SBK_Techno/ligue-hockey`. Chaque demande de fusion et chaque poussée sur `main` déclenche `.gitea/workflows/verification.yml`, qui exécute `npm run gate` sur le coureur autohébergé étiqueté `linux`. La porte est identique à celle exécutée localement; le workflow n'en copie aucune étape.
+Le dépôt vit sur Gitea à `https://git.localserver.ca/SBK_Techno/ligue-hockey`. `.gitea/workflows/verification.yml` s'exécute sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. La tâche installe les dépendances avec `npm ci`, puis exécute `npm run gate`, la même porte qu'en local. Le workflow ne copie aucune étape.
 
-Le coureur tourne dans un conteneur `gitea/act_runner`, lance chaque tâche dans l'image Node déclarée par `scripts/ci/act-runner.yaml` et ne monte que le socket Docker requis pour démarrer ces conteneurs de tâche. Son cycle de vie passe par `scripts/ci/runner.sh` :
+Le coureur est autohébergé sur `home` (`10.145.0.10`), dans le conteneur `ligue-hockey-runner` (`gitea/act_runner:0.2.11`). Son état vit dans `$HOME/ci/ligue-hockey-runner` sur cet hôte. Le conteneur du coureur monte le socket Docker pour démarrer les conteneurs de tâche; `container.docker_host: "-"` empêche le socket d'entrer dans les tâches, `valid_volumes` est vide et `privileged` est faux. Chaque tâche tourne dans `node:24-bookworm`, tirée à chaque exécution, sans volume hôte.
 
 ```bash
-scripts/ci/runner.sh install
-install -m 600 /dev/stdin "$HOME/ci/ligue-hockey-runner/secrets/registration-token" <<<"$JETON_GITEA"
-scripts/ci/runner.sh start
+scripts/ci/runner.sh install       # rend act-runner.yaml dans $HOME/ci/ligue-hockey-runner/config.yaml
+read -rs JETON                     # coller le jeton, aucun echo
+printf '%s' "$JETON" | install -m 600 /dev/stdin "$HOME/ci/ligue-hockey-runner/secrets/registration-token"
+unset JETON
+scripts/ci/runner.sh start         # enregistre, supprime le jeton, active le redémarrage Docker
 scripts/ci/runner.sh status
 scripts/ci/runner.sh logs
 scripts/ci/runner.sh stop
 ```
 
-Le jeton d'enregistrement se crée dans **Paramètres du dépôt → Actions → Coureurs**. Il n'est jamais commité ni écrit dans un journal; `start` le supprime dès l'enregistrement terminé. Le conteneur redémarre avec Docker grâce à `--restart unless-stopped`.
+`recreate` applique un changement de `scripts/ci/act-runner.yaml` ou de l'image du coureur. `reset` arrête le conteneur, supprime l'enregistrement local `.runner` et exige un nouveau jeton; utilisez-le pour une rotation ou après la suppression du coureur dans Gitea. Le jeton se crée dans **Paramètres du dépôt → Actions → Coureurs**. Il n'est jamais commité, journalisé ni laissé sur disque après l'enregistrement.
 
-Le major Node de l'image du coureur et celui de `package.json` (`engines.node`) doivent rester identiques. `npm run verify:architecture` refuse la dérive, une étiquette de coureur mal alignée avec `runs-on`, une action non épinglée à un SHA complet ou un workflow qui n'appelle pas `npm run gate`.
+`npm run verify:architecture` analyse la structure réelle des fichiers et refuse: un déclencheur manquant, une tâche autre que `gate`, un `runs-on` différent de l'étiquette, un `if` ou `continue-on-error`, une étape `npm run gate` absente, en double ou enveloppée, un `npm ci` absent, une action non épinglée à un SHA complet, un script `gate` ou `verify` affaibli, un major Node différent entre `package.json`, le coureur et le Dockerfile, un socket Docker ou des volumes hôte dans les tâches, et une étiquette de coureur dupliquée dans le script.
+
+Limite connue: le statut porte sur la tête de la demande de fusion, pas sur un commit de fusion. La protection de `main` exige le statut et refuse les poussées directes; une approbation humaine indépendante reste requise par la politique, mais elle n'est pas encore imposée par Gitea tant qu'un seul compte actif signe les changements.
 
 ## Mise à jour et retour arrière
 

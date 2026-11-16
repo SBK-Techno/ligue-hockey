@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fr } from '../config/i18n/fr.ts';
+import { checkCiContract } from './lib/ci-contract.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const SCANNED_EXTENSIONS = ['.ts', '.js', '.svelte', '.css'];
@@ -139,93 +140,38 @@ check(
 	'Build tooling may read the database URL from the environment.'
 );
 
-function checkCiContract() {
-	const runnerTemplate = join(ROOT, 'scripts/ci/act-runner.yaml');
-	const workflowFile = join(ROOT, '.gitea/workflows/verification.yml');
-	for (const file of [runnerTemplate, workflowFile]) {
-		if (!existsSync(file)) {
-			findings.push({
-				file,
-				line: 1,
-				rule: 'ci-contract',
-				detail: 'The CI contract files must exist.'
-			});
+const workflowDir = join(ROOT, '.gitea/workflows');
+const readText = (path: string) => (existsSync(path) ? readFileSync(path, 'utf8') : '');
+const workflows = existsSync(workflowDir)
+	? readdirSync(workflowDir)
+			.filter((entry) => entry.endsWith('.yml') || entry.endsWith('.yaml'))
+			.map((entry) => ({
+				path: join(workflowDir, entry),
+				content: readFileSync(join(workflowDir, entry), 'utf8')
+			}))
+	: [];
+
+findings.push(
+	...checkCiContract({
+		workflows,
+		runnerConfig: {
+			path: join(ROOT, 'scripts/ci/act-runner.yaml'),
+			content: readText(join(ROOT, 'scripts/ci/act-runner.yaml'))
+		},
+		runnerScript: {
+			path: join(ROOT, 'scripts/ci/runner.sh'),
+			content: readText(join(ROOT, 'scripts/ci/runner.sh'))
+		},
+		packageFile: {
+			path: join(ROOT, 'package.json'),
+			content: readText(join(ROOT, 'package.json'))
+		},
+		dockerfile: {
+			path: join(ROOT, 'Dockerfile'),
+			content: readText(join(ROOT, 'Dockerfile'))
 		}
-	}
-	if (!existsSync(runnerTemplate) || !existsSync(workflowFile)) return;
-
-	const packageFile = join(ROOT, 'package.json');
-	const packageJson = JSON.parse(readFileSync(packageFile, 'utf8')) as {
-		engines?: { node?: string };
-		scripts?: Record<string, string>;
-	};
-	const nodeMinimum = Number(packageJson.engines?.node?.match(/\d+/)?.[0] ?? NaN);
-
-	if (!packageJson.scripts?.gate) {
-		findings.push({
-			file: packageFile,
-			line: 1,
-			rule: 'ci-contract',
-			detail: 'package.json must declare the gate script.'
-		});
-	}
-
-	const runnerConfig = readFileSync(runnerTemplate, 'utf8');
-	const labelMatch = runnerConfig.match(
-		/^\s+- "([a-z0-9._-]+):docker:\/\/node:(\d+)-/m
-	);
-	if (!labelMatch) {
-		findings.push({
-			file: runnerTemplate,
-			line: 1,
-			rule: 'ci-contract',
-			detail: 'The runner must declare a label backed by a Node image.'
-		});
-		return;
-	}
-	const [, label, imageMajor] = labelMatch;
-	if (Number(imageMajor) !== nodeMinimum) {
-		findings.push({
-			file: runnerTemplate,
-			line: runnerConfig.slice(0, labelMatch.index).split('\n').length,
-			rule: 'ci-contract',
-			detail: `The runner Node image (${imageMajor}) must match engines.node (${nodeMinimum}).`
-		});
-	}
-
-	const workflow = readFileSync(workflowFile, 'utf8');
-	const lines = workflow.split('\n');
-	const runOn = lines.findIndex((line) => /^\s*runs-on:/.test(line));
-	if (runOn < 0 || !new RegExp(`^\\s*runs-on:\\s*${label}\\s*$`).test(lines[runOn])) {
-		findings.push({
-			file: workflowFile,
-			line: runOn + 1,
-			rule: 'ci-contract',
-			detail: `The gate must run on the runner label ${label}.`
-		});
-	}
-	if (!/\bnpm run gate\b/.test(workflow)) {
-		findings.push({
-			file: workflowFile,
-			line: 1,
-			rule: 'ci-contract',
-			detail: 'The workflow must call the gate script.'
-		});
-	}
-	for (const [index, line] of lines.entries()) {
-		const action = line.match(/^\s*uses:\s*(\S+)/);
-		if (action && !/@[0-9a-f]{40}$/.test(action[1])) {
-			findings.push({
-				file: workflowFile,
-				line: index + 1,
-				rule: 'ci-contract',
-				detail: 'Actions must be pinned to a full commit SHA.'
-			});
-		}
-	}
-}
-
-checkCiContract();
+	})
+);
 
 const knownKeys = new Set(Object.keys(fr));
 for (const file of sourceFiles.filter(

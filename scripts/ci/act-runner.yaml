@@ -1,5 +1,6 @@
 # Configuration du coureur Gitea de ce dépôt.
 # Le chemin du répertoire de travail est substitué par scripts/ci/runner.sh.
+# Les étiquettes de coureur sont définies ici seulement; le script ne les duplique pas.
 
 log:
   level: info
@@ -19,10 +20,11 @@ cache:
 container:
   network: ""
   privileged: false
-  workdir_parent: @WORKDIR_PARENT@
+  # "-" empêche le montage du socket Docker de l'hôte dans les conteneurs de tâche.
+  docker_host: "-"
+  workdir_parent: "__WORKDIR_PARENT__"
   valid_volumes: []
-  docker_host: ""
-  force_pull: false
+  force_pull: true
   force_rebuild: false
 
 host:
