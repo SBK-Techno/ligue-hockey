@@ -49,9 +49,10 @@ GitHub Actions exécute `.github/workflows/ci.yml` sur chaque demande de fusion,
 - `console.*` outside the logger.
 - `new Date()` / `Date.now()` outside `src/lib/shared/time/clock.ts`.
 - Drizzle imports outside `src/lib/server/db/` and `src/lib/domain/*/queries.ts` / `schema.ts`.
-- Hex colours outside `src/lib/ui/tokens.css` and `config/branding.json`.
+- Hex or `rgb()`/`hsl()` colours outside `src/lib/ui/tokens.css` and the manifest colours in `config/branding.json`.
 - French literals outside `config/i18n/fr.ts` and data fixtures.
-- Duplicated defaults: every tunable belongs to one config layer.
+- Hand-maintained static text assets: every text file under `static/` must be generated and listed in `static/generated-assets.json`.
+- Duplicated defaults or generated asset names: every tunable and every generated filename belongs to one config layer or manifest.
 - Role checks in UI or services (`actor.role === 'admin'`) outside `config/roles.ts` and `policy.ts`.
 - Direct `fetch` to email/push providers; use the adapters.
 
