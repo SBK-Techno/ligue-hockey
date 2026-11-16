@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { gameRatingAttributes } from '#config/rating-attributes.ts';
 	import { positionDefinition } from '#config/positions.ts';
-	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import RatingScale from '#lib/ui/RatingScale.svelte';
@@ -21,9 +21,7 @@
 		if (!form || form === handled) return;
 		handled = form;
 		const savedId =
-			form.ok && form.next === true && typeof form.playerId === 'string'
-				? form.playerId
-				: null;
+			form.ok && typeof form.playerId === 'string' ? form.playerId : null;
 		const failedId = form.ok === false && typeof form.playerId === 'string' ? form.playerId : null;
 		if (!savedId && !failedId) return;
 
@@ -32,13 +30,16 @@
 			const savedIndex = savedId
 				? players.findIndex((player) => player.playerId === savedId)
 				: -1;
+			const savedPlayer = savedIndex >= 0 ? players[savedIndex] : null;
 			const targetId = failedId
 				? failedId
-				: savedIndex >= 0
-					? (players.slice(savedIndex + 1).find((player) => !player.complete)?.playerId ??
-						players.find((player) => !player.complete)?.playerId ??
-						null)
-					: null;
+				: savedPlayer && !savedPlayer.complete
+					? savedPlayer.playerId
+					: savedIndex >= 0
+						? (players.slice(savedIndex + 1).find((player) => !player.complete)?.playerId ??
+							players.find((player) => !player.complete)?.playerId ??
+							null)
+						: null;
 			if (!targetId) return;
 			const sheet = document.getElementById(`assessment-${targetId}`);
 			if (sheet instanceof HTMLDetailsElement) sheet.open = true;
@@ -56,10 +57,12 @@
 
 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
 	<p class="font-mono text-xs text-muted">
-		{t('rating.ratedPlayers', {
-			done: assessment.ratedPlayers,
-			total: assessment.totalPlayers
-		})}
+		{formatCount(
+			assessment.ratedPlayers,
+			'rating.ratedPlayers.one',
+			'rating.ratedPlayers.many',
+			{ total: assessment.totalPlayers }
+		)}
 	</p>
 	<p class="text-[11px] text-muted">{t('rating.gameHelp')}</p>
 </div>
@@ -82,7 +85,7 @@
 			<summary
 				class="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-2.5"
 			>
-				<span class="jersey">{player.jerseyNumber ?? t('rating.notAvailable')}</span>
+				<span class="jersey">{player.jerseyNumber ?? '-'}</span>
 				<span class="min-w-0 flex-1">
 					<span class="block truncate text-sm font-semibold">{player.fullName}</span>
 					<span class="mt-0.5 block text-xs text-muted">
@@ -130,11 +133,8 @@
 					</fieldset>
 					{#if assessment.canRate}
 						<div class="mt-3 flex flex-wrap gap-2">
-							<button class="btn-primary btn-sm" type="submit" name="next" value="1">
+							<button class="btn-primary btn-sm" type="submit">
 								{t('rating.saveNext')}
-							</button>
-							<button class="btn-secondary btn-sm" type="submit">
-								{t('common.save')}
 							</button>
 							<button class="btn-ghost btn-sm" type="submit" name="clear" value="1">
 								{t('rating.notSeenGame')}

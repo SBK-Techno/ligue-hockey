@@ -142,7 +142,7 @@ export const fr = {
   'rating.scaleHelp': '1 = sous le calibre · 3 = calibre de la ligue · 5 = au-dessus du calibre',
   'rating.notObserved': 'Pas vu',
   'rating.seasonTitle': 'Fiche de saison',
-  'rating.positionTitle': 'Critères de position',
+  'rating.positionTitle': 'Critères de poste',
   'rating.gameTitle': 'Évaluation du match',
   'rating.gameHelp':
     'Comment le joueur a joué ce match. Ces notes ne changent pas sa fiche de saison.',
@@ -163,7 +163,8 @@ export const fr = {
   'rating.edit': 'Évaluer',
   'rating.editGame': 'Évaluer le match',
   'rating.noPlayedGames': 'Aucun match joué pour l’instant.',
-  'rating.ratedPlayers': '{done} joueurs évalués sur {total}',
+  'rating.ratedPlayers.one': '{count} joueur évalué sur {total}',
+  'rating.ratedPlayers.many': '{count} joueurs évalués sur {total}',
   'rating.gameNotPlayed': 'Ce match n’a pas encore été joué.',
   'rating.playerNotInGame': 'Ce joueur n’est pas dans l’alignement de ce match.',
   'rating.gameNotGenerated': 'Les équipes ne sont pas encore formées pour ce match.',
@@ -297,7 +298,7 @@ export const fr = {
     'Écart maximal de notes combinées avant de considérer l’âge. Échelle de {min} à {max}.',
   'settings.maxPlayers.label': 'Maximum de joueurs',
   'settings.maxPlayers.description':
-    'Limite de sécurité pour la génération des équipes. Au moins {minimum} joueurs pour couvrir toutes les positions d’un match.',
+    'Limite de sécurité pour la génération des équipes. Au moins {minimum} joueurs pour couvrir tous les postes d’un match.',
   'settings.maxMessageLength.label': 'Longueur des messages',
   'settings.maxMessageLength.description': 'Caractères maximaux par message.',
   'settings.maxPollOptions.label': 'Options de sondage',
@@ -318,7 +319,7 @@ export const fr = {
     'La fenêtre de notification dépasse le maximum autorisé.',
   'settings.invariant.roster': 'Une équipe doit avoir au moins un joueur.',
   'settings.invariant.maxPlayers':
-    'Le maximum de joueurs doit couvrir toutes les positions d’un match.',
+    'Le maximum de joueurs doit couvrir tous les postes d’un match.',
 
   'home.weekStrip': 'Les sept prochains jours',
   'home.greeting': 'Bonjour, {name}',
@@ -423,8 +424,15 @@ export const fr = {
   'games.status.completed': 'Terminé',
   'games.roster': 'Alignement',
   'games.rosterIncomplete': 'Alignement incomplet',
+  'games.incomplete':
+    'Une équipe n’a encore aucun joueur. L’équilibre sera mesuré quand les deux équipes seront remplies.',
   'games.openSlots.one': '{count} place ouverte',
   'games.openSlots.many': '{count} places ouvertes',
+  'games.filledPlaces.one': '{count} place comblée',
+  'games.filledPlaces.many': '{count} places comblées',
+  'games.sizeGap': 'Écart de taille : {count}',
+  'games.teamSize': '{team} : {count}',
+  'games.details': 'Détails du match',
   'games.generate': 'Faire les équipes',
   'games.regenerate': 'Refaire les équipes',
   'games.regenerateConfirm':
@@ -432,21 +440,28 @@ export const fr = {
   'games.generated': 'Alignement publié',
   'games.publishedAt': 'Équipes affichées le {date}',
   'games.notGenerated': 'Sans alignement',
-  'games.smartBalance': 'Équilibre actuel',
-  'games.averageWhite': 'Moyenne blanche',
-  'games.averageBlack': 'Moyenne noire',
+  'games.skillGap': 'Écart de notes',
+  'games.ageGap': 'Écart d’âge cumulé',
+  'games.average': 'Moyenne {team}',
   'games.bestSwap': 'Le meilleur échange',
   'games.bestSwapHelp':
-    'Échanger {a} et {b} ferait passer l’écart de {before} à {after}.',
+    'Échanger {a} et {b} ferait passer l’écart de notes de {before} à {after}.',
+  'games.bestSwapAge':
+    'L’écart d’âge cumulé passerait de {before} à {after} ans.',
+  'games.swapConfirm':
+    'Échanger {a} et {b}? L’écart de notes passera de {before} à {after} et l’écart d’âge cumulé de {ageBefore} à {ageAfter} ans.',
   'games.applySwap': 'Faire l’échange',
   'games.swapDone': 'Échange fait, alignement rééquilibré.',
-  'games.noBetterSwap': 'Cet alignement est déjà le meilleur possible.',
+  'games.noBetterSwap': 'Aucun échange ne rapproche davantage les équipes.',
   'games.fillSlots': 'Combler les places',
-  'games.fillSlotsHelp': 'Placer {count} joueur disponible selon le poste.',
-  'games.fillDone': '{count} place comblée.',
+  'games.fillSlotsHelp.one':
+    '{count} joueur du bassin peut combler une place selon son poste.',
+  'games.fillSlotsHelp.many':
+    '{count} joueurs du bassin peuvent combler une place selon leur poste.',
+  'games.fillDone.one': '{count} place comblée.',
+  'games.fillDone.many': '{count} places comblées.',
   'games.noOneToFill': 'Aucun joueur disponible ne peut combler une place.',
-  'games.alreadyBalanced': 'Les deux équipes sont déjà très proches.',
-  'games.openSlotsLeft': '{count} place reste à combler.',
+  'games.alreadyBalanced': 'Aucun échange ne rapproche davantage les équipes.',
   'games.bench': 'Joueurs sans place',
   'games.unassigned': 'Place libre',
   'games.substitutes': 'Remplaçant',
@@ -454,11 +469,11 @@ export const fr = {
   'games.adminEdit': 'Modifier le match',
   'games.adminCancel': 'Annuler le match',
   'games.notes': 'Note pour les joueurs',
-  'games.noNotes': 'Aucune note.',
   'games.teamBalance': 'Écart de notes : {skill} · écart d’âge cumulé : {age} ans',
-  'games.balanceNote':
-    'L’alignement tient compte du niveau et de l’âge des joueurs. Les notes restent confidentielles.',
   'games.rulesConflict': 'Règles incompatibles',
+  'games.warning.rulePreference':
+    'Une préférence d’alignement n’a pas pu être respectée.',
+  'games.warning.unfilledSlots': 'Des places restent ouvertes.',
   'games.limitConflict': 'Les écarts demandés ne sont pas respectés',
   'games.limitConflictHelp':
     'Aucun alignement ne respecte les écarts demandés. Demande à un administrateur d’ajuster les réglages.',
@@ -468,8 +483,14 @@ export const fr = {
     'Aucune combinaison ne respecte toutes les règles. Demande à un administrateur d’ajuster les règles.',
   'games.ratingsMissing':
     'Certains joueurs n’ont pas encore d’évaluations complètes.',
+  'games.ratingsMissingNames': 'Joueurs concernés : {names}.',
+  'games.ratingsMissingHelp':
+    'Complète leurs évaluations pour les inclure dans l’alignement.',
+  'games.ratingsMissingLink': 'Ouvrir les évaluations',
   'games.noMatch': 'Ce match est introuvable.',
   'games.cancelledNotice': 'Ce match est annulé.',
+  'games.lineupLocked':
+    'L’alignement ne se modifie plus une fois le match commencé.',
 
   'availability.title': 'Présence',
   'availability.present': 'Présent',
@@ -521,7 +542,7 @@ export const fr = {
   'subs.notInPoolHelp':
     'Demande à un administrateur de t’ajouter à la liste des remplaçants.',
   'subs.adminNotice':
-    'Tu vois les places ouvertes et la liste des remplaçants. Un administrateur règle les favoris et les positions.',
+    'Tu vois les places ouvertes et la liste des remplaçants. Un administrateur règle les favoris et les postes.',
   'subs.managePool': 'Gérer les remplaçants',
   'subs.favorite': 'Favori',
   'subs.addFavorite': 'Marquer comme favori',
@@ -587,6 +608,8 @@ export const fr = {
   'balance.status.overdue': 'En retard',
   'balance.status.upcoming': 'À venir',
   'balance.noPlan': 'Aucuns frais de saison pour l’instant.',
+  'balance.feeNotSet':
+    'Les frais de saison ne sont pas encore fixés. Règle-les dans les paramètres avant de créer les versements.',
   'balance.noPlanShort': 'Sans versements',
   'balance.noPayments':
     'Aucun versement pour l’instant. Un responsable enregistre les paiements reçus.',

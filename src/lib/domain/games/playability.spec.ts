@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isGamePlayable } from './playability.ts';
+import { isGamePlayable, isLineupEditable } from './playability.ts';
 
 /** 16 novembre 2026, 13 h à Toronto (UTC-5). */
 const NOW = Date.UTC(2026, 10, 16, 18, 0);
@@ -29,5 +29,20 @@ describe('isGamePlayable', () => {
 		['programmé demain', game({ gameDate: '2026-11-17', startTime: '09:00' }), false]
 	])('%s', (_label, value, expected) => {
 		expect(isGamePlayable(value, NOW, ZONE)).toBe(expected);
+	});
+});
+
+describe('isLineupEditable', () => {
+	it.each([
+		['à venir plus tard aujourd’hui', game({ startTime: '14:00' }), true],
+		['à venir demain', game({ gameDate: '2026-11-17', startTime: '09:00' }), true],
+		['commencé plus tôt aujourd’hui', game({ startTime: '12:00' }), false],
+		['exactement à l’heure de départ', game({ startTime: '13:00' }), false],
+		['hier', game({ gameDate: '2026-11-15' }), false],
+		['annulé dans le futur', game({ status: 'cancelled', gameDate: '2026-12-01' }), false],
+		['terminé dans le futur', game({ status: 'completed', gameDate: '2026-12-01' }), false],
+		['sans alignement généré', game({ generated: false, gameDate: '2026-12-01' }), true]
+	])('%s', (_label, value, expected) => {
+		expect(isLineupEditable(value, NOW, ZONE)).toBe(expected);
 	});
 });

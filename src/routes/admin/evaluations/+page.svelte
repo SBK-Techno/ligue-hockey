@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { positionDefinition } from '#config/positions.ts';
-	import { formatDate, formatDecimal, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import {
+		formatCount,
+		formatDate,
+		formatDecimal,
+		formatTime,
+		t
+	} from '#lib/shared/i18n/index.ts';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import RecordRow from '#lib/ui/RecordRow.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
@@ -55,10 +61,12 @@
 						title="{formatTime(game.startTime)} · {game.location}"
 						meta={formatDate(game.gameDate, 'short')}
 						badge="{game.rated}/{game.players}"
-						badgeLabel={t('rating.ratedPlayers', {
-							done: game.rated,
-							total: game.players
-						})}
+						badgeLabel={formatCount(
+							game.rated,
+							'rating.ratedPlayers.one',
+							'rating.ratedPlayers.many',
+							{ total: game.players }
+						)}
 						badgeTone={game.rated === 0
 							? 'neutral'
 							: game.complete

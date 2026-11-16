@@ -42,8 +42,10 @@
 	<div class="flex items-center gap-1 {disabled ? 'opacity-60' : ''}">
 		{#each values as rating (rating)}
 			<label
-				class="grid h-11 w-11 cursor-pointer place-items-center border text-sm font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice {disabled
-					? 'cursor-not-allowed border-line bg-surface'
+				class="relative grid h-11 w-11 cursor-pointer place-items-center border text-sm font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice {disabled
+					? value === rating
+						? 'cursor-not-allowed border-line-strong bg-paper-deep text-ink'
+						: 'cursor-not-allowed border-line bg-surface text-muted'
 					: value === rating
 						? 'border-ink bg-ink text-paper'
 						: 'border-line-strong bg-surface text-ink hover:border-ink'}"
@@ -59,6 +61,9 @@
 					aria-label="{label} : {rating}"
 				/>
 				{rating}
+				{#if value === rating}
+					<span class="absolute right-1 top-1 h-1.5 w-1.5 bg-current" aria-hidden="true"></span>
+				{/if}
 			</label>
 		{/each}
 		{#if clearable}

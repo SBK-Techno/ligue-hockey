@@ -49,7 +49,6 @@ export const actions: Actions = {
 				ok: true,
 				message: t('rating.saved'),
 				playerId,
-				next: form.get('next') === '1',
 				assessment: result
 			};
 		} catch (cause) {

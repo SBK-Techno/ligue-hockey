@@ -15,6 +15,14 @@ export type Payment = {
 
 export type InstallmentStatus = 'paid' | 'partial' | 'overdue' | 'upcoming';
 
+/**
+ * Un plan sans montant n'est pas un plan : il ne doit ni afficher « Payé »
+ * ni compter dans les joueurs sans versements.
+ */
+export function planIsActive(plan: PaymentPlan | null): boolean {
+	return plan !== null && plan.totalCents > 0;
+}
+
 export type InstallmentBalance = {
 	number: 1 | 2;
 	amountCents: number;

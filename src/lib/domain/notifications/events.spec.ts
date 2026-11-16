@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync } from 'node:fs';
-import { fr } from '#config/i18n/fr.ts';
 import { NOTIFICATION_CHANNELS } from '#config/notification-channels.ts';
 import {
 	NOTIFICATION_EVENTS,
@@ -58,11 +57,35 @@ const PAYLOADS: Record<NotificationEventKey, unknown> = {
 	balance_overdue: { amountCents: 12000, currency: 'CAD', dueDate: '2026-11-22' }
 };
 
+/** Chaque événement est résolu avec son propre schéma, sans indexation générique. */
+const URLS: Record<NotificationEventKey, string> = {
+	account_access: NOTIFICATION_EVENTS.account_access.url(
+		NOTIFICATION_EVENTS.account_access.schema.parse(PAYLOADS.account_access)
+	),
+	password_reset: NOTIFICATION_EVENTS.password_reset.url(
+		NOTIFICATION_EVENTS.password_reset.schema.parse(PAYLOADS.password_reset)
+	),
+	sub_request: NOTIFICATION_EVENTS.sub_request.url(
+		NOTIFICATION_EVENTS.sub_request.schema.parse(PAYLOADS.sub_request)
+	),
+	sub_claimed: NOTIFICATION_EVENTS.sub_claimed.url(
+		NOTIFICATION_EVENTS.sub_claimed.schema.parse(PAYLOADS.sub_claimed)
+	),
+	sub_bumped: NOTIFICATION_EVENTS.sub_bumped.url(
+		NOTIFICATION_EVENTS.sub_bumped.schema.parse(PAYLOADS.sub_bumped)
+	),
+	game_cancelled: NOTIFICATION_EVENTS.game_cancelled.url(
+		NOTIFICATION_EVENTS.game_cancelled.schema.parse(PAYLOADS.game_cancelled)
+	),
+	balance_overdue: NOTIFICATION_EVENTS.balance_overdue.url(
+		NOTIFICATION_EVENTS.balance_overdue.schema.parse(PAYLOADS.balance_overdue)
+	)
+};
+
 describe('notification registry', () => {
 	it('links every event to a route that exists', () => {
 		for (const key of NOTIFICATION_EVENT_KEYS) {
-			const payload = NOTIFICATION_EVENTS[key].schema.parse(PAYLOADS[key]);
-			const url = NOTIFICATION_EVENTS[key].url(payload);
+			const url = URLS[key];
 			expect(routeExists(url), `${key} -> ${url}`).toBe(true);
 		}
 	});

@@ -152,9 +152,15 @@ export function formatAge(age: number): string {
 const pluralRules = new Intl.PluralRules(branding.locale);
 const decimalFormats = new Map<number, Intl.NumberFormat>();
 
-export function formatCount(count: number, singularKey: I18nKey, pluralKey: I18nKey): string {
+export function formatCount(
+	count: number,
+	singularKey: I18nKey,
+	pluralKey: I18nKey,
+	params: Params = {}
+): string {
 	return t(pluralRules.select(count) === 'one' ? singularKey : pluralKey, {
-		count
+		count,
+		...params
 	});
 }
 

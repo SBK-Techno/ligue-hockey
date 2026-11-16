@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { gameStatus } from '#config/game-status.ts';
+	import { gameWarningDefinition } from '#config/game-warnings.ts';
 	import { mapUrlFor } from '#config/maps.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
@@ -417,20 +418,26 @@
 						age: game.generation.ageDiffLabel ?? ''
 					})}
 				</p>
-				{#if data.canManage && game.generation.warnings.includes('rule-limit')}
-					<div class="alert mt-3">
-						<p class="font-semibold">{t('games.limitConflict')}</p>
-						<p class="mt-1">{t('games.limitConflictHelp')}</p>
-					</div>
-				{/if}
-				{#if game.generation.warnings.includes('rule-conflict')}
-					<div class="notice mt-3">
-						<p class="font-semibold">{t('games.rulesConflict')}</p>
-						<p class="mt-1">
-							{data.canManage ? t('games.rulesConflictHelp') : t('games.rulesConflictPlayer')}
-						</p>
-					</div>
-				{/if}
+				{#each game.generation.warnings as warning (warning)}
+					{@const definition = gameWarningDefinition(warning)}
+					{#if warning !== 'rule-limit' || data.canManage}
+						<div class={definition.tone === 'alert' ? 'alert mt-3' : 'notice mt-3'}>
+							<p class="font-semibold">{t(definition.labelKey)}</p>
+							{#if definition.helpKey}
+								<p class="mt-1">
+									{t(
+										data.canManage || !definition.playerHelpKey
+											? definition.helpKey
+											: definition.playerHelpKey
+									)}
+								</p>
+							{/if}
+							{#if warning === 'unfilled-slots'}
+								<p class="mt-1 text-sm">{game.openSlotsLabel}</p>
+							{/if}
+						</div>
+					{/if}
+				{/each}
 				{#if data.canManage && game.generation.ruleViolations.length > 0}
 					<div class="notice mt-3">
 						<p class="font-semibold">{t('admin.ruleViolations')}</p>

@@ -2,11 +2,13 @@ import type { Position } from '#config/positions.ts';
 import { buildSlotDefinitions, rosterTemplateFromSettings } from '#config/roster.ts';
 import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { anonymousActor } from '#lib/domain/auth/types.ts';
+import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
+import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { cancelAllForGame } from '#lib/domain/subs/generation.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
@@ -30,7 +32,7 @@ import {
 	upsertAvailability,
 	type SlotAssignment
 } from './queries.ts';
-import { buildLineupPool, templateFromRow } from './pool.ts';
+import { generationPlan, lineupPool, type PoolSlot } from './pool.ts';
 import type { GameRow } from './schema.ts';
 import type { GameBenchView, GameGenerationView, GameSlotView, GameSummary } from './types.ts';
 import {
@@ -90,7 +92,10 @@ function generationView(
 		skillDiff: includeMetrics ? snapshot.skillDiff : null,
 		ageDiff: includeMetrics ? snapshot.ageDiff : null,
 		sizeDiff: includeMetrics ? snapshot.sizeDiff : null,
-		skillDiffLabel: includeMetrics ? formatDecimal(snapshot.skillDiff, 2) : null,
+		skillDiffLabel:
+			includeMetrics && snapshot.skillDiff !== null
+				? formatDecimal(snapshot.skillDiff, 2)
+				: null,
 		ageDiffLabel: includeMetrics ? formatDecimal(snapshot.ageDiff, 1) : null,
 		warnings: snapshot.warnings,
 		ruleViolations: includeMetrics
@@ -322,7 +327,10 @@ export function cancelGame(actor: Actor, gameId: string): void {
 	});
 }
 
-export function regenerateGame(gameId: string): GenerationResult {
+export function regenerateGame(
+	gameId: string,
+	actor: Actor = anonymousActor
+): GenerationResult {
 	const row = findGame(gameId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
@@ -331,12 +339,22 @@ export function regenerateGame(gameId: string): GenerationResult {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
 
-	const template = templateFromRow(row);
-	const lineup = buildLineupPool(gameId, template);
-	const { settings, bench, players, kindOf } = lineup;
+	const previousRatedPlayerIds = listGameRatingPlayerIds(gameId);
+	const slotRows: PoolSlot[] = listSlotAssignments(gameId).map((slot) => ({
+		team: slot.team,
+		position: slot.position,
+		slotIndex: slot.slotIndex,
+		player:
+			slot.playerId && slot.assignmentKind
+				? { playerId: slot.playerId, kind: slot.assignmentKind }
+				: null
+	}));
+	const pool = lineupPool(row, slotRows);
+	const plan = generationPlan(pool);
+	const { settings, template } = pool;
 
 	const result = generateTeams({
-		players,
+		players: plan.players,
 		template,
 		rules: rulesForGeneration(),
 		skillTolerance: settings['teams.skillTolerance'],
@@ -353,25 +371,42 @@ export function regenerateGame(gameId: string): GenerationResult {
 		position: assignment.position,
 		slotIndex: assignment.slotIndex,
 		playerId: assignment.playerId,
-		kind: kindOf.get(assignment.playerId) ?? 'regular'
+		kind: plan.kindOf.get(assignment.playerId) ?? 'regular'
 	}));
 
 	const generatedAt = clock.nowMs();
+	const dressed = new Set(assignments.map((assignment) => assignment.playerId));
+	const removedRatedPlayerIds = previousRatedPlayerIds.filter(
+		(playerId) => !dressed.has(playerId)
+	);
 	const snapshot: GenerationSnapshot = {
 		skillDiff: result.skillDiff,
 		ageDiff: result.ageDiff,
 		sizeDiff: result.sizeDiff,
 		warnings: result.warnings,
 		ruleViolations: result.violations,
-		bench,
+		bench: plan.bench,
 		candidateKey: result.candidateKey,
 		generatedAt
 	};
 
-	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt);
+	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt, {
+		removedRatedPlayerIds,
+		audits:
+			removedRatedPlayerIds.length > 0
+				? [
+						auditEntry(actor, {
+							action: 'ratings.game_removed',
+							entityType: 'game',
+							entityId: gameId,
+							metadata: { playerIds: removedRatedPlayerIds }
+						})
+					]
+				: []
+	});
 
 	const namedIds = [
-		...bench.map((entry) => entry.playerId),
+		...plan.bench.map((entry) => entry.playerId),
 		...result.violations.flatMap((violation) => violation.playerIds)
 	];
 	const names = new Map(
@@ -384,7 +419,7 @@ export function regenerateGame(gameId: string): GenerationResult {
 			}
 		])
 	);
-	const benchViews: GameBenchView[] = bench.map((entry) => ({
+	const benchViews: GameBenchView[] = plan.bench.map((entry) => ({
 		playerId: entry.playerId,
 		fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
 		position: entry.position,
@@ -418,7 +453,7 @@ export function regenerateGame(gameId: string): GenerationResult {
 
 export function regenerateAsAdmin(actor: Actor, gameId: string): GenerationResult {
 	requirePermission(actor, 'manageGames');
-	const result = regenerateGame(gameId);
+	const result = regenerateGame(gameId, actor);
 	recordAudit(actor, {
 		action: 'game.generate',
 		entityType: 'game',

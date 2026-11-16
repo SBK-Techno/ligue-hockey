@@ -1,3 +1,4 @@
+import type { GameWarning } from '#config/game-warnings.ts';
 import type { Position } from '#config/positions.ts';
 import type { Team } from '#config/teams.ts';
 
@@ -48,7 +49,7 @@ export type GameGenerationView = {
 	sizeDiff: number | null;
 	skillDiffLabel: string | null;
 	ageDiffLabel: string | null;
-	warnings: string[];
+	warnings: GameWarning[];
 	ruleViolations: GameRuleViolationView[];
 	bench: GameBenchView[];
 	generatedAt: number;

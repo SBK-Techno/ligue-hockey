@@ -93,6 +93,15 @@ export function listAdminPlayers(actor: Actor): AdminPlayer[] {
 	return listAllPlayersWithEmail().map(toAdmin);
 }
 
+/**
+ * Liste minimale pour les évaluations : la capacité de noter suffit, sans
+ * exiger l'administration complète des joueurs.
+ */
+export function listRatingPlayers(actor: Actor): PublicPlayer[] {
+	requirePermission(actor, 'editRatings');
+	return listAllPlayersWithEmail().map(toPublic);
+}
+
 export function findOwnProfile(actor: Actor): SelfProfile | null {
 	const user = requireUser(actor);
 	const row = findPlayerWithEmail(user.userId);

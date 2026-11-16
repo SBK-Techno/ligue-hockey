@@ -9,13 +9,21 @@ type FakeElement = { disabled: boolean };
 function fakeNode() {
 	const buttons: FakeElement[] = [{ disabled: false }];
 	const fieldsets: FakeElement[] = [{ disabled: false }];
+	const controls: FakeElement[] = [{ disabled: false }];
 	const node = {
 		buttons,
 		fieldsets,
+		controls,
 		setAttribute: vi.fn(),
 		removeAttribute: vi.fn(),
 		querySelectorAll: (selector: string) =>
-			selector === 'button' ? buttons : selector === 'fieldset' ? fieldsets : []
+			selector === 'button'
+				? buttons
+				: selector === 'fieldset'
+					? fieldsets
+					: selector === 'input, select, textarea'
+						? controls
+						: []
 	};
 	return node;
 }
@@ -47,6 +55,7 @@ describe('progressiveForm', () => {
 		}) => Promise<void>;
 
 		expect(node.fieldsets[0].disabled).toBe(true);
+		expect(node.controls[0].disabled).toBe(true);
 		expect(node.buttons[0].disabled).toBe(true);
 
 		const updateOptions = vi.fn(async () => {});
@@ -58,6 +67,7 @@ describe('progressiveForm', () => {
 		expect(updateOptions).toHaveBeenCalledWith({ reset: false });
 		expect(onSuccess).toHaveBeenCalledWith({ type: 'success' });
 		expect(node.fieldsets[0].disabled).toBe(false);
+		expect(node.controls[0].disabled).toBe(false);
 		expect(node.buttons[0].disabled).toBe(false);
 	});
 });

@@ -30,8 +30,15 @@ export function progressiveForm(
 		const wasDisabled = buttons.map((button) => button.disabled);
 		const fieldsets = Array.from(node.querySelectorAll<HTMLFieldSetElement>('fieldset'));
 		const fieldsetsWereDisabled = fieldsets.map((fieldset) => fieldset.disabled);
+		const controls = Array.from(
+			node.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+				'input, select, textarea'
+			)
+		);
+		const controlsWereDisabled = controls.map((control) => control.disabled);
 		for (const button of buttons) button.disabled = true;
 		for (const fieldset of fieldsets) fieldset.disabled = true;
+		for (const control of controls) control.disabled = true;
 
 		return async ({ update, result }) => {
 			try {
@@ -46,6 +53,9 @@ export function progressiveForm(
 					});
 					fieldsets.forEach((fieldset, index) => {
 						fieldset.disabled = fieldsetsWereDisabled[index] ?? false;
+					});
+					controls.forEach((control, index) => {
+						control.disabled = controlsWereDisabled[index] ?? false;
 					});
 				}
 				const closed = active?.closest('details:not([open])');

@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, inArray, notInArray } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { games } from '#lib/domain/games/schema.ts';
 import { playerRatings, gamePlayerRatings, type PlayerRatingRow } from './schema.ts';
 
@@ -71,32 +71,18 @@ export function listGameRatings(gameId: string): GameRatingRow[] {
 }
 
 /**
- * Remplace l'évaluation d'un joueur et supprime, dans la même transaction,
- * les notes des joueurs qui ne font plus partie de l'alignement habillé.
+ * Remplace l'évaluation d'un joueur. Seules ses propres lignes bougent : le
+ * retrait d'un joueur de l'alignement est la responsabilité de l'écrivain
+ * d'alignement, qui purge et audite dans sa transaction.
  */
 export function replaceGameRatings(
 	gameId: string,
 	playerId: string,
 	values: Record<string, number>,
 	updatedAt: number,
-	updatedBy: string | null,
-	dressedPlayerIds: readonly string[]
+	updatedBy: string | null
 ): void {
 	db.transaction((tx) => {
-		if (dressedPlayerIds.length === 0) {
-			tx.delete(gamePlayerRatings)
-				.where(eq(gamePlayerRatings.gameId, gameId))
-				.run();
-		} else {
-			tx.delete(gamePlayerRatings)
-				.where(
-					and(
-						eq(gamePlayerRatings.gameId, gameId),
-						notInArray(gamePlayerRatings.playerId, [...dressedPlayerIds])
-					)
-				)
-				.run();
-		}
 		tx.delete(gamePlayerRatings)
 			.where(
 				and(
@@ -118,6 +104,42 @@ export function replaceGameRatings(
 				.run();
 		}
 	});
+}
+
+/** Joueurs qui ont au moins une note de match enregistrée pour ce match. */
+export function listGameRatingPlayerIds(gameId: string): string[] {
+	return [
+		...new Set(
+			db
+				.select({ playerId: gamePlayerRatings.playerId })
+				.from(gamePlayerRatings)
+				.where(eq(gamePlayerRatings.gameId, gameId))
+				.all()
+				.map((row) => row.playerId)
+		)
+	];
+}
+
+/**
+ * Supprime les notes des joueurs retirés de l'alignement. L'écrivain
+ * d'alignement fournit sa transaction pour que la purge et les places
+ * réussissent ou échouent ensemble.
+ */
+export function deleteGameRatingsForPlayers(
+	gameId: string,
+	playerIds: readonly string[],
+	executor: DbExecutor = db
+): number {
+	if (playerIds.length === 0) return 0;
+	return executor
+		.delete(gamePlayerRatings)
+		.where(
+			and(
+				eq(gamePlayerRatings.gameId, gameId),
+				inArray(gamePlayerRatings.playerId, [...playerIds])
+			)
+		)
+		.run().changes;
 }
 
 export type PlayerGameRatingHistoryRow = {

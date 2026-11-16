@@ -54,7 +54,7 @@ vi.mock('./queries.ts', () => ({
 vi.mock('#lib/domain/audit/service.ts', () => ({ recordAudit }));
 vi.mock('#lib/domain/players/service.ts', () => ({
 	getPlayer: vi.fn(),
-	listAdminPlayers: vi.fn(() => [])
+	listRatingPlayers: vi.fn(() => [])
 }));
 vi.mock('#lib/domain/games/upcoming.ts', () => ({
 	regenerateUpcomingGeneratedGames: vi.fn()
@@ -126,8 +126,7 @@ describe('saveGameAssessment', () => {
 			'p1',
 			skaterValues,
 			expect.any(Number),
-			'admin',
-			['p1', 'p2']
+			'admin'
 		);
 	});
 
@@ -146,8 +145,7 @@ describe('saveGameAssessment', () => {
 			'p2',
 			{ goaliePositioning: 4, reboundControl: 3, puckHandling: 4, composure: 5 },
 			expect.any(Number),
-			'admin',
-			['p1', 'p2']
+			'admin'
 		);
 	});
 
@@ -163,8 +161,7 @@ describe('saveGameAssessment', () => {
 			'p1',
 			{},
 			expect.any(Number),
-			'admin',
-			['p1', 'p2']
+			'admin'
 		);
 		expect(recordAudit).toHaveBeenLastCalledWith(
 			admin,

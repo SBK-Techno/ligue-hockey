@@ -20,7 +20,7 @@ import { getGame, listSchedule } from '#lib/domain/games/service.ts';
 import { isGamePlayable } from '#lib/domain/games/playability.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
 import {
-	listAdminPlayers,
+	listRatingPlayers,
 	getPlayer
 } from '#lib/domain/players/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
@@ -241,7 +241,7 @@ export function setRatings(
 
 export function evaluationOverviews(actor: Actor): EvaluationOverview[] {
 	requirePermission(actor, 'editRatings');
-	const players = listAdminPlayers(actor);
+	const players = listRatingPlayers(actor);
 	const rows = listRatingsForPlayers(players.map((player) => player.userId));
 	const grouped = new Map<string, Record<string, number>>();
 	const updated = new Map<string, number>();
@@ -393,13 +393,6 @@ export function saveGameAssessment(
 		values[key] = value;
 	}
 
-	const dressedPlayerIds = [
-		...new Set(
-			game.slots
-				.map((entry) => entry.player?.playerId)
-				.filter((id): id is string => Boolean(id))
-		)
-	];
 	const previousAttributes = listGameRatings(gameId).filter(
 		(row) => row.playerId === playerId && allowedKeys.has(row.attribute)
 	).length;
@@ -409,8 +402,7 @@ export function saveGameAssessment(
 		playerId,
 		values,
 		clock.nowMs(),
-		user.userId,
-		dressedPlayerIds
+		user.userId
 	);
 	// L'audit garde le nombre de critères avant et après, jamais les notes :
 	// une évaluation reste privée même pour les administrateurs.

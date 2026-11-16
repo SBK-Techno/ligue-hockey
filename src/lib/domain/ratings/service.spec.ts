@@ -12,7 +12,7 @@ const {
 	listPlayerGameRatings,
 	listRatingsForPlayers,
 	getPlayer,
-	listAdminPlayers
+	listRatingPlayers
 } = vi.hoisted(() => ({
 		upsertRatings: vi.fn<
 			(playerId: string, values: Record<string, number>, at: number, by: string | null) => void
@@ -37,7 +37,7 @@ const {
 		>(() => []),
 		listRatingsForPlayers: vi.fn(() => []),
 		getPlayer: vi.fn(() => ({ position: 'forward' })),
-		listAdminPlayers: vi.fn(() => [])
+		listRatingPlayers: vi.fn(() => [])
 	}));
 
 vi.mock('./queries.ts', () => ({
@@ -51,7 +51,7 @@ vi.mock('./queries.ts', () => ({
 
 vi.mock('#lib/domain/players/service.ts', () => ({
 	getPlayer,
-	listAdminPlayers
+	listRatingPlayers
 }));
 
 vi.mock('#lib/domain/audit/service.ts', () => ({
@@ -64,6 +64,7 @@ vi.mock('#lib/domain/games/upcoming.ts', () => ({
 
 const admin: Actor = { kind: 'user', userId: 'admin', name: 'Admin', role: 'admin' };
 const player: Actor = { kind: 'user', userId: 'player', name: 'Player', role: 'player' };
+const manager: Actor = { kind: 'user', userId: 'manager', name: 'Manager', role: 'manager' };
 
 function completeRatings(): RatingsInput {
 	return Object.fromEntries(
@@ -88,7 +89,7 @@ describe('setRatings', () => {
 		listRatings.mockReturnValue([]);
 		listPlayerGameRatings.mockReturnValue([]);
 		listRatingsForPlayers.mockReturnValue([]);
-		listAdminPlayers.mockReturnValue([]);
+		listRatingPlayers.mockReturnValue([]);
 		getPlayer.mockClear();
 		getPlayer.mockReturnValue({ position: 'forward' });
 	});
@@ -181,7 +182,7 @@ describe('setRatings', () => {
 
 	it('summarises the season and position completion for the hub', async () => {
 		const { evaluationOverviews } = await import('./service.ts');
-		listAdminPlayers.mockReturnValue([
+		listRatingPlayers.mockReturnValue([
 			{ userId: 'p1', fullName: 'Alex Tremblay', position: 'forward' }
 		] as never);
 		listRatingsForPlayers.mockReturnValue([
@@ -272,7 +273,7 @@ describe('setRatings', () => {
 
 	it('marks a season with a partial poste as incomplete', async () => {
 		const { evaluationOverviews } = await import('./service.ts');
-		listAdminPlayers.mockReturnValue([
+		listRatingPlayers.mockReturnValue([
 			{ userId: 'p1', fullName: 'Alex Tremblay', position: 'forward' }
 		] as never);
 		listRatingsForPlayers.mockReturnValue([
@@ -296,6 +297,15 @@ describe('setRatings', () => {
 			code: 'FORBIDDEN'
 		});
 		expect(upsertRatings).not.toHaveBeenCalled();
+	});
+
+	it('denies the evaluation hub to a manager without editRatings', async () => {
+		const { evaluationOverviews } = await import('./service.ts');
+
+		expect(thrownBy(() => evaluationOverviews(manager))).toMatchObject({
+			code: 'FORBIDDEN'
+		});
+		expect(listRatingPlayers).not.toHaveBeenCalled();
 	});
 });
 

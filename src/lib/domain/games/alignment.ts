@@ -1,35 +1,41 @@
 import type { Position } from '#config/positions.ts';
-import type { Team } from '#config/teams.ts';
+import { gameWarningsInOrder, type GameWarning } from '#config/game-warnings.ts';
+import { TEAMS, type Team } from '#config/teams.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { auditEntry } from '#lib/domain/audit/service.ts';
 import { playerCandidatesByIds } from '#lib/domain/players/candidates.ts';
-import {
-	overallsForPlayers,
-	requireCompleteRatings
-} from '#lib/domain/ratings/overall.ts';
+import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
+import { overallsForPlayers } from '#lib/domain/ratings/overall.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
+import { getSettings } from '#lib/domain/settings/service.ts';
+import type { SettingsValues } from '#config/settings-registry.ts';
 import {
 	balanceView,
 	bestSwap,
 	fillSuggestions,
 	violationsFor,
+	type BalanceView,
 	type Placement
 } from '#lib/domain/teams/balance.ts';
 import type { GeneratorPlayer } from '#lib/domain/teams/generator.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { clock } from '#lib/shared/time/clock.ts';
-import { findGame, saveAssignments, type SlotAssignment } from './queries.ts';
+import { findGame, listSlotAssignments, saveAssignments, type SlotAssignment } from './queries.ts';
+import { isLineupEditable } from './playability.ts';
+import { lineupPool, type LineupPool } from './pool.ts';
 import { getGame, type GameView } from './service.ts';
+import type { GenerationSnapshot } from './validators.ts';
 
 export type LineupIntelligence = {
-	generated: boolean;
+	complete: boolean;
 	openSlots: number;
-	skillDiff: number;
+	placed: number;
+	skillDiff: number | null;
 	ageDiff: number;
 	sizeDiff: number;
-	averageWhite: number;
-	averageBlack: number;
+	averages: Record<Team, number | null>;
+	sizes: Record<Team, number>;
 	swap: {
 		playerAId: string;
 		playerBId: string;
@@ -38,149 +44,147 @@ export type LineupIntelligence = {
 		position: Position;
 		skillDiffBefore: number;
 		skillDiffAfter: number;
+		ageDiffBefore: number;
+		ageDiffAfter: number;
 	} | null;
 	fills: {
 		count: number;
 		names: string[];
 	};
 	benchNames: string[];
+	unratedNames: string[];
 };
+
+export type FillResult = {
+	filled: number;
+	intelligence: LineupIntelligence;
+};
+
+function byTeam<T>(value: (team: Team) => T): Record<Team, T> {
+	return Object.fromEntries(
+		TEAMS.map((team) => [team.key, value(team.key)])
+	) as Record<Team, T>;
+}
 
 function emptyIntelligence(): LineupIntelligence {
 	return {
-		generated: false,
+		complete: false,
 		openSlots: 0,
-		skillDiff: 0,
+		placed: 0,
+		skillDiff: null,
 		ageDiff: 0,
 		sizeDiff: 0,
-		averageWhite: 0,
-		averageBlack: 0,
+		averages: byTeam(() => null),
+		sizes: byTeam(() => 0),
 		swap: null,
 		fills: { count: 0, names: [] },
-		benchNames: []
+		benchNames: [],
+		unratedNames: []
 	};
 }
 
-type LineupContext = {
-	placements: Placement[];
-	openSlots: { team: Team; position: Position; index: number }[];
-	players: GeneratorPlayer[];
-	names: Map<string, string>;
-	bench: { playerId: string; position: Position; kind: 'regular' | 'sub' }[];
-};
-
-function lineupContext(game: GameView): LineupContext {
-	const bench = game.generation?.bench ?? [];
-	const placedIds = game.slots
-		.filter((slot) => slot.player)
-		.map((slot) => slot.player!.playerId);
-	const ids = [...new Set([...placedIds, ...bench.map((entry) => entry.playerId)])];
-	const details = playerCandidatesByIds(ids);
-	const byId = new Map(details.map((player) => [player.userId, player]));
-	const names = new Map(details.map((player) => [player.userId, player.fullName]));
-	const required = requireCompleteRatings(placedIds);
-	const optional = overallsForPlayers(bench.map((entry) => entry.playerId));
-	const kindById = new Map<string, 'regular' | 'sub'>([
-		...game.slots
-			.filter((slot) => slot.player)
-			.map((slot) => [slot.player!.playerId, slot.player!.kind] as const),
-		...bench.map((entry) => [entry.playerId, entry.kind] as const)
-	]);
-
-	const players: GeneratorPlayer[] = ids
-		.map((id) => {
-			const detail = byId.get(id);
-			const overall = required.get(id) ?? optional.get(id);
-			if (!detail || overall === undefined) return null;
-			return {
-				id,
-				position: detail.position,
-				age: detail.age,
-				overall,
-				kind: kindById.get(id) ?? 'regular'
-			};
-		})
-		.filter((player): player is GeneratorPlayer => player !== null);
-
-	return {
-		placements: game.slots
-			.filter((slot) => slot.player)
-			.map((slot) => ({
-				playerId: slot.player!.playerId,
-				team: slot.team,
-				position: slot.position
-			})),
-		openSlots: game.slots
-			.filter((slot) => !slot.player)
-			.map((slot) => ({
-				team: slot.team,
-				position: slot.position,
-				index: slot.slotIndex
-			})),
-		players,
-		names,
-		bench
-	};
+function average(view: BalanceView, team: Team): number | null {
+	const totals = view.totals[team];
+	if (totals.count === 0) return null;
+	return Number(totals.skillAverage.toFixed(2));
 }
 
-export function lineupIntelligence(game: GameView): LineupIntelligence {
-	if (!game.generated) return emptyIntelligence();
+function ratedPlayers(pool: LineupPool) {
+	const placed = [...pool.players.values()].filter((member) => member.placed);
+	return [...placed, ...pool.available].map((member) => ({
+		id: member.playerId,
+		position: member.position,
+		age: member.age,
+		overall: member.overall,
+		kind: member.kind,
+		eligiblePositions: member.eligiblePositions
+	}));
+}
 
-	const context = lineupContext(game);
+function intelligenceFrom(pool: LineupPool): LineupIntelligence {
+	const fillPool = ratedPlayers(pool);
+	const players: GeneratorPlayer[] = fillPool.map((player) => ({
+		id: player.id,
+		position: player.position,
+		age: player.age,
+		overall: player.overall,
+		kind: player.kind
+	}));
 	const rules = rulesForGeneration();
-	const view = balanceView(context.placements, context.players);
+	const view = balanceView(pool.placed, players);
 	const swap = bestSwap({
-		placements: context.placements,
-		players: context.players,
-		rules
+		placements: pool.placed,
+		players,
+		rules,
+		maxAgeSpread: pool.settings['teams.maxAgeSpread']
 	});
 	const fills = fillSuggestions({
-		openSlots: context.openSlots,
-		placements: context.placements,
-		pool: context.players,
+		openSlots: pool.openSlots,
+		placements: pool.placed,
+		pool: fillPool,
 		rules
 	});
 
 	return {
-		generated: true,
-		openSlots: context.openSlots.length,
+		complete: view.complete,
+		openSlots: pool.openSlots.length,
+		placed: pool.placed.length,
 		skillDiff: view.skillDiff,
 		ageDiff: view.ageDiff,
 		sizeDiff: view.sizeDiff,
-		averageWhite: Number(view.totals.white.skillAverage.toFixed(2)),
-		averageBlack: Number(view.totals.black.skillAverage.toFixed(2)),
+		averages: byTeam((team) => average(view, team)),
+		sizes: byTeam((team) => view.totals[team].count),
 		swap: swap
 			? {
 					playerAId: swap.playerAId,
 					playerBId: swap.playerBId,
-					nameA: context.names.get(swap.playerAId) ?? swap.playerAId,
-					nameB: context.names.get(swap.playerBId) ?? swap.playerBId,
+					nameA: pool.names.get(swap.playerAId) ?? swap.playerAId,
+					nameB: pool.names.get(swap.playerBId) ?? swap.playerBId,
 					position: swap.position,
 					skillDiffBefore: swap.skillDiffBefore,
-					skillDiffAfter: swap.skillDiffAfter
+					skillDiffAfter: swap.skillDiffAfter,
+					ageDiffBefore: swap.ageDiffBefore,
+					ageDiffAfter: swap.ageDiffAfter
 				}
 			: null,
 		fills: {
 			count: fills.length,
-			names: fills.map((fill) => context.names.get(fill.playerId) ?? fill.playerId)
+			names: fills.map((fill) => pool.names.get(fill.playerId) ?? fill.playerId)
 		},
-		benchNames: context.bench.map(
-			(entry) => context.names.get(entry.playerId) ?? entry.playerId
-		)
+		benchNames: pool.bench.map((entry) => pool.names.get(entry.playerId) ?? entry.playerId),
+		unratedNames: pool.unrated
 	};
 }
 
-function assertEditable(gameId: string): void {
+/**
+ * Intelligence de l'alignement. Les moyennes dérivent des notes : elles ne
+ * sortent du service que pour un acteur autorisé à gérer les matchs, jamais
+ * parce que la page est sous /admin.
+ */
+export function lineupIntelligence(actor: Actor, game: GameView): LineupIntelligence {
+	requirePermission(actor, 'manageGames');
+	if (!game.generated) return emptyIntelligence();
+	const row = findGame(game.id);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
+	}
+	return intelligenceFrom(lineupPool(row, game.slots));
+}
+
+function editableGame(actor: Actor, gameId: string): { game: GameView; pool: LineupPool } {
+	requirePermission(actor, 'manageGames');
+	const game = getGame(actor, gameId);
+	if (!isLineupEditable(game)) {
+		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
+	}
+	if (!game.generated) {
+		throw new AppError('CONFLICT', { key: 'rating.gameNotGenerated' });
+	}
 	const row = findGame(gameId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
 	}
-	if (row.status !== 'scheduled') {
-		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
-	}
-	if (row.generationJson === null) {
-		throw new AppError('CONFLICT', { key: 'rating.gameNotGenerated' });
-	}
+	return { game, pool: lineupPool(row, game.slots) };
 }
 
 function placementsOf(assignments: readonly SlotAssignment[]): Placement[] {
@@ -206,64 +210,160 @@ function candidateKey(assignments: readonly SlotAssignment[]): string {
 		.join('|');
 }
 
-/**
- * Écrit un alignement modifié et recalcule son état réel : écarts, règles et
- * places ouvertes. Le snapshot cesse de décrire la génération passée pour
- * décrire l'alignement qui est réellement publié.
- */
-function saveAlignment(
+function slotKey(slot: {
+	team: Team;
+	position: Position;
+	slotIndex: number;
+}): string {
+	return `${slot.team}:${slot.position}:${slot.slotIndex}`;
+}
+
+function validatedOpenSlots(
 	gameId: string,
-	assignments: SlotAssignment[],
-	bench: { playerId: string; position: Position; kind: 'regular' | 'sub' }[],
-	openSlots: number
-): void {
-	const ids = assignments.map((assignment) => assignment.playerId);
-	const names = playerCandidatesByIds(ids);
-	const overalls = requireCompleteRatings(ids);
-	const players: GeneratorPlayer[] = names.map((player) => ({
-		id: player.userId,
-		position: player.position,
-		age: player.age,
-		overall: overalls.get(player.userId) ?? 0,
-		kind: 'regular'
-	}));
-	const view = balanceView(placementsOf(assignments), players);
-	const violations = violationsFor(placementsOf(assignments), rulesForGeneration());
-	const warnings: string[] = [];
-	if (openSlots > 0) {
-		warnings.push('unfilled-slots');
-	}
-	if (violations.some((violation) => violation.strict)) {
-		warnings.push('rule-conflict');
-	}
-	if (violations.some((violation) => !violation.strict)) {
-		warnings.push('rule-preference');
+	assignments: readonly SlotAssignment[]
+): number {
+	const slots = listSlotAssignments(gameId);
+	const known = new Set(
+		slots.map((slot) =>
+			slotKey({ team: slot.team, position: slot.position, slotIndex: slot.slotIndex })
+		)
+	);
+	const written = new Set<string>();
+	const players = new Set<string>();
+
+	for (const assignment of assignments) {
+		const key = slotKey(assignment);
+		if (!known.has(key) || written.has(key)) {
+			throw new AppError('INTERNAL', {
+				message: `Invalid alignment slot: ${key}`
+			});
+		}
+		if (players.has(assignment.playerId)) {
+			throw new AppError('INTERNAL', {
+				message: `Duplicate player in alignment: ${assignment.playerId}`
+			});
+		}
+		written.add(key);
+		players.add(assignment.playerId);
 	}
 
+	return known.size - written.size;
+}
+
+function limitExceeded(view: BalanceView, settings: SettingsValues): boolean {
+	const skill = settings['teams.maxSkillSpread'];
+	const age = settings['teams.maxAgeSpread'];
+	const size = settings['teams.maxSizeSpread'];
+	return (
+		(skill > 0 && view.skillDiff !== null && view.skillDiff > skill) ||
+		(age > 0 && view.ageDiff > age) ||
+		(size > 0 && view.sizeDiff > size)
+	);
+}
+
+/**
+ * Écrit un alignement modifié et recalcule son état réel : écarts, règles,
+ * plafonds et places ouvertes. Les places ouvertes viennent du jeu de places
+ * du match et des affectations écrites, jamais d'un compte fourni. L'audit
+ * est écrit dans la même transaction que les places.
+ */
+function saveAlignment(
+	actor: Actor,
+	gameId: string,
+	assignments: SlotAssignment[],
+	bench: readonly { playerId: string; position: Position; kind: 'regular' | 'sub' }[],
+	action: string,
+	metadata: Record<string, unknown>
+): void {
+	const openSlots = validatedOpenSlots(gameId, assignments);
+	const ids = assignments.map((assignment) => assignment.playerId);
+	const dressed = new Set(ids);
+	const removedRatedPlayerIds = listGameRatingPlayerIds(gameId).filter(
+		(playerId) => !dressed.has(playerId)
+	);
+	const details = playerCandidatesByIds(ids);
+	const overalls = overallsForPlayers(ids);
+	const kindById = new Map(
+		assignments.map((assignment) => [assignment.playerId, assignment.kind])
+	);
+	const players: GeneratorPlayer[] = details
+		.filter((player) => overalls.has(player.userId))
+		.map((player) => ({
+			id: player.userId,
+			position: player.position,
+			age: player.age,
+			overall: overalls.get(player.userId)!,
+			kind: kindById.get(player.userId) ?? 'regular'
+		}));
+	const placements = placementsOf(assignments);
+	const view = balanceView(placements, players);
+	const violations = violationsFor(placements, rulesForGeneration());
+	const strict = violations.filter((violation) => violation.strict).length;
+	const soft = violations.length - strict;
+	const settings = getSettings();
+
+	const warnings: GameWarning[] = [];
+	if (openSlots > 0) warnings.push('unfilled-slots');
+	if (strict > 0) warnings.push('rule-conflict');
+	if (soft > 0) warnings.push('rule-preference');
+	if (limitExceeded(view, settings)) warnings.push('rule-limit');
+
+	const seen = new Set<string>();
+	const benchEntries = bench.filter((entry) => {
+		if (seen.has(entry.playerId)) return false;
+		seen.add(entry.playerId);
+		return true;
+	});
+
 	const generatedAt = clock.nowMs();
+	const snapshot: GenerationSnapshot = {
+		skillDiff: view.skillDiff,
+		ageDiff: view.ageDiff,
+		sizeDiff: view.sizeDiff,
+		warnings: gameWarningsInOrder(warnings),
+		ruleViolations: violations,
+		bench: benchEntries.map((entry) => ({
+			playerId: entry.playerId,
+			position: entry.position,
+			kind: entry.kind
+		})),
+		candidateKey: candidateKey(assignments),
+		generatedAt
+	};
+
 	saveAssignments(
 		gameId,
 		assignments,
 		generatedAt,
-		JSON.stringify({
-			skillDiff: view.skillDiff,
-			ageDiff: view.ageDiff,
-			sizeDiff: view.sizeDiff,
-			warnings,
-			ruleViolations: violations,
-			bench,
-			candidateKey: candidateKey(assignments),
-			generatedAt
-		}),
-		generatedAt
+		JSON.stringify(snapshot),
+		generatedAt,
+		{
+			removedRatedPlayerIds,
+			audits: [
+				auditEntry(actor, {
+					action,
+					entityType: 'game',
+					entityId: gameId,
+					metadata
+				}),
+				...(removedRatedPlayerIds.length > 0
+					? [
+							auditEntry(actor, {
+								action: 'ratings.game_removed',
+								entityType: 'game',
+								entityId: gameId,
+								metadata: { playerIds: removedRatedPlayerIds }
+							})
+						]
+					: [])
+			]
+		}
 	);
 }
 
 export function applyBestSwap(actor: Actor, gameId: string): LineupIntelligence {
-	requirePermission(actor, 'manageGames');
-	assertEditable(gameId);
-	const game = getGame(actor, gameId);
-	const intelligence = lineupIntelligence(game);
+	const { game, pool } = editableGame(actor, gameId);
+	const intelligence = intelligenceFrom(pool);
 	if (!intelligence.swap) {
 		throw new AppError('CONFLICT', { key: 'games.noBetterSwap' });
 	}
@@ -296,43 +396,26 @@ export function applyBestSwap(actor: Actor, gameId: string): LineupIntelligence 
 			};
 		});
 
-	saveAlignment(
-		gameId,
-		assignments,
-		game.generation?.bench ?? [],
-		game.openSlots
-	);
-	recordAudit(actor, {
-		action: 'game.swap',
-		entityType: 'game',
-		entityId: gameId,
-		metadata: {
-			playerAId: intelligence.swap.playerAId,
-			playerBId: intelligence.swap.playerBId
-		}
+	saveAlignment(actor, gameId, assignments, pool.bench, 'game.swap', {
+		playerAId: intelligence.swap.playerAId,
+		playerBId: intelligence.swap.playerBId
 	});
-	return lineupIntelligence(getGame(actor, gameId));
+	return lineupIntelligence(actor, getGame(actor, gameId));
 }
 
-export function fillOpenSlots(actor: Actor, gameId: string): LineupIntelligence {
-	requirePermission(actor, 'manageGames');
-	assertEditable(gameId);
-	const game = getGame(actor, gameId);
-	const intelligence = lineupIntelligence(game);
-	if (intelligence.fills.count === 0) {
+export function fillOpenSlots(actor: Actor, gameId: string): FillResult {
+	const { game, pool } = editableGame(actor, gameId);
+	const suggestions = fillSuggestions({
+		openSlots: pool.openSlots,
+		placements: pool.placed,
+		pool: ratedPlayers(pool),
+		rules: rulesForGeneration()
+	});
+	if (suggestions.length === 0) {
 		throw new AppError('CONFLICT', { key: 'games.noOneToFill' });
 	}
 
-	const context = lineupContext(game);
-	const suggestions = fillSuggestions({
-		openSlots: context.openSlots,
-		placements: context.placements,
-		pool: context.players,
-		rules: rulesForGeneration()
-	});
-	const kindById = new Map(context.players.map((player) => [player.id, player.kind]));
 	const filled = new Set(suggestions.map((suggestion) => suggestion.playerId));
-
 	const assignments: SlotAssignment[] = game.slots
 		.filter((slot) => slot.player)
 		.map((slot) => ({
@@ -349,21 +432,24 @@ export function fillOpenSlots(actor: Actor, gameId: string): LineupIntelligence 
 			position: suggestion.slot.position,
 			slotIndex: suggestion.slot.index,
 			playerId: suggestion.playerId,
-			kind: kindById.get(suggestion.playerId) ?? 'regular'
+			kind: pool.kindOf.get(suggestion.playerId) ?? 'regular'
 		});
 	}
 
 	saveAlignment(
+		actor,
 		gameId,
 		assignments,
-		(context.bench ?? []).filter((entry) => !filled.has(entry.playerId)),
-		Math.max(0, game.openSlots - suggestions.length)
+		pool.bench.filter((entry) => !filled.has(entry.playerId)),
+		'game.fill',
+		{
+			count: suggestions.length,
+			players: suggestions.map((suggestion) => suggestion.playerId)
+		}
 	);
-	recordAudit(actor, {
-		action: 'game.fill',
-		entityType: 'game',
-		entityId: gameId,
-		metadata: { players: suggestions.map((suggestion) => suggestion.playerId) }
-	});
-	return lineupIntelligence(getGame(actor, gameId));
+
+	return {
+		filled: suggestions.length,
+		intelligence: lineupIntelligence(actor, getGame(actor, gameId))
+	};
 }

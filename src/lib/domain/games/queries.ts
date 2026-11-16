@@ -1,6 +1,9 @@
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
+import type { AuditEntry } from '#lib/domain/audit/queries.ts';
+import { insertAudit } from '#lib/domain/audit/queries.ts';
 import { players } from '#lib/domain/players/schema.ts';
+import { deleteGameRatingsForPlayers } from '#lib/domain/ratings/queries.ts';
 import { gameAvailability, gameSlots, games } from './schema.ts';
 
 export type NewGame = typeof games.$inferInsert;
@@ -74,13 +77,28 @@ export type SlotAssignment = {
 	kind: (typeof gameSlots.$inferSelect)['assignmentKind'];
 };
 
+export type SaveAssignmentsOptions = {
+	/** Audits écrits dans la même transaction que les places. */
+	audits?: readonly AuditEntry[];
+	/** Joueurs sortis de l'alignement dont les notes de match sont purgées. */
+	removedRatedPlayerIds?: readonly string[];
+};
+
 export function saveAssignments(
 	gameId: string,
 	assignments: readonly SlotAssignment[],
 	generatedAt: number,
 	generationJson: string,
-	updatedAt: number
+	updatedAt: number,
+	options: SaveAssignmentsOptions = {}
 ): void {
+	const written = new Set(assignments.map((assignment) => assignment.playerId));
+	for (const playerId of options.removedRatedPlayerIds ?? []) {
+		if (written.has(playerId)) {
+			throw new Error(`Cannot purge ratings for a dressed player: ${playerId}`);
+		}
+	}
+
 	db.transaction((tx) => {
 		tx.update(gameSlots)
 			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt })
@@ -109,6 +127,11 @@ export function saveAssignments(
 			.set({ generatedAt, generationJson, updatedAt })
 			.where(eq(games.id, gameId))
 			.run();
+
+		deleteGameRatingsForPlayers(gameId, options.removedRatedPlayerIds ?? [], tx);
+		for (const audit of options.audits ?? []) {
+			insertAudit(audit, tx);
+		}
 	});
 }
 

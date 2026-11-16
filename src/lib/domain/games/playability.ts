@@ -13,6 +13,10 @@ export type PlayableGame = {
 	generated: boolean;
 };
 
+function startsAt(game: PlayableGame, timeZone: string): number {
+	return zonedDateTimeToMs(game.gameDate, game.startTime, timeZone);
+}
+
 export function isGamePlayable(
 	game: PlayableGame,
 	at: number = clock.nowMs(),
@@ -21,5 +25,18 @@ export function isGamePlayable(
 	if (!game.generated) return false;
 	if (game.status === 'cancelled') return false;
 	if (game.status === 'completed') return true;
-	return zonedDateTimeToMs(game.gameDate, game.startTime, timeZone) <= at;
+	return startsAt(game, timeZone) <= at;
+}
+
+/**
+ * L'alignement se modifie seulement avant le début d'un match encore
+ * programmé. Un match commencé, terminé ou annulé est figé; aucune comparaison
+ * de chaîne de date ne décide de cette politique.
+ */
+export function isLineupEditable(
+	game: PlayableGame,
+	at: number = clock.nowMs(),
+	timeZone: string = branding.timezone
+): boolean {
+	return game.status === 'scheduled' && startsAt(game, timeZone) > at;
 }

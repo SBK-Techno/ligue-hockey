@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyDiscount, splitPlan } from './plan.ts';
-import { computeBalance, type PaymentPlan } from './policy.ts';
+import { computeBalance, planIsActive, type PaymentPlan } from './policy.ts';
 
 const plan: PaymentPlan = {
 	totalCents: 30_000,
@@ -141,5 +141,15 @@ describe('plan amounts', () => {
 	it('never returns a negative amount', () => {
 		expect(applyDiscount(35_000, 120)).toBe(0);
 		expect(applyDiscount(35_000, -10)).toBe(35_000);
+	});
+});
+
+describe('planIsActive', () => {
+	it.each([
+		['aucun plan', null, false],
+		['plan à zéro', { ...plan, totalCents: 0 }, false],
+		['plan normal', plan, true]
+	])('%s', (_label, value, expected) => {
+		expect(planIsActive(value as PaymentPlan | null)).toBe(expected);
 	});
 });

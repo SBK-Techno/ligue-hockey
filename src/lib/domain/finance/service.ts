@@ -17,7 +17,7 @@ import { newId } from '#lib/shared/ids/id.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import { applyDiscount, splitPlan } from './plan.ts';
-import { computeBalance, type Balance, type Payment, type PaymentPlan } from './policy.ts';
+import { computeBalance, planIsActive, type Balance, type Payment, type PaymentPlan } from './policy.ts';
 import {
 	deletePayment,
 	findPayment,
@@ -208,7 +208,7 @@ export function listBalances(actor: Actor): AdminBalanceRow[] {
 		return {
 			...(view ?? emptyBalance(player.userId, player.fullName)),
 			active: player.active,
-			hasPlan: view !== null
+			hasPlan: planIsActive(plan)
 		};
 	});
 }
@@ -224,6 +224,9 @@ export function applyDefaultPlan(actor: Actor, playerId: string): BalanceView | 
 		settings['finance.totalCents'],
 		player.position === 'goalie' ? settings['finance.goalieDiscountPercent'] : 0
 	);
+	if (total <= 0) {
+		throw new AppError('VALIDATION', { key: 'balance.feeNotSet' });
+	}
 	const amounts = splitPlan(total, settings['finance.firstInstallmentPercent']);
 	const now = clock.nowMs();
 

@@ -110,9 +110,11 @@
 						</div>
 					{/if}
 				</dl>
-				<p class="mt-2 text-xs text-muted">
-					{t('rating.formHelp', { count: data.ratings.form.games })}
-				</p>
+				{#if data.ratings.form.games > 0}
+					<p class="mt-2 text-xs text-muted">
+						{t('rating.formHelp', { count: data.ratings.form.games })}
+					</p>
+				{/if}
 			</section>
 		</aside>
 	</div>
