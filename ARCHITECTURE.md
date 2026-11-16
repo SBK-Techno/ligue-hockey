@@ -1,5 +1,7 @@
 # Architecture
 
+> Ce document technique est en anglais pour rester aligné avec le code et les identifiants.
+
 ## Runtime
 
 Single-container SvelteKit application, Node 24, SQLite (WAL) on a mounted volume, served behind the operator's HTTPS reverse proxy. One league per deployment. No multi-tenancy.
@@ -38,11 +40,11 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 ## Layers
 
-- `src/lib/shared/` — kernel. Config, clock, ids, i18n, logging, errors, validation, result helpers. No domain imports.
-- `src/lib/domain/<module>/` — `schema.ts` (Drizzle), `service.ts` (use cases + policy), `queries.ts` (SQL), `policy.ts` (pure rules), `types.ts`, tests. Domain modules may import the kernel and their own files; cross-module calls go through the other module's service, never its queries.
-- `src/lib/server/` — infrastructure only: database client, migrations, adapters.
-- `src/routes/` — transport. Load functions produce view models; form actions parse input with the module's schema, call one service, map `AppError` to a message. No business rules.
-- `src/lib/ui/` — presentational components. They receive props, emit events, and read only i18n + tokens.
+- `src/lib/shared/`: kernel. Config, clock, ids, i18n, logging, errors, validation, result helpers. No domain imports.
+- `src/lib/domain/<module>/`: `schema.ts` (Drizzle), `service.ts` (use cases + policy), `queries.ts` (SQL), `policy.ts` (pure rules), `types.ts`, tests. Domain modules may import the kernel and their own files; cross-module calls go through the other module's service, never its queries.
+- `src/lib/server/`: infrastructure only: database client, migrations, adapters.
+- `src/routes/`: transport. Load functions produce view models; form actions parse input with the module's schema, call one service, map `AppError` to a message. No business rules.
+- `src/lib/ui/`: presentational components. They receive props, emit events, and read only i18n + tokens.
 
 ## Configuration
 
@@ -91,20 +93,23 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 
 `npm run verify` runs, in order:
 
-1. `svelte-check` — types and Svelte diagnostics.
-2. `eslint` — import boundaries and restricted syntax.
-3. `vitest run` — unit, property, and contract tests.
-4. `verify:architecture` — scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the CI contract from `scripts/lib/ci-contract.ts`: workflow triggers, the single `gate` job, the exact `npm run gate` step, pinned actions, the gate and verify scripts, matching Node majors in `package.json`, the runner label, the Dockerfile, and the absence of the host Docker socket or host volumes in job containers.
-5. `verify:generated` — regenerates every branding asset, manifest, social image, and generated module in memory and fails if the checked-in bytes differ. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
-6. `verify:shell` — parses `scripts/ci/runner.sh` with `bash -n`.
+1. `svelte-check`: types and Svelte diagnostics.
+2. `eslint`: import boundaries and restricted syntax.
+3. `vitest run`: unit, property, and contract tests.
+4. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
+5. `verify:generated`: regenerates every branding asset, manifest, social image, and generated module in memory and fails if the checked-in bytes differ. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+6. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
+7. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
 
-CI runs `npm run gate`, which is the same verify plus `npm run build`. Branch protection on `main` requires the `Vérification` status check and refuses direct pushes; a red gate blocks the merge. The check runs on the pull request head, not on a merge commit.
+CI runs `npm run gate`, which is the same verify plus `npm run build`. The `required` job aggregates `verify` and `container`, and branch protection on `main` requires that check and refuses direct pushes. A red gate blocks the merge. The check runs on the pull request head, not on a merge commit.
 
 ## Web delivery
 
 - Every route is server-rendered and reads its data per request; there is no shared client cache of league data.
 - Content-hashed assets are served immutable. The service worker precaches only public static assets and `offline.html`; authenticated HTML, `__data.json`, and API responses are never written to the shared cache. Offline navigation falls back to the static page.
 - The manifest and icon URLs are generated with content hashes and regenerated by `npm run generate`; the HTML never hardcodes them.
+- The documentation site is rendered from the canonical Markdown at the repository root by `scripts/docs/` and published by GitHub Pages. There is no second copy of the documentation.
+- Container images carry OCI version, revision and source labels, and are published to GHCR by the release workflow. `package.json` is the version owner; a release tag must match it.
 
 ## Data and migrations
 

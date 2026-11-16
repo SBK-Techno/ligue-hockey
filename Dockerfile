@@ -24,6 +24,14 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 FROM node:24-bookworm-slim AS runtime
+ARG VERSION=dev
+ARG REVISION=unknown
+ARG SOURCE=https://github.com/SBK-Techno/ligue-hockey
+LABEL org.opencontainers.image.title="Ligue de hockey du dimanche matin" \
+      org.opencontainers.image.description="Horaire, présences, équipes, remplaçants et paiements de la ligue." \
+      org.opencontainers.image.version="$VERSION" \
+      org.opencontainers.image.revision="$REVISION" \
+      org.opencontainers.image.source="$SOURCE"
 ENV NODE_ENV=production \
     PORT=3000
 WORKDIR /app

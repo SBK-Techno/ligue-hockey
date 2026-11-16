@@ -17,19 +17,22 @@ npm run dev              # local development
 npm run check            # svelte-check
 npm run lint             # eslint
 npm run test             # vitest
-npm run verify           # check + lint + tests + architecture + generated
-npm run gate             # verify + build, the exact CI gate
+npm run verify           # check, lint, tests, architecture, generated, shell, docs
+npm run docs:check       # génère et valide le site de documentation
+npm run gate             # verify + build, la porte exacte de CI
 npm run build            # production build
 npm run db:generate      # generate a migration from schema changes
 ```
 
 Demo data is created through the admin screens; there is no seed command.
 
-## Integration continue
+## Intégration continue et publication
 
-Gitea exécute `.gitea/workflows/verification.yml` sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. La tâche installe avec `npm ci` puis appelle `npm run gate`; elle ne copie aucune étape de vérification. La protection de `main` refuse les poussées directes et exige le statut `Vérification`.
+GitHub Actions exécute `.github/workflows/ci.yml` sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. `verify` installe Node depuis `.nvmrc` et appelle `npm run gate`; `container` construit l'image et vérifie `/api/health`; `required` agrège les deux résultats et constitue le statut exigé par la protection de `main`. Aucune étape de vérification n'est copiée dans un workflow.
 
-`npm run verify:architecture` valide le contrat CI dans `scripts/lib/ci-contract.ts`: déclencheurs, tâche unique `gate`, étape exacte, actions épinglées, scripts `gate` et `verify`, major Node identique dans `package.json`, le coureur et le Dockerfile, et absence du socket Docker ou de volumes hôte dans les conteneurs de tâche. Le coureur se gère avec `scripts/ci/runner.sh` (voir `OPERATIONS.md`).
+`pages.yml` publie le site généré par `scripts/docs/` sur `https://sbk-techno.github.io/ligue-hockey/`. `release.yml` publie l'image sur GHCR et crée la version GitHub à partir d'une étiquette `v*`.
+
+`npm run verify:architecture` valide le contrat de publication dans `scripts/lib/ci-contract.ts`: déclencheurs, tâches `verify`, `container` et `required`, étape exacte `npm run gate`, `npm ci`, `setup-node` avec `.nvmrc` et cache, actions épinglées, permissions Pages, étiquettes de publication, cible GHCR, scripts `gate` et `verify`, major Node identique dans `package.json`, `.nvmrc` et le Dockerfile, et métadonnées OCI de l'image.
 
 ## Boundaries
 

@@ -1,5 +1,11 @@
 # Ligue de hockey du dimanche matin
 
+<!-- docs:site:start -->
+[![CI](https://github.com/SBK-Techno/ligue-hockey/actions/workflows/ci.yml/badge.svg)](https://github.com/SBK-Techno/ligue-hockey/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/documentation-en%20ligne-2453BB)](https://sbk-techno.github.io/ligue-hockey/)
+[![Image](https://img.shields.io/badge/image-ghcr.io%2Fsbk--techno%2Fligue--hockey-2453BB)](https://github.com/SBK-Techno/ligue-hockey/pkgs/container/ligue-hockey)
+<!-- docs:site:end -->
+
 PWA installable pour une ligue de hockey récréatif du dimanche matin, en français québécois. Elle réunit l'horaire, les présences, les équipes équilibrées, la banque de remplaçants, les frais de saison et la discussion avec sondages.
 
 ## Fonctionnalités
@@ -29,23 +35,28 @@ Le modèle `.env.example` cible `https://hockey.sbktechno.com`. En production, `
 ## Vérification
 
 ```bash
-npm run verify   # types, lint, tests, architecture, actifs générés
-npm run build    # build de production (adapter-node)
+npm run verify   # types, lint, tests, architecture, actifs générés, documentation
+npm run gate     # verify + build, la porte exacte de CI
+npm run docs:check
 ```
 
-Les tests couvrent la sélection d'alignement, le générateur, les vagues de remplaçants, les frais, les descriptions dérivées des réglages, le formatage français, la sécurité des courriels et la politique d'abonnement push. `npm run verify:generated` vérifie chaque actif de marque octet par octet.
+Les tests couvrent la sélection d'alignement, le générateur, les vagues de remplaçants, les frais, les descriptions dérivées des réglages, le formatage français, la sécurité des courriels et la politique d'abonnement push. `npm run verify:generated` vérifie chaque actif de marque octet par octet. `npm run docs:check` valide le site de documentation et ses liens.
+
+## Documentation
+
+Le guide complet est publié à <https://sbk-techno.github.io/ligue-hockey/>. Les sources canoniques sont [README.md](README.md), [ARCHITECTURE.md](ARCHITECTURE.md), [OPERATIONS.md](OPERATIONS.md), [CONTRIBUTING.md](CONTRIBUTING.md) et [SECURITY.md](SECURITY.md); le site est généré par `scripts/docs/`.
 
 ## Déploiement
 
-Docker et Compose sont la voie supportée :
+L'image est publiée sur GHCR:
 
 ```bash
-mkdir -p data
-docker compose up -d --build
+docker pull ghcr.io/sbk-techno/ligue-hockey:1.0.0
+docker compose up -d --no-build
 curl -fsS https://votre-domaine/api/health
 ```
 
-Toutes les valeurs d'exploitation, la sauvegarde, les mises à jour et le dépannage sont décrits dans [OPERATIONS.md](OPERATIONS.md). L'architecture et les frontières de modules sont dans [ARCHITECTURE.md](ARCHITECTURE.md).
+Pour construire localement, `docker compose up -d --build`. Toutes les valeurs d'exploitation, la sauvegarde, les mises à jour, le retour arrière et le dépannage sont décrits dans [OPERATIONS.md](OPERATIONS.md). L'architecture et les frontières de modules sont dans [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Pile
 

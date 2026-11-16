@@ -54,38 +54,41 @@ Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, pu
 - Le planificateur tourne toutes les `NOTIFICATION_TICK_MS` millisecondes. Un `lastTickAt` qui vieillit indique un processus bloqué.
 - Les actions administratives et les notifications sont tracées dans `audit_log` et consultables en base.
 
-## Intégration continue
+## Intégration continue et publication
 
-Le dépôt vit sur Gitea à `https://git.localserver.ca/SBK_Techno/ligue-hockey`. `.gitea/workflows/verification.yml` s'exécute sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. La tâche installe les dépendances avec `npm ci`, puis exécute `npm run gate`, la même porte qu'en local. Le workflow ne copie aucune étape.
+Le dépôt est publié sur GitHub à `https://github.com/SBK-Techno/ligue-hockey`. Les workflows sont la seule voie de publication:
 
-Le coureur est autohébergé sur `home` (`10.145.0.10`), dans le conteneur `ligue-hockey-runner` (`gitea/act_runner:0.2.11`). Son état vit dans `$HOME/ci/ligue-hockey-runner` sur cet hôte. Le conteneur du coureur monte le socket Docker pour démarrer les conteneurs de tâche; `container.docker_host: "-"` empêche le socket d'entrer dans les tâches, `valid_volumes` est vide et `privileged` est faux. Chaque tâche tourne dans `node:24-bookworm`, tirée à chaque exécution, sans volume hôte.
+- `ci.yml` s'exécute sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. `verify` installe Node depuis `.nvmrc` et exécute `npm run gate`; `container` construit l'image et vérifie `/api/health`; `required` agrège les deux et constitue le statut requis par la protection de `main`.
+- `docs.yml` valide le site quand la documentation, la marque ou le générateur changent.
+- `pages.yml` publie le site sur `https://sbk-techno.github.io/ligue-hockey/`.
+- `release.yml` s'exécute sur une étiquette `v*`: il vérifie que l'étiquette correspond à `package.json`, construit l'image, la pousse sur `ghcr.io/sbk-techno/ligue-hockey` avec les étiquettes de version, de révision et `latest`, puis crée la version GitHub.
+- `security.yml` audite les dépendances d'exécution chaque semaine; `codeql.yml` analyse le code; `dependency-review.yml` bloque les changements à risque élevé; Dependabot propose les mises à jour.
+
+`npm run verify:architecture` analyse les workflows et le dépôt, et refuse: un déclencheur manquant, une tâche `verify`, `container` ou `required` absente, une étape `npm run gate` absente ou enveloppée, un `npm ci` absent, un `setup-node` sans `.nvmrc` ou sans cache, une action non épinglée à un SHA complet, une publication Pages sans permission OIDC, une publication qui n'écoute pas les étiquettes `v*` ou qui ne pousse pas sur GHCR, un script `gate` ou `verify` affaibli, un major Node différent entre `package.json`, `.nvmrc` et le Dockerfile, ou une métadonnée OCI absente.
+
+La protection de `main` refuse les poussées directes et exige le statut `required`. Le statut porte sur la tête de la demande de fusion, pas sur un commit de fusion.
+
+## Publication d'une version
+
+La version de `package.json` est l'unique source. `npm version patch` crée le commit et l'étiquette, puis `git push --follow-tags` déclenche la publication. Vérifiez ensuite la version GitHub et l'image:
 
 ```bash
-scripts/ci/runner.sh install       # rend act-runner.yaml dans $HOME/ci/ligue-hockey-runner/config.yaml
-read -rs JETON                     # coller le jeton, aucun echo
-printf '%s' "$JETON" | install -m 600 /dev/stdin "$HOME/ci/ligue-hockey-runner/secrets/registration-token"
-unset JETON
-scripts/ci/runner.sh start         # enregistre, supprime le jeton, active le redémarrage Docker
-scripts/ci/runner.sh status
-scripts/ci/runner.sh logs
-scripts/ci/runner.sh stop
+gh release view "v$(node -p "require('./package.json').version")"
+docker pull ghcr.io/sbk-techno/ligue-hockey:1.0.0
 ```
-
-`recreate` applique un changement de `scripts/ci/act-runner.yaml` ou de l'image du coureur. `reset` arrête le conteneur, supprime l'enregistrement local `.runner` et exige un nouveau jeton; utilisez-le pour une rotation ou après la suppression du coureur dans Gitea. Le jeton se crée dans **Paramètres du dépôt → Actions → Coureurs**. Il n'est jamais commité, journalisé ni laissé sur disque après l'enregistrement.
-
-`npm run verify:architecture` analyse la structure réelle des fichiers et refuse: un déclencheur manquant, une tâche autre que `gate`, un `runs-on` différent de l'étiquette, un `if` ou `continue-on-error`, une étape `npm run gate` absente, en double ou enveloppée, un `npm ci` absent, une action non épinglée à un SHA complet, un script `gate` ou `verify` affaibli, un major Node différent entre `package.json`, le coureur et le Dockerfile, un socket Docker ou des volumes hôte dans les tâches, et une étiquette de coureur dupliquée dans le script.
-
-Limite connue: le statut porte sur la tête de la demande de fusion, pas sur un commit de fusion. La protection de `main` exige le statut et refuse les poussées directes; une approbation humaine indépendante reste requise par la politique, mais elle n'est pas encore imposée par Gitea tant qu'un seul compte actif signe les changements.
 
 ## Mise à jour et retour arrière
 
+L'image de production vient de GHCR. `LIGUE_IMAGE` choisit la version déployée; la valeur par défaut est `ghcr.io/sbk-techno/ligue-hockey:latest`.
+
 ```bash
-docker compose build --pull
-docker compose up -d
+docker compose pull
+docker compose up -d --no-build
 curl -fsS https://votre-domaine/api/health
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
 ```
 
-Les migrations sont appliquées automatiquement et ne sont pas réversibles. Avant chaque mise à jour :
+Pour construire localement, `docker compose up -d --build`. Les migrations sont appliquées automatiquement et ne sont pas réversibles. Avant chaque mise à jour :
 
 ```bash
 mkdir -p backups
@@ -94,7 +97,7 @@ docker cp ligue-hockey:/app/data/backup.db "backups/ligue-$(date +%Y%m%dT%H%M%S)
 docker compose exec -T --user app ligue rm /app/data/backup.db
 ```
 
-Pour revenir à une version précédente, conservez une image étiquetée par version et relancez-la avec la sauvegarde correspondante. Ne rétrogradez jamais le schéma sans restaurer la base.
+Pour revenir à une version précédente, épinglez son étiquette ou son digest dans `LIGUE_IMAGE`, relancez `docker compose pull` et `docker compose up -d --no-build`, puis restaurez la base correspondante. Ne rétrogradez jamais le schéma sans restaurer la base.
 
 ## Sauvegarde et restauration
 

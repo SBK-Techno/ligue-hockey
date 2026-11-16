@@ -11,13 +11,13 @@ export type ContractFile = { path: string; content: string };
 
 export type ContractInputs = {
 	workflows: ContractFile[];
-	runnerConfig: ContractFile;
-	runnerScript: ContractFile;
 	packageFile: ContractFile;
 	dockerfile: ContractFile;
+	nvmrc: ContractFile;
 };
 
-const GATE_WORKFLOW = 'verification.yml';
+type Json = Record<string, unknown>;
+
 const GATE_SCRIPT = 'npm run verify && npm run build';
 const VERIFY_COMMANDS = [
 	'npm run check',
@@ -25,10 +25,17 @@ const VERIFY_COMMANDS = [
 	'npm run test',
 	'npm run verify:architecture',
 	'npm run verify:generated',
-	'npm run verify:shell'
+	'npm run verify:shell',
+	'npm run docs:check'
 ] as const;
 
-type Json = Record<string, unknown>;
+function asObject(value: unknown): Json | null {
+	return value && typeof value === 'object' && !Array.isArray(value) ? (value as Json) : null;
+}
+
+function asArray(value: unknown): unknown[] {
+	return Array.isArray(value) ? value : [];
+}
 
 function lineOf(content: string, needle: string): number {
 	const index = content.indexOf(needle);
@@ -40,10 +47,6 @@ function finding(file: string, line: number, detail: string): ContractFinding {
 	return { file, line, rule: 'ci-contract', detail };
 }
 
-function asObject(value: unknown): Json | null {
-	return value && typeof value === 'object' && !Array.isArray(value) ? (value as Json) : null;
-}
-
 function collectUses(value: unknown, output: string[] = []): string[] {
 	if (Array.isArray(value)) {
 		for (const entry of value) collectUses(entry, output);
@@ -52,11 +55,8 @@ function collectUses(value: unknown, output: string[] = []): string[] {
 	const object = asObject(value);
 	if (!object) return output;
 	for (const [key, entry] of Object.entries(object)) {
-		if (key === 'uses' && typeof entry === 'string') {
-			output.push(entry);
-		} else {
-			collectUses(entry, output);
-		}
+		if (key === 'uses' && typeof entry === 'string') output.push(entry);
+		else collectUses(entry, output);
 	}
 	return output;
 }
@@ -67,310 +67,406 @@ function isPinned(uses: string): boolean {
 	return /@[0-9a-f]{40}$/.test(uses);
 }
 
-function parseYamlFile(file: ContractFile, findings: ContractFinding[]): Json | null {
+function parseFile(file: ContractFile | undefined, findings: ContractFinding[]): Json | null {
+	if (!file) return null;
 	try {
-		const parsed = parse(file.content);
-		const object = asObject(parsed);
+		const object = asObject(parse(file.content));
 		if (!object) {
-			findings.push(finding(file.path, 1, 'The file must contain a YAML mapping.'));
+			findings.push(finding(file.path, 1, 'Le fichier doit contenir une table YAML.'));
 			return null;
 		}
 		return object;
 	} catch {
-		findings.push(finding(file.path, 1, 'The file must contain valid YAML.'));
+		findings.push(finding(file.path, 1, 'Le fichier doit contenir du YAML valide.'));
 		return null;
 	}
 }
 
-function checkWorkflow(
+function jobNames(jobs: Json | null): string[] {
+	return jobs ? Object.keys(jobs) : [];
+}
+
+function stepsOf(job: Json | null): Json[] {
+	return asArray(job?.steps).map(asObject).filter((step): step is Json => step !== null);
+}
+
+function runsOf(job: Json | null): string[] {
+	return stepsOf(job)
+		.map((step) => step.run)
+		.filter((run): run is string => typeof run === 'string');
+}
+
+function usesOf(job: Json | null): string[] {
+	return stepsOf(job)
+		.map((step) => step.uses)
+		.filter((uses): uses is string => typeof uses === 'string');
+}
+
+function hasRun(job: Json | null, needle: string): boolean {
+	return runsOf(job).some((run) => run.includes(needle));
+}
+
+function checkTriggers(
 	file: ContractFile,
-	label: string | null,
+	workflow: Json,
+	options: { pullRequest?: boolean; branches?: string[]; tags?: string[] },
 	findings: ContractFinding[]
 ): void {
-	const workflow = parseYamlFile(file, findings);
-	if (!workflow) return;
-
 	const triggers = asObject(workflow.on);
 	if (!triggers) {
-		findings.push(finding(file.path, 1, 'The workflow must declare explicit triggers.'));
+		findings.push(finding(file.path, 1, 'Le workflow doit déclarer ses déclencheurs.'));
 		return;
 	}
-	if (!('pull_request' in triggers)) {
+	if (options.pullRequest && !('pull_request' in triggers)) {
 		findings.push(
-			finding(file.path, lineOf(file.content, 'on:'), 'The workflow must run on pull_request.')
+			finding(file.path, lineOf(file.content, 'on:'), 'Le workflow doit écouter pull_request.')
 		);
 	}
 	const push = asObject(triggers.push);
-	const branches = push?.branches;
-	const pushesMain = Array.isArray(branches)
-		? branches.includes('main')
-		: branches === 'main';
-	if (!pushesMain) {
-		findings.push(
-			finding(file.path, lineOf(file.content, 'push:'), 'The workflow must run on pushes to main.')
-		);
-	}
-
-	const jobs = asObject(workflow.jobs);
-	const jobNames = jobs ? Object.keys(jobs) : [];
-	if (jobNames.length !== 1 || jobNames[0] !== 'gate') {
-		findings.push(
-			finding(
-				file.path,
-				lineOf(file.content, 'jobs:'),
-				'The workflow must declare exactly one job named gate.'
-			)
-		);
-	}
-	const job = jobs ? asObject(jobs.gate) : null;
-	if (!job) return;
-
-	if (job.if !== undefined) {
-		findings.push(finding(file.path, lineOf(file.content, 'if:'), 'The gate job cannot be conditional.'));
-	}
-	if (job['continue-on-error'] !== undefined) {
-		findings.push(
-			finding(
-				file.path,
-				lineOf(file.content, 'continue-on-error'),
-				'The gate job cannot continue on error.'
-			)
-		);
-	}
-	if (label && job['runs-on'] !== label) {
-		findings.push(
-			finding(
-				file.path,
-				lineOf(file.content, 'runs-on:'),
-				`The gate must run on the runner label ${label}.`
-			)
-		);
-	}
-	if (typeof job['runs-on'] !== 'string') {
-		findings.push(finding(file.path, lineOf(file.content, 'runs-on:'), 'runs-on must be a string.'));
-	}
-
-	const steps = Array.isArray(job.steps) ? job.steps.map(asObject) : [];
-	const runCommands = steps.flatMap((step) => (typeof step?.run === 'string' ? [step.run] : []));
-	if (!runCommands.includes('npm ci --no-audit --no-fund')) {
-		findings.push(
-			finding(
-				file.path,
-				lineOf(file.content, 'steps:'),
-				'The gate must install the lockfile with npm ci.'
-			)
-		);
-	}
-	if (runCommands.filter((command) => command === 'npm run gate').length !== 1) {
-		findings.push(
-			finding(
-				file.path,
-				lineOf(file.content, 'run:'),
-				'The gate must call npm run gate exactly once, without a wrapper.'
-			)
-		);
-	}
-	for (const step of steps) {
-		if (step?.if !== undefined) {
+	if (options.branches) {
+		const branches = push?.branches;
+		const matches = Array.isArray(branches)
+			? options.branches.every((branch) => branches.includes(branch))
+			: branches === options.branches[0];
+		if (!matches) {
 			findings.push(
-				finding(file.path, lineOf(file.content, 'if:'), 'The gate steps cannot be conditional.')
-			);
-		}
-		if (step?.['continue-on-error'] !== undefined) {
-			findings.push(
-				finding(
-					file.path,
-					lineOf(file.content, 'continue-on-error'),
-					'The gate steps cannot continue on error.'
-				)
+				finding(file.path, lineOf(file.content, 'push:'), 'Le workflow doit écouter les poussées vers main.')
 			);
 		}
 	}
-	for (const step of steps) {
-		if (typeof step?.uses === 'string' && !isPinned(step.uses)) {
+	if (options.tags) {
+		const tags = push?.tags;
+		const matches = Array.isArray(tags)
+			? options.tags.every((tag) => tags.includes(tag))
+			: tags === options.tags[0];
+		if (!matches) {
 			findings.push(
-				finding(
-					file.path,
-					lineOf(file.content, step.uses),
-					`Action must be pinned to a full commit SHA: ${step.uses}`
-				)
+				finding(file.path, lineOf(file.content, 'tags:'), 'Le workflow doit écouter les étiquettes v*.')
 			);
 		}
 	}
 }
 
-function checkPackage(file: ContractFile, findings: ContractFinding[]): number | null {
-	let pkg: Json;
-	try {
-		pkg = JSON.parse(file.content) as Json;
-	} catch {
-		findings.push(finding(file.path, 1, 'package.json must contain valid JSON.'));
-		return null;
+function checkCi(
+	file: ContractFile,
+	workflow: Json,
+	nodeMajor: number | null,
+	findings: ContractFinding[]
+): void {
+	checkTriggers(file, workflow, { pullRequest: true, branches: ['main'] }, findings);
+	const jobs = asObject(workflow.jobs);
+	const names = jobNames(jobs);
+	for (const expected of ['verify', 'container', 'required']) {
+		if (!names.includes(expected)) {
+			findings.push(finding(file.path, lineOf(file.content, 'jobs:'), `La tâche ${expected} est requise.`));
+		}
 	}
-	const scripts = asObject(pkg.scripts);
+
+	for (const name of names) {
+		const job = asObject(jobs?.[name]);
+		if (job?.if !== undefined && name !== 'required') {
+			findings.push(finding(file.path, lineOf(file.content, 'if:'), `La tâche ${name} ne peut pas être conditionnelle.`));
+		}
+		if (job?.['continue-on-error'] !== undefined) {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'continue-on-error'), `La tâche ${name} ne peut pas continuer en cas d'erreur.`)
+			);
+		}
+	}
+
+	const verify = asObject(jobs?.verify);
+	if (verify) {
+		const steps = stepsOf(verify);
+		const setup = steps.find(
+			(step) => typeof step.uses === 'string' && step.uses.startsWith('actions/setup-node@')
+		);
+		const settings = asObject(setup?.with);
+		if (!setup) {
+			findings.push(finding(file.path, lineOf(file.content, 'steps:'), 'La tâche verify doit installer Node.'));
+		} else {
+			if (settings?.['node-version-file'] !== '.nvmrc') {
+				findings.push(
+					finding(file.path, lineOf(file.content, 'node-version-file'), 'setup-node doit lire .nvmrc.')
+				);
+			}
+			if (settings?.cache !== 'npm') {
+				findings.push(finding(file.path, lineOf(file.content, 'cache:'), 'setup-node doit activer le cache npm.'));
+			}
+		}
+		if (!hasRun(verify, 'npm ci --no-audit --no-fund')) {
+			findings.push(finding(file.path, lineOf(file.content, 'run:'), 'La tâche verify doit installer avec npm ci.'));
+		}
+		if (runsOf(verify).filter((run) => run === 'npm run gate').length !== 1) {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'run:'), 'La tâche verify doit appeler npm run gate exactement une fois.')
+			);
+		}
+		if (nodeMajor === null) {
+			findings.push(finding(file.path, 1, 'Le major Node doit être déclaré dans package.json.'));
+		}
+	}
+
+	const container = asObject(jobs?.container);
+	if (container) {
+		if (!hasRun(container, 'docker build')) {
+			findings.push(finding(file.path, lineOf(file.content, 'run:'), "La tâche container doit construire l'image."));
+		}
+		if (!hasRun(container, 'bash scripts/ci/container-smoke.sh')) {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'run:'), 'La tâche container doit exécuter le test de santé.')
+			);
+		}
+	}
+
+	const required = asObject(jobs?.required);
+	if (required) {
+		const needs = asArray(required.needs);
+		if (!needs.includes('verify') || !needs.includes('container')) {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'needs:'), 'La tâche required doit dépendre de verify et container.')
+			);
+		}
+		if (required.if !== 'always()') {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'if:'), "La tâche required doit toujours s'exécuter.")
+			);
+		}
+		const aggregate = stepsOf(required).find((step) => typeof step.run === 'string' && step.run.includes('test "$VERIFY"'));
+		if (!aggregate) {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'steps:'), 'La tâche required doit agréger les deux résultats.')
+			);
+		}
+	}
+}
+
+function checkPages(file: ContractFile, workflow: Json, findings: ContractFinding[]): void {
+	checkTriggers(file, workflow, { branches: ['main'] }, findings);
+	const jobs = asObject(workflow.jobs);
+	const build = asObject(jobs?.build);
+	const deploy = asObject(jobs?.deploy);
+	if (!build) findings.push(finding(file.path, lineOf(file.content, 'jobs:'), 'La tâche build est requise.'));
+	if (!deploy) findings.push(finding(file.path, lineOf(file.content, 'jobs:'), 'La tâche deploy est requise.'));
+	if (build && !hasRun(build, 'npm run docs:build')) {
+		findings.push(finding(file.path, lineOf(file.content, 'run:'), 'La tâche build doit générer le site.'));
+	}
+	if (deploy) {
+		const uses = usesOf(deploy).find((value) => value.startsWith('actions/deploy-pages@'));
+		if (!uses) {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'uses:'), 'La tâche deploy doit utiliser actions/deploy-pages.')
+			);
+		}
+		const permissions = asObject(deploy.permissions);
+		if (permissions?.pages !== 'write' || permissions?.['id-token'] !== 'write') {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'permissions:'), 'La tâche deploy doit pouvoir écrire Pages avec un jeton OIDC.')
+			);
+		}
+	}
+}
+
+function checkRelease(file: ContractFile, workflow: Json, findings: ContractFinding[]): void {
+	checkTriggers(file, workflow, { tags: ['v*'] }, findings);
+	const permissions = asObject(workflow.permissions);
+	if (permissions?.contents !== 'write' || permissions?.packages !== 'write') {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'permissions:'), 'La publication doit pouvoir écrire le dépôt et les paquets.')
+		);
+	}
+	const jobs = asObject(workflow.jobs);
+	const release = asObject(jobs?.release);
+	if (!release) {
+		findings.push(finding(file.path, lineOf(file.content, 'jobs:'), 'La tâche release est requise.'));
+		return;
+	}
+	const runs = runsOf(release);
+	if (!runs.some((run) => run.includes('node -p') && run.includes('GITHUB_REF_NAME'))) {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'run:'), "La publication doit vérifier que l'étiquette correspond à package.json.")
+		);
+	}
+	if (!runs.some((run) => run.includes('docker build') && run.includes('--build-arg VERSION'))) {
+		findings.push(finding(file.path, lineOf(file.content, 'run:'), "La publication doit construire l'image avec sa version."));
+	}
+	const environment = asObject(release.env);
+	if (environment?.IMAGE !== 'ghcr.io/sbk-techno/ligue-hockey') {
+		findings.push(
+			finding(
+				file.path,
+				lineOf(file.content, 'IMAGE:'),
+				"La publication doit cibler l'image ghcr.io/sbk-techno/ligue-hockey."
+			)
+		);
+	}
+	if (!runs.some((run) => run.includes('docker push'))) {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'run:'), "La publication doit pousser l'image sur GHCR.")
+		);
+	}
+	if (!runs.some((run) => run.includes('gh release create'))) {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'run:'), 'La publication doit créer une version GitHub.')
+		);
+	}
+}
+
+function checkNamedWorkflow(
+	file: ContractFile,
+	workflow: Json,
+	options: { run?: string; uses?: string; permissions?: Record<string, string> },
+	findings: ContractFinding[]
+): void {
+	const jobs = asObject(workflow.jobs);
+	for (const name of jobNames(jobs)) {
+		const job = asObject(jobs?.[name]);
+		if (options.run && !hasRun(job, options.run)) {
+			findings.push(finding(file.path, lineOf(file.content, 'run:'), `La tâche ${name} doit exécuter ${options.run}.`));
+		}
+		if (options.uses && !usesOf(job).some((value) => value.startsWith(options.uses as string))) {
+			findings.push(finding(file.path, lineOf(file.content, 'uses:'), `La tâche ${name} doit utiliser ${options.uses}.`));
+		}
+	}
+	if (options.permissions) {
+		const permissions = asObject(workflow.permissions);
+		for (const [key, value] of Object.entries(options.permissions)) {
+			if (permissions?.[key] !== value) {
+				findings.push(
+					finding(file.path, lineOf(file.content, 'permissions:'), `Le workflow doit déclarer ${key}: ${value}.`)
+				);
+			}
+		}
+	}
+}
+
+export function checkCiContract(inputs: ContractInputs): ContractFinding[] {
+	const findings: ContractFinding[] = [];
+	const byName = (name: string) =>
+		inputs.workflows.find((file) => file.path.endsWith(`/${name}`) || file.path === name);
+
+	let packageJson: Json;
+	try {
+		packageJson = JSON.parse(inputs.packageFile.content) as Json;
+	} catch {
+		findings.push(finding(inputs.packageFile.path, 1, 'package.json doit contenir du JSON valide.'));
+		return findings;
+	}
+	const scripts = asObject(packageJson.scripts);
 	if (scripts?.gate !== GATE_SCRIPT) {
 		findings.push(
-			finding(file.path, lineOf(file.content, '"gate"'), `The gate script must be: ${GATE_SCRIPT}`)
+			finding(inputs.packageFile.path, lineOf(inputs.packageFile.content, '"gate"'), `La porte doit être: ${GATE_SCRIPT}`)
 		);
 	}
 	const verify = typeof scripts?.verify === 'string' ? scripts.verify : '';
 	for (const command of VERIFY_COMMANDS) {
 		if (!verify.includes(command)) {
 			findings.push(
-				finding(
-					file.path,
-					lineOf(file.content, '"verify"'),
-					`The verify script must include: ${command}`
-				)
+				finding(inputs.packageFile.path, lineOf(inputs.packageFile.content, '"verify"'), `La vérification doit inclure: ${command}`)
 			);
 		}
 	}
-
-	const engines = asObject(pkg.engines);
-	const node = typeof engines?.node === 'string' ? engines.node.match(/\d+/)?.[0] : undefined;
-	if (!node) {
-		findings.push(finding(file.path, lineOf(file.content, '"engines"'), 'engines.node must declare a major.'));
-		return null;
+	if (!scripts?.['docs:build'] || !scripts?.['docs:check']) {
+		findings.push(
+			finding(inputs.packageFile.path, lineOf(inputs.packageFile.content, '"docs:build"'), 'Les scripts de documentation sont requis.')
+		);
 	}
-	return Number(node);
-}
 
-function checkDockerfile(file: ContractFile, nodeMajor: number | null, findings: ContractFinding[]): void {
-	const majors = [...file.content.matchAll(/^\s*FROM\s+node:(\d+)/gim)].map((match) =>
+	const engines = asObject(packageJson.engines);
+	const nodeMatch = typeof engines?.node === 'string' ? engines.node.match(/\d+/) : null;
+	const nodeMajor = nodeMatch ? Number(nodeMatch[0]) : null;
+	if (nodeMajor === null) {
+		findings.push(
+			finding(inputs.packageFile.path, lineOf(inputs.packageFile.content, '"engines"'), 'engines.node doit déclarer un major.')
+		);
+	}
+	const nvmrcMatch = inputs.nvmrc.content.trim().replace(/^v/, '').match(/^\d+/);
+	const nvmrcMajor = nvmrcMatch ? Number(nvmrcMatch[0]) : null;
+	if (nodeMajor !== null && nvmrcMajor !== nodeMajor) {
+		findings.push(
+			finding(inputs.nvmrc.path, 1, `Le major de .nvmrc (${nvmrcMajor}) doit correspondre à engines.node (${nodeMajor}).`)
+		);
+	}
+
+	const dockerMajors = [...inputs.dockerfile.content.matchAll(/^\s*FROM\s+node:(\d+)/gim)].map((match) =>
 		Number(match[1])
 	);
-	if (majors.length === 0) {
-		findings.push(finding(file.path, 1, 'The image must build from a Node base image.'));
-		return;
+	if (dockerMajors.length === 0) {
+		findings.push(finding(inputs.dockerfile.path, 1, "L'image doit partir d'une image Node."));
 	}
-	if (nodeMajor === null) return;
-	for (const major of majors) {
-		if (major !== nodeMajor) {
+	for (const major of dockerMajors) {
+		if (nodeMajor !== null && major !== nodeMajor) {
 			findings.push(
 				finding(
-					file.path,
-					lineOf(file.content, `node:${major}`),
-					`The Dockerfile Node major (${major}) must match engines.node (${nodeMajor}).`
+					inputs.dockerfile.path,
+					lineOf(inputs.dockerfile.content, `node:${major}`),
+					`Le major Node du Dockerfile (${major}) doit correspondre à engines.node (${nodeMajor}).`
 				)
 			);
 		}
 	}
-}
-
-function checkRunner(
-	configFile: ContractFile,
-	scriptFile: ContractFile,
-	nodeMajor: number | null,
-	findings: ContractFinding[]
-): string | null {
-	const config = parseYamlFile(configFile, findings);
-	if (!config) return null;
-
-	const runner = asObject(config.runner);
-	const labels = Array.isArray(runner?.labels) ? runner.labels : [];
-	if (labels.length !== 1) {
+	if (!inputs.dockerfile.content.includes('org.opencontainers.image.version')) {
 		findings.push(
-			finding(configFile.path, lineOf(configFile.content, 'labels:'), 'The runner must declare exactly one label.')
+			finding(inputs.dockerfile.path, 1, 'L image doit déclarer ses métadonnées OCI.')
 		);
 	}
-	let label: string | null = null;
-	if (labels.length === 1 && typeof labels[0] === 'string') {
-		const match = labels[0].match(/^([a-z0-9._-]+):docker:\/\/node:(\d+)(?:[-.@][^\s]*)?$/);
-		if (!match) {
-			findings.push(
-				finding(
-					configFile.path,
-					lineOf(configFile.content, labels[0]),
-					'The runner label must map to a Node container image.'
-				)
-			);
-		} else {
-			label = match[1];
-			if (nodeMajor !== null && Number(match[2]) !== nodeMajor) {
-				findings.push(
-					finding(
-						configFile.path,
-						lineOf(configFile.content, labels[0]),
-						`The runner Node image (${match[2]}) must match engines.node (${nodeMajor}).`
-					)
-				);
-			}
+
+	for (const name of ['ci.yml', 'docs.yml', 'pages.yml', 'release.yml', 'security.yml', 'codeql.yml', 'dependency-review.yml']) {
+		if (!byName(name)) findings.push(finding(name, 1, `Le workflow ${name} est requis.`));
+	}
+
+	const ciFile = byName('ci.yml');
+	const ci = parseFile(ciFile, findings);
+	if (ci && ciFile) checkCi(ciFile, ci, nodeMajor, findings);
+
+	const pagesFile = byName('pages.yml');
+	const pages = parseFile(pagesFile, findings);
+	if (pages && pagesFile) checkPages(pagesFile, pages, findings);
+
+	const releaseFile = byName('release.yml');
+	const release = parseFile(releaseFile, findings);
+	if (release && releaseFile) checkRelease(releaseFile, release, findings);
+
+	const docsFile = byName('docs.yml');
+	const docs = parseFile(docsFile, findings);
+	if (docs && docsFile) checkNamedWorkflow(docsFile, docs, { run: 'npm run docs:check' }, findings);
+
+	const securityFile = byName('security.yml');
+	const security = parseFile(securityFile, findings);
+	if (security && securityFile) {
+		checkNamedWorkflow(securityFile, security, { run: 'npm audit --omit=dev --audit-level=high' }, findings);
+	}
+
+	const codeqlFile = byName('codeql.yml');
+	const codeql = parseFile(codeqlFile, findings);
+	if (codeql && codeqlFile) {
+		const uses = collectUses(codeql);
+		if (!uses.some((value) => value.startsWith('github/codeql-action/init@'))) {
+			findings.push(finding(codeqlFile.path, 1, "CodeQL doit initialiser l'analyse."));
 		}
+		if (!uses.some((value) => value.startsWith('github/codeql-action/analyze@'))) {
+			findings.push(finding(codeqlFile.path, 1, 'CodeQL doit analyser le code.'));
+		}
+		checkNamedWorkflow(codeqlFile, codeql, { permissions: { 'security-events': 'write' } }, findings);
 	}
 
-	const container = asObject(config.container);
-	if (container?.docker_host !== '-') {
-		findings.push(
-			finding(
-				configFile.path,
-				lineOf(configFile.content, 'docker_host'),
-				'The host Docker socket must not be mounted into job containers; set docker_host to "-".'
-			)
-		);
+	const reviewFile = byName('dependency-review.yml');
+	const review = parseFile(reviewFile, findings);
+	if (review && reviewFile) {
+		checkNamedWorkflow(reviewFile, review, { uses: 'actions/dependency-review-action@' }, findings);
 	}
-	if (container?.privileged !== false) {
-		findings.push(
-			finding(
-				configFile.path,
-				lineOf(configFile.content, 'privileged'),
-				'Job containers must not run privileged.'
-			)
-		);
-	}
-	if (!Array.isArray(container?.valid_volumes) || container.valid_volumes.length > 0) {
-		findings.push(
-			finding(
-				configFile.path,
-				lineOf(configFile.content, 'valid_volumes'),
-				'Workflows must not mount host volumes.'
-			)
-		);
-	}
-	if (/GITEA_RUNNER_LABELS|--labels\b/.test(scriptFile.content)) {
-		findings.push(
-			finding(
-				scriptFile.path,
-				lineOf(scriptFile.content, 'GITEA_RUNNER_LABELS'),
-				'The runner labels must have one owner: act-runner.yaml.'
-			)
-		);
-	}
-
-	return label;
-}
-
-export function checkCiContract(inputs: ContractInputs): ContractFinding[] {
-	const findings: ContractFinding[] = [];
-
-	const gate = inputs.workflows.find((file) => file.path.endsWith(GATE_WORKFLOW));
-	if (!gate) {
-		findings.push(finding(GATE_WORKFLOW, 1, 'The gate workflow must exist.'));
-	}
-
-	const nodeMajor = checkPackage(inputs.packageFile, findings);
-	checkDockerfile(inputs.dockerfile, nodeMajor, findings);
-	const label = checkRunner(inputs.runnerConfig, inputs.runnerScript, nodeMajor, findings);
 
 	for (const workflow of inputs.workflows) {
-		if (workflow === gate) {
-			checkWorkflow(workflow, label, findings);
-			continue;
-		}
 		let parsed: unknown;
 		try {
 			parsed = parse(workflow.content);
 		} catch {
-			findings.push(finding(workflow.path, 1, 'The workflow must contain valid YAML.'));
+			findings.push(finding(workflow.path, 1, 'Le workflow doit contenir du YAML valide.'));
 			continue;
 		}
 		for (const uses of collectUses(parsed)) {
 			if (!isPinned(uses)) {
 				findings.push(
-					finding(
-						workflow.path,
-						lineOf(workflow.content, uses),
-						`Action must be pinned to a full commit SHA: ${uses}`
-					)
+					finding(workflow.path, lineOf(workflow.content, uses), `Action non épinglée à un SHA complet: ${uses}`)
 				);
 			}
 		}

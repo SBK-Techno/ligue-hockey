@@ -1,7 +1,7 @@
 services:
   ligue:
     build: .
-    image: ligue-hockey:latest
+    image: ${LIGUE_IMAGE:-ghcr.io/sbk-techno/ligue-hockey:latest}
     container_name: ligue-hockey
     restart: unless-stopped
     env_file:

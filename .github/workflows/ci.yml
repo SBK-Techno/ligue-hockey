@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Vérification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Récupérer la révision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Installer Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Installer les dépendances
+        run: npm ci --no-audit --no-fund
+      - name: Exécuter la porte
+        run: npm run gate
+
+  container:
+    name: Conteneur
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Récupérer la révision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Construire l'image
+        env:
+          SOURCE: https://github.com/${{ github.repository }}
+        run: |
+          docker build \
+            --build-arg VERSION=ci \
+            --build-arg REVISION="$GITHUB_SHA" \
+            --build-arg SOURCE="$SOURCE" \
+            -t ligue-hockey:ci .
+      - name: Vérifier le conteneur
+        run: bash scripts/ci/container-smoke.sh ligue-hockey:ci
+
+  required:
+    name: required
+    needs: [verify, container]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Agréger les portes
+        env:
+          VERIFY: ${{ needs.verify.result }}
+          CONTAINER: ${{ needs.container.result }}
+        run: |
+          set -euo pipefail
+          test "$VERIFY" = "success"
+          test "$CONTAINER" = "success"

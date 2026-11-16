@@ -1,0 +1,367 @@
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { marked } from 'marked';
+import { addHeadingIds, escapeHtml, rewriteLinks, type TocEntry } from './lib.ts';
+import { DEFAULT_SITE_URL, pages, REPOSITORY_URL, SITE_NAME, type DocPage } from './pages.ts';
+
+const ROOT = new URL('../..', import.meta.url).pathname;
+const OUT = join(ROOT, 'site');
+
+type Branding = {
+	description: string;
+	themeColor: string;
+	emailPalette: {
+		ink: string;
+		paper: string;
+		surface: string;
+		line: string;
+		muted: string;
+		brand: string;
+	};
+};
+
+function readJson<T>(path: string): T {
+	return JSON.parse(readFileSync(path, 'utf8')) as T;
+}
+
+function assertColour(name: string, value: string): string {
+	if (!/^#[0-9a-f]{6}$/i.test(value)) {
+		throw new Error(`Couleur invalide pour ${name}: ${value}`);
+	}
+	return value;
+}
+
+function buildCss(branding: Branding): string {
+	const palette = branding.emailPalette;
+	const ink = assertColour('ink', palette.ink);
+	const paper = assertColour('paper', palette.paper);
+	const surface = assertColour('surface', palette.surface);
+	const line = assertColour('line', palette.line);
+	const muted = assertColour('muted', palette.muted);
+	const brand = assertColour('brand', palette.brand);
+
+	return `@font-face {
+	font-family: 'Archivo Variable';
+	src: url('fonts/archivo.woff2') format('woff2');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Instrument Sans Variable';
+	src: url('fonts/instrument-sans.woff2') format('woff2');
+	font-weight: 400 700;
+	font-style: normal;
+	font-display: swap;
+}
+:root {
+	color-scheme: light;
+	--ink: ${ink};
+	--paper: ${paper};
+	--surface: ${surface};
+	--line: ${line};
+	--muted: ${muted};
+	--brand: ${brand};
+	--brand-deep: color-mix(in srgb, ${brand} 78%, ${ink});
+	--measure: 68ch;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+	margin: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+	font-size: 1.0625rem;
+	line-height: 1.7;
+	text-rendering: optimizeLegibility;
+}
+a { color: var(--brand-deep); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+a:hover { color: var(--brand); }
+a:focus-visible, button:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent); outline-offset: 3px; border-radius: 0.25rem; }
+.skip { position: absolute; left: -999px; top: 0; background: var(--ink); color: var(--paper); padding: 0.75rem 1rem; z-index: 10; }
+.skip:focus { left: 1rem; top: 1rem; }
+.masthead { position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(14px); }
+.masthead-inner { max-width: 78rem; margin: 0 auto; padding: 0.85rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; }
+.brand { display: inline-flex; align-items: center; gap: 0.65rem; color: var(--ink); text-decoration: none; font-family: 'Archivo Variable', sans-serif; font-weight: 700; letter-spacing: 0.08em; font-size: 0.78rem; text-transform: uppercase; }
+.brand img { width: 30px; height: 30px; }
+.nav { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; margin-left: auto; font-size: 0.92rem; }
+.nav a { color: var(--muted); text-decoration: none; padding: 0.25rem 0; border-bottom: 2px solid transparent; }
+.nav a:hover { color: var(--ink); }
+.nav a[aria-current='page'] { color: var(--ink); border-bottom-color: var(--brand); }
+.repo-link { font-size: 0.86rem; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 0.35rem 0.8rem; color: var(--ink); background: var(--surface); }
+.repo-link:hover { border-color: var(--brand); color: var(--brand-deep); }
+.shell { max-width: 78rem; margin: 0 auto; padding: 3rem 1.5rem 6rem; display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 4rem; align-items: start; }
+.sidebar { position: sticky; top: 5.5rem; display: flex; flex-direction: column; gap: 1.75rem; font-size: 0.9rem; }
+.eyebrow { margin: 0 0 0.5rem; font-family: 'Archivo Variable', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.side-nav { display: flex; flex-direction: column; gap: 0.15rem; }
+.side-nav a { text-decoration: none; color: var(--muted); padding: 0.3rem 0.55rem; border-radius: 0.4rem; border-left: 2px solid transparent; }
+.side-nav a:hover { color: var(--ink); background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.side-nav a[aria-current='page'] { color: var(--ink); border-left-color: var(--brand); background: var(--surface); }
+.toc-title { font-family: 'Archivo Variable', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.5rem; }
+.toc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; border-left: 1px solid var(--line); }
+.toc-list a { display: block; padding: 0.2rem 0 0.2rem 0.75rem; color: var(--muted); text-decoration: none; font-size: 0.86rem; line-height: 1.4; }
+.toc-list a:hover { color: var(--brand-deep); }
+.toc-depth-3 a { padding-left: 1.45rem; font-size: 0.82rem; }
+.mobile-toc { display: none; margin: 0 0 2rem; border: 1px solid var(--line); border-radius: 0.75rem; background: var(--surface); padding: 0.75rem 1rem; }
+.mobile-toc summary { cursor: pointer; font-family: 'Archivo Variable', sans-serif; font-weight: 600; }
+.mobile-toc .toc-list { border-left: 0; margin-top: 0.75rem; }
+.content { max-width: var(--measure); min-width: 0; }
+.content > :first-child { margin-top: 0; }
+.content h1, .content h2, .content h3 { font-family: 'Archivo Variable', sans-serif; line-height: 1.15; letter-spacing: -0.015em; }
+.content h1 { font-size: clamp(2.2rem, 4.5vw, 3.4rem); margin: 0 0 1.5rem; font-weight: 700; }
+.content h2 { font-size: clamp(1.5rem, 2.6vw, 2rem); margin: 3.25rem 0 1rem; padding-top: 1.25rem; border-top: 1px solid var(--line); font-weight: 650; }
+.content h3 { font-size: 1.2rem; margin: 2.25rem 0 0.75rem; font-weight: 650; }
+.content p, .content ul, .content ol { margin: 0 0 1.15rem; }
+.content li { margin-bottom: 0.35rem; }
+.content blockquote { margin: 1.5rem 0; padding: 0.25rem 0 0.25rem 1.25rem; border-left: 3px solid var(--brand); color: var(--muted); }
+.content code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 0.88em; background: var(--surface); border: 1px solid var(--line); border-radius: 0.35rem; padding: 0.1rem 0.32rem; }
+.content pre { margin: 1.5rem 0; padding: 1rem 1.15rem; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 0.85rem; line-height: 1.55; }
+.content pre code { background: none; border: 0; padding: 0; font-size: 0.86rem; }
+.table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+.content table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+.content .table-wrap table { margin: 0; }
+.content th, .content td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.content th { font-family: 'Archivo Variable', sans-serif; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.content hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
+.content img { max-width: 100%; height: auto; border-radius: 0.75rem; border: 1px solid var(--line); }
+.footer { border-top: 1px solid var(--line); background: var(--surface); }
+.footer-inner { max-width: 78rem; margin: 0 auto; padding: 1.75rem 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; color: var(--muted); font-size: 0.86rem; }
+.footer-inner a { color: var(--muted); }
+.footer-inner a:hover { color: var(--ink); }
+.footer-mark { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--ink); font-family: 'Archivo Variable', sans-serif; font-weight: 700; letter-spacing: 0.08em; font-size: 0.72rem; text-transform: uppercase; }
+.footer-mark img { width: 20px; height: 20px; }
+.footer-spacer { flex: 1; }
+.not-found { padding: 6rem 0; }
+@media (max-width: 960px) {
+	.shell { grid-template-columns: 1fr; gap: 1.5rem; padding-top: 2rem; }
+	.sidebar { display: none; }
+	.mobile-toc { display: block; }
+	.masthead-inner { flex-wrap: wrap; justify-content: space-between; }
+	.nav { display: flex; flex-wrap: nowrap; order: 3; flex-basis: 100%; margin-left: 0; overflow-x: auto; white-space: nowrap; padding-top: 0.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+	html { scroll-behavior: auto; }
+	*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+@media print {
+	.masthead, .sidebar, .mobile-toc, .footer { display: none; }
+	body { background: #fff; color: #000; font-size: 11pt; }
+	.shell { display: block; padding: 0; }
+	.content { max-width: none; }
+	a { color: #000; text-decoration: underline; }
+}
+`;
+}
+
+function renderToc(toc: TocEntry[]): string {
+	if (toc.length === 0) return '';
+	const items = toc
+		.map(
+			(entry) =>
+				`<li class="toc-depth-${entry.depth}"><a href="#${entry.id}">${escapeHtml(entry.text)}</a></li>`
+		)
+		.join('\n');
+	return `<ol class="toc-list">\n${items}\n</ol>`;
+}
+
+type TemplateInput = {
+	page: DocPage;
+	content: string;
+	toc: TocEntry[];
+	siteUrl: string;
+	version: string;
+	branding: Branding;
+	notFound?: boolean;
+};
+
+function renderTemplate(input: TemplateInput): string {
+	const { page, content, toc, siteUrl, version, branding } = input;
+	const canonical = input.notFound
+		? ''
+		: `<link rel="canonical" href="${siteUrl}${page.slug === 'index' ? '/' : `/${page.slug}.html`}">`;
+	const nav = pages
+		.map(
+			(entry) =>
+				`<a href="${entry.slug}.html"${entry.slug === page.slug ? ' aria-current="page"' : ''}>${escapeHtml(entry.nav)}</a>`
+		)
+		.join('\n');
+	const sideNav = pages
+		.map(
+			(entry) =>
+				`<a href="${entry.slug}.html"${entry.slug === page.slug ? ' aria-current="page"' : ''}>${escapeHtml(entry.nav)}</a>`
+		)
+		.join('\n');
+	const tocHtml = renderToc(toc);
+	const description = escapeHtml(page.description);
+	const title = input.notFound ? 'Page introuvable' : `${page.title} · ${SITE_NAME}`;
+
+	return `<!doctype html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="${escapeHtml(branding.themeColor)}">
+<meta name="color-scheme" content="light">
+<title>${escapeHtml(title)}</title>
+<meta name="description" content="${description}">
+${canonical}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${escapeHtml(SITE_NAME)}">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="${siteUrl}/assets/apercu.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/crest.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+<header class="masthead">
+	<div class="masthead-inner">
+		<a class="brand" href="index.html"><img src="assets/crest.svg" alt="" width="30" height="30"><span>LHDM</span></a>
+		<nav class="nav" aria-label="Documentation">
+${nav}
+		</nav>
+		<a class="repo-link" href="${REPOSITORY_URL}">GitHub</a>
+	</div>
+</header>
+<div class="shell">
+	<aside class="sidebar">
+		<div>
+			<p class="eyebrow">Documentation</p>
+			<nav class="side-nav" aria-label="Sections">
+${sideNav}
+			</nav>
+		</div>
+		${tocHtml ? `<div><p class="toc-title">Sur cette page</p>${tocHtml}</div>` : ''}
+	</aside>
+	<main id="contenu" class="content">
+		${tocHtml ? `<details class="mobile-toc"><summary>Sur cette page</summary>${tocHtml}</details>` : ''}
+${content}
+	</main>
+</div>
+<footer class="footer">
+	<div class="footer-inner">
+		<span class="footer-mark"><img src="assets/crest.svg" alt="" width="20" height="20">LHDM</span>
+		<span>Version ${escapeHtml(version)}</span>
+		<span class="footer-spacer"></span>
+		<a href="${REPOSITORY_URL}">Code source</a>
+		<a href="${REPOSITORY_URL}/issues">Signaler un problème</a>
+	</div>
+</footer>
+</body>
+</html>
+`;
+}
+
+function copyAssets(branding: Branding, iconSource: string): void {
+	const assets = join(OUT, 'assets');
+	mkdirSync(join(assets, 'fonts'), { recursive: true });
+	copyFileSync(iconSource, join(assets, 'crest.svg'));
+	copyFileSync(join(ROOT, 'static/social/apercu.jpg'), join(assets, 'apercu.jpg'));
+	copyFileSync(
+		join(ROOT, 'node_modules/@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2'),
+		join(assets, 'fonts/archivo.woff2')
+	);
+	copyFileSync(
+		join(
+			ROOT,
+			'node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2'
+		),
+		join(assets, 'fonts/instrument-sans.woff2')
+	);
+	writeFileSync(
+		join(assets, 'site.css'),
+		buildCss(branding),
+		'utf8'
+	);
+}
+
+export function buildDocs(siteUrl = DEFAULT_SITE_URL): { pages: number; output: string } {
+	const brandingPath = join(ROOT, 'config/branding.json');
+	const branding = readJson<Branding>(brandingPath);
+	const version = readJson<{ version: string }>(join(ROOT, 'package.json')).version;
+	const normalizedSiteUrl = siteUrl.replace(/\/+$/, '');
+	const slugs = new Map(pages.map((page) => [page.source, page.slug]));
+
+	rmSync(OUT, { recursive: true, force: true });
+	mkdirSync(OUT, { recursive: true });
+	copyAssets(branding, join(ROOT, 'config/branding/icon.svg'));
+
+	for (const page of pages) {
+		const markdown = readFileSync(join(ROOT, page.source), 'utf8').replace(
+			/<!-- docs:site:start -->[\s\S]*?<!-- docs:site:end -->\n?/g,
+			''
+		);
+		const rendered = marked.parse(markdown, { gfm: true }) as string;
+		const withIds = addHeadingIds(rendered);
+		const linked = rewriteLinks(withIds.html, {
+			slugs,
+			repositoryUrl: REPOSITORY_URL
+		});
+		const content = linked
+			.replace(/<table>/g, '<div class="table-wrap"><table>')
+			.replace(/<\/table>/g, '</table></div>');
+		writeFileSync(
+			join(OUT, `${page.slug}.html`),
+			renderTemplate({
+				page,
+				content,
+				toc: withIds.toc,
+				siteUrl: normalizedSiteUrl,
+				version,
+				branding
+			}),
+			'utf8'
+		);
+	}
+
+	const notFound: DocPage = {
+		slug: '404',
+		title: 'Page introuvable',
+		nav: 'Page introuvable',
+		description: 'La page demandée n’existe pas.',
+		source: 'README.md'
+	};
+	writeFileSync(
+		join(OUT, '404.html'),
+		renderTemplate({
+			page: notFound,
+			content: '<h1>Page introuvable</h1><p><a href="index.html">Revenir à la présentation</a></p>',
+			toc: [],
+			siteUrl: normalizedSiteUrl,
+			version,
+			branding,
+			notFound: true
+		}),
+		'utf8'
+	);
+
+	const sitemap = pages
+		.map(
+			(page) =>
+				`<url><loc>${normalizedSiteUrl}${page.slug === 'index' ? '/' : `/${page.slug}.html`}</loc></url>`
+		)
+		.join('\n');
+	writeFileSync(
+		join(OUT, 'sitemap.xml'),
+		`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemap}\n</urlset>\n`,
+		'utf8'
+	);
+	writeFileSync(join(OUT, 'robots.txt'), 'User-agent: *\nAllow: /\n', 'utf8');
+
+	return { pages: pages.length, output: OUT };
+}
+
+function option(name: string): string | undefined {
+	const index = process.argv.indexOf(name);
+	return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	const result = buildDocs(option('--site-url'));
+	console.log(`Documentation générée: ${result.pages} pages dans ${result.output}`);
+}
+

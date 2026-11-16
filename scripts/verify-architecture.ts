@@ -140,7 +140,7 @@ check(
 	'Build tooling may read the database URL from the environment.'
 );
 
-const workflowDir = join(ROOT, '.gitea/workflows');
+const workflowDir = join(ROOT, '.github/workflows');
 const readText = (path: string) => (existsSync(path) ? readFileSync(path, 'utf8') : '');
 const workflows = existsSync(workflowDir)
 	? readdirSync(workflowDir)
@@ -151,17 +151,20 @@ const workflows = existsSync(workflowDir)
 			}))
 	: [];
 
+for (const stale of [join(ROOT, '.gitea'), join(ROOT, 'scripts/ci/runner.sh')]) {
+	if (existsSync(stale)) {
+		findings.push({
+			file: stale,
+			line: 1,
+			rule: 'ci-contract',
+			detail: 'La publication GitHub ne doit pas conserver la configuration Gitea.'
+		});
+	}
+}
+
 findings.push(
 	...checkCiContract({
 		workflows,
-		runnerConfig: {
-			path: join(ROOT, 'scripts/ci/act-runner.yaml'),
-			content: readText(join(ROOT, 'scripts/ci/act-runner.yaml'))
-		},
-		runnerScript: {
-			path: join(ROOT, 'scripts/ci/runner.sh'),
-			content: readText(join(ROOT, 'scripts/ci/runner.sh'))
-		},
 		packageFile: {
 			path: join(ROOT, 'package.json'),
 			content: readText(join(ROOT, 'package.json'))
@@ -169,6 +172,10 @@ findings.push(
 		dockerfile: {
 			path: join(ROOT, 'Dockerfile'),
 			content: readText(join(ROOT, 'Dockerfile'))
+		},
+		nvmrc: {
+			path: join(ROOT, '.nvmrc'),
+			content: readText(join(ROOT, '.nvmrc'))
 		}
 	})
 );

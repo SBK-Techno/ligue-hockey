@@ -1,6 +1,8 @@
 node_modules
 .svelte-kit
 build
+site
+.github
 data
 .git
 .env
@@ -9,5 +11,6 @@ data
 *.db
 *.db-shm
 *.db-wal
+*.md
 npm-debug.log*
 .DS_Store
