@@ -5,6 +5,7 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
+import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { cancelAllForGame } from '#lib/domain/subs/generation.ts';
@@ -41,6 +42,8 @@ import {
 
 export type GameView = GameSummary & {
 	notes: string | null;
+	locationAddress: string | null;
+	locationMapUrl: string | null;
 	slots: GameSlotView[];
 	generation: GameGenerationView | null;
 	openSlots: number;
@@ -58,6 +61,7 @@ function summary(row: GameRow): GameSummary {
 		id: row.id,
 		gameDate: row.gameDate,
 		startTime: row.startTime,
+		locationId: row.locationId,
 		location: row.location,
 		status: row.status
 	};
@@ -162,10 +166,13 @@ export function getGame(actor: Actor, gameId: string): GameView {
 	}));
 
 	const openSlots = slots.filter((slot) => !slot.player).length;
+	const location = getLocationDetails(actor, row.locationId);
 
 	return {
 		...summary(row),
 		notes: row.notes,
+		locationAddress: location.address,
+		locationMapUrl: location.mapUrl,
 		slots,
 		generation: generationView(row, names, can(actor, 'manageGames')),
 		openSlots,
@@ -177,6 +184,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 export function createGame(actor: Actor, input: GameInput): GameSummary {
 	requirePermission(actor, 'manageGames');
 	const parsed = parseSchema(gameInputSchema, input);
+	const location = getLocation(actor, parsed.locationId);
 	const settings = getSettings();
 	const rosterTemplate = rosterTemplateFromSettings(settings);
 
@@ -198,7 +206,8 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 				id: gameId,
 				gameDate: parsed.gameDate,
 				startTime: parsed.startTime,
-				location: parsed.location,
+				locationId: location.id,
+				location: location.name,
 				notes: parsed.notes,
 				status: 'scheduled',
 				rosterTemplateJson: JSON.stringify(rosterTemplate),
@@ -226,7 +235,8 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 		id: gameId,
 		gameDate: parsed.gameDate,
 		startTime: parsed.startTime,
-		location: parsed.location,
+		locationId: location.id,
+		location: location.name,
 		status: 'scheduled'
 	};
 }
@@ -241,6 +251,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
 	const parsed = parseSchema(gameInputSchema, input);
+	const location = getLocation(actor, parsed.locationId);
 
 	try {
 		updateGameRow(
@@ -248,7 +259,8 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 			{
 				gameDate: parsed.gameDate,
 				startTime: parsed.startTime,
-				location: parsed.location,
+				locationId: location.id,
+				location: location.name,
 				notes: parsed.notes
 			},
 			clock.nowMs()
@@ -266,7 +278,14 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 		entityId: gameId
 	});
 
-	return summary({ ...row, ...parsed, notes: parsed.notes });
+	return summary({
+		...row,
+		gameDate: parsed.gameDate,
+		startTime: parsed.startTime,
+		locationId: location.id,
+		location: location.name,
+		notes: parsed.notes
+	});
 }
 
 export function cancelGame(actor: Actor, gameId: string): void {

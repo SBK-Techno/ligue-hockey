@@ -55,15 +55,27 @@
 				/>
 			</div>
 			<div class="sm:col-span-2">
-				<label class="label" for="location">{t('games.location')}</label>
-				<input
+				<label class="label" for="locationId">{t('games.location')}</label>
+				<select
 					class="input"
-					id="location"
-					name="location"
-					value={data.defaults.location}
-					maxlength={GAME_LIMITS.locationMax}
+					id="locationId"
+					name="locationId"
+					value={data.defaults.locationId}
 					required
-				/>
+				>
+					{#if data.locations.length === 0}
+						<option value="">{t('admin.locationNone')}</option>
+					{/if}
+					{#each data.locations as location (location.id)}
+						<option value={location.id}>{location.name}</option>
+					{/each}
+				</select>
+				{#if data.locations.length === 0}
+					<p class="hint">
+						{t('admin.locationCreateFirst')}
+						<a class="link" href="/admin/lieux">{t('admin.addLocation')}</a>
+					</p>
+				{/if}
 			</div>
 			<div class="sm:col-span-2">
 				<label class="label" for="notes">{t('games.notes')}</label>
@@ -76,7 +88,9 @@
 				></textarea>
 			</div>
 			<div class="sm:col-span-2">
-				<button class="btn-primary" type="submit">{t('games.adminCreate')}</button>
+				<button class="btn-primary" type="submit" disabled={data.locations.length === 0}>
+					{t('games.adminCreate')}
+				</button>
 			</div>
 		</form>
 	</section>

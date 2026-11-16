@@ -5,6 +5,8 @@ export type GameSummary = {
 	id: string;
 	gameDate: string;
 	startTime: string;
+	locationId: string;
+	/** Libellé figé du lieu pour ce match. Renommer le lieu ne le réécrit pas. */
 	location: string;
 	status: 'scheduled' | 'cancelled' | 'completed';
 };

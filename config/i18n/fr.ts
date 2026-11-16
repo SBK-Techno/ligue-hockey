@@ -228,8 +228,8 @@ export const fr = {
   'settings.seasonLabel.label': 'Nom de la saison',
   'settings.seasonLabel.description':
     'Affiché dans l’application et les rappels.',
-  'settings.defaultLocation.label': 'Aréna par défaut',
-  'settings.defaultLocation.description': 'Prérempli à la création d’un match.',
+  'settings.defaultLocation.label': 'Lieu par défaut',
+  'settings.defaultLocation.description': 'Proposé à la création d’un match.',
   'settings.defaultStartTime.label': 'Heure par défaut',
   'settings.defaultStartTime.description':
     'Heure préremplie à la création d’un match.',
@@ -408,7 +408,8 @@ export const fr = {
   'games.past': 'Passés',
   'games.showArchive': 'Voir les {count} matchs passés',
   'games.hideArchive': 'Revenir aux derniers matchs',
-  'games.location': 'Aréna',
+  'games.location': 'Lieu',
+  'games.openMap': 'Voir sur la carte',
   'games.date': 'Date',
   'games.time': 'Heure',
   'games.status.scheduled': 'À venir',
@@ -842,7 +843,39 @@ export const fr = {
     'Désactiver {name}? Le joueur sort des alignements et de la liste des remplaçants. Son historique reste.',
   'admin.games': 'Matchs',
   'admin.gamesHelp':
-    'La prochaine date est proposée automatiquement. Vérifie l’heure et l’aréna avant de créer.',
+    'La prochaine date est proposée automatiquement. Vérifie l’heure et le lieu avant de créer.',
+  'admin.locations': 'Lieux',
+  'admin.locationsTitle': 'Lieux des matchs',
+  'admin.locationsHelp':
+    'Un lieu se choisit à la création d’un match. Renommer un lieu ne change pas les matchs déjà créés.',
+  'admin.addLocation': 'Ajouter un lieu',
+  'admin.locationName': 'Nom du lieu',
+  'admin.locationAddress': 'Adresse',
+  'admin.locationMap': 'Lien de la carte',
+  'admin.locationMapHelp':
+    'Optionnel. Sans lien, l’adresse sert de recherche sur la carte.',
+  'admin.locationNotes': 'Notes',
+  'admin.locationSaved': 'Lieu enregistré.',
+  'admin.locationDeleted': 'Lieu supprimé.',
+  'admin.locationExists': 'Un lieu porte déjà ce nom.',
+  'admin.locationNotFound': 'Ce lieu est introuvable.',
+  'admin.locationInUse':
+    'Ce lieu est utilisé par un match. Il ne peut pas être supprimé.',
+  'admin.locationDeleteConfirm':
+    'Supprimer ce lieu? S’il est utilisé par un match, la suppression sera refusée.',
+  'admin.locationEdit': 'Modifier le lieu',
+  'admin.locationNone': 'Aucun lieu',
+  'admin.locationCreateFirst': 'Ajoute un lieu avant de créer un match.',
+  'admin.locationNoAddress': 'Sans adresse',
+  'admin.locationNoGames': 'Aucun match',
+  'admin.locationGames.one': '{count} match',
+  'admin.locationGames.many': '{count} matchs',
+  'admin.locationCompleted.one': '{count} terminé',
+  'admin.locationCompleted.many': '{count} terminés',
+  'admin.locationNext': 'Prochain : {date}',
+  'admin.locationLast': 'Dernier : {date}',
+  'admin.locationsEmpty':
+    'Aucun lieu. Ajoute le premier pour pouvoir créer des matchs.',
   'admin.backToGames': 'Retour aux matchs',
   'admin.generatedSummary':
     'Joueurs placés : {players}. Places libres : {open}.',

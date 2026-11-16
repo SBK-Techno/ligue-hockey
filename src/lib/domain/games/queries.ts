@@ -114,7 +114,9 @@ export function saveAssignments(
 
 export function updateGame(
 	gameId: string,
-	patch: Partial<Pick<NewGame, 'gameDate' | 'startTime' | 'location' | 'notes' | 'status'>>,
+	patch: Partial<
+		Pick<NewGame, 'gameDate' | 'startTime' | 'locationId' | 'location' | 'notes' | 'status'>
+	>,
 	updatedAt: number
 ): void {
 	db.update(games)

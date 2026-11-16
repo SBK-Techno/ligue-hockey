@@ -1,6 +1,8 @@
 import { redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { branding } from '#lib/generated/branding.ts';
+import { can } from '#lib/domain/auth/policy.ts';
 import { createGame, getGame, listSchedule } from '#lib/domain/games/service.ts';
+import { listLocations } from '#lib/domain/locations/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import {
@@ -25,6 +27,8 @@ export const load: ServerLoad = ({ locals, url }) => {
 	const actor = locals.actor;
 	const settings = getSettings();
 	const schedule = actor.kind === 'user' ? listSchedule(actor) : [];
+	const locations =
+		actor.kind === 'user' && can(actor, 'manageGames') ? listLocations(actor) : [];
 	const today = todayInZone(branding.timezone, clock.nowMs());
 
 	const upcoming = schedule.filter(
@@ -34,11 +38,15 @@ export const load: ServerLoad = ({ locals, url }) => {
 		.filter((game) => game.gameDate < today || game.status === 'completed')
 		.reverse();
 
-	// Le dernier match sert de modèle : même aréna, même heure, zéro ressaisie.
+	// Le dernier match sert de modèle : même lieu, même heure, zéro ressaisie.
 	const last = schedule.at(-1);
+	const defaultLocation =
+		locations.find((location) => location.id === last?.locationId) ??
+		locations.find((location) => location.name === settings['games.defaultLocation']) ??
+		locations[0];
 	const defaults = {
 		date: nextLeagueDay(),
-		location: last?.location ?? settings['games.defaultLocation'],
+		locationId: defaultLocation?.id ?? '',
 		time: last?.startTime ?? settings['games.defaultStartTime']
 	};
 
@@ -51,6 +59,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 		),
 		pastTotal: past.length,
 		showArchive,
+		locations,
 		defaults
 	};
 };

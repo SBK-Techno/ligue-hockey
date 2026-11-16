@@ -77,16 +77,19 @@
 				/>
 			</div>
 			<div class="sm:col-span-2">
-				<label class="label" for="location">{t('games.location')}</label>
-				<input
+				<label class="label" for="locationId">{t('games.location')}</label>
+				<select
 					class="input"
-					id="location"
-					name="location"
-					value={game.location}
-					maxlength={GAME_LIMITS.locationMax}
+					id="locationId"
+					name="locationId"
+					value={game.locationId}
 					required
 					disabled={game.status !== 'scheduled'}
-				/>
+				>
+					{#each data.locations as location (location.id)}
+						<option value={location.id}>{location.name}</option>
+					{/each}
+				</select>
 			</div>
 			<div class="sm:col-span-2">
 				<label class="label" for="notes">{t('games.notes')}</label>

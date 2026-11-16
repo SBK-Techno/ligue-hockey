@@ -3,6 +3,7 @@ export * from '../../domain/audit/schema.ts';
 export * from '../../domain/chat/schema.ts';
 export * from '../../domain/finance/schema.ts';
 export * from '../../domain/games/schema.ts';
+export * from '../../domain/locations/schema.ts';
 export * from '../../domain/notifications/schema.ts';
 export * from '../../domain/players/schema.ts';
 export * from '../../domain/ratings/schema.ts';

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { gameStatus } from '#config/game-status.ts';
+	import { mapUrlFor } from '#config/maps.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
@@ -20,6 +21,9 @@
 	const availability = $derived(data.availability);
 	const hasProfile = $derived(data.hasPlayerProfile);
 	const isManager = $derived(actor !== null && can(actor, 'manageGames'));
+	const mapUrl = $derived(
+		game ? mapUrlFor(game.locationAddress, game.locationMapUrl) : null
+	);
 	const ownSlot = $derived(
 		game && actor
 			? game.slots.find((slot) => slot.player?.playerId === actor.userId)
@@ -75,6 +79,29 @@
 			{/if}
 		{/snippet}
 	</PageHeader>
+
+	{#if mapUrl}
+		<p class="-mt-3 mb-4">
+			<a
+				class="link inline-flex items-center gap-1 text-sm"
+				href={mapUrl}
+				target="_blank"
+				rel="noreferrer"
+			>
+				{t('games.openMap')}
+				<svg
+					viewBox="0 0 24 24"
+					class="h-3.5 w-3.5"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+				>
+					<path d="M14 5h5v5M19 5l-8 8M18 13v6H5V6h6" />
+				</svg>
+			</a>
+		</p>
+	{/if}
 
 	{#if game.notes}
 		<div class="notice mb-4 whitespace-pre-wrap break-words">{game.notes}</div>

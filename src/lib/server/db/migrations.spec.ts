@@ -216,6 +216,137 @@ describe('migrations vs registres', () => {
 		}
 	});
 
+	it('convertit les libellés de matchs en lieux sans perdre les tables enfants', () => {
+		const folder = mkdtempSync(join(tmpdir(), 'lhdm-locations-'));
+		try {
+			cpSync(MIGRATIONS, folder, { recursive: true });
+			const journalPath = join(folder, 'meta/_journal.json');
+			const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
+				entries: { tag: string }[];
+			};
+			writeFileSync(
+				journalPath,
+				JSON.stringify({ ...journal, entries: journal.entries.slice(0, -1) })
+			);
+
+			const previous = new Database(':memory:');
+			previous.pragma('foreign_keys = ON');
+			migrate(drizzle(previous), { migrationsFolder: folder });
+
+			previous
+				.prepare(
+					`insert into user (id, name, email, email_verified, created_at, updated_at)
+					 values ('u1', 'Joueur', 'joueur@example.test', 1, ?, ?)`
+				)
+				.run(NOW, NOW);
+			previous
+				.prepare(
+					`insert into players (user_id, first_name, last_name, position, age, created_at, updated_at)
+					 values ('u1', 'Joueur', 'Test', 'forward', 30, ?, ?)`
+				)
+				.run(NOW, NOW);
+
+			const insertGame = previous.prepare(
+				`insert into games (id, game_date, start_time, location, roster_template_json, created_at, updated_at)
+				 values (?, ?, ?, ?, ?, ?, ?)`
+			);
+			insertGame.run('g1', '2026-01-04', '09:00', 'Aréna A', '{}', NOW, NOW);
+			insertGame.run('g2', '2026-01-11', '09:00', 'Aréna B', '{}', NOW, NOW);
+			insertGame.run('g3', '2026-01-18', '09:00', 'Aréna A', '{}', NOW, NOW);
+
+			previous
+				.prepare(
+					`insert into game_slots (id, game_id, team, position, slot_index, created_at, updated_at)
+					 values ('s1', 'g1', 'white', 'forward', 0, ?, ?)`
+				)
+				.run(NOW, NOW);
+			previous
+				.prepare(
+					`insert into game_availability (game_id, player_id, status, updated_at)
+					 values ('g1', 'u1', 'present', ?)`
+				)
+				.run(NOW);
+			previous
+				.prepare(
+					`insert into sub_requests (id, game_id, position, reason, status, created_at)
+					 values ('r1', 'g1', 'forward', 'manual', 'open', ?)`
+				)
+				.run(NOW);
+			previous
+				.prepare(
+					`insert into game_player_ratings (game_id, player_id, attribute, value, updated_at)
+					 values ('g1', 'u1', 'impact', 3, ?)`
+				)
+				.run(NOW);
+
+			cpSync(MIGRATIONS, folder, { recursive: true });
+			migrate(drizzle(previous), { migrationsFolder: folder });
+
+			const locations = previous
+				.prepare('select id, name from locations order by id')
+				.all() as { id: string; name: string }[];
+			expect(locations).toEqual([
+				{ id: 'loc_1', name: 'Aréna A' },
+				{ id: 'loc_2', name: 'Aréna B' }
+			]);
+
+			const games = previous
+				.prepare(
+					`select games.id, games.location, games.location_id, locations.name
+					 from games
+					 inner join locations on locations.id = games.location_id
+					 order by games.id`
+				)
+				.all() as {
+				id: string;
+				location: string;
+				location_id: string;
+				name: string;
+			}[];
+			expect(games).toEqual([
+				{ id: 'g1', location: 'Aréna A', location_id: 'loc_1', name: 'Aréna A' },
+				{ id: 'g2', location: 'Aréna B', location_id: 'loc_2', name: 'Aréna B' },
+				{ id: 'g3', location: 'Aréna A', location_id: 'loc_1', name: 'Aréna A' }
+			]);
+			expect(locations).toHaveLength(2);
+
+			const missing = previous
+				.prepare('select count(*) as count from games where location_id is null')
+				.get() as { count: number };
+			expect(missing.count).toBe(0);
+
+			for (const table of [
+				'game_slots',
+				'game_availability',
+				'sub_requests',
+				'game_player_ratings'
+			]) {
+				const row = previous
+					.prepare(`select count(*) as count from ${table}`)
+					.get() as { count: number };
+				expect(row.count, table).toBe(1);
+			}
+			expect(previous.prepare('pragma foreign_key_check').all()).toEqual([]);
+
+			const indexes = previous
+				.prepare(
+					"select name, sql from sqlite_master where type = 'index' and tbl_name = 'games'"
+				)
+				.all() as { name: string; sql: string | null }[];
+			const indexNames = indexes.map((index) => index.name);
+			expect(indexNames).toContain('games_schedule_unique');
+			expect(indexNames).toContain('games_location_idx');
+			const scheduleIndex = indexes.find(
+				(index) => index.name === 'games_schedule_unique'
+			);
+			expect(scheduleIndex?.sql).toContain('WHERE "status" <> \'cancelled\'');
+
+			previous.close();
+		} finally {
+			rmSync(folder, { recursive: true, force: true });
+		}
+	});
+
 	it('accepte chaque clé de réglage avec sa valeur par défaut', () => {
 		const insert = sqlite.prepare(
 			'insert into league_settings (key, value_json, updated_at) values (?, ?, ?)'

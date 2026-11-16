@@ -33,6 +33,9 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Navigation surfaces | `config/surfaces.ts` | header, mobile bar, mobile priorities | surface tests |
 | Admin screens and their capability | `config/admin-tabs.ts` | admin sidebar, admin mobile selector | typecheck |
 | Game status label and tone | `config/game-status.ts` | schedule rows, game detail, admin game lists | typecheck |
+| Reusable game locations (name, address, map URL, notes) | `src/lib/domain/locations/schema.ts` | admin locations, game picker, game detail, location metrics | locations tests + migration test |
+| Map provider URL template and fallback | `config/maps.ts` | game detail, admin locations | map-link test |
+| Historical game location label | `games.location` snapshot | schedule, game detail, notifications, history | migration test |
 | Alignment rule modes | `config/rule-modes.ts` | rule form, rule list, generator, badges | mode round-trip test |
 | Rating attributes, position criteria and game criteria | `config/rating-attributes.ts` | ratings service, evaluation sheets, overall calculation | registry test |
 | Recent-form window | `config/ratings.ts` | ratings service | rating tests |
@@ -104,6 +107,14 @@ Two layers, never merged:
 - **Game sheet.** `game_player_ratings` stores four observations from 1 to 5 per dressed player and game, adapted to the position (impact, engagement, décisions, discipline for skaters; positionnement, rebonds, manipulation, sang-froid for goalies). A missing observation means “pas vu”, never zero. Game sheets never overwrite or average into the season sheet.
 
 The recent-form value is a derived mean of the last `RATING_FORM_WINDOW` evaluated games and is shown separately from the season overall. Every write requires `editRatings`; every read that exposes ratings does the same. The evaluation hub, season sheet and game sheet are the only editing surfaces; the player admin page links to the season sheet instead of duplicating it.
+
+## Locations
+
+A location is a reusable league entity in `locations`: name, optional address, optional map URL and notes. Games reference it through `location_id` with `ON DELETE RESTRICT`, so a location used by a game cannot be deleted. The admin screen at `/admin/lieux` owns create, edit and delete; the game form only selects an existing location.
+
+`games.location` remains on the row as a historical snapshot label. It is written from the location name when a game is created or its location changes, and it is never edited independently. Renaming a location changes future pickers and map links, but it does not rewrite past game labels or notification payloads.
+
+Map links come from `config/maps.ts`: an explicit location map URL wins, otherwise the address fills the provider-agnostic search template, otherwise there is no link. Location metrics (game count, completed count, next and last game dates) are one grouped query in `locations/queries.ts`; the admin screen reads that result and never queries per row.
 
 ## Notifications
 
