@@ -92,8 +92,19 @@ const monthYearFormat = new Intl.DateTimeFormat(branding.locale, {
 	timeZone: branding.timezone
 });
 
+const monthLabelFormat = new Intl.DateTimeFormat(branding.locale, {
+	month: 'long',
+	year: 'numeric',
+	timeZone: 'UTC'
+});
+
 export function formatMonthYear(ms: number): string {
 	return monthYearFormat.format(toDate(ms));
+}
+
+/** Un mois de calendrier `YYYY-MM`, sans dépendre du fuseau du serveur. */
+export function formatMonthLabel(month: string): string {
+	return monthLabelFormat.format(dateOnlyToDate(`${month}-01`));
 }
 
 export function formatTimeParts(time: string): { hour: string; minute: string } {

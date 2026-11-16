@@ -5,6 +5,7 @@
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import PollOptions from '#lib/ui/PollOptions.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { prefersReducedMotion, scrollBehavior } from '#lib/ui/scroll.ts';
 	import type { PageProps } from './$types';
@@ -195,33 +196,7 @@
 					<p class="mt-1.5 text-sm italic text-muted">{t('chat.deleted')}</p>
 				{:else if message.poll}
 					<div class="mt-2">
-						<p class="break-words font-semibold">{message.poll.question}</p>
-						{#if message.poll.closed}
-							<p class="badge mt-2">{t('chat.pollClosed')}</p>
-						{/if}
-						<ul role="list" class="mt-3 space-y-2">
-							{#each message.poll.options as option (option.id)}
-								<li>
-									<form method="POST" action="?/vote" use:progressiveForm class="flex items-center gap-2">
-										<input type="hidden" name="messageId" value={message.id} />
-										<input type="hidden" name="optionId" value={option.id} />
-										<button
-											class="flex min-h-11 flex-1 items-center justify-between gap-3 rounded-control border px-3 py-2 text-left text-sm transition-colors disabled:opacity-60 {option.myVote
-												? 'border-ice bg-ice-soft font-semibold text-ice-deep'
-												: 'border-line-strong bg-paper'}"
-											type="submit"
-											disabled={message.poll.closed}
-											aria-pressed={option.myVote}
-										>
-											<span class="min-w-0 break-words">{option.label}</span>
-											<span class="badge shrink-0">
-												{formatCount(option.votes, 'chat.votes.one', 'chat.votes.many')}
-											</span>
-										</button>
-									</form>
-								</li>
-							{/each}
-						</ul>
+						<PollOptions messageId={message.id} poll={message.poll} />
 						{#if message.canDelete && !message.poll.closed}
 							<form method="POST" action="?/closePoll" use:progressiveForm class="mt-3">
 								<input type="hidden" name="messageId" value={message.id} />

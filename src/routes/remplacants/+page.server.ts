@@ -21,15 +21,14 @@ import {
 	saveMySubProfile,
 	setSubstituteFavorite
 } from '#lib/domain/subs/service.ts';
-import { subFavoriteInputSchema, subProfileInputSchema } from '#lib/domain/subs/validators.ts';
+import {
+	subFavoriteInputSchema,
+	subProfileInputSchema,
+	subRequestRefSchema
+} from '#lib/domain/subs/validators.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
-
-const requestRefSchema = z.object({
-	gameId: z.string().min(1),
-	requestId: z.string().min(1)
-});
 
 const requestSchema = z.object({
 	gameId: z.string().min(1),
@@ -118,7 +117,7 @@ export const actions: Actions = {
 	},
 	cancel: async ({ request, locals }) => {
 		try {
-			const parsed = parseForm(requestRefSchema, await request.formData());
+			const parsed = parseForm(subRequestRefSchema, await request.formData());
 			const result = cancelRequest(locals.actor, parsed.gameId, parsed.requestId);
 			return {
 				ok: true,
@@ -139,7 +138,7 @@ export const actions: Actions = {
 	},
 	claim: async ({ request, locals }) => {
 		try {
-			const parsed = parseForm(requestRefSchema, await request.formData());
+			const parsed = parseForm(subRequestRefSchema, await request.formData());
 			const result = claimSubstitute(locals.actor, parsed.gameId, parsed.requestId);
 			return {
 				ok: true,
