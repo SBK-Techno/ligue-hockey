@@ -30,6 +30,8 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Positions | `config/positions.ts` | schema checks, forms, roster templates, notifications | architecture check |
 | Roles and capabilities | `config/capabilities.ts`, `config/roles.ts` | policy, navigation, admin role editor | policy tests |
 | Navigation surfaces | `config/surfaces.ts` | header, bottom bar, account menu | surface tests |
+| Admin screens and their capability | `config/admin-tabs.ts` | admin sidebar, admin mobile tabs, home shortcuts | typecheck |
+| Game status label and tone | `config/game-status.ts` | schedule rows, game detail, admin game lists | typecheck |
 | Alignment rule modes | `config/rule-modes.ts` | rule form, rule list, generator, badges | mode round-trip test |
 | Rating attributes and weights | `config/rating-attributes.ts` | ratings service, admin form, overall calculation | registry test |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |

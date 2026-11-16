@@ -80,7 +80,7 @@ export const fr = {
   'auth.lead':
     'Horaire, présences, équipes, remplacements et paiements, réunis au même endroit.',
   'auth.inviteOnly':
-    'L’accès se fait par invitation. Demande-la à un responsable de la ligue.',
+    'L’accès se fait par invitation. Demande-la à un administrateur.',
   'auth.forgot': 'Mot de passe oublié?',
   'auth.reset.title': 'Mot de passe oublié',
   'auth.reset.lead':
@@ -109,9 +109,8 @@ export const fr = {
   'invite.tooShort':
     'Le mot de passe doit contenir au moins {count} caractères.',
   'invite.expiry': 'Ce lien est valable {count} jours.',
-  'invite.expired': 'Cette invitation est expirée ou a déjà été utilisée.',
-  'invite.expiredHelp':
-    'Demande une nouvelle invitation à un responsable de la ligue.',
+  'invite.expired': 'Ce lien est expiré ou a déjà été utilisé.',
+  'invite.expiredHelp': 'Demande un nouveau lien.',
   'invite.success': 'Ton mot de passe est enregistré. Connecte-toi.',
 
   'position.forward': 'Attaquant',
@@ -260,37 +259,29 @@ export const fr = {
   'home.noGame': 'Aucun match à l’horaire',
   'home.availability': 'Ta présence',
   'home.team': 'Ton équipe',
-  'home.openSlots': 'Positions à pourvoir',
   'home.balance': 'Ton solde',
   'home.balanceOwed': '{amount} à payer',
   'home.balanceClear': 'À jour',
-  'home.balanceOverdue': 'En retard',
-  'home.chat': 'Derniers messages',
   'home.admin': 'Raccourcis',
   'home.manageGame': 'Gérer le match',
   'home.viewGame': 'Voir le match',
   'home.noGameHelp':
-    'La prochaine date sera affichée dès qu’elle sera publiée.',
+    'Un responsable publie la prochaine date. Tu la verras ici.',
   'home.noGameHelpAdmin':
     'Crée le prochain match pour ouvrir les présences et préparer l’alignement.',
   'home.createGame': 'Créer un match',
   'home.adminHero':
     'Tu vois le prochain match comme les joueurs. L’horaire et les alignements se gèrent dans la gestion.',
-  'home.manageSchedule': 'Gérer l’horaire',
   'home.adminOpenSlots':
     'Aucune place ouverte. Ouvre une demande depuis un match de l’horaire.',
-  'home.openRequest': 'Ouvrir une demande',
+  'home.openRequest': 'Choisir un match',
   'home.management': 'Gestion de la ligue',
-  'home.managementHelp': 'Les raccourcis de la semaine.',
-  'home.manageBalances': 'Voir les soldes',
+  'home.managementHelp': 'Les écrans que tu peux gérer.',
   'home.awaitingReply': 'Tu n’as pas encore répondu.',
   'home.replyPresent': 'Présence confirmée.',
   'home.replyAbsent': 'Absence indiquée.',
   'home.upcoming': 'À venir',
-  'home.allGames': 'Tout l’horaire',
-  'home.substituteNotice':
-    'Tu es remplaçant. Les demandes de dernière minute apparaissent ici.',
-  'home.balanceNone': 'Aucun montant à payer pour le moment.',
+  'home.allGames': 'Tous les matchs',
   'home.chatPreview': 'Dans la discussion',
   'home.attendance': 'Présences',
   'home.present': 'Présents',
@@ -298,23 +289,42 @@ export const fr = {
   'home.pending': 'Pas encore répondu',
   'home.deadline': 'Réponse attendue avant le {date}.',
   'home.cancelled': 'Ce match est annulé.',
-  'home.lineupSoon':
-    'Les équipes seront publiées après la fermeture des présences.',
   'home.balanceDue': 'À payer',
-  'home.substituteCta': 'Voir les places',
-  'home.everyoneAnswered': 'Tout le monde a répondu.',
+  'home.substituteCta': 'Voir les places ouvertes',
+  'home.steps.title': 'Ta semaine',
+  'home.steps.help': 'Ce qu’il reste à faire avant le match.',
+  'home.steps.answer': 'Ta présence',
+  'home.steps.answerTodo': 'Réponds avant le {date}.',
+  'home.steps.team': 'Ton équipe',
+  'home.steps.teamWaiting': 'Les équipes s’affichent après la fermeture des présences.',
+  'home.steps.notInLineup': 'Tu n’es pas dans l’alignement de ce match.',
+  'home.steps.noProfile': 'Aucune fiche de joueur.',
+  'home.steps.viewLineup': 'Voir l’alignement',
+  'home.steps.place': 'Ta place',
+  'home.steps.placeOpen.one': '{count} place ouverte',
+  'home.steps.placeOpen.many': '{count} places ouvertes',
+  'home.steps.placeNone': 'Aucune place ouverte.',
+  'home.steps.noBalance': 'Aucun montant à payer.',
+  'home.steps.balanceClear': 'Ton solde est à jour.',
+  'home.steps.balanceOpen': 'À payer : {amount}.',
+  'home.steps.balanceLate': 'Montant en retard : {amount}.',
+  'home.steps.viewBalance': 'Voir le solde',
+  'home.steps.discussion': 'La discussion',
+  'home.steps.chatEmpty': 'Aucun message pour l’instant.',
+  'home.steps.openChat': 'Ouvrir la discussion',
   'home.noPlayerProfile':
-    'Ton compte n’est pas lié à un profil de joueur. Un responsable peut t’en créer un.',
+    'Ton compte n’a pas de fiche de joueur. Un administrateur peut en créer une.',
   'subs.emptyHelp':
-    'Les places s’affichent dès qu’un joueur régulier se désiste.',
+    'Une place s’affiche quand un joueur régulier se désiste.',
   'subs.ownRequestOpen': 'Ta place est offerte à un remplaçant.',
   'chat.pollTag': 'Sondage',
-  'chat.emptyHelp': 'La discussion de la ligue apparaîtra ici.',
+  'chat.emptyHelp': 'Écris le premier message ci-dessous.',
 
-  'games.title': 'Horaire',
+  'games.title': 'Matchs',
   'games.subtitle': 'Tous les matchs de la saison.',
   'games.empty': 'Aucun match à l’horaire.',
-  'games.emptyHelp': 'L’horaire sera publié dès qu’un match sera ajouté.',
+  'games.emptyHelp':
+    'Un responsable ajoute les matchs. Ils apparaîtront ici dès que l’horaire sera prêt.',
   'games.next': 'Prochain',
   'games.upcoming': 'À venir',
   'games.past': 'Passés',
@@ -332,13 +342,13 @@ export const fr = {
   'games.regenerate': 'Recalculer les équipes',
   'games.generated': 'Alignement publié',
   'games.notGenerated': 'Alignement à venir',
-  'games.bench': 'Banc',
+  'games.bench': 'Joueurs en surplus',
   'games.unassigned': 'Non assigné',
-  'games.substitutes': 'Remplaçants',
+  'games.substitutes': 'Remplaçant',
   'games.adminCreate': 'Créer un match',
   'games.adminEdit': 'Modifier le match',
   'games.adminCancel': 'Annuler le match',
-  'games.notes': 'Notes',
+  'games.notes': 'Note pour les joueurs',
   'games.noNotes': 'Aucune note.',
   'games.teamBalance': 'Écart de notes : {skill} · écart d’âge : {age} ans',
   'games.balanceNote':
@@ -346,11 +356,11 @@ export const fr = {
   'games.rulesConflict': 'Règles incompatibles',
   'games.limitConflict': 'Les écarts demandés ne sont pas respectés',
   'games.limitConflictHelp':
-    'Aucun alignement ne respecte les écarts de notes, d’âge ou de joueurs. Ajuste les réglages ou les présences.',
+    'Aucun alignement ne respecte les écarts demandés. Demande à un administrateur d’ajuster les réglages.',
   'games.rulesConflictPlayer':
-    'Un ajustement est nécessaire. Un responsable va corriger l’alignement.',
+    'L’alignement doit être ajusté. Un responsable va s’en occuper.',
   'games.rulesConflictHelp':
-    'Aucun alignement ne respecte toutes les règles. Ajuste les règles ou l’alignement.',
+    'Aucune combinaison ne respecte toutes les règles. Demande à un administrateur d’ajuster les règles.',
   'games.ratingsMissing':
     'Certains joueurs n’ont pas encore d’évaluations complètes.',
   'games.noMatch': 'Ce match est introuvable.',
@@ -362,7 +372,12 @@ export const fr = {
   'availability.unknown': 'Pas encore répondu',
   'availability.markPresent': 'Je serai là',
   'availability.markAbsent': 'Je serai absent',
+  'availability.answer': 'Répondre',
   'availability.saved': 'Présence enregistrée.',
+  'availability.savedRequested':
+    'Absence enregistrée. Une demande de remplaçant est ouverte.',
+  'availability.savedBumped':
+    'Présence enregistrée. Le remplaçant est retiré du match.',
   'availability.locked': 'Les présences sont fermées pour ce match.',
   'availability.gameClosed': 'Ce match n’accepte plus de présences.',
   'availability.substituteNoConfirm':
@@ -379,21 +394,22 @@ export const fr = {
   'subs.placeOpen': 'Place ouverte',
   'subs.requestedBy': 'Demandée par {name}',
   'subs.rules':
-    'Les favoris sont avisés en premier, puis la banque de remplaçants. La première personne admissible qui prend la place est confirmée.',
+    'Les remplaçants admissibles reçoivent un avis. La première personne qui prend la place l’obtient.',
   'games.lineupSoonAdmin':
-    'Génère l’alignement quand les présences sont prêtes.',
+    'Publie les équipes quand les présences sont prêtes.',
   'games.lineupSoon':
-    'L’alignement sera publié après la fermeture des présences.',
+    'Les équipes s’affichent ici dès qu’un responsable les publie.',
   'subs.subtitle': 'Les places ouvertes et la banque de remplaçants.',
   'subs.openPositions': 'Positions à combler',
-  'subs.positionNotSelected': 'Position non choisie',
-  'subs.poolEmpty': 'Aucun remplaçant inscrit.',
+  'subs.positionNotSelected': 'Cette position n’est pas dans tes positions.',
+  'subs.poolEmpty':
+    'Aucun remplaçant pour l’instant. Un administrateur peut en ajouter un.',
   'subs.viewGame': 'Voir le match',
   'subs.notInPoolHelp':
-    'Demande à un responsable de la ligue de t’ajouter à la banque.',
+    'Demande à un administrateur de t’ajouter à la liste des remplaçants.',
   'subs.adminNotice':
-    'Tu vois les places ouvertes et la banque. Les favoris et les positions se gèrent dans la gestion des joueurs.',
-  'subs.managePool': 'Gérer la banque',
+    'Tu vois les places ouvertes et la liste des remplaçants. Un administrateur règle les favoris et les positions.',
+  'subs.managePool': 'Gérer les remplaçants',
   'subs.favorite': 'Favori',
   'subs.addFavorite': 'Marquer comme favori',
   'subs.removeFavorite': 'Retirer des favoris',
@@ -401,7 +417,6 @@ export const fr = {
   'subs.positions': 'Positions acceptées',
   'subs.positionsHelp':
     'Tu recevras seulement les demandes pour ces positions.',
-  'subs.openRequest': 'Position ouverte',
   'subs.requestFor': '{position} recherché(e)',
   'subs.claim': 'Je prends cette position',
   'subs.release': 'Me retirer du match',
@@ -411,13 +426,13 @@ export const fr = {
   'subs.requestCreated': 'Demande de remplaçant créée.',
   'subs.requestCancelled': 'Demande annulée.',
   'subs.cancelRequest': 'Annuler la demande',
-  'subs.status.filled': 'Comblé',
+  'subs.status.filled': 'Comblée',
   'subs.choosePosition': 'Position recherchée',
   'subs.noneOpen': 'Aucune position ouverte.',
   'subs.substituteList': 'Banque de remplaçants',
   'subs.notInPool': 'Tu n’es pas inscrit comme remplaçant.',
   'subs.profileSaved': 'Tes positions sont enregistrées.',
-  'subs.add': 'Ajouter un remplaçant',
+  'subs.add': 'Demander un remplaçant',
   'subs.remove': 'Retirer',
   'subs.notifyFavorites': 'Favoris avisés en premier',
   'subs.notifyGeneral': 'Liste générale avisée ensuite',
@@ -436,10 +451,10 @@ export const fr = {
   'balance.subtitle': 'Ce que tu as payé et ce qu’il reste.',
   'balance.subtitleAdmin': 'Les cotisations et les paiements de la saison.',
   'balance.adminNoProfile':
-    'Ton compte n’a pas de fiche de joueur. Les soldes des joueurs se gèrent dans l’administration.',
+    'Ton compte n’a pas de fiche de joueur. Un administrateur gère les soldes des joueurs.',
   'balance.manageAll': 'Voir tous les soldes',
   'balance.noPlanHelp':
-    'Un responsable va t’informer du montant et des dates de paiement.',
+    'Un administrateur va t’indiquer le montant et les dates de paiement.',
   'balance.paymentMethods': 'Modes de paiement : {methods}.',
   'balance.payHelp':
     'Pour payer, utilise la méthode convenue avec un responsable. Le paiement apparaîtra ici dès qu’il sera enregistré.',
@@ -459,7 +474,8 @@ export const fr = {
   'balance.status.upcoming': 'À venir',
   'balance.noPlan': 'Aucune cotisation planifiée.',
   'balance.noPlanShort': 'Aucun plan',
-  'balance.noPayments': 'Aucun versement enregistré.',
+  'balance.noPayments':
+    'Aucun versement pour l’instant. Un administrateur enregistre les paiements reçus.',
   'balance.recordPayment': 'Enregistrer un versement',
   'balance.amount': 'Montant',
   'balance.method': 'Méthode',
@@ -467,11 +483,12 @@ export const fr = {
   'balance.history': 'Historique',
   'balance.onlyYou': 'Visible par toi et l’administration.',
   'balance.adminTitle': 'Soldes des joueurs',
-  'balance.overdueNotice': 'Un montant de {amount} est en retard.',
+  'balance.overdueNotice':
+    'Un versement de {amount} est en retard. Demande à un administrateur comment le régler.',
   'balance.editPlan': 'Modifier le plan',
   'balance.totalCents': 'Montant total',
-  'balance.firstDue': 'Première date',
-  'balance.secondDue': 'Deuxième date',
+  'balance.firstDue': 'Date du premier versement',
+  'balance.secondDue': 'Date du deuxième versement',
   'balance.firstPercent': 'Part du premier versement',
   'balance.amountInvalid': 'Entre un montant valide.',
   'balance.paymentNotFound': 'Versement introuvable.',
@@ -488,7 +505,7 @@ export const fr = {
   'chat.placeholder': 'Écris un message…',
   'chat.send': 'Envoyer',
   'chat.sent': 'Message envoyé.',
-  'chat.empty': 'Aucun message. Lance la discussion.',
+  'chat.empty': 'Aucun message pour l’instant.',
   'chat.newPoll': 'Créer un sondage',
   'chat.pollQuestion': 'Question',
   'chat.pollOptions': 'Choix',
@@ -523,7 +540,7 @@ export const fr = {
   'profile.substitute': 'Remplaçant',
   'profile.notifications': 'Notifications',
   'profile.emailNotifications': 'Recevoir les avis par courriel',
-  'profile.pushNotifications': 'Recevoir les notifications push',
+  'profile.pushNotifications': 'Recevoir les notifications',
   'profile.pushEnable': 'Activer sur cet appareil',
   'profile.pushDisable': 'Désactiver sur cet appareil',
   'profile.pushEnabled': 'Notifications activées sur cet appareil.',
@@ -535,7 +552,7 @@ export const fr = {
     'Les notifications push ne sont pas activées pour la ligue.',
   'profile.pushFailed': 'Impossible d’activer les notifications. Réessaie.',
   'profile.notificationsHelp':
-    'Choisis comment la ligue t’avise. Le courriel et cet appareil se règlent séparément.',
+    'Le courriel se règle ici. Pour recevoir les notifications sur cet appareil, active-les plus bas.',
   'profile.pushIosInstall':
     'Sur iPhone, ajoute d’abord l’application à l’écran d’accueil.',
   'profile.saved': 'Profil enregistré.',
@@ -559,7 +576,7 @@ export const fr = {
   'profile.identitySaved': 'Ton nom est enregistré.',
   'profile.playerNameManaged':
     'Ton nom de joueur se change dans ta fiche de joueur.',
-  'profile.playerSection': 'Ta fiche de joueur',
+  'profile.playerSection': 'Fiche de joueur',
   'profile.playerSectionHelp':
     'Ces infos servent aux alignements et à la banque de remplaçants.',
   'profile.jersey': 'Numéro de chandail',
@@ -597,17 +614,19 @@ export const fr = {
   'profile.sessionsRevoked.many': '{count} appareils déconnectés.',
   'profile.adminSection': 'Administration',
   'profile.adminHelp':
-    'Tu gères la ligue. Ces raccourcis ouvrent les écrans d’administration.',
+    'Ces raccourcis ouvrent les écrans que ton rôle permet de gérer.',
   'profile.signOutHelp': 'Tu peux fermer ta session sur cet appareil.',
   'notifications.title': 'Notifications',
+  'notifications.settings': 'Choisir les avis reçus',
   'notifications.empty': 'Aucune notification.',
   'notifications.emptyHelp':
     'Les avis de match, de remplacement et de solde apparaîtront ici.',
   'notifications.emptyHelpAdmin':
-    'Les avis de remplacement comblé apparaissent ici. Les alertes de gestion restent dans l’administration.',
+    'Les avis de remplacement, d’annulation et de solde apparaissent ici.',
   'notifications.noneUnread': 'Tout est lu.',
   'notifications.markAll': 'Tout marquer comme lu',
-  'notifications.allRead': 'Toutes les notifications sont marquées comme lues.',
+  'notifications.allRead':
+    'Les notifications affichées sont marquées comme lues.',
   'notifications.unread': 'Nouvelle',
   'notifications.unreadCount.one': '{count} non lue',
   'notifications.unreadCount.many': '{count} non lues',
@@ -661,10 +680,10 @@ export const fr = {
   'admin.roleHelp':
     'Chaque rôle ouvre un ensemble de capacités. Les capacités du rôle choisi sont listées dessous.',
   'admin.roleSaved': 'Rôle enregistré.',
-  'admin.status': 'Accès',
+  'admin.status': 'Participation',
   'admin.statusHelp':
-    'Un joueur désactivé reste dans l’historique, mais sort des alignements et de la banque de remplaçants.',
-  'admin.statusSaved': 'Accès enregistré.',
+    'Un joueur désactivé reste dans l’historique, mais sort des alignements et de la liste des remplaçants.',
+  'admin.statusSaved': 'Participation enregistrée.',
   'admin.active': 'Actif',
   'admin.inactive': 'Désactivé',
   'admin.deletePlayer': 'Supprimer le joueur',
@@ -680,16 +699,16 @@ export const fr = {
   'admin.jerseyNumber': 'Numéro de chandail',
 
   'admin.dashboard': 'Tableau de bord',
-  'admin.dashboardHelp': 'Ce qui presse cette semaine.',
+  'admin.dashboardHelp': 'Ce qui demande ton attention maintenant.',
   'admin.players': 'Joueurs',
   'admin.searchPlayers': 'Rechercher un joueur',
-  'admin.resetPassword': 'Réinitialiser le mot de passe',
+  'admin.resetPassword': 'Envoyer un lien de mot de passe',
   'admin.addSub': 'Ajouter à la banque',
   'admin.removeSub': 'Retirer de la banque',
   'admin.emailHint': 'Le joueur recevra son invitation à cette adresse.',
   'admin.ageHint': 'Sert à équilibrer l’âge des équipes.',
   'admin.deactivateConfirm':
-    'Désactiver {name}? Il ne sera plus considéré pour les alignements.',
+    'Désactiver {name}? Le joueur sort des alignements et de la liste des remplaçants. Son historique reste.',
   'admin.games': 'Matchs',
   'admin.gamesHelp':
     'La prochaine date est proposée automatiquement. Vérifie l’heure et l’aréna avant de créer.',
@@ -715,13 +734,13 @@ export const fr = {
   'admin.substitutes': 'Remplaçants',
   'admin.addPlayer': 'Ajouter un joueur',
   'admin.editPlayer': 'Modifier le joueur',
-  'admin.invite': 'Envoyer l’invitation',
+  'admin.invite': 'Créer le joueur et envoyer l’invitation',
   'admin.inviteSent':
-    'Invitation créée pour {email}. Le courriel est en file d’envoi.',
+    'Joueur créé. L’invitation part si les avis courriel sont activés.',
   'admin.inviteEmailFailed':
-    'Joueur créé, mais le courriel n’a pas pu être mis en file. Tu peux renvoyer le lien.',
-  'admin.reinvite': 'Réinitialiser le mot de passe',
-  'admin.inviteResent': 'Nouveau lien en file d’envoi.',
+    'Joueur créé, mais l’invitation n’est pas partie. Ouvre sa fiche pour renvoyer le lien.',
+  'admin.reinvite': 'Renvoyer le lien de mot de passe',
+  'admin.inviteResent': 'Lien de connexion renvoyé.',
   'admin.paymentDeleted': 'Versement supprimé.',
   'rating.notRated': 'Non noté',
   'balance.applyDefaultsConfirm':
@@ -803,7 +822,8 @@ export const fr = {
   'capability.viewAllBalancesHelp': 'Consulter le solde de chaque joueur.',
   'capability.viewAdmin': 'Accéder à la gestion',
   'capability.viewAdminHelp': 'Ouvrir l’espace de gestion de la ligue.',
-  'admin.role.playerHelp': 'Un joueur gère sa présence, son profil et son solde.',
+  'admin.role.playerHelp':
+    'Un joueur voit son horaire, ses présences, sa fiche et son solde.',
   'admin.role.managerHelp':
     'Un responsable gère les matchs, les remplaçants et la discussion, sans toucher aux comptes ni aux réglages.',
   'admin.role.adminHelp': 'Un admin gère tout, y compris les comptes, les rôles et les réglages.',
@@ -828,7 +848,7 @@ export const fr = {
   'error.title.forbidden': 'Accès refusé',
   'offline.title': 'Tu es hors ligne',
   'offline.body':
-    'Tes données ne sont pas accessibles sans connexion. Reconnecte-toi pour voir l’horaire, tes présences et la discussion.',
+    'Reconnecte-toi à Internet pour voir l’horaire, tes présences et la discussion.',
   'offline.retry': 'Réessayer',
   'error.title.generic': 'Un pépin est survenu',
   'error.help': 'Reviens à l’accueil ou réessaie dans un instant.',

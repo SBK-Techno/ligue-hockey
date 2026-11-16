@@ -56,6 +56,8 @@ export type AvailabilityResult = {
 	requestCreated: boolean;
 	bumpedPlayerId: string | null;
 	regenerated: boolean;
+	/** Message de confirmation à afficher, déjà choisi selon l'effet produit. */
+	messageKey: I18nKey;
 	warning?: I18nKey;
 };
 
@@ -179,11 +181,17 @@ export function markAvailability(
 	});
 
 	const regeneration = regenerateIfGenerated(gameId);
+	const messageKey: I18nKey = bumpedPlayerId
+		? 'availability.savedBumped'
+		: requestCreated
+			? 'availability.savedRequested'
+			: 'availability.saved';
 	return {
 		status,
 		requestCreated,
 		bumpedPlayerId,
 		regenerated: regeneration.regenerated,
+		messageKey,
 		...(regeneration.warning ? { warning: regeneration.warning } : {})
 	};
 }

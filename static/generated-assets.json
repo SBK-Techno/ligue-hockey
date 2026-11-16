@@ -10,7 +10,7 @@
     "static/manifest.webmanifest": "81909474e0419e2f7ca5839c94d4358b7e4c71d78da48396eae7970f127d498b",
     "src/app.html": "fb90d83ca717defba749ed454693e4c944303e15011b64b31b38b202f0a11b89",
     "static/robots.txt": "815bcd053b51b42648ea3f8103c8c9f86eb64d2d6eaad8f3b45b673b47f959b7",
-    "static/offline.html": "6ab8abc27e58f221f4833ff0d2fd2bc588c6d83519502c123e48c9af00146502",
+    "static/offline.html": "e96b2b4d535c61b98c12c28ad266a5779b12507853b5fbd5d6c7aa3e90c70c04",
     "src/lib/generated/branding.ts": "27a5fc512be9aa9c4bb3980d82eca05e04505d7cb4ce813f185590b52cc2015f",
     "static/social/apercu.jpg": "2ac0357d2a30b7e703d7172ae2f3856a676b9eae02aedc3e4de43f8bee65a79e"
   }

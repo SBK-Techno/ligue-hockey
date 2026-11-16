@@ -1,11 +1,15 @@
 @theme {
-	/* Palette: encre, papier chaud, bleu SBK, rouge de filet. */
+	/* Palette : encre, papier chaud, bleu SBK, rouge de filet. */
 	--color-ink: #101a22;
 	--color-paper: #f5f2ea;
+	--color-paper-deep: #ece7db;
 	--color-surface: #fffcf6;
 	/* Texte et icônes posés sur une surface de marque (bleu, rouge). */
 	--color-on-brand: var(--color-surface);
+	/* Trait décoratif : séparateurs, bordures de cartes. */
 	--color-line: #ded6c7;
+	/* Trait de commande : bordure de champ, de bouton secondaire, de case. 3:1 minimum. */
+	--color-line-strong: #958872;
 	--color-muted: #58656e;
 	--color-ice: #2453bb;
 	--color-ice-deep: #173b8c;
@@ -19,14 +23,24 @@
 		'Segoe UI', sans-serif;
 	--font-display: 'Archivo Variable', 'Helvetica Neue', ui-sans-serif, sans-serif;
 	--radius-card: 1.25rem;
+	--radius-sheet: 0.75rem;
 	--radius-control: 0.75rem;
 	--shadow-card: 0 1px 2px rgb(16 26 34 / 0.05), 0 18px 40px -32px rgb(16 26 34 / 0.35);
 	--shadow-lift: 0 2px 4px rgb(16 26 34 / 0.06), 0 24px 48px -28px rgb(16 26 34 / 0.4);
+	--shadow-strip: 0 1px 0 rgb(255 252 246 / 0.08) inset;
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	/* Durées : court pour un retour immédiat, moyen pour un panneau, long pour une entrée. */
+	--duration-fast: 160ms;
+	--duration-base: 220ms;
+	--duration-slow: 320ms;
+	/* Largeur de lecture confortable pour les messages et les textes longs. */
+	--measure: 68ch;
 }
 
 :root {
-	/* Une seule source pour la barre mobile: hauteur utile + zone sûre iOS. */
-	--bottom-bar-height: 4rem;
-	--bottom-bar-offset: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
+	/* Une seule source pour la barre mobile : hauteur utile + zone sûre iOS. */
+	--bottom-bar-height: 4.5rem;
+	--bottom-bar-offset: calc(
+		var(--bottom-bar-height) + 1px + env(safe-area-inset-bottom)
+	);
 }

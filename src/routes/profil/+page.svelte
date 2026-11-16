@@ -11,6 +11,7 @@
 	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
 	import PasswordField from '#lib/ui/PasswordField.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import { managementTabs } from '#lib/domain/auth/destinations.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import type { PageProps } from './$types';
 
@@ -21,20 +22,7 @@
 	const profile = $derived(data.profile);
 	const isManager = $derived(actor !== null && can(actor, 'viewAdmin'));
 	const canSeeRatings = $derived(actor !== null && can(actor, 'editRatings'));
-	const managementLinks = $derived([
-		...(actor && can(actor, 'managePlayers')
-			? [{ href: '/admin/joueurs', key: 'admin.players' as const }]
-			: []),
-		...(actor && can(actor, 'manageGames')
-			? [{ href: '/admin/matchs', key: 'admin.games' as const }]
-			: []),
-		...(actor && can(actor, 'viewAllBalances')
-			? [{ href: '/admin/soldes', key: 'admin.balances' as const }]
-			: []),
-		...(actor && can(actor, 'manageSettings')
-			? [{ href: '/admin/parametres', key: 'admin.settings' as const }]
-			: [])
-	]);
+	const managementLinks = $derived(actor ? managementTabs(actor) : []);
 	const roleLabel = $derived(
 		account ? t(roleDefinition(account.role)?.labelKey ?? 'admin.role.player') : ''
 	);
@@ -602,7 +590,7 @@
 					<p class="hint mt-1">{t('profile.adminHelp')}</p>
 					<div class="mt-4 grid gap-2 sm:grid-cols-2">
 						{#each managementLinks as link (link.href)}
-							<a class="btn-secondary justify-start" href={link.href}>{t(link.key)}</a>
+							<a class="btn-secondary justify-start" href={link.href}>{t(link.labelKey)}</a>
 						{/each}
 					</div>
 				</section>

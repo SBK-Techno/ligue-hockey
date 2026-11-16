@@ -87,14 +87,18 @@ export function formatMonthYear(ms: number): string {
 	return monthYearFormat.format(toDate(ms));
 }
 
-export function formatTime(time: string): string {
+export function formatTimeParts(time: string): { hour: string; minute: string } {
 	const [hour, minute] = time.split(':');
-	const value = Number(hour);
+	return { hour: String(Number(hour)), minute: minute ?? '00' };
+}
+
+export function formatTime(time: string): string {
+	const { hour, minute } = formatTimeParts(time);
 	const unit = t('common.hourShort');
 	if (minute === '00') {
-		return `${value} ${unit}`;
+		return `${hour} ${unit}`;
 	}
-	return `${value} ${unit} ${minute}`;
+	return `${hour} ${unit} ${minute}`;
 }
 
 export function formatDateTime(date: string, time: string): string {

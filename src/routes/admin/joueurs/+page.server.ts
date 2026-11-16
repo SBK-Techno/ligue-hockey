@@ -43,7 +43,7 @@ export const actions: Actions = {
 			return {
 				ok: true,
 				message: result.inviteQueued
-					? t('admin.inviteSent', { email: parsed.email })
+					? t('admin.inviteSent')
 					: t('admin.inviteEmailFailed')
 			};
 		} catch (cause) {

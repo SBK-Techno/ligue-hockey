@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { gameStatus } from '#config/game-status.ts';
 	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
-	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
@@ -8,11 +8,6 @@
 
 	let { data, form }: PageProps = $props();
 
-	const statusKey: Record<string, I18nKey> = {
-		scheduled: 'games.status.scheduled',
-		cancelled: 'games.status.cancelled',
-		completed: 'games.status.completed'
-	};
 </script>
 
 <FormFeedback {form} class="mb-4" />
@@ -65,7 +60,7 @@
 						{#if game.status === 'cancelled'}
 							<span class="badge-alert">{t('games.status.cancelled')}</span>
 						{:else}
-							<span class="badge">{t(statusKey[game.status] ?? 'games.status.scheduled')}</span>
+							<span class="badge">{t(gameStatus(game.status).labelKey)}</span>
 						{/if}
 						{#if game.generated}
 							<span class="badge-ice">{t('games.generated')}</span>

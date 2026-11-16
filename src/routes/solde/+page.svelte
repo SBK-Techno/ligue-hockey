@@ -3,6 +3,7 @@
 	import { PAYMENT_METHODS, paymentDefinition } from '#config/payment-methods.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatDate, formatMoney, t } from '#lib/shared/i18n/index.ts';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -26,20 +27,18 @@
 	);
 </script>
 
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
-	<div>
-		<h1>{t('balance.title')}</h1>
-		<p class="mt-1.5 text-sm text-muted">
-			{data.seasonLabel} ·
-			{isManager && !data.hasPlayerProfile
-				? t('balance.subtitleAdmin')
-				: t('balance.subtitle')}
-		</p>
-	</div>
-	{#if canViewAllBalances && data.balance}
-		<a class="btn-secondary btn-sm" href="/admin/soldes">{t('balance.manageAll')}</a>
-	{/if}
-</div>
+<PageHeader
+	title={t('balance.title')}
+	meta="{data.seasonLabel} · {isManager && !data.hasPlayerProfile
+		? t('balance.subtitleAdmin')
+		: t('balance.subtitle')}"
+>
+	{#snippet actions()}
+		{#if canViewAllBalances && data.balance}
+			<a class="btn-secondary btn-sm" href="/admin/soldes">{t('balance.manageAll')}</a>
+		{/if}
+	{/snippet}
+</PageHeader>
 
 {#if !data.balance}
 	<div class="card">

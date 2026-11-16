@@ -2,6 +2,7 @@
 	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -13,30 +14,30 @@
 
 <FormFeedback {form} class="mb-4" />
 
-<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
-	<div>
-		<h1>{t('notifications.title')}</h1>
-		<p class="mt-1.5 text-sm text-muted">
-			{#if data.unread === 0}
-				{t('notifications.noneUnread')}
-			{:else}
-				{formatCount(
+<PageHeader
+	title={t('notifications.title')}
+	meta={data.items.length === 0
+		? undefined
+		: data.unread === 0
+			? t('notifications.noneUnread')
+			: formatCount(
 					data.unread,
 					'notifications.unreadCount.one',
 					'notifications.unreadCount.many'
 				)}
-			{/if}
-		</p>
-	</div>
-	{#if unreadIds.length > 0}
-		<form method="POST" action="?/read" use:progressiveForm>
-			{#each unreadIds as id (id)}
-				<input type="hidden" name="ids" value={id} />
-			{/each}
-			<button class="btn-secondary btn-sm" type="submit">{t('notifications.markAll')}</button>
-		</form>
-	{/if}
-</div>
+>
+	{#snippet actions()}
+		<a class="btn-ghost btn-sm" href="/profil#notifications">{t('notifications.settings')}</a>
+		{#if unreadIds.length > 0}
+			<form method="POST" action="?/read" use:progressiveForm>
+				{#each unreadIds as id (id)}
+					<input type="hidden" name="ids" value={id} />
+				{/each}
+				<button class="btn-secondary btn-sm" type="submit">{t('notifications.markAll')}</button>
+			</form>
+		{/if}
+	{/snippet}
+</PageHeader>
 
 {#if data.items.length === 0}
 	<div class="card">
@@ -44,6 +45,9 @@
 		<p class="hint">
 			{isManager ? t('notifications.emptyHelpAdmin') : t('notifications.emptyHelp')}
 		</p>
+		<a class="btn-secondary btn-sm mt-3" href="/profil#notifications">
+			{t('notifications.settings')}
+		</a>
 	</div>
 {:else}
 	<ul role="list" class="space-y-2">

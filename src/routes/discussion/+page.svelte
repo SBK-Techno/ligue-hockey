@@ -4,6 +4,7 @@
 	import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -43,26 +44,24 @@
 
 <FormFeedback
 	{form}
-	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+0.75rem)] z-40 mx-auto max-w-md shadow-lift lg:bottom-6"
+	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+5.5rem)] z-40 mx-auto max-w-md shadow-lift lg:bottom-[5.5rem]"
 />
 
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
-	<div>
-		<h1>{t('chat.title')}</h1>
-		<p class="mt-1.5 text-sm text-muted">{t('chat.subtitle')}</p>
-	</div>
-	{#if data.canCreatePoll}
-		<button
-			class="btn-secondary btn-sm"
-			type="button"
-			onclick={() => (showPoll = !showPoll)}
-			aria-expanded={showPoll}
-			aria-controls="poll-form"
-		>
-			{showPoll ? t('common.close') : t('chat.newPoll')}
-		</button>
-	{/if}
-</div>
+<PageHeader title={t('chat.title')} meta={t('chat.subtitle')}>
+	{#snippet actions()}
+		{#if data.canCreatePoll}
+			<button
+				class="btn-secondary btn-sm"
+				type="button"
+				onclick={() => (showPoll = !showPoll)}
+				aria-expanded={showPoll}
+				aria-controls="poll-form"
+			>
+				{showPoll ? t('common.close') : t('chat.newPoll')}
+			</button>
+		{/if}
+	{/snippet}
+</PageHeader>
 
 {#if showPoll}
 	<section class="card mb-5" id="poll-form">
@@ -123,12 +122,12 @@
 {/if}
 
 {#if messages.length === 0}
-	<div class="card">
+	<div class="card mx-auto w-full max-w-3xl">
 		<p class="text-sm text-muted">{t('chat.empty')}</p>
 		<p class="hint">{t('chat.emptyHelp')}</p>
 	</div>
 {:else}
-	<ul role="list" class="space-y-3">
+	<ul role="list" class="mx-auto w-full max-w-3xl space-y-3">
 		{#each messages as message (message.id)}
 			<li class="card">
 				<div class="flex items-start justify-between gap-3">
@@ -165,7 +164,7 @@
 										<button
 											class="flex min-h-11 flex-1 items-center justify-between gap-3 rounded-control border px-3 py-2 text-left text-sm transition-colors disabled:opacity-60 {option.myVote
 												? 'border-ice bg-ice-soft font-semibold text-ice-deep'
-												: 'border-line bg-paper'}"
+												: 'border-line-strong bg-paper'}"
 											type="submit"
 											disabled={message.poll.closed}
 											aria-pressed={option.myVote}
@@ -204,13 +203,13 @@
 	method="POST"
 	action="?/send"
 	use:progressiveForm
-	class="sticky bottom-[var(--bottom-bar-offset)] mt-4 lg:bottom-4"
+	class="sticky bottom-[var(--bottom-bar-offset)] mx-auto mt-4 w-full max-w-3xl lg:bottom-4"
 >
 	<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
-	<div class="flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 shadow-card">
+	<div class="flex items-end gap-2 rounded-2xl border border-line-strong bg-surface p-2 shadow-card">
 		<textarea
 			id="chat-body"
-			class="min-h-11 flex-1 resize-none rounded-control border-0 bg-transparent px-2 py-2 text-base text-ink outline-none placeholder:text-muted/70 focus-visible:ring-2 focus-visible:ring-ice"
+			class="min-h-11 flex-1 resize-none rounded-control border-0 bg-transparent px-2 py-2 text-base text-ink outline-none placeholder:text-muted focus-visible:ring-2 focus-visible:ring-ice"
 			name="body"
 			rows="1"
 			placeholder={t('chat.placeholder')}

@@ -73,7 +73,7 @@ export const actions: Actions = {
 			const result = markAvailability(locals.actor, params.id!, parsed.status);
 			return {
 				ok: true,
-				message: result.warning ? t(result.warning) : t('availability.saved')
+				message: t(result.warning ?? result.messageKey)
 			};
 		} catch (cause) {
 			return actionError(cause);
