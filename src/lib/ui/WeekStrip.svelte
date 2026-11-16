@@ -28,7 +28,7 @@
 				aria-label="{label} · {status}"
 				data-game="true"
 			>
-				<span class="text-[9px] font-semibold uppercase tracking-[0.08em]" aria-hidden="true">
+				<span class="text-[length:var(--text-stamp)] font-semibold uppercase tracking-[0.08em]" aria-hidden="true">
 					{formatWeekdayShort(day)}
 				</span>
 				<time datetime={day} class="numeric text-sm" aria-hidden="true">
@@ -38,7 +38,7 @@
 		{:else}
 			<span class="week-day" data-game="false">
 				<span class="sr-only">{label}</span>
-				<span class="text-[9px] font-semibold uppercase tracking-[0.08em]" aria-hidden="true">
+				<span class="text-[length:var(--text-stamp)] font-semibold uppercase tracking-[0.08em]" aria-hidden="true">
 					{formatWeekdayShort(day)}
 				</span>
 				<time datetime={day} class="numeric text-sm" aria-hidden="true">

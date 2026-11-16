@@ -4,11 +4,12 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `design/auth-hero`.
-- Target version: `1.3.2`.
-- Shipped: identity, navigation, evaluations, smart sheet, locations, `1.3.0`; initial-paint fix, `1.3.1`.
-- In flight: natural rink palette, auth hero, round-3 defects.
-- Next: gate, PR, `1.3.2`, promote.
+- Branch: `fix/1.3.3`.
+- Target version: `1.3.3`.
+- Shipped: identity, navigation, evaluations, smart sheet, locations, `1.3.0`; initial-paint fix, `1.3.1`; natural rink, auth hero, shared Black/White sheet, `1.3.2` (live).
+- In flight: `/remplacants` inline create and manage actions, the warm blue/white/red rounded theme, the dressing-room login hero, the account profile destination on mobile, the admin 320 grid and the record-row order.
+- Verification: `npm run gate` is green with 350 tests in 43 files, 225 architecture files, generated assets, documentation and the production build.
+- Next: PR, merge, tag `v1.3.3`, release, promote and verify health.
 
 ## Verified milestones
 
@@ -24,54 +25,43 @@ This file tracks the current milestone, verified evidence, and the work that is 
 | `71605a4` | Smart sheet live pool, strict rules, typed warnings, ratings purge | 289 tests, 33 files |
 | `f681365` | Architecture document corrections | review |
 | `5bbbb46` | Notification links resolve to real routes | 5 tests |
+| `6a1d315` | `1.3.0` identity, navigation, evaluations, smart sheet, locations | gate, PR 12 |
+| `1a00cf7` | `1.3.1` initial-paint flash fix | gate, PR 13, live |
+| `3b50ec4` | `1.3.2` natural rink, auth hero, shared team sheet, recalibration test | 340 tests, live health `ok` |
+| `3728997` | `1.3.3` `/remplacants` inline pool and request actions | 350 tests, check, lint |
 
-## Confirmed open defects (release blockers)
+## Next: 1.3.4 correctness
 
-Tracked in `/tmp/opencode/fixer-polish.md` and `/tmp/opencode/recheck-round2.md`. The main ones:
+- Freeze game records and availability after the start time; make cancellation atomic; filter recent form by playability.
+- Notification inbox: mark every unread item, cursor pagination, anchor rows with a separate read action.
+- One invitation/reset mode token; keep the email after a wrong password; correct resend purpose.
+- Chat: initial scroll to the latest message, true new-message count, growing composer, focus return.
+- Evaluation: return the actual `canRate` reason, show failures near the form, expose older played games.
+- Remaining navigation checks: header at 768 and the bottom-bar reserve on admin and tablet (the profile destination and the 320 admin grid ship in 1.3.3).
 
-- A season rating sheet cannot save a partial sheet or clear a note.
-- "Pas vu ce match" erases every row with no confirmation.
-- A cleared empty sheet does not visibly clear.
-- Schedule splits and the hero use the date, not the zoned start time.
-- The payment form renders when no plan exists and always fails.
-- "Mark all read" only covers the first page of the inbox.
-- The admin row menu is clipped by `overflow-hidden`.
-- Overall balance status is re-derived in four places and disagrees.
-- Editing a game rewrites the frozen location label.
-- Login forgets the email; invitation and reset share one message.
-- Solde clips money at 390 px; several targets are below 44 px.
-- Evaluation saves lose keyboard focus.
-- `#solde` links land at the top of the player page.
+## Next: 1.3.5 input and administration
 
-## Smart-sheet verifier (confirmed)
+- Finance input guards only: real dates, ordered dates, non-zero installments, no future payments, cap at outstanding.
+- Admin schedule: reverse archive, exclude completed games from the draft reference, no silent location fallback, configured limits.
+- Admin and accessibility polish: self-role reason, shared filter counts and reset, `#solde` anchors, one inactive label, profile fieldsets, 44 px standalone links, row-menu direction, paid amount.
+- Copy/glossary pass and `PROGRESS.md` upkeep.
+- Test isolation: `.env.test` database, scripts typecheck, language in the CI contract, one DB opener, strict config validators, own-property key lookups.
 
-- Regeneration bypasses the editable policy: a started `scheduled` game can be regenerated and its ratings purged. Gate `regenerateGame`, `regenerateAsAdmin` and `regenerateUpcomingGeneratedGames` on `isLineupEditable` and future start.
-- The admin edit page never renders persisted warnings, so `rule-limit` is invisible after a manual edit.
-- Warning order has secondary owners: the generator hardcodes keys, the service persists without registry order, and the public page compares literals.
-- The bench is rendered from the snapshot on the public page and from the live pool on the admin page.
-- An unrated bench player is named by the alert but the link opens the game sheet, which only lists dressed players.
-- The generate audit is outside the slot transaction.
-- The smart-sheet test calls `fillSuggestions` with a hand-built pool, not the live pool; `fc.assert` is unseeded.
-- A locked game with a swap prints "already balanced".
-- Dead exports: `isGameWarning`, `gameWarningLabelKey`, `requireCompleteRatings`.
+## Next: 1.4.0 member surfaces
 
+- Home situation board: the hero and the panel spans change with game phase, presence, lineup state, absence, manager slots, balance, substitute requests, polls and profile presence. Month calendar with game days, today and multiple games per day.
+- Team section `/equipe`: season roster with position, games, attendance and Black/White history; ratings only behind the ratings capability. Rink board with placement for managers, pair-rule lines, live balance and a past-game timeline.
 
-## Deferred to the next milestone
+## Deferred to a later milestone
 
 - Finance model rewrite: N installments, charges, allocations, credits, refunds, receipts, interest-only arrears, no fixed late fee, no card surcharge, trust-sum flag. Legal constraints are in `/tmp/opencode/finance-legal.md`.
 - Archive pagination, batch game reads, admin dashboard payload trimming.
 - Cancelled-game metrics and the `completed` status writer.
 - Chat history pagination and connection-lost UI.
-- Full copy glossary pass and the remaining accessibility polish.
+- Gitea migration of the publication contract (explicit platform gap).
 
 ## Environment and operations
 
 - Live SMTP is still misconfigured.
 - The GHCR package is private; the server needs a classic PAT with `read:packages`.
-- SMS notifications need a phone column, a provider and an adapter; no provider chosen.
-- Availability reminders to non-responders do not exist.
-- PR #11 (`feat/auto-release`) is open and must be reviewed separately.
-
-## Verification contract
-
-`npm run gate` is the only release gate: type check, lint, tests, language, architecture, generated assets, shell, docs and production build. A commit is releasable only when the gate is green on the final tree and an independent verifier finds no confirmed defect in the changed surfaces.
+- Live promotion: pull the pinned image, map the existing container environment, recreate, then verify `/api/health`, the version label and the revision label.

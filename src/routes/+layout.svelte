@@ -42,6 +42,7 @@
 		return match ? `${t(match[1])} · ${branding.shortName}` : branding.name;
 	});
 
+	const showBottomBar = $derived(!page.url.pathname.startsWith('/admin'));
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
 	const openGraphLocale = $derived(branding.locale.replace('-', '_'));
 	const crawlDirective = $derived(branding.indexable ? 'index,follow' : 'noindex,nofollow');
@@ -76,36 +77,33 @@
 </svelte:head>
 
 {#if data.actor.kind === 'anonymous'}
-	<div class="lg:grid lg:min-h-dvh lg:grid-cols-[1.08fr_0.92fr]">
-		<aside
-			class="relative flex min-h-[18rem] flex-col overflow-hidden bg-ink px-5 pb-6 pt-5 text-paper sm:min-h-[22rem] sm:px-9 sm:pb-11 sm:pt-9 lg:min-h-dvh lg:p-12"
-		>
-			<img
-				src={branding.authImage}
-				alt=""
-				class="absolute inset-0 h-full w-full object-cover"
-				fetchpriority="high"
-				decoding="async"
-			/>
+	<div class="auth-shell">
+		<div class="auth-hero">
+			<img src={branding.authImage} alt="" fetchpriority="high" decoding="async" />
 			<div
-				class="absolute inset-0 bg-gradient-to-b from-ink/90 via-ink/20 to-ink/35"
+				class="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/20 to-ink/55 lg:bg-gradient-to-r lg:from-ink/90 lg:via-ink/35 lg:to-ink/15"
 				aria-hidden="true"
 			></div>
+			<div
+				class="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-ink/85 via-ink/20 to-transparent"
+				aria-hidden="true"
+			></div>
+		</div>
 
-			<div class="relative z-10">
-				<BrandLockup size="md" tone="dark" />
-			</div>
-		</aside>
+		<header class="auth-header">
+			<BrandLockup size="md" tone="dark" />
+		</header>
 
-		<main
-			id="contenu"
-			tabindex="-1"
-			class="flex scroll-mt-[var(--anchor-offset)] items-start justify-center px-4 py-8 sm:px-8 sm:py-12 lg:min-h-dvh lg:items-center"
-		>
-			<div class="w-full max-w-sm">
+		<main id="contenu" tabindex="-1" class="auth-main">
+			<div class="auth-panel page-enter">
 				{@render children()}
 			</div>
 		</main>
+
+		<p class="auth-caption">
+			<span class="h-px w-10 bg-paper/40" aria-hidden="true"></span>
+			<span class="micro-label text-paper/75">{t('auth.afterGame')}</span>
+		</p>
 	</div>
 {:else}
 	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
@@ -115,11 +113,17 @@
 		tabindex="-1"
 		class="mx-auto w-full max-w-6xl scroll-mt-[var(--anchor-offset)] px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
 	>
-		{@render children()}
+		{#key page.url.pathname}
+			<div class="page-enter">{@render children()}</div>
+		{/key}
 		<div aria-live="polite" class="sr-only">{pageTitle}</div>
 	</main>
 	<AppNavBottom actor={data.actor} />
-	<footer class="mx-auto w-full max-w-6xl px-4 pb-[calc(var(--bottom-bar-offset)+0.5rem)] pt-2 lg:pb-8">
+	<footer
+		class="mx-auto w-full max-w-6xl px-4 pt-2 lg:pb-8 {showBottomBar
+			? 'pb-[calc(var(--bottom-bar-offset)+0.5rem)]'
+			: 'pb-2'}"
+	>
 		<div
 			class="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 pt-5 text-[11px] font-medium text-muted"
 		>

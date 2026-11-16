@@ -35,7 +35,7 @@
 					<a
 						href={tab.href}
 						class="relative flex min-h-11 items-center border-l-[3px] px-2.5 text-[13px] font-medium no-underline transition-colors {current
-							? 'border-ochre bg-ink/[0.04] text-ink'
+							? 'border-ice bg-ice-soft text-ice-deep'
 							: 'border-transparent text-muted hover:bg-ink/5 hover:text-ink'}"
 						aria-current={current ? 'page' : undefined}
 					>

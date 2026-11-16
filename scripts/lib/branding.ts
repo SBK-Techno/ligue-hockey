@@ -213,7 +213,8 @@ function buildManifest(branding: Branding, icons: Record<IconRole, string>, pale
 function buildBrandingModule(
 	branding: Branding,
 	icons: Record<IconRole, string>,
-	palette: EmailPalette
+	palette: EmailPalette,
+	authImage: string
 ) {
 	const value = {
 		name: branding.name,
@@ -230,7 +231,7 @@ function buildBrandingModule(
 		backgroundColor: palette.paper,
 		emailPalette: palette,
 		socialImage: branding.socialImage,
-		authImage: branding.authImage,
+		authImage,
 		manifestPath: MANIFEST_PATH,
 		offlinePath: OFFLINE_PATH,
 		cachePrefix: cachePrefix(branding),
@@ -247,6 +248,16 @@ function buildBrandingModule(
 const SOCIAL_WIDTH = 1200;
 const SOCIAL_HEIGHT = 630;
 const SOCIAL_CREST = 184;
+const AUTH_WIDTH = 1200;
+const AUTH_HEIGHT = 800;
+
+async function renderAuthImage(root: string, branding: Branding): Promise<Buffer> {
+	const source = await readFile(path.join(root, branding.authSource));
+	return sharp(source)
+		.resize(AUTH_WIDTH, AUTH_HEIGHT, { fit: 'cover', position: 'centre' })
+		.webp({ quality: 82, effort: 6 })
+		.toBuffer();
+}
 
 function buildSocialOverlay(palette: EmailPalette): Buffer {
 	return Buffer.from(
@@ -327,7 +338,11 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 		contents: buildOfflinePage(branding, palette)
 	});
 
-	const moduleSource = buildBrandingModule(branding, icons, palette);
+	const auth = await renderAuthImage(root, branding);
+	const authImage = `/auth/dressing-room-${sha256(auth).slice(0, 12)}.webp`;
+	files.push({ path: `static${authImage}`, contents: auth });
+
+	const moduleSource = buildBrandingModule(branding, icons, palette, authImage);
 	files.push({ path: 'src/lib/generated/branding.ts', contents: moduleSource });
 
 	const social = await renderSocialImage(root, branding, svg, palette);
@@ -358,14 +373,16 @@ export async function writeGeneratedFiles(
 		await writeFile(target, file.contents);
 	}
 
-	// Les icônes sont nommées par contenu : une régénération laisse sinon des
-	// fichiers orphelins que le service worker précacherait pour rien.
+	// Les icônes et la photo de connexion sont nommées par contenu : une
+	// régénération laisse sinon des fichiers orphelins que le service worker
+	// précacherait pour rien.
 	const expected = new Set(files.map((file) => file.path.split(path.sep).join('/')));
-	const iconDir = path.join(root, 'static/icons');
-	for (const name of await readdir(iconDir).catch(() => [])) {
-		const relative = `static/icons/${name}`;
-		if (name.endsWith('.png') && !expected.has(relative)) {
-			await unlink(path.join(iconDir, name));
+	for (const dir of ['static/icons', 'static/auth']) {
+		for (const name of await readdir(path.join(root, dir)).catch(() => [])) {
+			const relative = `${dir}/${name}`;
+			if (!expected.has(relative)) {
+				await unlink(path.join(root, dir, name));
+			}
 		}
 	}
 }

@@ -6,6 +6,12 @@ import { checkboxToBoolean } from '#lib/shared/validation.ts';
 const name = z.string().trim().min(1).max(PLAYER_LIMITS.nameMax);
 const age = z.coerce.number().int().min(PLAYER_LIMITS.ageMin).max(PLAYER_LIMITS.ageMax);
 
+const playerIdSchema = z.string().trim().min(1);
+
+export const playerIdInputSchema = z.object({
+	playerId: playerIdSchema
+});
+
 const jersey = z.preprocess(
 	(value) => (value === undefined || value === null || value === '' ? null : value),
 	z.coerce.number().int().min(PLAYER_LIMITS.jerseyMin).max(PLAYER_LIMITS.jerseyMax).nullable()

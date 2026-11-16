@@ -207,7 +207,7 @@
 										<input type="hidden" name="optionId" value={option.id} />
 										<button
 											class="flex min-h-11 flex-1 items-center justify-between gap-3 rounded-control border px-3 py-2 text-left text-sm transition-colors disabled:opacity-60 {option.myVote
-												? 'border-ochre bg-ochre/10 font-semibold text-ink'
+												? 'border-ice bg-ice-soft font-semibold text-ice-deep'
 												: 'border-line-strong bg-paper'}"
 											type="submit"
 											disabled={message.poll.closed}

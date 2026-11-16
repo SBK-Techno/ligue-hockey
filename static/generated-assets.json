@@ -2,16 +2,17 @@
   "generatedBy": "scripts/generate.ts",
   "source": "config/branding.json, config/i18n/fr.ts and src/lib/ui/tokens.css",
   "files": {
-    "static/icons/favicon-32.39e672b26a42.png": "39e672b26a422947f33c53a05e2e1746df8a7d39c103004744b920e322f3ecd9",
-    "static/icons/apple-touch-180.e024bab6cc61.png": "e024bab6cc61ec355b8c76b15257c99d2fba96cfc7da0e64f5b646f112ef183e",
-    "static/icons/icon-192-192.12947a4e44de.png": "12947a4e44dec7b65f10b0b0fd039a2ffd4e4fa46286c44f88d1299d0185e38a",
-    "static/icons/icon-512-512.df153c39c10f.png": "df153c39c10f1d25fbeb9fec32b8bad2656697c74e81ad67790bd3485de2aeb2",
-    "static/icons/maskable-512-512.4d314577215b.png": "4d314577215be7aa13660ef9af0616dd2af8542ec53c2c642d19bef5b4ecd16b",
-    "static/manifest.webmanifest": "460a0c7077aa547f731002f15bad0df82bd6035ec6a3a3f4cdab4e70065e1697",
-    "src/app.html": "680588cf94431ec02731f719dccaffbe4b802f9bd8ac48998c8c9155f0c030cc",
+    "static/icons/favicon-32.4c6787c2333a.png": "4c6787c2333a166ed1f6eae10ba4eea31578ebbd33d573fba630896952c58588",
+    "static/icons/apple-touch-180.aff87536bf7c.png": "aff87536bf7cacd6b1014b505830bb46f16d9295398c9bedf01078dffa62abed",
+    "static/icons/icon-192-192.073945cb4e02.png": "073945cb4e02cba9170ebde2b4722fd4721e1e827d8a8066aae26140a4abf3fb",
+    "static/icons/icon-512-512.904ac52376ea.png": "904ac52376eaeb02303f8823cbf0e045adcdf1ed3ec75f77cadbe60659c597b1",
+    "static/icons/maskable-512-512.5c023d038900.png": "5c023d03890083491048c095c2200b59fa3d60a4a950031fe15158bb4a8a839e",
+    "static/manifest.webmanifest": "8bc2b5af4ff652be2b15fd5d5803f40744328b9c63216dcbdf15b2ee111ae020",
+    "src/app.html": "b13f1e24fa6697640a1b698a3eaa0c6f89eb061b2cb73c5e92f452d83042418b",
     "static/robots.txt": "815bcd053b51b42648ea3f8103c8c9f86eb64d2d6eaad8f3b45b673b47f959b7",
-    "static/offline.html": "b1ae949ced3c2de4cc3b90f4250b45775640bba8269b04f0ff98a13011972b9e",
-    "src/lib/generated/branding.ts": "de0653516dfb9d00da3ad0441a077bdf80d6b19386917731c88f4ad677fd5130",
-    "static/social/apercu.jpg": "529fba9d0d5b9d83d90aedf6fca31d73417c9878604686f543145a7b81ba1781"
+    "static/offline.html": "644ce63111a238eda8a5c6224854f6fe7e5a1c959471ef59975d25bee4edf2d8",
+    "static/auth/dressing-room-0397f5db9c38.webp": "0397f5db9c3888b1f1dd67a856f0467619f13e1fc5c8413c0b9fa1ff4bac28bc",
+    "src/lib/generated/branding.ts": "0b585982bb7003481d0cb2d839d7581872f6b8be2c0a8b2b995b4fe079ac4dbb",
+    "static/social/apercu.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02"
   }
 }

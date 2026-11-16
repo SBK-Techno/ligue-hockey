@@ -27,7 +27,7 @@
 
 <div class="mt-4 grid gap-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-line">
 	{#each orderedTeams as team (team.key)}
-		<div class="min-w-0 overflow-hidden border border-line">
+		<div class="min-w-0 overflow-hidden rounded-card border border-line bg-surface">
 			<div
 				class="flex items-center justify-between gap-2 border-t-[6px] px-3 py-2 {team.key ===
 				'black'
@@ -37,14 +37,14 @@
 				<div class="flex min-w-0 items-center gap-2">
 					<span
 						aria-hidden="true"
-						class="h-3 w-3 shrink-0 {team.key === 'black'
+						class="h-3 w-3 shrink-0 rounded-full {team.key === 'black'
 							? 'bg-team-black'
 							: 'border border-line-strong bg-team-white'}"
 					></span>
 					<h3 class="text-base font-semibold">{t(team.labelKey)}</h3>
 				</div>
 				{#if ownTeam === team.key}
-					<span class="stamp border-ochre bg-ochre/10 text-ink">{t('home.team')}</span>
+					<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('home.team')}</span>
 				{/if}
 			</div>
 
@@ -62,7 +62,7 @@
 										{slot.player.fullName}
 									</span>
 									{#if isMe}
-										<span class="stamp border-ochre bg-ochre/10 text-ink">{t('common.you')}</span>
+										<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>
 									{:else if slot.player.kind === 'sub'}
 										<span class="badge shrink-0">{t('games.substitutes')}</span>
 									{:else}

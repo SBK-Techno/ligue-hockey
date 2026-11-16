@@ -1,50 +1,55 @@
 @theme {
-	/* Palette : épinette, neige, glace, bois de bande et rouille de filet. */
-	--color-ink: #143238;
-	--color-paper: #f4efe3;
-	--color-paper-deep: #e7decd;
-	--color-surface: #fbf7ed;
-	/* Texte et icônes posés sur une surface de marque (épinette, rouille). */
-	--color-on-brand: var(--color-surface);
-	/* Trait décoratif : séparateurs, bordures de feuilles. */
-	--color-line: #d7cab4;
+	/* Palette : bleu de denim, papier chaud, rouge de brique. */
+	--color-ink: #12283a;
+	--color-paper: #f6f1e7;
+	--color-paper-deep: #eae1d2;
+	--color-surface: #fffdf8;
+	/* Texte et icônes posés sur une surface de marque. */
+	--color-on-brand: #ffffff;
+	/* Trait décoratif : séparateurs, bordures de cartes. */
+	--color-line: #ddd2bf;
 	/* Trait de commande : bordure de champ, de bouton secondaire, de case. 3:1 minimum. */
-	--color-line-strong: #8a7b64;
-	--color-muted: #5b6a6a;
-	--color-ice: #2b6a8c;
-	--color-ice-deep: #1e4d68;
-	--color-ice-soft: #e0ecef;
-	--color-alert: #b24a33;
-	--color-alert-deep: #8c3625;
-	--color-alert-soft: #f7e4db;
-	--color-ok: #3f7654;
-	--color-ok-soft: #e4efe5;
-	/* Marque de la ligue : le bois clair d'une bande d'aréna. Un seul repère par écran. */
-	--color-ochre: #b47b2a;
+	--color-line-strong: #8c7b63;
+	--color-muted: #5e6a6a;
+	--color-ice: #1f5c99;
+	--color-ice-deep: #173f6b;
+	--color-ice-soft: #e3ecf4;
+	/* Rouge de la ligue : la marque, jamais une alerte de formulaire. */
+	--color-accent: #b4432f;
+	--color-accent-deep: #8c3223;
+	--color-accent-soft: #f6e4dd;
+	--color-alert: #a33a2a;
+	--color-alert-deep: #7f2a1d;
+	--color-alert-soft: #f7e3dd;
+	--color-ok: #3f6b4c;
+	--color-ok-soft: #e5efe6;
 	/* Maillots : deux équipes, noir et blanc, indépendantes de la palette de l'app. */
 	--color-team-black: #101010;
 	--color-team-white: #ffffff;
 
-	/* Deux familles, deux voix : la planche d'aréna et la feuille de match. */
+	/* Deux familles, deux voix : la planche d'aréna et le tableau indicateur. */
 	--font-sans: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
 	--font-display: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
 	--font-mono: 'Spline Sans Mono Variable', 'Spline Sans Mono', ui-monospace, 'SFMono-Regular',
 		Menlo, Consolas, monospace;
 
-	/* Une feuille imprimée n'a pas de coin arrondi. Les champs gardent 2 px. */
-	--radius-card: 0;
-	--radius-sheet: 0;
-	--radius-control: 2px;
-	--shadow-card: none;
-	/* Un panneau se pose : ombre dure et courte, jamais un halo. */
-	--shadow-lift: 0.25rem 0.25rem 0 rgb(20 50 56 / 0.12);
+	/* Cartes et feuilles : coins ronds, ombre chaude et douce. */
+	--radius-card: 1rem;
+	--radius-sheet: 1rem;
+	--radius-control: 0.75rem;
+	--radius-pill: 999px;
+	--shadow-card: 0 1px 2px rgb(18 40 58 / 0.05), 0 14px 34px -24px rgb(18 40 58 / 0.26);
+	/* Un panneau se soulève : ombre diffuse, jamais un décalage dur. */
+	--shadow-lift: 0 2px 4px rgb(18 40 58 / 0.07), 0 22px 48px -28px rgb(18 40 58 / 0.32);
+	--shadow-button: inset 0 1px 0 rgb(255 253 248 / 0.2);
 	--shadow-strip: none;
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-spring: cubic-bezier(0.22, 1.18, 0.36, 1);
 
 	/* Durées : court pour un retour immédiat, moyen pour un panneau. */
-	--duration-fast: 120ms;
-	--duration-base: 180ms;
-	--duration-slow: 260ms;
+	--duration-fast: 140ms;
+	--duration-base: 220ms;
+	--duration-slow: 320ms;
 
 	/* Rôles typographiques. Aucune taille hors de cette échelle. */
 	--text-display: clamp(1.75rem, 1.25rem + 1.7vw, 2.5rem);
@@ -65,7 +70,7 @@
 	/* Une seule source pour la barre mobile : hauteur utile + zone sûre iOS. */
 	--bottom-bar-height: 4.25rem;
 	--bottom-bar-offset: calc(
-		var(--bottom-bar-height) + 1px + env(safe-area-inset-bottom)
+		var(--bottom-bar-height) + max(0.5rem, env(safe-area-inset-bottom))
 	);
 	--anchor-offset: calc(3.75rem + 1px + env(safe-area-inset-top) + 0.75rem);
 	/* Gouttière du numéro de chandail dans une feuille de présence. */

@@ -12,7 +12,7 @@
   "direction": "ltr",
   "categories": ["sports", "productivity"],
   "iconSource": "config/branding/icon.svg",
-  "authImage": "/auth/arena-8bbdd21541f3.webp",
+  "authSource": "config/branding/auth-source.jpg",
   "socialImage": "/social/apercu.jpg",
   "socialSource": "config/branding/social-source-2026.jpg",
   "icons": {
