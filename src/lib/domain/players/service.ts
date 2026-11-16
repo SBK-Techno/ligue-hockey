@@ -5,6 +5,7 @@ import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts'
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { identity } from '#lib/domain/auth/identity.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
+import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
@@ -13,13 +14,12 @@ import {
 	deletePlayerAccount,
 	findPlayer,
 	findPlayerWithEmail,
-	findPlayersByIds,
 	insertPlayer,
 	listActivePlayers,
 	listAllPlayersWithEmail,
 	updatePlayer
 } from './queries.ts';
-import type { PlayerRow } from './schema.ts';
+import { toPublic } from './public.ts';
 import type {
 	AdminUpdatePlayerInput,
 	InvitePlayerInput,
@@ -46,26 +46,9 @@ export type AdminPlayer = SelfProfile & {
 	role: Role;
 };
 
-function fullName(row: Pick<PlayerRow, 'firstName' | 'lastName'>): string {
-	return `${row.firstName} ${row.lastName}`;
-}
-
 function isDuplicateEmail(error: unknown): boolean {
 	const code = (error as { body?: { code?: string } }).body?.code;
 	return code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' || code === 'USER_ALREADY_EXISTS';
-}
-
-function toPublic(row: PlayerRow): PublicPlayer {
-	return {
-		userId: row.userId,
-		firstName: row.firstName,
-		lastName: row.lastName,
-		fullName: fullName(row),
-		position: row.position,
-		jerseyNumber: row.jerseyNumber,
-		isSubstitute: row.isSubstitute,
-		active: row.active
-	};
 }
 
 function requireVisible(actor: Actor, playerId: string) {
@@ -103,21 +86,6 @@ export function isSubstitutePlayer(actor: Actor): boolean {
 export function listRoster(actor: Actor): PublicPlayer[] {
 	requireUser(actor);
 	return listActivePlayers().map(toPublic);
-}
-
-export type PlayerCandidate = PublicPlayer & {
-	age: number;
-};
-
-export function generationCandidates(): PlayerCandidate[] {
-	return listActivePlayers().map((row) => ({
-		...toPublic(row),
-		age: row.age
-	}));
-}
-
-export function playersByIds(playerIds: readonly string[]): PublicPlayer[] {
-	return findPlayersByIds(playerIds).map(toPublic);
 }
 
 export function listAdminPlayers(actor: Actor): AdminPlayer[] {
@@ -233,6 +201,7 @@ export async function invitePlayer(
 		entityId: created.id,
 		metadata: { position: input.position, inviteQueued }
 	});
+	regenerateUpcomingGeneratedGames();
 
 	return { userId: created.id, inviteQueued };
 }
@@ -280,6 +249,7 @@ export async function updateOwnProfile(
 		entityType: 'player',
 		entityId: user.userId
 	});
+	regenerateUpcomingGeneratedGames();
 	return getOwnProfile(actor);
 }
 
@@ -316,6 +286,7 @@ export async function adminUpdatePlayer(
 		entityId: playerId,
 		metadata: { fields: Object.keys(patch) }
 	});
+	regenerateUpcomingGeneratedGames();
 
 	return toAdmin(findPlayerWithEmail(playerId));
 }
@@ -366,4 +337,5 @@ export async function deletePlayer(actor: Actor, playerId: string): Promise<void
 		entityId: playerId,
 		metadata: { role }
 	});
+	regenerateUpcomingGeneratedGames();
 }

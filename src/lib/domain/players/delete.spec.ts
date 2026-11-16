@@ -39,6 +39,11 @@ vi.mock('#lib/domain/audit/service.ts', () => ({
 	recordAudit: vi.fn()
 }));
 
+const regenerateUpcomingGeneratedGames = vi.fn();
+vi.mock('#lib/domain/games/upcoming.ts', () => ({
+	regenerateUpcomingGeneratedGames
+}));
+
 vi.mock('#lib/shared/logging/logger.ts', () => ({
 	logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
@@ -67,6 +72,7 @@ describe('deletePlayer', () => {
 		findPlayer.mockClear();
 		deletePlayerAccount.mockClear();
 		identitySpy.mockClear();
+		regenerateUpcomingGeneratedGames.mockClear();
 	});
 
 	it('uses the transactional account deletion instead of a bare user delete', async () => {
@@ -75,6 +81,7 @@ describe('deletePlayer', () => {
 
 		expect(deletePlayerAccount).toHaveBeenCalledWith('target', expect.any(String));
 		expect(identitySpy).not.toHaveBeenCalled();
+		expect(regenerateUpcomingGeneratedGames).toHaveBeenCalledTimes(1);
 	});
 
 	it('refuses to delete the acting account', async () => {

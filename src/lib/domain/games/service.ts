@@ -9,11 +9,11 @@ import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts'
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { generateTeams, type GeneratorPlayer } from '#lib/domain/teams/generator.ts';
-import { requireCompleteRatings } from '#lib/domain/ratings/service.ts';
-import { rulesForGeneration } from '#lib/domain/rules/service.ts';
-import { generationCandidates, playersByIds } from '#lib/domain/players/service.ts';
+import { requireCompleteRatings } from '#lib/domain/ratings/overall.ts';
+import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
+import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import { cancelAllForGame, claimsForGeneration } from '#lib/domain/subs/service.ts';
+import { cancelAllForGame, claimsForGeneration } from '#lib/domain/subs/generation.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
@@ -469,7 +469,6 @@ export function regenerateIfGenerated(gameId: string): {
 } {
 	const row = findGame(gameId);
 	if (!row?.generatedAt) return { regenerated: false };
-	if (!getSettings()['teams.autoRegenerate']) return { regenerated: false };
 
 	try {
 		regenerateGame(gameId);

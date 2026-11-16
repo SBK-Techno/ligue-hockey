@@ -36,10 +36,6 @@ export function canCreatePoll(actor: Actor, allowPlayerPolls: boolean): boolean 
   return can(actor, 'moderateChat') || allowPlayerPolls;
 }
 
-export function canViewRatings(actor: Actor): boolean {
-  return can(actor, 'editRatings');
-}
-
 export function canManageGame(actor: Actor): boolean {
   return can(actor, 'manageGames');
 }

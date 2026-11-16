@@ -62,7 +62,10 @@ vi.mock('#lib/domain/players/service.ts', () => ({
 		position: 'forward',
 		isSubstitute: false
 	}),
-	findOwnProfile: () => ({ userId: 'me', position: 'forward', isSubstitute: false }),
+	findOwnProfile: () => ({ userId: 'me', position: 'forward', isSubstitute: false })
+}));
+
+vi.mock('#lib/domain/players/candidates.ts', () => ({
 	generationCandidates: () => [],
 	playersByIds: () => []
 }));

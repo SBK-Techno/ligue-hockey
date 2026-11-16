@@ -113,9 +113,15 @@ export function createManualRequest(
 	actor: Actor,
 	gameId: string,
 	position: Position
-): SubRequestView {
+): SubRequestView & RosterActionResult {
 	const game = getGame(actor, gameId);
-	return createSubRequest(actor, game, position);
+	const request = createSubRequest(actor, game, position);
+	const regeneration = regenerateIfGenerated(gameId);
+	return {
+		...request,
+		regenerated: regeneration.regenerated,
+		...(regeneration.warning ? { warning: regeneration.warning } : {})
+	};
 }
 
 export function listSubstitutePool(actor: Actor): SubProfileView[] {

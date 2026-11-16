@@ -10,12 +10,8 @@ import {
 	setGamePresence
 } from '#lib/domain/games/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
-import {
-	findOwnProfile,
-	generationCandidates,
-	getOwnProfile,
-	playersByIds
-} from '#lib/domain/players/service.ts';
+import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
+import { findOwnProfile, getOwnProfile } from '#lib/domain/players/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import {
 	cancelForReturn,

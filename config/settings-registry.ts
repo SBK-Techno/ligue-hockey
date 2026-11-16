@@ -305,14 +305,6 @@ export const SETTINGS = {
     labelKey: 'settings.maxSizeSpread.label',
     descriptionKey: 'settings.maxSizeSpread.description'
   }),
-  'teams.autoRegenerate': defineSetting({
-    group: 'teams',
-    kind: 'boolean',
-    schema: z.boolean(),
-    defaultValue: true,
-    labelKey: 'settings.autoRegenerate.label',
-    descriptionKey: 'settings.autoRegenerate.description'
-  }),
   'chat.maxMessageLength': defineSetting({
     group: 'chat',
     kind: 'number',

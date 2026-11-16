@@ -341,10 +341,10 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 			average(candidate.skill[TEAM_A], candidate.counts[TEAM_A]) -
 				average(candidate.skill[TEAM_B], candidate.counts[TEAM_B])
 		);
-		const ageDiff = Math.abs(
-			average(candidate.age[TEAM_A], candidate.counts[TEAM_A]) -
-				average(candidate.age[TEAM_B], candidate.counts[TEAM_B])
-		);
+		// Le critère demandé est l'âge cumulatif : on compare la somme des âges
+		// des deux équipes, pas leur moyenne, pour que la profondeur du banc
+		// compte aussi.
+		const ageDiff = Math.abs(candidate.age[TEAM_A] - candidate.age[TEAM_B]);
 		const key = [...candidate.assignments]
 			.sort(
 				(a, b) =>

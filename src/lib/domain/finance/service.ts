@@ -61,12 +61,15 @@ function graceDays(): number {
 
 function planFromRow(row: PaymentPlanRow | undefined): PaymentPlan | null {
 	if (!row) return null;
+	const settings = getSettings();
 	return {
 		totalCents: row.totalCents,
 		firstCents: row.firstCents,
 		secondCents: row.secondCents,
-		firstDueDate: row.firstDueDate,
-		secondDueDate: row.secondDueDate
+		// Un plan plus ancien peut ne pas porter les dates de la saison : on
+		// reprend alors les dates prévues dans les réglages.
+		firstDueDate: row.firstDueDate ?? settings['finance.installment1Due'],
+		secondDueDate: row.secondDueDate ?? settings['finance.installment2Due']
 	};
 }
 
