@@ -70,7 +70,21 @@ La protection de `main` refuse les poussées directes et exige le statut `requir
 
 ## Publication d'une version
 
-La version de `package.json` est l'unique source. `npm version patch` crée le commit et l'étiquette, puis `git push --follow-tags` déclenche la publication. Vérifiez ensuite la version GitHub et l'image:
+La version de `package.json` est l'unique source. La montée de version passe par une demande de fusion, puis l'étiquette est créée sur le commit fusionné:
+
+```bash
+npm version patch --no-git-tag-version   # ou minor, major
+git switch -c chore/version-x.y.z
+git commit -am "chore(version): x.y.z"
+git push -u origin chore/version-x.y.z
+# Ouvrir et fusionner la demande de fusion.
+git switch main && git pull --ff-only
+version="$(node -p "require('./package.json').version")"
+git tag -a "v$version" -m "Version $version"
+git push origin "v$version"
+```
+
+Vérifiez ensuite la version GitHub et l'image:
 
 ```bash
 gh release view "v$(node -p "require('./package.json').version")"
