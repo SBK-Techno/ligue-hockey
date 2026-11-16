@@ -16,7 +16,9 @@ import {
 	listRequestableGames,
 	listSubstitutePool
 } from '#lib/domain/roster/service.ts';
+import { getGame } from '#lib/domain/games/service.ts';
 import {
+	cancelOwnRequest,
 	getMySubProfile,
 	saveMySubProfile,
 	setSubstituteFavorite
@@ -123,6 +125,16 @@ export const actions: Actions = {
 				ok: true,
 				message: result.warning ? t(result.warning) : t('subs.requestCancelled')
 			};
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	cancelOwn: async ({ request, locals }) => {
+		try {
+			const parsed = parseForm(subRequestRefSchema, await request.formData());
+			const game = getGame(locals.actor, parsed.gameId);
+			cancelOwnRequest(locals.actor, game, parsed.requestId);
+			return { ok: true, message: t('subs.requestCancelled') };
 		} catch (cause) {
 			return actionError(cause);
 		}

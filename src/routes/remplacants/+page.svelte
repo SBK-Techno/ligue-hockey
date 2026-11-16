@@ -13,6 +13,7 @@
 
 	let { data, form }: PageProps = $props();
 
+	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
 	let showInvite = $state(false);
 	let showRequest = $state(false);
 
@@ -144,6 +145,16 @@
 								{/if}
 								{#if data.canManageRequests}
 									<form method="POST" action="?/cancel" use:progressiveForm>
+										<input type="hidden" name="gameId" value={request.gameId} />
+										<input type="hidden" name="requestId" value={request.id} />
+										<ConfirmSubmit
+											label={t('subs.cancelRequest')}
+											question={t('subs.cancelRequestConfirm')}
+											class="btn-ghost btn-sm"
+										/>
+									</form>
+								{:else if actor && request.requestedByPlayerId === actor.userId}
+									<form method="POST" action="?/cancelOwn" use:progressiveForm>
 										<input type="hidden" name="gameId" value={request.gameId} />
 										<input type="hidden" name="requestId" value={request.id} />
 										<ConfirmSubmit
