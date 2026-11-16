@@ -155,7 +155,7 @@
 					<div
 						bind:this={panel}
 						id="menu-compte"
-						class="absolute right-0 top-[calc(100%+0.5rem)] z-40 max-h-[70dvh] w-72 overflow-y-auto rounded-card border border-line bg-surface p-2 shadow-lift"
+						class="card-flush absolute right-0 top-[calc(100%+0.5rem)] z-40 max-h-[70dvh] w-72 overflow-y-auto p-2"
 					>
 						<div class="border-b border-line px-2.5 pb-2.5 pt-1">
 							<p class="truncate text-body font-semibold">{actor.name}</p>
@@ -182,7 +182,7 @@
 						</nav>
 						<form method="POST" action="/deconnexion" class="mt-1 border-t border-line pt-1">
 							<button
-								class="flex min-h-11 w-full items-center px-2.5 text-left text-body font-medium text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+								class="flex min-h-11 w-full items-center px-2.5 text-left text-body font-medium text-muted transition-colors hover:bg-ice-soft hover:text-ink"
 								type="submit"
 							>
 								{t('nav.logout')}

@@ -14,7 +14,7 @@
 
 {#if !path.startsWith('/admin')}
 	<nav
-		class="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 rounded-card border border-line bg-surface/95 shadow-lift backdrop-blur-md lg:hidden"
+		class="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 rounded-card border border-line bg-surface shadow-lift lg:hidden"
 		aria-label={t('nav.mainMenu')}
 	>
 		<ul class="mx-auto flex max-w-lg items-stretch gap-1 p-1.5">

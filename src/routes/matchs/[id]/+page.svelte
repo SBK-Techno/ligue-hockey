@@ -12,6 +12,7 @@
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import TeamLineup from '#lib/ui/TeamLineup.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
@@ -53,7 +54,6 @@
 		title={t('games.noMatch')}
 		back={{ href: '/matchs', label: t('games.title') }}
 	/>
-	<a class="btn-secondary" href="/matchs">{t('common.back')}</a>
 {:else}
 	<PageHeader
 		title={formatDate(game.gameDate)}
@@ -73,10 +73,11 @@
 		{/snippet}
 	</PageHeader>
 
+	<div class="page-stack">
 	{#if mapUrl}
-		<p class="-mt-3 mb-4">
+		<p>
 			<a
-				class="link inline-flex items-center gap-1 text-body"
+				class="link inline-flex min-h-11 items-center gap-1 text-body"
 				href={mapUrl}
 				target="_blank"
 				rel="noreferrer"
@@ -97,17 +98,16 @@
 	{/if}
 
 	{#if game.notes}
-		<div class="notice mb-4 whitespace-pre-wrap break-words">{game.notes}</div>
+		<div class="notice whitespace-pre-wrap break-words">{game.notes}</div>
 	{/if}
 
 	{#if game.status === 'cancelled'}
-		<div class="alert mb-4">
+		<div class="alert">
 			<p class="font-semibold">{t('games.cancelledNotice')}</p>
 		</div>
 	{/if}
 
-	<section class="card">
-		<h2>{hasProfile ? t('home.availability') : t('availability.title')}</h2>
+	<SectionCard title={hasProfile ? t('home.availability') : t('availability.title')}>
 
 		{#if game.status === 'cancelled'}
 			<p class="mt-2 text-body text-muted">{t('games.cancelledNotice')}</p>
@@ -151,13 +151,10 @@
 					method="POST"
 					action="?/availability"
 					use:progressiveForm
-					class="grid w-full grid-cols-2 gap-2 sm:inline-flex sm:w-auto sm:rounded-control sm:border sm:border-line-strong sm:bg-paper sm:p-1"
+					class="grid w-full grid-cols-2 gap-2 sm:inline-flex sm:w-auto"
 				>
 					<button
-						class="min-h-11 rounded-control border px-4 text-body font-semibold transition-colors sm:border-0 {availability.own ===
-						'present'
-							? 'border-ink bg-ink text-paper'
-							: 'border-line-strong bg-surface text-ink hover:bg-paper sm:bg-transparent sm:text-muted sm:hover:bg-ink/5 sm:hover:text-ink'}"
+						class="chip justify-center"
 						name="status"
 						value="present"
 						type="submit"
@@ -166,10 +163,7 @@
 						{t('availability.markPresent')}
 					</button>
 					<button
-						class="min-h-11 rounded-control border px-4 text-body font-semibold transition-colors sm:border-0 {availability.own ===
-						'absent'
-							? 'border-ink bg-ink text-paper'
-							: 'border-line-strong bg-surface text-ink hover:bg-paper sm:bg-transparent sm:text-muted sm:hover:bg-ink/5 sm:hover:text-ink'}"
+						class="chip justify-center"
 						name="status"
 						value="absent"
 						type="submit"
@@ -184,42 +178,29 @@
 			{/if}
 		{/if}
 
-	</section>
+	</SectionCard>
 
 	{#if availability && availability.rows.length + availability.pending.length > 0}
-		<section class="card mt-4">
-			<h2>{t('home.attendance')}</h2>
-			<div class="mt-3">
-				<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
-			</div>
-		</section>
+		<SectionCard title={t('home.attendance')}>
+			<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
+		</SectionCard>
 	{/if}
 
 	{#if data.requests.length > 0 || isManager}
-		<section class="card mt-4">
-			<div class="section-title">
-				<h2>{t('subs.title')}</h2>
+		<SectionCard title={t('subs.title')} flush>
+			<div class="section-row flex flex-wrap items-center justify-between gap-2 pb-0">
+				<p class="hint">{t('subs.rules')}</p>
 				{#if openRequests.length > 0}
 					<span class="micro-label">{t('subs.openPositions')}</span>
 				{/if}
 			</div>
-			<p class="hint mt-1">{t('subs.rules')}</p>
 
 			{#if data.requests.length === 0}
-				<p class="mt-3 text-body text-muted">{t('subs.noneOpen')}</p>
+				<p class="section-row text-body text-muted">{t('subs.noneOpen')}</p>
 			{:else}
-				<ul role="list" class="mt-3 space-y-2">
+				<ul role="list" class="mt-2 divide-y divide-line border-t border-line">
 					{#each openRequests as request (request.id)}
-						<li
-							class="relative rounded-control border border-line bg-paper px-3 py-3 pl-4"
-						>
-							<span
-								aria-hidden="true"
-								class="absolute inset-y-2 left-0 w-0.5 rounded-full {request.status ===
-								'open'
-									? 'bg-ice'
-									: 'bg-ok'}"
-							></span>
+						<li class="section-row">
 							<div class="flex flex-wrap items-center justify-between gap-3">
 								<div class="min-w-0">
 									<p class="text-body font-semibold">
@@ -232,7 +213,7 @@
 									</p>
 								</div>
 								<div class="flex flex-wrap items-center gap-2">
-									<span class="badge {request.status === 'filled' ? 'badge-ok' : 'badge-ice'}">
+									<span class={request.status === 'filled' ? 'badge-ok' : 'badge-ice'}>
 										{request.status === 'filled' ? t('subs.status.filled') : t('subs.placeOpen')}
 									</span>
 									{#if request.status === 'open' && data.isSubstitute}
@@ -263,9 +244,9 @@
 					{/each}
 				</ul>
 				{#if filledRequests.length > 0}
-					<details class="group mt-3 border-t border-line/70 pt-1">
+					<details class="group border-t border-line">
 						<summary
-							class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body marker:content-none"
+							class="link section-row flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body marker:content-none"
 						>
 							<svg
 								viewBox="0 0 24 24"
@@ -279,9 +260,9 @@
 							</svg>
 							{t('subs.filledHistory', { count: filledRequests.length })}
 						</summary>
-						<ul role="list" class="mt-1 space-y-2">
+						<ul role="list" class="divide-y divide-line border-t border-line">
 							{#each filledRequests as request (request.id)}
-								<li class="rounded-control border border-line bg-paper px-3 py-2.5">
+								<li class="section-row">
 									<div class="flex flex-wrap items-center justify-between gap-2">
 										<div class="min-w-0">
 											<p class="text-body font-semibold">
@@ -319,7 +300,7 @@
 					method="POST"
 					action="?/requestSub"
 					use:progressiveForm
-					class="mt-5 flex flex-wrap items-end gap-2 border-t border-line/80 pt-4"
+					class="section-body flex flex-wrap items-end gap-2 border-t border-line"
 				>
 					<div class="min-w-40">
 						<label class="label" for="position">{t('subs.choosePosition')}</label>
@@ -332,32 +313,27 @@
 					<button class="btn-secondary" type="submit">{t('subs.add')}</button>
 				</form>
 			{/if}
-		</section>
+		</SectionCard>
 	{/if}
 
 	{#if game.generated}
-		<section class="mt-6">
-			<div class="flex flex-wrap items-baseline justify-between gap-3">
-				<div>
-					<h2>{t('games.roster')}</h2>
-					{#if game.generation}
-						<p class="mt-1 text-meta text-muted">
-							{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
-						</p>
-					{/if}
-				</div>
+		<SectionCard title={t('games.roster')} flush>
+			{#snippet actions()}
 				<span class="badge-ok">{t('games.generated')}</span>
+			{/snippet}
+			<div class="section-body">
+				{#if game.generation}
+					<p class="text-meta text-muted">
+						{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
+					</p>
+				{/if}
+				<TeamLineup slots={game.slots} ownTeam={ownTeam} actorId={actor?.userId ?? null} />
 			</div>
-
-			<TeamLineup slots={game.slots} ownTeam={ownTeam} actorId={actor?.userId ?? null} />
-		</section>
+		</SectionCard>
 
 		{#if game.generation && data.canManage}
-			<section class="card mt-6">
-				<div class="section-title">
-					<h2>{t('team.balance')}</h2>
-				</div>
-				<p class="mt-2 text-body text-muted">
+			<SectionCard title={t('team.balance')}>
+				<p class="text-body text-muted">
 					{t('games.teamBalance', {
 						skill: game.generation.skillDiffLabel ?? '',
 						age: game.generation.ageDiffLabel ?? ''
@@ -417,12 +393,11 @@
 						<button class="btn-secondary btn-sm" type="submit">{t('games.regenerate')}</button>
 					</form>
 				{/if}
-			</section>
+			</SectionCard>
 		{/if}
 	{:else}
-		<section class="card mt-6">
-			<h2>{t('games.notGenerated')}</h2>
-			<p class="measure mt-2 text-body text-muted">
+		<SectionCard title={t('games.notGenerated')}>
+			<p class="measure text-body text-muted">
 				{data.canManage ? t('games.lineupSoonAdmin') : t('games.lineupSoon')}
 			</p>
 			{#if data.canManage && data.editable}
@@ -430,6 +405,7 @@
 					<button class="btn-primary" type="submit">{t('games.generate')}</button>
 				</form>
 			{/if}
-		</section>
+		</SectionCard>
 	{/if}
+	</div>
 {/if}

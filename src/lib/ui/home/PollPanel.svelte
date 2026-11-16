@@ -14,7 +14,5 @@
 </script>
 
 <SectionCard title={t('chat.pollTag')}>
-	<div class="px-4 py-3">
-		<PollOptions {messageId} {poll} />
-	</div>
+	<PollOptions {messageId} {poll} />
 </SectionCard>

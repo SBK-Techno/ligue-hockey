@@ -23,6 +23,7 @@ const substitute: Actor = {
 	name: 'Remplaçant',
 	role: 'player'
 };
+const other2: Actor = { kind: 'user', userId: 'other2', name: 'Autre', role: 'player' };
 
 function insertUser(id: string, role: string) {
 	sqlite
@@ -193,12 +194,13 @@ beforeEach(() => {
 describe('chargement de l’accueil', () => {
 	it('ne donne aucune donnée de gestion, d’évaluation ou de solde étranger à un joueur', async () => {
 		const data = (await loadFor(player)) as {
-			board: { manager: boolean; panels: { kind: string }[] };
+			board: { manager: boolean; panels: { kind: string }[]; actions: { kind: string }[] };
 			managerSummary: unknown;
 			evaluationGame: unknown;
 			balance: { playerId: string; totalCents: number };
 			claimable: unknown[];
 			openPoll: { unvoted: boolean } | null;
+			game: { generation: unknown } | null;
 		};
 
 		expect(data.board.manager).toBe(false);
@@ -208,8 +210,8 @@ describe('chargement de l’accueil', () => {
 		expect(data.balance).toMatchObject({ playerId: 'player', totalCents: 10000 });
 		expect(data.claimable).toEqual([]);
 		expect(data.openPoll?.unvoted).toBe(true);
-		expect(data).not.toHaveProperty('ratings');
-		expect(data).not.toHaveProperty('balances');
+		expect(data.board.actions.map((action) => action.kind)).not.toContain('evaluations');
+		expect(data.game?.generation).toBeNull();
 	});
 
 	it('donne le bandeau de gestion et les compteurs au gestionnaire', async () => {
@@ -246,6 +248,19 @@ describe('chargement de l’accueil', () => {
 });
 
 describe('actions de l’accueil', () => {
+	it('enregistre une présence', async () => {
+		const result = await actions.availability!(
+			actionEvent(other2, { gameId: 'future', status: 'present' })
+		);
+
+		expect(result).toMatchObject({ ok: true });
+		expect(
+			sqlite
+				.prepare('select status from game_availability where game_id = ? and player_id = ?')
+				.get('future', 'other2')
+		).toEqual({ status: 'present' });
+	});
+
 	it('enregistre un vote de sondage', async () => {
 		const result = await actions.vote!(
 			actionEvent(player, { messageId: 'poll-msg', optionId: 'opt-yes' })
@@ -286,5 +301,30 @@ describe('actions de l’accueil', () => {
 		expect(
 			sqlite.prepare('select status from sub_requests where id = ?').get('req-defense')
 		).toEqual({ status: 'open' });
+	});
+
+	it('annule sa propre demande, mais pas celle d’un autre', async () => {
+		sqlite
+			.prepare(
+				`insert into sub_requests (id, game_id, requested_by_player_id, created_by_user_id, position, reason, status, created_at, filled_by_player_id, filled_at, cancelled_at)
+				 values ('req-own', 'future', 'player', null, 'forward', 'absence', 'open', 0, null, null, null)`
+			)
+			.run();
+
+		const own = await actions.cancelRequest!(
+			actionEvent(player, { gameId: 'future', requestId: 'req-own' })
+		);
+		expect(own).toMatchObject({ ok: true });
+		expect(
+			sqlite.prepare('select status from sub_requests where id = ?').get('req-own')
+		).toEqual({ status: 'cancelled' });
+
+		const foreign = await actions.cancelRequest!(
+			actionEvent(player, { gameId: 'future', requestId: 'req-defense' })
+		);
+		expect(foreign).toMatchObject({
+			status: 403,
+			data: { ok: false, key: 'subs.notRequester' }
+		});
 	});
 });

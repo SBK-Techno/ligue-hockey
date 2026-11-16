@@ -35,7 +35,14 @@
 		return [
 			date,
 			formatCount(day.gameCount, 'home.calendarGame.one', 'home.calendarGame.many'),
-			day.hasCancelled ? t('home.calendarCancelledAmong') : null
+			day.cancelledCount > 0
+				? t(
+						day.cancelledCount === 1
+							? 'home.calendarCancelledAmong'
+							: 'home.calendarCancelledAmong.many',
+						{ count: day.cancelledCount }
+					)
+				: null
 		]
 			.filter(Boolean)
 			.join(' · ');
@@ -66,9 +73,6 @@
 		class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line px-4 py-2.5"
 	>
 		<h2 id={titleId}>{monthLabel}</h2>
-		<a class="link -my-2 inline-flex min-h-11 items-center text-body" href="/matchs">
-			{t('home.openSchedule')}
-		</a>
 	</header>
 
 	<div class="p-2 sm:p-3">

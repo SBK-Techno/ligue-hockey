@@ -18,7 +18,7 @@
 		size === 'lg' ? 'h-12' : size === 'sm' ? 'h-8' : 'h-10'
 	);
 	const nameSize = $derived(
-		size === 'lg' ? 'text-xl' : size === 'sm' ? 'text-body' : 'text-base'
+		size === 'lg' ? 'text-section' : size === 'sm' ? 'text-body' : 'text-subhead'
 	);
 </script>
 

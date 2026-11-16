@@ -68,7 +68,7 @@
 		</summary>
 		<ul role="list" class="mt-1 grid gap-x-4 pb-1 text-body sm:grid-cols-2">
 			{#each present as row (row.playerId)}
-				<li class="flex min-h-9 items-center gap-2 border-b border-line/70 py-1">
+				<li class="flex min-h-9 items-center gap-2 border-b border-line py-1">
 					<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ice"></span>
 					<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
 						{row.fullName}

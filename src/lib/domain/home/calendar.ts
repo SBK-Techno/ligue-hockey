@@ -20,6 +20,7 @@ export type CalendarDay = {
 	isPast: boolean;
 	games: CalendarGame[];
 	gameCount: number;
+	cancelledCount: number;
 	hasCancelled: boolean;
 };
 
@@ -92,6 +93,7 @@ export function buildMonthCalendar(input: {
 			const inMonth = date.startsWith(`${month}-`);
 			const games = inMonth ? (gamesByDate.get(date) ?? []) : [];
 			if (inMonth) gameCount += games.length;
+			const cancelledCount = games.filter((game) => game.status === 'cancelled').length;
 			week.push({
 				date,
 				dayOfMonth: Number(date.slice(8, 10)),
@@ -100,7 +102,8 @@ export function buildMonthCalendar(input: {
 				isPast: date < input.today,
 				games,
 				gameCount: games.length,
-				hasCancelled: games.some((game) => game.status === 'cancelled')
+				cancelledCount,
+				hasCancelled: cancelledCount > 0
 			});
 		}
 		weeks.push(week);

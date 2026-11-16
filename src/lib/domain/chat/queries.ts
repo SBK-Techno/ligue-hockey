@@ -109,14 +109,25 @@ export function castVote(
 	optionId: string,
 	userId: string,
 	createdAt: number
-): void {
-	db.insert(pollVotes)
-		.values({ messageId, optionId, userId, createdAt })
-		.onConflictDoUpdate({
-			target: [pollVotes.messageId, pollVotes.userId],
-			set: { optionId, createdAt }
-		})
-		.run();
+): boolean {
+	return db.transaction((tx) => {
+		const poll = tx
+			.select({ closesAt: polls.closesAt })
+			.from(polls)
+			.where(eq(polls.messageId, messageId))
+			.get();
+		if (!poll || (poll.closesAt !== null && poll.closesAt <= createdAt)) {
+			return false;
+		}
+		tx.insert(pollVotes)
+			.values({ messageId, optionId, userId, createdAt })
+			.onConflictDoUpdate({
+				target: [pollVotes.messageId, pollVotes.userId],
+				set: { optionId, createdAt }
+			})
+			.run();
+		return true;
+	});
 }
 
 export function closePoll(messageId: string, closesAt: number): void {

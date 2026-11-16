@@ -48,7 +48,7 @@
 		/>
 		<button
 			type="button"
-			class="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-control text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+			class="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-control text-muted transition-colors hover:bg-ice-soft hover:text-ink"
 			onclick={() => (visible = !visible)}
 			aria-label={visible ? t('common.hidePassword') : t('common.showPassword')}
 		>

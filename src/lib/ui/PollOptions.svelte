@@ -17,18 +17,25 @@
 		showQuestion?: boolean;
 		class?: string;
 	} = $props();
+
+	const questionId = $props.id();
 </script>
 
 <div class={className}>
 	{#if showQuestion}
-		<p class="break-words font-semibold">{poll.question}</p>
+		<p id={questionId} class="break-words font-semibold">{poll.question}</p>
 	{/if}
 
 	{#if poll.closed}
 		<p class="badge mt-2">{t('chat.pollClosed')}</p>
 	{/if}
 
-	<ul role="list" class="mt-3 space-y-2">
+	<div
+		role="group"
+		aria-labelledby={showQuestion ? questionId : undefined}
+		aria-label={showQuestion ? undefined : t('chat.pollTag')}
+	>
+		<ul role="list" class="mt-3 space-y-2">
 		{#each poll.options as option (option.id)}
 			<li>
 				<form method="POST" {action} use:progressiveForm class="flex items-center gap-2">
@@ -51,4 +58,5 @@
 			</li>
 		{/each}
 	</ul>
+	</div>
 </div>

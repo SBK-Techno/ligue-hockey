@@ -332,6 +332,37 @@ const cases: Case[] = [
 		actions: [],
 		panels: ['calendar', 'install'],
 		spans: [12, 12]
+	},
+	{
+		name: 'le jour du match, l’équipe, la présence et le sondage se partagent la grille',
+		input: {
+			gameToday: true,
+			teamsGenerated: true,
+			ownSlot: true,
+			otherUpcomingGames: 2,
+			openPoll: { unvoted: false }
+		},
+		mode: 'game-day',
+		hero: 'today',
+		manager: false,
+		actions: [],
+		panels: ['team', 'upcoming', 'attendance', 'poll', 'install'],
+		spans: [5, 7, 5, 7, 12]
+	},
+	{
+		name: 'un remplaçant dans un alignement publié garde ses places dans son panneau',
+		input: {
+			isSubstitute: true,
+			teamsGenerated: true,
+			ownSlot: true,
+			claimableCount: 2
+		},
+		mode: 'lineup',
+		hero: 'upcoming',
+		manager: false,
+		actions: ['claim'],
+		panels: ['team', 'actions', 'calendar', 'attendance', 'substitutes', 'install'],
+		spans: [5, 7, 7, 5, 12, 12]
 	}
 ];
 

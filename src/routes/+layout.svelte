@@ -125,7 +125,7 @@
 			: 'pb-2'}"
 	>
 		<div
-			class="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 pt-5 text-caption font-medium text-muted"
+			class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-caption font-medium text-muted"
 		>
 			<p>{branding.name}</p>
 			<p>{t('brand.presentedBy', { name: branding.organisation })}</p>

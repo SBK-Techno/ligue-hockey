@@ -11,13 +11,11 @@
 		game,
 		ownSlot,
 		ownBench,
-		isSubstitute,
 		actorId
 	}: {
 		game: GameView;
 		ownSlot: GameSlotView | null;
 		ownBench: GameBenchView | null;
-		isSubstitute: boolean;
 		actorId: string;
 	} = $props();
 
@@ -35,19 +33,10 @@
 			violation.names.find((name) => name !== ownSlot.player?.fullName) ?? violation.names[1];
 		return t('home.teamRuleNote', { rule: t(mode.shortLabelKey), name: otherName });
 	});
-	const href = $derived(isSubstitute && !ownSlot ? '/remplacants' : `/matchs/${game.id}`);
-	const linkLabel = $derived(
-		ownSlot
-			? t('home.viewSheet')
-			: isSubstitute
-				? t('home.substituteCta')
-				: t('home.viewLineup')
-	);
 </script>
 
-<SectionCard title={t('home.team')} {href} {linkLabel}>
-	<div class="p-4">
-		{#if ownSlot && team && position}
+<SectionCard title={t('home.team')}>
+	{#if ownSlot && team && position}
 			<div class="flex items-start gap-3">
 				<span class="jersey min-h-10 min-w-10 text-base">{jersey ?? '-'}</span>
 				<div class="min-w-0">
@@ -71,5 +60,4 @@
 			<p class="text-body font-semibold">{t('home.teamNoSlot')}</p>
 			<p class="hint">{t('home.teamNoSlotHelp')}</p>
 		{/if}
-	</div>
 </SectionCard>

@@ -3,6 +3,7 @@
 	import type { SubRequestWithGame } from '#lib/domain/roster/service.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import { filledRequestLabel } from '#lib/ui/filled-request.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
@@ -15,12 +16,12 @@
 	} = $props();
 </script>
 
-<SectionCard title={t('subs.title')}>
+<SectionCard title={t('subs.title')} flush>
 	{#if requests.length > 0}
-		<p class="px-4 pt-3 text-meta text-muted">{t('home.substitutesHelp')}</p>
+		<p class="section-row pb-0 text-meta text-muted">{t('home.substitutesHelp')}</p>
 		<ul role="list" class="mt-2 divide-y divide-line">
 			{#each requests as request (request.id)}
-				<li class="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+				<li class="section-row flex flex-wrap items-start justify-between gap-3">
 					<div class="min-w-0">
 						<p class="text-body font-semibold">
 							{t(positionDefinition(request.position).labelKey)}
@@ -44,7 +45,7 @@
 	{/if}
 
 	{#if ownRequest}
-		<div class="px-4 py-3 {requests.length === 0 ? '' : 'border-t border-line'}">
+		<div class="section-row {requests.length === 0 ? '' : 'border-t border-line'}">
 			<p class="text-body font-semibold">
 				{ownRequest.status === 'open'
 					? t('home.substitutesOwnRequest')
@@ -57,6 +58,18 @@
 				<p class="hint">{filledRequestLabel(ownRequest)}</p>
 			{/if}
 			<a class="action-link text-body" href="/remplacants">{t('home.actionOwnRequestLink')}</a>
+			{#if ownRequest.status === 'open'}
+				<form method="POST" action="?/cancelRequest" use:progressiveForm class="mt-2">
+					<input type="hidden" name="gameId" value={ownRequest.gameId} />
+					<input type="hidden" name="requestId" value={ownRequest.id} />
+					<ConfirmSubmit
+						label={t('subs.cancelRequest')}
+						question={t('subs.cancelRequestConfirm')}
+						confirmLabel={t('subs.cancelRequest')}
+						class="btn-danger btn-sm"
+					/>
+				</form>
+			{/if}
 		</div>
 	{/if}
 </SectionCard>

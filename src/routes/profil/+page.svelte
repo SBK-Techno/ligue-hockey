@@ -187,7 +187,7 @@
 	]);
 </script>
 
-<PageHeader title={t('profile.title')} meta={account?.name} />
+<PageHeader title={t('profile.title')} />
 
 {#if !account}
 	<div class="card">
@@ -204,10 +204,10 @@
 						{initials}
 					</span>
 					<div class="min-w-0">
-						<p class="break-words font-display text-section font-semibold leading-tight">
+						<p class="break-words text-section font-semibold leading-tight">
 							{account.name}
 						</p>
-						<p class="mt-1 break-all text-body text-paper/65">{account.email}</p>
+						<p class="mt-1 break-all text-body text-paper/70">{account.email}</p>
 					</div>
 				</div>
 
@@ -248,7 +248,7 @@
 
 			<nav
 				aria-label={t('profile.sections')}
-				class="grid grid-cols-2 gap-1 border-y border-line bg-paper/95 py-1.5 lg:grid-cols-1 lg:border-0 lg:bg-transparent lg:py-0"
+				class="grid grid-cols-2 gap-1 border-y border-line bg-paper py-1.5 lg:grid-cols-1 lg:border-0 lg:bg-transparent lg:py-0"
 			>
 				{#each sections as item (item.id)}
 					{@const current = currentHash === `#${item.id}`}
@@ -256,7 +256,7 @@
 						href="#{item.id}"
 						class="flex min-h-11 items-center border-l-[3px] px-2.5 text-body font-medium no-underline transition-colors {current
 							? 'border-ice bg-ice-soft text-ice-deep'
-							: 'border-transparent text-muted hover:bg-ink/5 hover:text-ink'}"
+							: 'border-transparent text-muted hover:bg-ice-soft hover:text-ink'}"
 						aria-current={current ? 'location' : undefined}
 					>
 						{item.label}

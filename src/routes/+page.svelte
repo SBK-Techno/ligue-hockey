@@ -3,6 +3,7 @@
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import RecordRow from '#lib/ui/RecordRow.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import ActionsPanel from '#lib/ui/home/ActionsPanel.svelte';
@@ -24,27 +25,26 @@
 <FormFeedback {form} class="mb-4" />
 
 {#if data.board}
-	<header class="mb-4">
-		<p class="micro-label">{data.seasonLabel}</p>
-		<h1 class="mt-1">{t('home.title')}</h1>
-		<p class="mt-1 text-body text-muted">
-			{t('home.greeting', { name: actor?.name.split(' ')[0] ?? '' })}
-		</p>
-	</header>
-
-	<HomeHero
-		variant={data.board.hero}
-		game={data.game}
-		availability={data.availability}
-		ownSlot={data.ownSlot}
-		ownBench={data.ownBench}
-		ownRequest={data.ownRequest}
-		isSubstitute={data.isSubstitute}
-		isManager={data.isManager}
-		hasGame={data.game !== null}
+	<PageHeader
+		eyebrow={data.seasonLabel}
+		title={t('home.title')}
+		meta={t('home.greeting', { name: actor?.name.split(' ')[0] ?? '' })}
 	/>
 
-	<div class="board-grid mt-4">
+	<div class="page-stack">
+		<HomeHero
+			variant={data.board.hero}
+			game={data.game}
+			availability={data.availability}
+			ownSlot={data.ownSlot}
+			ownBench={data.ownBench}
+			ownRequest={data.ownRequest}
+			isSubstitute={data.isSubstitute}
+			isManager={data.isManager}
+			hasGame={data.game !== null}
+		/>
+
+		<div class="board-grid">
 		{#each data.board.panels as panel, index (panel.kind)}
 			<div class="reveal" style="--span: {panel.span}; --i: {index}">
 				{#if panel.kind === 'manager'}
@@ -55,6 +55,8 @@
 							gameDate={data.game.gameDate}
 							startTime={data.game.startTime}
 							location={data.game.location}
+							showGameMeta={!data.hasPlayerProfile}
+							showAttendance={!data.hasPlayerProfile}
 						/>
 					{/if}
 				{:else if panel.kind === 'actions'}
@@ -72,7 +74,6 @@
 							game={data.game}
 							ownSlot={data.ownSlot}
 							ownBench={data.ownBench}
-							isSubstitute={data.isSubstitute}
 							actorId={actor?.userId ?? ''}
 						/>
 					{/if}
@@ -85,6 +86,7 @@
 						title={t('home.upcoming')}
 						href="/matchs"
 						linkLabel={t('home.allGames')}
+						flush
 					>
 						<ul role="list" class="divide-y divide-line">
 							{#each data.nextGames as next (next.id)}
@@ -103,14 +105,8 @@
 					</SectionCard>
 				{:else if panel.kind === 'attendance'}
 					{#if data.availability && data.game}
-						<SectionCard
-							title={t('home.attendance')}
-							href="/matchs/{data.game.id}"
-							linkLabel={t('home.viewGame')}
-						>
-							<div class="px-4 py-3">
-								<HomeAttendance availability={data.availability} />
-							</div>
+						<SectionCard title={t('home.attendance')}>
+							<HomeAttendance availability={data.availability} />
 						</SectionCard>
 					{/if}
 				{:else if panel.kind === 'poll'}
@@ -133,5 +129,6 @@
 				{/if}
 			</div>
 		{/each}
+		</div>
 	</div>
 {/if}

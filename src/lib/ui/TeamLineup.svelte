@@ -25,9 +25,9 @@
 	}
 </script>
 
-<div class="mt-4 grid gap-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-line">
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
 	{#each orderedTeams as team (team.key)}
-		<div class="min-w-0 overflow-hidden rounded-card border border-line bg-surface">
+		<div class="card-flush min-w-0 overflow-hidden">
 			<div
 				class="flex items-center justify-between gap-2 border-t-[6px] px-3 py-2 {team.key ===
 				'black'
@@ -55,7 +55,7 @@
 					<ul role="list">
 						{#each rows as slot (slot.slotIndex)}
 							{@const isMe = actorId !== null && slot.player?.playerId === actorId}
-							<li class="ledger-row border-b border-line/70 last:border-b-0" data-you={isMe}>
+							<li class="ledger-row border-b border-line last:border-b-0" data-you={isMe}>
 								<span class="jersey">{slot.player?.jerseyNumber ?? '-'}</span>
 								{#if slot.player}
 									<span class="min-w-0 truncate text-body {isMe ? 'font-semibold' : ''}">

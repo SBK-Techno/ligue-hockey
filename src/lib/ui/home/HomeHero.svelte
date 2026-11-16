@@ -68,6 +68,75 @@
 	{/if}
 {/snippet}
 
+{#snippet presenceForm()}
+	{#if availability}
+		<form
+			method="POST"
+			action="?/availability"
+			use:progressiveForm
+			class="mt-2 grid grid-cols-2 gap-2"
+		>
+			<input type="hidden" name="gameId" value={gameId} />
+			<button
+				class="chip chip-on-ink justify-center"
+				name="status"
+				value="present"
+				type="submit"
+				aria-pressed={present}
+			>
+				{t('availability.markPresent')}
+			</button>
+			<button
+				class="chip chip-on-ink justify-center"
+				name="status"
+				value="absent"
+				type="submit"
+				aria-pressed={absent}
+			>
+				{t('availability.markAbsent')}
+			</button>
+		</form>
+		<p class="mt-2 text-meta text-paper/60">
+			{t('home.deadline', { date: availability.closesAtLabel })}
+		</p>
+	{/if}
+{/snippet}
+
+{#snippet cancelRequestForm()}
+	{#if ownRequest}
+		<form method="POST" action="?/cancelRequest" use:progressiveForm class="mt-2">
+			<input type="hidden" name="gameId" value={gameId} />
+			<input type="hidden" name="requestId" value={ownRequest.id} />
+			<ConfirmSubmit
+				label={t('subs.cancelRequest')}
+				question={t('subs.cancelRequestConfirm')}
+				confirmLabel={t('subs.cancelRequest')}
+				class="btn border border-paper/40 text-paper hover:bg-paper/15"
+			/>
+		</form>
+	{/if}
+{/snippet}
+
+{#snippet absentState()}
+	{#if ownRequest?.status === 'open'}
+		<p class="mt-2 text-body leading-snug text-paper/80">{t('subs.ownRequestOpen')}</p>
+		{@render cancelRequestForm()}
+		<a
+			class="mt-2 inline-flex min-h-11 items-center text-body font-semibold text-paper underline decoration-paper/40 underline-offset-4"
+			href="/remplacants"
+		>
+			{t('home.actionOwnRequestLink')}
+		</a>
+	{:else if ownRequest?.status === 'filled'}
+		<p class="mt-2 text-body leading-snug text-paper/80">
+			{filledRequestLabel(ownRequest)}
+		</p>
+	{:else}
+		<p class="mt-2 text-body leading-snug text-paper/70">{t('home.absentNoRequest')}</p>
+	{/if}
+	{@render withdrawForm()}
+{/snippet}
+
 {#if variant === 'profile'}
 	<section class="sheet p-5 sm:p-6">
 		<h2>{isManager ? t('home.noProfileAdmin') : t('home.noProfileTitle')}</h2>
@@ -128,7 +197,7 @@
 				</div>
 
 				<p
-					class="mt-3 font-display text-[length:var(--text-figure)] font-semibold leading-tight text-paper"
+					class="mt-3 text-[length:var(--text-figure)] font-semibold leading-tight text-paper"
 				>
 					{formatWeekday(game.gameDate)}
 					{formatDayMonth(game.gameDate)}
@@ -162,22 +231,7 @@
 		<div class="px-5 py-4 sm:px-6">
 			{#if variant === 'absent'}
 				<span class="stamp border-alert bg-alert-soft text-alert">{t('availability.absent')}</span>
-				{#if ownRequest?.status === 'open'}
-					<p class="mt-2 text-body leading-snug text-paper/80">{t('subs.ownRequestOpen')}</p>
-					<a
-						class="mt-2 inline-flex min-h-11 items-center text-body font-semibold text-paper underline decoration-paper/40 underline-offset-4"
-						href="/remplacants"
-					>
-						{t('home.actionOwnRequestLink')}
-					</a>
-				{:else if ownRequest?.status === 'filled'}
-					<p class="mt-2 text-body leading-snug text-paper/80">
-						{filledRequestLabel(ownRequest)}
-					</p>
-				{:else}
-					<p class="mt-2 text-body leading-snug text-paper/70">{t('home.absentNoRequest')}</p>
-				{/if}
-				{@render withdrawForm()}
+				{@render absentState()}
 			{:else if variant === 'cancelled'}
 				<p class="text-body leading-relaxed text-paper/80">{t('games.cancelledNotice')}</p>
 			{:else if ownSlot}
@@ -186,56 +240,20 @@
 				<p class="text-body leading-relaxed text-paper/75">{t('availability.substituteHint')}</p>
 			{:else if unanswered && availability}
 				<p class="text-body font-semibold text-paper">{t('home.availability')}</p>
-				<form
-					method="POST"
-					action="?/availability"
-					use:progressiveForm
-					class="mt-2 grid grid-cols-2 gap-2"
-				>
-					<input type="hidden" name="gameId" value={gameId} />
-					<button
-						class="min-h-11 rounded-control border px-3 py-2 text-body font-semibold transition-colors {present
-							? 'border-paper bg-paper text-ink'
-							: 'border-paper/40 text-paper hover:bg-paper/15'}"
-						name="status"
-						value="present"
-						type="submit"
-						aria-pressed={present}
-					>
-						{t('availability.markPresent')}
-					</button>
-					<button
-						class="min-h-11 rounded-control border px-3 py-2 text-body font-semibold transition-colors {absent
-							? 'border-paper bg-paper text-ink'
-							: 'border-paper/40 text-paper hover:bg-paper/15'}"
-						name="status"
-						value="absent"
-						type="submit"
-						aria-pressed={absent}
-					>
-						{t('availability.markAbsent')}
-					</button>
-				</form>
-				<p class="mt-2 text-meta text-paper/60">
-					{t('home.deadline', { date: availability.closesAtLabel })}
-				</p>
+				{@render presenceForm()}
 			{:else if present}
 				<p class="font-mono text-meta text-paper/85">{t('home.replyPresent')}</p>
-				{#if ownRequest?.status === 'open'}
-					<p class="mt-1 text-body text-paper/75">{t('subs.ownRequestOpen')}</p>
+				{#if availability?.canRespond}
+					{@render presenceForm()}
+				{:else}
+					{#if availability?.canWithdraw}
+						<p class="mt-1 text-meta text-paper/60">{t('availability.lockedHelp')}</p>
+					{/if}
+					{@render withdrawForm()}
 				{/if}
-				{#if availability?.canWithdraw}
-					<p class="mt-1 text-meta text-paper/60">{t('availability.lockedHelp')}</p>
-				{/if}
-				{@render withdrawForm()}
 			{:else if absent}
 				<p class="font-mono text-meta text-paper/85">{t('home.replyAbsent')}</p>
-				{#if ownRequest?.status === 'open'}
-					<p class="mt-1 text-body text-paper/75">{t('subs.ownRequestOpen')}</p>
-				{:else if ownRequest?.status === 'filled'}
-					<p class="mt-1 text-body text-paper/75">{filledRequestLabel(ownRequest)}</p>
-				{/if}
-				{@render withdrawForm()}
+				{@render absentState()}
 			{:else if availability?.locked}
 				<p class="text-body text-paper/75">{t('availability.locked')}</p>
 			{:else if ownBench}

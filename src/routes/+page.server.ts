@@ -29,6 +29,7 @@ import {
 	listOpenRequests,
 	type SubRequestWithGame
 } from '#lib/domain/roster/service.ts';
+import { cancelOwnRequest } from '#lib/domain/subs/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { getMySubProfile } from '#lib/domain/subs/service.ts';
 import { subRequestRefSchema } from '#lib/domain/subs/validators.ts';
@@ -120,7 +121,12 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 
 	const schedule = listSchedule(actor);
 	const { upcoming } = splitSchedule(schedule);
-	const nextId = nextGameId(schedule);
+	// Un match annulé ne cache jamais le suivant, mais s'il ne reste que lui,
+	// l'accueil doit le montrer comme annulé plutôt que comme une absence de match.
+	const nextId =
+		nextGameId(schedule) ??
+		upcoming.find((entry) => entry.status === 'cancelled')?.id ??
+		null;
 	const game = nextId ? getGame(actor, nextId) : null;
 	const today = todayInZone(branding.timezone);
 	const calendar = buildMonthCalendar({
@@ -129,8 +135,9 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 		nextGameDate: game?.gameDate ?? null
 	});
 
-	// Un joueur ne charge que sa propre présence; un gestionnaire a besoin
-	// des compteurs pour son bandeau. Personne d'autre ne charge ces données.
+	// La feuille de présence est partagée par les membres du match; le
+	// gestionnaire en a aussi besoin pour son bandeau. Aucune évaluation ni
+	// aucun solde étranger n'entre dans cette réponse.
 	const availability =
 		game && (hasPlayerProfile || canManageGames) ? availabilityForGame(actor, game) : null;
 	const balance = hasPlayerProfile ? getMyBalance(actor) : null;
@@ -271,6 +278,16 @@ export const actions: Actions = {
 				ok: true,
 				message: t(result.warning ?? 'subs.claimed')
 			};
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	cancelRequest: async ({ request, locals }) => {
+		try {
+			const parsed = parseForm(subRequestRefSchema, await request.formData());
+			const game = getGame(locals.actor, parsed.gameId);
+			cancelOwnRequest(locals.actor, game, parsed.requestId);
+			return { ok: true, message: t('subs.requestCancelled') };
 		} catch (cause) {
 			return actionError(cause);
 		}

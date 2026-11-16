@@ -8,6 +8,7 @@
 	import { formatDate, formatMoney, t } from '#lib/shared/i18n/index.ts';
 	import PollOptions from '#lib/ui/PollOptions.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	let {
@@ -29,10 +30,10 @@
 	const claim = $derived(claimable[0] ?? null);
 </script>
 
-<SectionCard title={t('home.actionsTitle')}>
+<SectionCard title={t('home.actionsTitle')} flush>
 	<ul role="list" class="divide-y divide-line">
 		{#each actions as action (action.kind)}
-			<li class="px-4 py-3">
+			<li class="section-row">
 				{#if action.kind === 'balance' && balance}
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div class="min-w-0">
@@ -78,6 +79,16 @@
 						<a class="btn-secondary btn-sm" href="/remplacants">
 							{t('home.actionOwnRequestLink')}
 						</a>
+						<form method="POST" action="?/cancelRequest" use:progressiveForm>
+							<input type="hidden" name="gameId" value={ownRequest.gameId} />
+							<input type="hidden" name="requestId" value={ownRequest.id} />
+							<ConfirmSubmit
+								label={t('subs.cancelRequest')}
+								question={t('subs.cancelRequestConfirm')}
+								confirmLabel={t('subs.cancelRequest')}
+								class="btn-danger btn-sm"
+							/>
+						</form>
 					</div>
 				{:else if action.kind === 'claim' && claim}
 					<div class="flex flex-wrap items-start justify-between gap-3">

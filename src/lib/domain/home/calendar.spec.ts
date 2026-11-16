@@ -82,9 +82,20 @@ describe('table du mois', () => {
 		const double = day(calendar, '2026-11-22');
 
 		expect(double?.gameCount).toBe(2);
+		expect(double?.cancelledCount).toBe(1);
 		expect(double?.hasCancelled).toBe(true);
 		expect(double?.games.map((game) => game.id)).toEqual(['double-1', 'double-2']);
 		expect(calendar.gameCount).toBe(4);
+
+		const twoCancelled = buildMonthCalendar({
+			games: [
+				...games,
+				{ id: 'double-3', gameDate: '2026-11-22', startTime: '13:00', status: 'cancelled' }
+			],
+			today,
+			nextGameDate: '2026-11-22'
+		});
+		expect(day(twoCancelled, '2026-11-22')?.cancelledCount).toBe(2);
 	});
 
 	it('ignore les matchs des jours voisins et d’un autre mois', () => {
