@@ -45,8 +45,7 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
-| Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | drizzle-kit diff |
-| Derived validation | `drizzle-zod` from the schema | routes and services | typecheck |
+| Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | `migrations.spec.ts` drift guard |
 
 Static literals for these facts are prohibited. A repeated value gets an owner and a derived consumer; it is never copied.
 
@@ -60,13 +59,12 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 ## Visual system
 
-The interface is a printed arena match sheet, not a dashboard. It carries its own identity through three type voices and one restrained accent:
+The interface is a printed arena match sheet, not a dashboard. It carries its own identity through two type families and three voices, plus one restrained accent:
 
-- **Display: Fraunces Variable** for page titles, the wordmark, the match-sheet date and section headings. Soft serif, optical sizing on, `SOFT` around 20 to 40, `WONK 1` only on the wordmark. Never used for figures, because its digits are proportional.
-- **Text: IBM Plex Sans Variable** for body, labels, buttons and every numeral. Its digits are tabular by default, so money, clock times, jersey numbers and counts align without extra rules. `.numeric` and `.stat-value` are the only numeral classes.
-- **Data: IBM Plex Mono** for measured stamps only: micro-labels, dates in ruled lists, jersey plates. Never for body copy.
+- **Display and text: Anybody Variable.** Display uses the wider optical range for page titles, the wordmark, the match-sheet date and section headings; text uses the same family at reading sizes for body, labels and buttons. Its digits are tabular, so money, clock times, jersey numbers and counts align without extra rules. `.numeric` and `.stat-value` are the only numeral classes.
+- **Data: Spline Sans Mono Variable** for measured stamps only: micro-labels, dates in ruled lists, jersey plates. Never for body copy.
 
-Surfaces are sheets: `--radius-card` 0.5rem, `--radius-sheet` 0.375rem, `--radius-control` 0.375rem, a 1px border and a single low shadow. Lists are ruled with `divide-y`; card stacks are reserved for genuinely separate objects. The background is a faint 32px paper rule.
+Surfaces are sheets: `--radius-card` 0, `--radius-sheet` 0, `--radius-control` 2px, a 1px border and no card shadow. A lifted panel uses one hard short shadow (`--shadow-lift`), never a halo. Lists are ruled with `divide-y`; card stacks are reserved for genuinely separate objects. The background is a faint 32px paper rule.
 
 Colour is semantic:
 
@@ -144,7 +142,7 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 - Exhaustive over position-scoped combinations. The search space is bounded by the roster cap in settings; the cap is enforced before generation.
 - If the strict pair rules make the roster infeasible, return `violations` naming the rules. Hard violations produce `rule-conflict`; unmet preferences produce `rule-preference`, a warning rather than a conflict.
 - The game snapshot stores the violations (rule, kind, strength, player ids) so the admin view can name both players after a reload, without re-running the generator.
-- Property tests assert: exact slot counts, no duplicate assignment, every hard rule honoured, determinism, and that a better skill split cannot be found by a single swap.
+- Table-driven generator tests assert: exact slot counts, no duplicate assignment, every hard rule honoured, determinism, and that a better skill split cannot be found by a single swap.
 
 ## Mechanical gates
 
@@ -152,10 +150,10 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 
 1. `svelte-check`: types and Svelte diagnostics.
 2. `eslint`: import boundaries and restricted syntax.
-3. `vitest run`: unit, property, and contract tests.
+3. `vitest run`: unit, table-driven, integration and contract tests.
 4. `verify:language`: rejects vouvoiement, second-person plural imperatives, em dashes and malformed placeholders in the French dictionary.
 5. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
-6. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+6. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy and declared channels.
 7. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
 8. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
 
