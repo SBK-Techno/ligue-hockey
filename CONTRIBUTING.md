@@ -52,11 +52,18 @@ Le site est publié par GitHub Pages à `https://sbk-techno.github.io/ligue-hock
 
 ## Publication
 
-La version de `package.json` est l'unique source. Pour publier:
+La version de `package.json` est l'unique source. La montée de version passe par une demande de fusion, puis l'étiquette est créée sur le commit fusionné:
 
 ```bash
-npm version patch   # ou minor, major
-git push --follow-tags
+npm version patch --no-git-tag-version   # ou minor, major
+git switch -c chore/version-x.y.z
+git commit -am "chore(version): x.y.z"
+git push -u origin chore/version-x.y.z
+# Ouvrir et fusionner la demande de fusion.
+git switch main && git pull --ff-only
+version="$(node -p "require('./package.json').version")"
+git tag -a "v$version" -m "Version $version"
+git push origin "v$version"
 ```
 
 Le workflow `release.yml` vérifie que l'étiquette `v<version>` correspond à `package.json`, construit l'image, la pousse sur `ghcr.io/sbk-techno/ligue-hockey` avec les étiquettes de version, de révision et `latest`, puis crée la version GitHub avec les notes générées.
