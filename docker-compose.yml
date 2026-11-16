@@ -1,9 +1,11 @@
+name: ligue-hockey
+
 services:
   ligue:
-    build: .
-    image: ${LIGUE_IMAGE:-ghcr.io/sbk-techno/ligue-hockey:latest}
+    image: ${LIGUE_IMAGE:-ghcr.io/sbk-techno/ligue-hockey:1.0.0}
     container_name: ligue-hockey
     restart: unless-stopped
+    stop_grace_period: 30s
     env_file:
       - .env
     environment:
@@ -11,21 +13,31 @@ services:
       DATABASE_URL: /app/data/ligue.db
       MIGRATIONS_DIR: /app/drizzle
     ports:
-      - '127.0.0.1:3000:3000'
+      - "127.0.0.1:3000:3000"
     volumes:
       - ligue-data:/app/data
     healthcheck:
       test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:3000/api/health').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))"
-        ]
+        - CMD
+        - node
+        - -e
+        - 'fetch("http://127.0.0.1:3000/api/health").then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))'
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
 volumes:
   ligue-data:
