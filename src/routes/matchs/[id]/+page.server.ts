@@ -73,7 +73,7 @@ export const actions: Actions = {
 			const result = markAvailability(locals.actor, params.id!, parsed.status);
 			return {
 				ok: true,
-				message: result.warning ? t(result.warning) : t('availability.saved')
+				message: t(result.warning ?? result.messageKey)
 			};
 		} catch (cause) {
 			return actionError(cause);
@@ -114,8 +114,11 @@ export const actions: Actions = {
 	cancelRequest: async ({ request, locals, params }) => {
 		try {
 			const parsed = parseForm(requestSchema, await request.formData());
-			cancelRequest(locals.actor, params.id!, parsed.requestId);
-			return { ok: true, message: t('subs.requestCancelled') };
+			const result = cancelRequest(locals.actor, params.id!, parsed.requestId);
+			return {
+				ok: true,
+				message: result.warning ? t(result.warning) : t('subs.requestCancelled')
+			};
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -123,8 +126,11 @@ export const actions: Actions = {
 	requestSub: async ({ request, locals, params }) => {
 		try {
 			const parsed = parseForm(manualRequestSchema, await request.formData());
-			createManualRequest(locals.actor, params.id!, parsed.position);
-			return { ok: true, message: t('subs.requestCreated') };
+			const result = createManualRequest(locals.actor, params.id!, parsed.position);
+			return {
+				ok: true,
+				message: result.warning ? t(result.warning) : t('subs.requestCreated')
+			};
 		} catch (cause) {
 			return actionError(cause);
 		}

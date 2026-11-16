@@ -153,6 +153,24 @@ describe('generateTeams', () => {
 		expect(result.ageDiff).toBe(0);
 	});
 
+	it('compares cumulative age, not average age', () => {
+		const players = [
+			player('a', 'forward', 3, 20),
+			player('b', 'forward', 3, 20),
+			player('c', 'forward', 3, 40)
+		];
+		const result = generateTeams(
+			input({
+				players,
+				template: { forwardsPerTeam: 2, defensePerTeam: 0, goaliesPerTeam: 0 }
+			})
+		);
+
+		// 20 + 20 d'un côté, 40 de l'autre : les sommes s'équilibrent même si
+		// les moyennes diffèrent. C'est le critère cumulatif demandé.
+		expect(result.ageDiff).toBe(0);
+	});
+
 	it('balances short rosters across both teams', () => {
 		const players = [player('a', 'forward'), player('b', 'forward')];
 		const result = generateTeams(
@@ -287,7 +305,7 @@ describe('generateTeams with league limits', () => {
 			input({
 				players: unevenAges,
 				template: twoPerTeam,
-				limits: { skill: 0, age: 10, size: 0 }
+				limits: { skill: 0, age: 20, size: 0 }
 			})
 		);
 

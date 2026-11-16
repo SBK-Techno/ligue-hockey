@@ -28,21 +28,32 @@ describe('computeSubRequestWaves', () => {
 		expect(result.generalAt - result.favoriteAt).toBe(4 * hour);
 	});
 
-	it('sends favourites immediately when their window has passed', () => {
+	it('keeps the favourite head start when their window has passed', () => {
 		const now = gameStartMs - 3 * hour;
 		const result = waves(now);
 
 		expect(result.favoriteAt).toBe(now + minute);
-		expect(result.generalAt).toBe(gameStartMs - 2 * hour);
-		expect(result.favoriteAt).toBeLessThan(result.generalAt);
+		// La vague générale est repoussée au dernier appel pour préserver l'avance.
+		expect(result.generalAt).toBe(gameStartMs - 30 * minute);
+		expect(result.generalAt - result.favoriteAt).toBeGreaterThan(2 * hour);
 	});
 
-	it('sends both waves immediately when the request is late', () => {
+	it('keeps the favourite head start when the request is late', () => {
 		const now = gameStartMs - hour;
 		const result = waves(now);
 
 		expect(result.favoriteAt).toBe(now + minute);
-		expect(result.generalAt).toBe(result.favoriteAt);
+		expect(result.generalAt).toBe(gameStartMs - 30 * minute);
+		expect(result.generalAt).toBeGreaterThan(result.favoriteAt);
+	});
+
+	it('always leaves favourites ahead of the general list, up to last call', () => {
+		for (let hours = 1; hours <= 48; hours += 1) {
+			const now = gameStartMs - hours * hour;
+			const result = waves(now);
+			expect(result.generalAt).toBeGreaterThanOrEqual(result.favoriteAt);
+			expect(result.generalAt - result.favoriteAt).toBeGreaterThan(0);
+		}
 	});
 
 	it('never schedules after the last-call cutoff', () => {

@@ -6,12 +6,12 @@
     "static/icons/apple-touch-180.f5b3ec40470a.png": "f5b3ec40470a819dd70a01da6ce4073576c181b4de3da6f3713deef5873baf4f",
     "static/icons/icon-192-192.f41cbf210c11.png": "f41cbf210c115f02c035199bd204be10b8b835e82795781eb34b6b8e7dcf8ba6",
     "static/icons/icon-512-512.e6d2499b9bbd.png": "e6d2499b9bbd5c5148f8fa0b9eda33604ccc313ff528080aad87a7c7de4a7f65",
-    "static/icons/maskable-512-512.91d68c680b54.png": "91d68c680b54fe1a54fd68dbbd1e1ff6375b3143d87f75a2d2f5872df5aaa389",
-    "static/manifest.webmanifest": "81909474e0419e2f7ca5839c94d4358b7e4c71d78da48396eae7970f127d498b",
+    "static/icons/maskable-512-512.28f891c1c4ec.png": "28f891c1c4ec0874ec278e798116c074e006193f64f1dfc169cf9fa61106ced8",
+    "static/manifest.webmanifest": "4da668f9928a8356bcb9c58f9354a3058ac25017fa7218150a5c7d24e17cb0c3",
     "src/app.html": "fb90d83ca717defba749ed454693e4c944303e15011b64b31b38b202f0a11b89",
     "static/robots.txt": "815bcd053b51b42648ea3f8103c8c9f86eb64d2d6eaad8f3b45b673b47f959b7",
-    "static/offline.html": "6ab8abc27e58f221f4833ff0d2fd2bc588c6d83519502c123e48c9af00146502",
-    "src/lib/generated/branding.ts": "27a5fc512be9aa9c4bb3980d82eca05e04505d7cb4ce813f185590b52cc2015f",
+    "static/offline.html": "a77d9dc1a8ee691fe752edcd2c9a581f5a113be0aff96f969133da794aecd2e1",
+    "src/lib/generated/branding.ts": "34235ac2bd7eba21f977d204a1861b0fc824eabe1f577518183302d32ac930d4",
     "static/social/apercu.jpg": "2ac0357d2a30b7e703d7172ae2f3856a676b9eae02aedc3e4de43f8bee65a79e"
   }
 }

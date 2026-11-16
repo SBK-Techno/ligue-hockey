@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { RULE_MODES, ruleModeDefinition, type RuleMode } from '#config/rule-modes.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
@@ -12,11 +13,6 @@
 	);
 	let selectedMode = $state<RuleMode>('together');
 	const selectedModeDefinition = $derived(ruleModeDefinition(selectedMode));
-	const badgeClass = {
-		ok: 'badge-ok',
-		alert: 'badge-alert',
-		ice: 'badge-ice'
-	} as const;
 </script>
 
 <FormFeedback {form} class="mb-4" />
@@ -75,31 +71,33 @@
 		<p class="text-sm text-muted">{t('admin.rulesEmpty')}</p>
 	</div>
 {:else}
-	<ul role="list" class="space-y-2">
-		{#each data.rules as rule (rule.id)}
-			{@const mode = ruleModeDefinition(rule.mode)}
-			<li class="card flex flex-wrap items-center justify-between gap-3 py-3.5">
-				<div class="min-w-0">
-					<p class="text-sm font-semibold">
-						{names.get(rule.playerAId) ?? rule.playerAId}
-						<span class="font-normal text-muted"> · </span>
-						{names.get(rule.playerBId) ?? rule.playerBId}
-					</p>
-					<p class="mt-1">
-						<span class="badge {mode ? badgeClass[mode.tone] : 'badge'}">
-							{mode ? t(mode.labelKey) : rule.mode}
-						</span>
-					</p>
-				</div>
-				<form method="POST" action="?/delete" use:progressiveForm>
-					<input type="hidden" name="id" value={rule.id} />
-					<ConfirmSubmit
-						label={t('admin.deleteRule')}
-						question={t('admin.deleteRuleConfirm')}
-						class="btn-ghost btn-sm"
-					/>
-				</form>
-			</li>
-		{/each}
-	</ul>
+	<div class="card-flush overflow-hidden">
+		<ul role="list" class="divide-y divide-line/70">
+			{#each data.rules as rule (rule.id)}
+				{@const mode = ruleModeDefinition(rule.mode)}
+				<li class="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+					<div class="min-w-0">
+						<p class="text-sm font-semibold">
+							{names.get(rule.playerAId) ?? t('admin.rulePlayerRemoved')}
+							<span class="font-normal text-muted"> · </span>
+							{names.get(rule.playerBId) ?? t('admin.rulePlayerRemoved')}
+						</p>
+						<p class="mt-1">
+							<span class={badgeClass(mode?.tone)}>
+								{mode ? t(mode.labelKey) : t('admin.ruleModeUnknown')}
+							</span>
+						</p>
+					</div>
+					<form method="POST" action="?/delete" use:progressiveForm>
+						<input type="hidden" name="id" value={rule.id} />
+						<ConfirmSubmit
+							label={t('admin.deleteRule')}
+							question={t('admin.deleteRuleConfirm')}
+							class="btn-ghost btn-sm"
+						/>
+					</form>
+				</li>
+			{/each}
+		</ul>
+	</div>
 {/if}

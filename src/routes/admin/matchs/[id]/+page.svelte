@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
-	import type { I18nKey } from '#config/i18n/fr.ts';
+	import { gameStatus } from '#config/game-status.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
@@ -10,11 +10,6 @@
 	let { data, form }: PageProps = $props();
 	const game = $derived(data.game);
 
-	const statusKey: Record<string, I18nKey> = {
-		scheduled: 'games.status.scheduled',
-		cancelled: 'games.status.cancelled',
-		completed: 'games.status.completed'
-	};
 </script>
 
 <FormFeedback {form} class="mb-4" />
@@ -31,7 +26,7 @@
 			<h1 class="mt-2 capitalize">{formatDate(game.gameDate)}</h1>
 			<p class="mt-1.5 text-sm text-muted">
 				{formatTime(game.startTime)} · {game.location}
-				· <span class="badge">{t(statusKey[game.status] ?? 'games.status.scheduled')}</span>
+				· <span class="badge">{t(gameStatus(game.status).labelKey)}</span>
 			</p>
 		</div>
 		<a class="btn-secondary btn-sm" href="/matchs/{game.id}">{t('home.viewGame')}</a>

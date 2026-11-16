@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../routes/layout.css';
+	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
@@ -39,6 +40,11 @@
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
 	const openGraphLocale = $derived(branding.locale.replace('-', '_'));
 	const crawlDirective = $derived(branding.indexable ? 'index,follow' : 'noindex,nofollow');
+
+	afterNavigate(({ from, to }) => {
+		if (!from || !to || from.url.pathname === to.url.pathname) return;
+		document.getElementById('contenu')?.focus({ preventScroll: true });
+	});
 </script>
 
 <svelte:head>
@@ -65,7 +71,7 @@
 {#if data.actor.kind === 'anonymous'}
 	<div class="lg:grid lg:min-h-dvh lg:grid-cols-[1.08fr_0.92fr]">
 		<aside
-			class="relative flex flex-col justify-between overflow-hidden bg-ink px-5 pb-9 pt-7 text-paper sm:px-9 sm:pb-11 sm:pt-9 lg:min-h-dvh lg:p-12"
+			class="relative flex flex-col justify-between overflow-hidden bg-ink px-5 pb-6 pt-5 text-paper sm:px-9 sm:pb-11 sm:pt-9 lg:min-h-dvh lg:p-12"
 		>
 			<svg
 				aria-hidden="true"
@@ -88,7 +94,7 @@
 
 			<div class="relative mt-8 max-w-md lg:mt-0">
 				<h1 class="text-paper">{t('auth.welcome')}</h1>
-				<p class="mt-4 text-sm leading-relaxed text-paper/70 sm:text-base">
+				<p class="mt-4 hidden text-sm leading-relaxed text-paper/70 sm:block sm:text-base">
 					{branding.description}
 				</p>
 			</div>
@@ -106,8 +112,9 @@
 {:else}
 	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
 	<AppNav actor={data.actor} unread={data.unread} />
-	<main id="contenu" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-5 sm:pt-8 lg:pb-12">
+	<main id="contenu" tabindex="-1" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 sm:pt-8 lg:pb-12">
 		{@render children()}
+		<div aria-live="polite" class="sr-only">{pageTitle}</div>
 	</main>
 	<footer class="mx-auto w-full max-w-6xl px-4 pb-[calc(var(--bottom-bar-offset)+0.5rem)] pt-2 lg:pb-8">
 		<div

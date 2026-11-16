@@ -48,7 +48,13 @@ export function computeSubRequestWaves(
 	const generalTarget = input.gameStartMs - input.generalLeadHours * HOUR;
 
 	const favoriteAt = clamp(favoriteTarget, earliest, latest);
-	const generalAt = clamp(generalTarget, favoriteAt, latest);
+	// Les favoris gardent leur avance même quand la demande arrive tard :
+	// la vague générale est repoussée, sans jamais dépasser le dernier appel.
+	const generalAt = clamp(
+		Math.max(generalTarget, favoriteAt + input.priorityGapHours * HOUR),
+		favoriteAt,
+		latest
+	);
 
 	return { favoriteAt, generalAt };
 }

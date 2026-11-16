@@ -22,6 +22,7 @@
 	} = $props();
 
 	let visible = $state(false);
+	const hintId = $derived(`${id}-hint`);
 </script>
 
 <div>
@@ -36,13 +37,13 @@
 			{minlength}
 			{required}
 			{value}
+			aria-describedby={hint ? hintId : undefined}
 		/>
 		<button
 			type="button"
-			class="absolute right-1 top-1 grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+			class="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-control text-muted transition-colors hover:bg-ink/5 hover:text-ink"
 			onclick={() => (visible = !visible)}
 			aria-label={visible ? t('common.hidePassword') : t('common.showPassword')}
-			aria-pressed={visible}
 		>
 			{#if visible}
 				<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -58,6 +59,6 @@
 		</button>
 	</div>
 	{#if hint}
-		<p class="hint">{hint}</p>
+		<p class="hint" id={hintId}>{hint}</p>
 	{/if}
 </div>

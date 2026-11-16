@@ -2,8 +2,8 @@ import { ruleModeDefinition, ruleModeFor, type RuleMode } from '#config/rule-mod
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
+import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
 import { getPlayer } from '#lib/domain/players/service.ts';
-import type { GeneratorRule } from '#lib/domain/teams/generator.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { clock } from '#lib/shared/time/clock.ts';
@@ -32,16 +32,6 @@ export function listRules(actor: Actor): PairRuleView[] {
 	}));
 }
 
-export function rulesForGeneration(): GeneratorRule[] {
-	return listPairRules().map((row) => ({
-		id: row.id,
-		playerAId: row.playerAId,
-		playerBId: row.playerBId,
-		kind: row.kind,
-		strict: row.strict
-	}));
-}
-
 export function createRule(actor: Actor, input: PairRuleInput): PairRuleView {
 	requirePermission(actor, 'manageRules');
 	const parsed = parseSchema(pairRuleInputSchema, input);
@@ -55,7 +45,7 @@ export function createRule(actor: Actor, input: PairRuleInput): PairRuleView {
 	}
 	const mode = ruleModeDefinition(parsed.mode);
 	if (!mode) {
-		throw new AppError('VALIDATION', { key: 'admin.ruleSelf' });
+		throw new AppError('VALIDATION', { key: 'admin.ruleModeUnknown' });
 	}
 	const existing = findPairRule(playerAId, playerBId);
 	if (existing) {
@@ -78,6 +68,7 @@ export function createRule(actor: Actor, input: PairRuleInput): PairRuleView {
 		entityId: id,
 		metadata: { playerAId, playerBId, mode: parsed.mode }
 	});
+	regenerateUpcomingGeneratedGames();
 
 	return { id, playerAId, playerBId, mode: parsed.mode };
 }
@@ -90,4 +81,5 @@ export function deleteRule(actor: Actor, id: string): void {
 		entityType: 'pair_rule',
 		entityId: id
 	});
+	regenerateUpcomingGeneratedGames();
 }

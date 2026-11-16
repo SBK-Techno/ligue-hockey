@@ -10,8 +10,8 @@ export const branding = {
   "scope": "/",
   "display": "standalone",
   "indexable": true,
-  "themeColor": "#121A21",
-  "backgroundColor": "#F7F5F0",
+  "themeColor": "#101a22",
+  "backgroundColor": "#f5f2ea",
   "emailPalette": {
     "ink": "#101a22",
     "paper": "#f5f2ea",
@@ -29,7 +29,7 @@ export const branding = {
     "appleTouch": "/icons/apple-touch-180.f5b3ec40470a.png",
     "icon192": "/icons/icon-192-192.f41cbf210c11.png",
     "icon512": "/icons/icon-512-512.e6d2499b9bbd.png",
-    "maskable": "/icons/maskable-512-512.91d68c680b54.png"
+    "maskable": "/icons/maskable-512-512.28f891c1c4ec.png"
   }
 } as const;
 

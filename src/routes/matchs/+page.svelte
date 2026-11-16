@@ -1,29 +1,22 @@
 <script lang="ts">
-	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
+	import { gameStatus } from '#config/game-status.ts';
 	import { formatDate, formatTime, formatWeekday, t } from '#lib/shared/i18n/index.ts';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'manageGames'));
-
-	const statusKey: Record<string, I18nKey> = {
-		scheduled: 'games.status.scheduled',
-		cancelled: 'games.status.cancelled',
-		completed: 'games.status.completed'
-	};
 </script>
 
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
-	<div>
-		<h1>{t('games.title')}</h1>
-		<p class="mt-1.5 text-sm text-muted">{t('games.subtitle')}</p>
-	</div>
-	{#if isManager}
-		<a class="btn-primary btn-sm" href="/admin/matchs">{t('games.adminCreate')}</a>
-	{/if}
-</div>
+<PageHeader title={t('games.title')} meta={t('games.subtitle')}>
+	{#snippet actions()}
+		{#if isManager}
+			<a class="btn-primary btn-sm" href="/admin/matchs">{t('games.adminCreate')}</a>
+		{/if}
+	{/snippet}
+</PageHeader>
 
 <h2 class="mb-3">{t('games.upcoming')}</h2>
 {#if data.upcoming.length === 0}
@@ -38,29 +31,26 @@
 	<ul role="list" class="space-y-2.5">
 		{#each data.upcoming as game, index (game.id)}
 			<li>
-				<a
-					href="/matchs/{game.id}"
-					class="card card-link flex items-center gap-4 py-3.5"
-				>
-					<div class="w-16 shrink-0 border-r border-line/80 pr-3 text-center">
-						<p class="text-[11px] font-semibold capitalize text-muted">
+				<a href="/matchs/{game.id}" class="card card-link flex items-center gap-4 py-3.5">
+					<span class="w-[4.5rem] shrink-0 whitespace-nowrap border-r border-line pr-3">
+						<span class="block whitespace-nowrap text-xs font-medium text-muted">
 							{formatWeekday(game.gameDate)}
-						</p>
-						<p class="font-display text-2xl font-bold leading-tight text-ink">
+						</span>
+						<span class="numeric mt-0.5 block text-lg text-ink">
 							{formatDate(game.gameDate, 'short')}
-						</p>
-					</div>
-					<div class="min-w-0 flex-1">
-						<p class="truncate text-sm font-semibold text-ink">
+						</span>
+					</span>
+					<span class="min-w-0 flex-1">
+						<span class="block truncate text-sm font-semibold text-ink">
 							{formatTime(game.startTime)} · {game.location}
-						</p>
-					</div>
+						</span>
+					</span>
 					{#if index === 0 && game.status === 'scheduled'}
 						<span class="badge-ice shrink-0">{t('games.next')}</span>
-					{:else if game.status === 'cancelled'}
-						<span class="badge-alert shrink-0">{t('games.status.cancelled')}</span>
 					{:else}
-						<span class="badge shrink-0">{t(statusKey[game.status] ?? 'games.status.scheduled')}</span>
+						<span class="badge shrink-0 {game.status === 'cancelled' ? 'badge-alert' : ''}">
+							{t(gameStatus(game.status).labelKey)}
+						</span>
 					{/if}
 				</a>
 			</li>
@@ -75,12 +65,12 @@
 			<li>
 				<a
 					href="/matchs/{game.id}"
-					class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-line/80 bg-surface px-4 py-3 text-sm no-underline transition-colors hover:border-ink/25"
+					class="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-line bg-surface px-4 py-3 text-sm no-underline transition-colors hover:border-ink/25"
 				>
 					<span class="font-semibold text-ink">{formatDate(game.gameDate, 'year')}</span>
 					<span class="text-muted">{formatTime(game.startTime)} · {game.location}</span>
-					<span class="ml-auto badge {game.status === 'cancelled' ? 'badge-alert' : 'badge'}">
-						{t(statusKey[game.status] ?? 'games.status.scheduled')}
+					<span class="badge ml-auto {game.status === 'cancelled' ? 'badge-alert' : ''}">
+						{t(gameStatus(game.status).labelKey)}
 					</span>
 				</a>
 			</li>

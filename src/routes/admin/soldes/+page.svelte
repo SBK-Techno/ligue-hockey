@@ -1,80 +1,132 @@
 <script lang="ts">
 	import { formatMoney, t } from '#lib/shared/i18n/index.ts';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	type Filter = 'all' | 'overdue' | 'outstanding' | 'noPlan';
+	let filter = $state<Filter>('all');
+
+	const filters = [
+		{ key: 'all' as const, labelKey: 'admin.filterAll' as const },
+		{ key: 'overdue' as const, labelKey: 'balance.status.overdue' as const },
+		{ key: 'outstanding' as const, labelKey: 'balance.outstanding' as const },
+		{ key: 'noPlan' as const, labelKey: 'balance.noPlanShort' as const }
+	];
+
+	const rows = $derived(
+		data.balances
+			.filter((row) => {
+				if (filter === 'overdue') return row.isOverdue;
+				if (filter === 'outstanding') return row.outstandingCents > 0;
+				if (filter === 'noPlan') return !row.hasPlan;
+				return true;
+			})
+			.sort(
+				(a, b) =>
+					Number(b.isOverdue) - Number(a.isOverdue) || b.outstandingCents - a.outstandingCents
+			)
+	);
 </script>
 
-<div class="mb-5">
-	<h1>{t('admin.balances')}</h1>
-	<p class="mt-1.5 text-sm text-muted">{t('admin.balancesHelp')}</p>
+<PageHeader title={t('admin.balances')} meta={t('admin.balancesHelp')} />
+
+<div class="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-sheet border border-line bg-line lg:grid-cols-4">
+	<div class="bg-surface px-4 py-3">
+		<p class="numeric text-xl">{formatMoney(data.totals.total ?? 0, data.currency)}</p>
+		<p class="mt-0.5 text-xs text-muted">{t('balance.total')}</p>
+	</div>
+	<div class="bg-surface px-4 py-3">
+		<p class="numeric text-xl">{formatMoney(data.totals.paid ?? 0, data.currency)}</p>
+		<p class="mt-0.5 text-xs text-muted">{t('balance.paid')}</p>
+	</div>
+	<div class="bg-surface px-4 py-3">
+		<p class="numeric text-xl">{formatMoney(data.totals.outstanding ?? 0, data.currency)}</p>
+		<p class="mt-0.5 text-xs text-muted">{t('balance.outstanding')}</p>
+	</div>
+	<div class="bg-surface px-4 py-3">
+		<p class="numeric text-xl {(data.totals.overdue ?? 0) > 0 ? 'text-alert' : ''}">
+			{data.totals.overdue ?? 0}
+		</p>
+		<p class="mt-0.5 text-xs text-muted">{t('admin.overdueBalances')}</p>
+	</div>
 </div>
 
-<div class="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-	<div class="stat">
-		<p class="stat-value">{formatMoney(data.totals.total ?? 0, data.currency)}</p>
-		<p class="stat-label">{t('balance.total')}</p>
+{#if data.balances.length > 0}
+	<div class="mb-3 flex flex-wrap items-center gap-1">
+		{#each filters as option (option.key)}
+			<button
+				type="button"
+				class="min-h-11 rounded-control border px-2.5 text-[13px] font-medium transition-colors {filter ===
+				option.key
+					? 'border-ice bg-ice-soft text-ice-deep'
+					: 'border-line-strong bg-surface text-muted hover:bg-paper'}"
+				aria-pressed={filter === option.key}
+				onclick={() => (filter = option.key)}
+			>
+				{t(option.labelKey)}
+			</button>
+		{/each}
 	</div>
-	<div class="stat">
-		<p class="stat-value">{formatMoney(data.totals.paid ?? 0, data.currency)}</p>
-		<p class="stat-label">{t('balance.paid')}</p>
-	</div>
-	<div class="stat">
-		<p class="stat-value">{formatMoney(data.totals.outstanding ?? 0, data.currency)}</p>
-		<p class="stat-label">{t('balance.outstanding')}</p>
-	</div>
-	<div class="stat">
-		<p class="stat-value text-alert">{data.totals.overdue ?? 0}</p>
-		<p class="stat-label">{t('admin.overdueBalances')}</p>
-	</div>
-</div>
+{/if}
 
 {#if data.balances.length === 0}
 	<div class="card">
 		<p class="text-sm text-muted">{t('admin.noPlayers')}</p>
 	</div>
+{:else if rows.length === 0}
+	<div class="card">
+		<p class="text-sm text-muted">{t('admin.noResults')}</p>
+	</div>
 {:else}
-	<ul role="list" class="space-y-2">
-		{#each data.balances as row (row.playerId)}
-			<li class="card flex flex-wrap items-center justify-between gap-3 py-3.5">
-				<div class="min-w-0">
-					<a class="font-semibold text-ink no-underline hover:underline" href="/admin/joueurs/{row.playerId}">
-						{row.playerName}
+	<div class="card-flush overflow-hidden">
+		<ul role="list" class="divide-y divide-line/70">
+			{#each rows as row (row.playerId)}
+				<li>
+					<a
+						class="flex min-h-14 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-ink/[0.03]"
+						href="/admin/joueurs/{row.playerId}"
+					>
+						<span class="min-w-0 flex-1">
+							<span class="flex min-w-0 items-center gap-2">
+								<span class="truncate font-semibold text-ink">{row.playerName}</span>
+								{#if !row.active}
+									<span class="badge shrink-0">{t('admin.status.inactive')}</span>
+								{/if}
+							</span>
+							<span class="mt-0.5 block truncate text-xs text-muted">
+								{#if row.hasPlan}
+									{t('balance.paidOf', {
+										paid: formatMoney(row.paidCents, row.currency),
+										total: formatMoney(row.totalCents, row.currency)
+									})}
+								{:else}
+									{t('balance.noPlanShort')}
+								{/if}
+							</span>
+						</span>
+						<span class="shrink-0 text-right">
+							<span class="numeric block text-base {row.isOverdue ? 'text-alert' : 'text-ink'}">
+								{formatMoney(row.outstandingCents, row.currency)}
+							</span>
+							<span class="mt-0.5 block">
+								{#if !row.hasPlan}
+									<span class="badge">{t('balance.noPlanShort')}</span>
+								{:else if row.isOverdue}
+									<span class="badge-alert">{t('balance.status.overdue')}</span>
+								{:else if row.outstandingCents === 0}
+									<span class="badge-ok">{t('balance.status.paid')}</span>
+								{:else if row.installments.some((installment) => installment.status === 'partial')}
+									<span class="badge-ice">{t('balance.status.partial')}</span>
+								{:else}
+									<span class="badge">{t('balance.status.upcoming')}</span>
+								{/if}
+							</span>
+						</span>
 					</a>
-					{#if !row.active}
-						<span class="badge-alert ml-2">{t('admin.status.inactive')}</span>
-					{/if}
-					{#if row.hasPlan}
-						<p class="mt-0.5 text-xs text-muted">
-							{t('balance.paidOf', {
-								paid: formatMoney(row.paidCents, row.currency),
-								total: formatMoney(row.totalCents, row.currency)
-							})}
-						</p>
-					{/if}
-				</div>
-				<div class="flex flex-wrap items-center gap-3">
-					<div class="text-right">
-						<p class="font-display text-lg font-bold text-ink">
-							{formatMoney(row.outstandingCents, row.currency)}
-						</p>
-						{#if !row.hasPlan}
-							<span class="badge">{t('balance.noPlanShort')}</span>
-						{:else if row.isOverdue}
-							<span class="badge-alert">{t('balance.status.overdue')}</span>
-						{:else if row.outstandingCents === 0}
-							<span class="badge-ok">{t('balance.status.paid')}</span>
-						{:else if row.installments.some((installment) => installment.status === 'partial')}
-							<span class="badge-ice">{t('balance.status.partial')}</span>
-						{:else}
-							<span class="badge">{t('balance.status.upcoming')}</span>
-						{/if}
-					</div>
-					<a class="btn-secondary btn-sm" href="/admin/joueurs/{row.playerId}">
-						{t('admin.openPlayer')}
-					</a>
-				</div>
-			</li>
-		{/each}
-	</ul>
+				</li>
+			{/each}
+		</ul>
+	</div>
 {/if}

@@ -43,7 +43,7 @@
 {:else}
 	<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
 		<div class="min-w-0">
-			<a class="link text-sm" href="/admin/joueurs">{t('admin.backToPlayers')}</a>
+			<a class="mb-1 inline-flex min-h-11 items-center text-sm font-semibold text-muted no-underline hover:text-ink" href="/admin/joueurs">{t('admin.backToPlayers')}</a>
 			<h1 class="mt-2">{player.fullName}</h1>
 			<p class="mt-1.5 break-words text-sm text-muted">
 				<span class="break-all">{player.email}</span> ·
@@ -143,7 +143,7 @@
 		{/if}
 	</section>
 
-	<div class="grid gap-4 lg:grid-cols-2">
+	<div class="grid gap-4 lg:grid-cols-2 lg:items-start">
 		<section class="card">
 			<h2 class="mb-3">{t('admin.editPlayer')}</h2>
 			<form method="POST" action="?/profile" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
@@ -224,7 +224,7 @@
 						</select>
 					</div>
 				{/each}
-				<div class="col-span-2 flex items-center justify-between gap-2">
+				<div class="col-span-full flex items-center justify-between gap-2">
 					<span class="badge">
 						{t('rating.overall')} :
 						{data.ratings?.overall == null
@@ -379,7 +379,14 @@
 					<li class="flex flex-wrap items-center gap-2">
 						<span>{t('balance.installment', { number: installment.number })} :</span>
 						<span>{formatMoney(installment.remainingCents, data.balance.currency)}</span>
-						<span class="badge">{t(statusKey[installment.status])}</span>
+						<span>
+							{installment.dueDate
+								? t('balance.dueOn', { date: formatDate(installment.dueDate, 'year') })
+								: t('balance.dueDatePending')}
+						</span>
+						<span class={installment.status === 'overdue' ? 'badge-alert' : 'badge'}>
+							{t(statusKey[installment.status])}
+						</span>
 					</li>
 				{/each}
 			</ul>

@@ -198,7 +198,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(idSchema, await request.formData());
 			removePayment(locals.actor, params.id!, parsed.paymentId);
-			return { ok: true, message: t('admin.paymentSaved') };
+			return { ok: true, message: t('admin.paymentDeleted') };
 		} catch (cause) {
 			return actionError(cause);
 		}

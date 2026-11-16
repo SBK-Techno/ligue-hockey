@@ -3,30 +3,28 @@
 	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'manageSubs'));
-	const poolHref = $derived(
+	const canManagePool = $derived(
 		data.actor.kind === 'user' && can(data.actor, 'managePlayers')
-			? '/admin/joueurs'
-			: '/admin/matchs'
 	);
 </script>
 
 <FormFeedback {form} class="mb-4" />
 
-<div class="mb-6">
-	<h1>{t('subs.title')}</h1>
-	<p class="mt-1.5 text-sm text-muted">{t('subs.subtitle')}</p>
-</div>
+<PageHeader title={t('subs.title')} meta={t('subs.subtitle')} />
 
 {#if isManager}
 	<div class="notice mb-5">
 		<p>{t('subs.adminNotice')}</p>
-		<a class="btn-secondary btn-sm mt-3" href={poolHref}>{t('subs.managePool')}</a>
+		{#if canManagePool}
+			<a class="btn-secondary btn-sm mt-3" href="/admin/joueurs">{t('subs.managePool')}</a>
+		{/if}
 	</div>
 {/if}
 {#if !data.isSubstitute && !isManager}
@@ -114,6 +112,7 @@
 	{/if}
 </section>
 
+{#if isManager}
 <section>
 	<div class="mb-3">
 		<div class="section-title">
@@ -146,3 +145,4 @@
 		</div>
 	{/if}
 </section>
+{/if}

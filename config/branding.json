@@ -10,8 +10,6 @@
   "display": "standalone",
   "indexable": true,
   "direction": "ltr",
-  "themeColor": "#121A21",
-  "backgroundColor": "#F7F5F0",
   "categories": ["sports", "productivity"],
   "iconSource": "config/branding/icon.svg",
   "socialImage": "/social/apercu.jpg",

@@ -3,6 +3,7 @@
 	import { PAYMENT_METHODS, paymentDefinition } from '#config/payment-methods.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatDate, formatMoney, t } from '#lib/shared/i18n/index.ts';
+	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -26,24 +27,22 @@
 	);
 </script>
 
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
-	<div>
-		<h1>{t('balance.title')}</h1>
-		<p class="mt-1.5 text-sm text-muted">
-			{data.seasonLabel} ·
-			{isManager && !data.hasPlayerProfile
-				? t('balance.subtitleAdmin')
-				: t('balance.subtitle')}
-		</p>
-	</div>
-	{#if canViewAllBalances && data.balance}
-		<a class="btn-secondary btn-sm" href="/admin/soldes">{t('balance.manageAll')}</a>
-	{/if}
-</div>
+<PageHeader
+	title={t('balance.title')}
+	meta="{data.seasonLabel} · {isManager && !data.hasPlayerProfile
+		? t('balance.subtitleAdmin')
+		: t('balance.subtitle')}"
+>
+	{#snippet actions()}
+		{#if canViewAllBalances && data.balance}
+			<a class="btn-secondary btn-sm" href="/admin/soldes">{t('balance.manageAll')}</a>
+		{/if}
+	{/snippet}
+</PageHeader>
 
 {#if !data.balance}
 	<div class="card">
-		{#if isManager && !data.hasPlayerProfile}
+		{#if !data.hasPlayerProfile}
 			<p class="text-sm text-muted">{t('balance.adminNoProfile')}</p>
 			{#if canViewAllBalances}
 				<a class="btn-secondary btn-sm mt-3" href="/admin/soldes">
@@ -56,20 +55,20 @@
 		{/if}
 	</div>
 {:else}
-	<div class="mb-4 grid gap-3 sm:grid-cols-3">
-		<div class="stat">
-			<p class="stat-value">{formatMoney(data.balance.totalCents, data.balance.currency)}</p>
-			<p class="stat-label">{t('balance.total')}</p>
+	<div class="mb-4 grid grid-cols-3 gap-px overflow-hidden rounded-sheet border border-line bg-line">
+		<div class="bg-surface px-3 py-3 sm:px-4">
+			<p class="numeric text-xl">{formatMoney(data.balance.totalCents, data.balance.currency)}</p>
+			<p class="mt-0.5 text-xs text-muted">{t('balance.total')}</p>
 		</div>
-		<div class="stat">
-			<p class="stat-value">{formatMoney(data.balance.paidCents, data.balance.currency)}</p>
-			<p class="stat-label">{t('balance.paid')}</p>
+		<div class="bg-surface px-3 py-3 sm:px-4">
+			<p class="numeric text-xl">{formatMoney(data.balance.paidCents, data.balance.currency)}</p>
+			<p class="mt-0.5 text-xs text-muted">{t('balance.paid')}</p>
 		</div>
-		<div class="stat">
-			<p class="stat-value {data.balance.isOverdue ? 'text-alert' : ''}">
+		<div class="bg-surface px-3 py-3 sm:px-4">
+			<p class="numeric text-xl {data.balance.isOverdue ? 'text-alert' : ''}">
 				{formatMoney(data.balance.outstandingCents, data.balance.currency)}
 			</p>
-			<p class="stat-label">{t('balance.outstanding')}</p>
+			<p class="mt-0.5 text-xs text-muted">{t('balance.outstanding')}</p>
 		</div>
 	</div>
 
@@ -81,18 +80,21 @@
 		</div>
 	{/if}
 
-	<section class="card mb-4">
-		<h2 class="mb-3">{t('balance.installmentsTitle')}</h2>
-		<ul role="list" class="space-y-2">
+	<section class="card-flush mb-4 overflow-hidden">
+		<h2 class="border-b border-line/70 px-4 py-3 text-lg">{t('balance.installmentsTitle')}</h2>
+		<ul role="list" class="divide-y divide-line/70">
 			{#each data.balance.installments as installment (installment.number)}
-				<li class="rounded-control border border-line bg-paper px-4 py-3">
+				<li class="px-4 py-3">
 					<div class="flex flex-wrap items-center justify-between gap-2">
 						<div>
 							<p class="font-semibold">{t('balance.installment', { number: installment.number })}</p>
 							<p class="text-sm text-muted">
 								{formatMoney(installment.amountCents, data.balance.currency)}
+								·
 								{#if installment.dueDate}
-									· {t('balance.dueOn', { date: formatDate(installment.dueDate, 'year') })}
+									{t('balance.dueOn', { date: formatDate(installment.dueDate, 'year') })}
+								{:else}
+									{t('balance.dueDatePending')}
 								{/if}
 							</p>
 						</div>
@@ -122,21 +124,21 @@
 				</li>
 			{/each}
 		</ul>
-		<div class="mt-4 border-t border-line/80 pt-4">
+		<div class="border-t border-line/70 px-4 py-3">
 			<p class="text-sm text-muted">{t('balance.payHelp')}</p>
 			<p class="hint">{t('balance.paymentMethods', { methods })}</p>
+			<p class="hint">{t('balance.onlyYou')}</p>
 		</div>
-		<p class="hint mt-3">{t('balance.onlyYou')}</p>
 	</section>
 
-	<section class="card">
-		<h2 class="mb-3">{t('balance.history')}</h2>
+	<section class="card-flush overflow-hidden">
+		<h2 class="border-b border-line/70 px-4 py-3 text-lg">{t('balance.history')}</h2>
 		{#if data.payments.length === 0}
-			<p class="text-sm text-muted">{t('balance.noPayments')}</p>
+			<p class="px-4 py-3 text-sm text-muted">{t('balance.noPayments')}</p>
 		{:else}
 			<ul role="list" class="divide-y divide-line/70">
 				{#each data.payments as payment (payment.id)}
-					<li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm first:pt-0 last:pb-0">
+					<li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
 						<div>
 							<p class="font-semibold">{formatMoney(payment.amountCents, data.balance.currency)}</p>
 							<p class="text-xs text-muted">

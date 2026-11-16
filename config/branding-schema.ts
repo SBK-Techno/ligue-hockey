@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'invalid-colour');
-
 export const brandingSchema = z.object({
 	name: z.string().min(1).max(80),
 	shortName: z.string().min(1).max(12),
@@ -14,8 +12,6 @@ export const brandingSchema = z.object({
 	display: z.enum(['standalone', 'fullscreen', 'minimal-ui', 'browser']),
 	indexable: z.boolean(),
 	direction: z.enum(['ltr', 'rtl']),
-	themeColor: hexColor,
-	backgroundColor: hexColor,
 	categories: z.array(z.string().min(1)).max(3),
 	iconSource: z.string().min(1),
 	socialImage: z.string().startsWith('/'),

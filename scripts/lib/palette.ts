@@ -16,7 +16,8 @@ export const PALETTE_KEYS = [
 	'alert-deep',
 	'alert-soft',
 	'ok',
-	'ok-soft'
+	'ok-soft',
+	'ochre'
 ] as const;
 
 export type PaletteKey = (typeof PALETTE_KEYS)[number];

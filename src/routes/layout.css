@@ -1,6 +1,7 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/archivo/wdth.css';
-@import '@fontsource-variable/instrument-sans/wght.css';
+@import '@fontsource-variable/fraunces/full.css';
+@import '@fontsource-variable/ibm-plex-sans';
+@import '@fontsource/ibm-plex-mono/500.css';
 @import '../lib/ui/tokens.css';
 
 @layer base {
@@ -13,30 +14,45 @@
 	body {
 		@apply bg-paper font-sans text-ink antialiased;
 		min-height: 100dvh;
-		background-image: radial-gradient(
-			color-mix(in srgb, var(--color-ink) 4%, transparent) 0.6px,
-			transparent 0.6px
+		/* Papier ligné : une règle horizontale très pâle, pas de trame à points. */
+		background-image: linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--color-ink) 2.4%, transparent) 1px,
+			transparent 1px
 		);
-		background-size: 22px 22px;
-		font-feature-settings: 'ss01' 1;
+		background-size: 100% 32px;
+		font-feature-settings: 'kern' 1, 'liga' 1;
 	}
 	h1,
 	h2,
 	h3 {
 		@apply font-display tracking-tight text-ink;
 		text-wrap: balance;
+		overflow-wrap: anywhere;
 	}
 	h1 {
-		@apply text-[2rem] font-bold leading-[1.05] sm:text-[2.6rem];
-		letter-spacing: -0.035em;
-		font-stretch: 104%;
+		font-size: clamp(2rem, 1.45rem + 2.1vw, 2.9rem);
+		font-weight: 500;
+		line-height: 1.08;
+		letter-spacing: -0.025em;
+		font-optical-sizing: auto;
+		font-variation-settings:
+			'SOFT' 25,
+			'WONK' 0;
 	}
 	h2 {
-		@apply text-xl font-bold leading-tight sm:text-2xl;
-		letter-spacing: -0.02em;
+		font-size: clamp(1.3rem, 1.1rem + 0.7vw, 1.7rem);
+		font-weight: 600;
+		line-height: 1.1;
+		letter-spacing: -0.015em;
+		font-optical-sizing: auto;
+		font-variation-settings:
+			'SOFT' 20,
+			'WONK' 0;
 	}
 	h3 {
-		@apply text-base font-semibold leading-snug;
+		@apply font-sans text-base font-semibold leading-snug;
+		letter-spacing: -0.01em;
 	}
 	p {
 		text-wrap: pretty;
@@ -48,6 +64,19 @@
 	:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
 		outline: 2px solid var(--color-ice);
 		outline-offset: 2px;
+	}
+	/* La cible du lien d'évitement reçoit le focus sans encadrer toute la page. */
+	main:focus,
+	main:focus-visible {
+		outline: none;
+	}
+	/* Sur une surface encre, l'anneau de focus passe au papier. */
+	.bg-ink :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+		outline-color: var(--color-paper);
+	}
+	/* Un dialogue modal ne laisse pas la page défiler derrière lui. */
+	body:has(dialog[open]) {
+		overflow: hidden;
 	}
 	input,
 	select,
@@ -68,7 +97,7 @@
 	::-webkit-scrollbar-thumb {
 		border: 3px solid var(--color-paper);
 		border-radius: 999px;
-		background: var(--color-line);
+		background: var(--color-line-strong);
 	}
 	a {
 		@apply underline-offset-4;
@@ -91,7 +120,7 @@
 	}
 	.card-link {
 		@apply block no-underline transition;
-		transition-duration: 220ms;
+		transition-duration: var(--duration-base);
 		transition-timing-function: var(--ease-out-expo);
 	}
 	.card-link:hover {
@@ -100,13 +129,42 @@
 		transform: translateY(-2px);
 	}
 
+	/* Chiffres de tableau : larges, alignés, stables d'un écran à l'autre. */
+	.numeric {
+		font-family: var(--font-sans);
+		font-variant-numeric: tabular-nums lining-nums;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		line-height: 1;
+	}
+	.numeric-xl {
+		font-size: clamp(2.5rem, 7vw, 3.75rem);
+	}
+	.numeric-lg {
+		font-size: 2rem;
+	}
+	.numeric-sm {
+		font-size: 1rem;
+	}
+
+	.micro-label {
+		@apply text-[0.6875rem] font-medium text-muted;
+		font-family: var(--font-mono);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.measure {
+		max-width: var(--measure);
+	}
+
+
 	.btn,
 	.btn-primary,
 	.btn-secondary,
 	.btn-ghost,
 	.btn-danger {
 		@apply inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 py-2 text-sm font-semibold no-underline transition disabled:cursor-not-allowed disabled:opacity-50;
-		transition-duration: 180ms;
+		transition-duration: var(--duration-fast);
 		transition-timing-function: var(--ease-out-expo);
 	}
 	.btn:active,
@@ -121,7 +179,7 @@
 		box-shadow: 0 1px 0 color-mix(in srgb, var(--color-on-brand) 15%, transparent) inset;
 	}
 	.btn-secondary {
-		@apply border border-line bg-surface text-ink hover:border-ink/40 hover:bg-paper;
+		@apply border border-line-strong bg-surface text-ink hover:border-ink/50 hover:bg-paper;
 	}
 	.btn-ghost {
 		@apply text-muted hover:bg-ink/5 hover:text-ink;
@@ -130,11 +188,16 @@
 		@apply bg-alert text-on-brand hover:bg-alert-deep;
 	}
 	.btn-sm {
-		@apply min-h-9 rounded-lg px-3 py-1.5 text-xs;
+		@apply min-h-11 rounded-control px-3 py-1.5 text-sm;
 	}
 
 	.input {
-		@apply min-h-11 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition placeholder:text-muted/70 focus:border-ice focus:ring-4 focus:ring-ice-soft;
+		@apply min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink transition placeholder:text-muted focus:border-ice;
+		transition-duration: var(--duration-fast);
+	}
+	.input:disabled {
+		@apply cursor-not-allowed bg-paper-deep text-muted;
+		border-color: var(--color-line);
 	}
 	.label {
 		@apply mb-1.5 block text-sm font-semibold text-ink;
@@ -146,48 +209,40 @@
 		@apply mt-1.5 text-sm font-medium text-alert;
 	}
 
+	/* Tampons d'état : un coin net, pas une pastille de tableau de bord. */
 	.badge,
 	.badge-ok,
 	.badge-alert,
 	.badge-ice {
-		@apply inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-2.5 py-1 text-xs font-semibold text-muted;
+		@apply inline-flex items-center gap-1.5 rounded-[0.3rem] border px-2 py-0.5 text-xs font-semibold;
+	}
+	.badge {
+		@apply border-line-strong/60 bg-paper text-ink;
 	}
 	.badge-ok {
-		@apply border-ok/20 bg-ok-soft text-ok;
+		@apply border-ok/30 bg-ok-soft text-ok;
 	}
 	.badge-alert {
-		@apply border-alert/20 bg-alert-soft text-alert;
+		@apply border-alert/30 bg-alert-soft text-alert;
 	}
 	.badge-ice {
-		@apply border-ice/20 bg-ice-soft text-ice-deep;
+		@apply border-ice/30 bg-ice-soft text-ice-deep;
 	}
 
-	.divider {
-		@apply border-t border-line;
-	}
 	.stat {
-		@apply rounded-control border border-line bg-paper/70 p-3;
+		@apply rounded-sheet border border-line bg-surface p-4;
+		box-shadow: var(--shadow-card);
 	}
 	.stat-value {
-		@apply font-display text-2xl font-bold leading-none text-ink;
-		font-variant-numeric: tabular-nums;
-		letter-spacing: -0.02em;
+		font-family: var(--font-sans);
+		font-variant-numeric: tabular-nums lining-nums;
+		font-weight: 600;
+		letter-spacing: -0.03em;
+		line-height: 1;
+		font-size: 1.75rem;
 	}
 	.stat-label {
 		@apply mt-1.5 text-xs font-medium text-muted;
-	}
-
-	.table {
-		@apply w-full border-collapse text-left text-sm;
-	}
-	.table th {
-		@apply border-b border-line px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted;
-	}
-	.table td {
-		@apply border-b border-line/70 px-3 py-3 align-middle;
-	}
-	.table tr:last-child td {
-		@apply border-b-0;
 	}
 
 	.alert {
@@ -212,17 +267,15 @@
 	.link {
 		@apply font-semibold text-ice no-underline hover:underline;
 	}
-	.eyebrow {
-		@apply text-xs font-semibold text-muted;
-	}
 	.skip-link {
-		@apply fixed left-4 top-4 z-50 -translate-y-24 rounded-control bg-ink px-4 py-2 text-sm font-semibold text-paper no-underline transition focus:translate-y-0;
+		@apply fixed left-4 z-50 -translate-y-24 rounded-control bg-ink px-4 py-2 text-sm font-semibold text-paper no-underline transition focus:translate-y-0;
+		top: max(1rem, env(safe-area-inset-top));
 	}
 	dialog::backdrop {
 		background: color-mix(in srgb, var(--color-ink) 45%, transparent);
 	}
 	dialog[open] {
-		animation: dialog-in 180ms var(--ease-out-expo);
+		animation: dialog-in var(--duration-fast) var(--ease-out-expo);
 	}
 	@keyframes dialog-in {
 		from {
@@ -231,8 +284,34 @@
 		}
 	}
 	.wordmark {
-		font-stretch: 112%;
-		letter-spacing: -0.045em;
+		letter-spacing: -0.015em;
+		font-weight: 600;
+		font-optical-sizing: auto;
+		font-variation-settings:
+			'SOFT' 40,
+			'WONK' 1;
+	}
+
+	/* Perforation de la feuille de match : la carte se détache du bloc. */
+	.tear-line {
+		position: relative;
+		border-top: 1px dashed color-mix(in srgb, var(--color-paper) 28%, transparent);
+	}
+	.tear-line::before,
+	.tear-line::after {
+		content: '';
+		position: absolute;
+		top: -0.4rem;
+		width: 0.8rem;
+		height: 0.8rem;
+		border-radius: 999px;
+		background: var(--color-paper);
+	}
+	.tear-line::before {
+		left: 0.3rem;
+	}
+	.tear-line::after {
+		right: 0.3rem;
 	}
 }
 

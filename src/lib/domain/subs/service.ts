@@ -4,12 +4,11 @@ import { listUserIdsWithCapability } from '#lib/domain/auth/queries.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
+import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import {
 	findOwnProfile,
 	getOwnProfile,
-	generationCandidates,
 	getPlayer,
-	playersByIds,
 	type SelfProfile
 } from '#lib/domain/players/service.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
@@ -25,7 +24,6 @@ import {
 	isTooLateForSubRequest
 } from './policy.ts';
 import {
-	cancelOpenRequests,
 	cancelRequest,
 	claimRequest,
 	findRequest,
@@ -568,23 +566,6 @@ export function cancelForReturn(
 	return bumpedPlayerId;
 }
 
-export function cancelAllForGame(
-	actor: Actor,
-	game: GameSummary
-): number {
-	requirePermission(actor, 'manageSubs');
-	const count = cancelOpenRequests(game.id, clock.nowMs());
-	if (count > 0) {
-		recordAudit(actor, {
-			action: 'sub.requests_cancelled',
-			entityType: 'game',
-			entityId: game.id,
-			metadata: { count }
-		});
-	}
-	return count;
-}
-
 export function listGameRequests(
 	actor: Actor,
 	game: GameSummary
@@ -611,9 +592,3 @@ export function listMyRequests(actor: Actor): SubRequestView[] {
 	return all.map((request) => requestView(request, names));
 }
 
-export function claimsForGeneration(gameId: string) {
-	return listClaimedSubs(gameId).filter(
-		(row): row is { playerId: string; position: Position; filledAt: number | null; requestId: string } =>
-			row.playerId !== null
-	);
-}
