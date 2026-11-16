@@ -19,7 +19,14 @@ const availabilitySchema = z.object({
 export const load: ServerLoad = ({ locals }) => {
 	const actor = locals.actor;
 	if (actor.kind !== 'user') {
-		return { games: [], game: null, availability: null, balance: null, openRequests: [], chat: [] };
+		return {
+			games: [],
+			game: null,
+			availability: null,
+			balance: null,
+			openRequests: [],
+			chat: []
+		};
 	}
 
 	const today = todayInZone(branding.timezone, clock.nowMs());
@@ -29,9 +36,7 @@ export const load: ServerLoad = ({ locals }) => {
 	const next = upcoming[0] ?? null;
 	const game = next ? getGame(actor, next.id) : null;
 	const availability = next ? getAvailability(actor, next.id) : null;
-	const openRequests = listOpenRequests(actor).filter(
-		(request) => next && request.gameId === next.id
-	);
+	const openRequests = listOpenRequests(actor);
 
 	return {
 		games: upcoming.slice(0, 3),
@@ -49,6 +54,7 @@ export const actions: Actions = {
 			const parsed = parseForm(availabilitySchema, await request.formData());
 			const result = markAvailability(locals.actor, parsed.gameId, parsed.status);
 			return {
+				ok: true,
 				message: result.warning ? t(result.warning) : t('availability.saved')
 			};
 		} catch (cause) {

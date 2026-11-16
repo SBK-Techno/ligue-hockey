@@ -37,6 +37,25 @@ const dateWithYear = new Intl.DateTimeFormat(branding.locale, {
 	timeZone: 'UTC'
 });
 
+const weekdayFormat = new Intl.DateTimeFormat(branding.locale, {
+	weekday: 'long',
+	timeZone: 'UTC'
+});
+
+const dayMonthFormat = new Intl.DateTimeFormat(branding.locale, {
+	day: 'numeric',
+	month: 'long',
+	timeZone: 'UTC'
+});
+
+export function formatWeekday(date: string): string {
+	return weekdayFormat.format(dateOnlyToDate(date));
+}
+
+export function formatDayMonth(date: string): string {
+	return dayMonthFormat.format(dateOnlyToDate(date));
+}
+
 export function formatDate(
 	date: string,
 	style: 'long' | 'short' | 'year' = 'long'

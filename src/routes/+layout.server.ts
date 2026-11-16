@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { unreadCount } from '#lib/domain/notifications/service.ts';
 
-const PUBLIC_PREFIXES = ['/connexion', '/reinitialiser-mot-de-passe'];
+const PUBLIC_PREFIXES = ['/connexion', '/mot-de-passe-oublie', '/reinitialiser-mot-de-passe'];
 
 function isPublic(pathname: string): boolean {
 	return PUBLIC_PREFIXES.some(

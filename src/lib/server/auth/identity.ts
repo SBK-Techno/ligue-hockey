@@ -22,11 +22,13 @@ export const betterAuthIdentity: IdentityProvider = {
 		await context.internalAdapter.deleteUser(userId);
 	},
 
-	async requestPasswordReset(email) {
+	async requestPasswordReset(email, purpose) {
+		const target = new URL(RESET_PATH, env.origin);
+		target.searchParams.set('mode', purpose);
 		await auth.api.requestPasswordReset({
 			body: {
 				email,
-				redirectTo: new URL(RESET_PATH, env.origin).toString()
+				redirectTo: target.toString()
 			}
 		});
 	}

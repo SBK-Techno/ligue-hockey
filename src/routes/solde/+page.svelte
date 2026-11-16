@@ -1,25 +1,37 @@
 <script lang="ts">
-	import { paymentDefinition } from '#config/payment-methods.ts';
+	import type { I18nKey } from '#config/i18n/fr.ts';
+	import { PAYMENT_METHODS, paymentDefinition } from '#config/payment-methods.ts';
 	import { formatDate, formatMoney, t } from '#lib/shared/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	const statusKey = {
+	const statusKey: Record<string, I18nKey> = {
 		paid: 'balance.status.paid',
 		partial: 'balance.status.partial',
 		overdue: 'balance.status.overdue',
 		upcoming: 'balance.status.upcoming'
-	} as const;
+	};
+
+	const methods = $derived(
+		PAYMENT_METHODS.filter((method) => method.key !== 'other')
+			.map((method) => t(method.labelKey))
+			.join(', ')
+	);
 </script>
 
-<div class="mb-5">
+<div class="mb-6">
 	<h1>{t('balance.title')}</h1>
-	<p class="mt-1 text-sm text-muted">{t('balance.subtitle')}</p>
+	<p class="mt-1.5 text-sm text-muted">
+		{data.seasonLabel} · {t('balance.subtitle')}
+	</p>
 </div>
 
 {#if !data.balance}
-	<div class="card text-sm text-muted">{t('balance.noPlan')}</div>
+	<div class="card">
+		<p class="text-sm text-muted">{t('balance.noPlan')}</p>
+		<p class="hint">{t('balance.noPlanHelp')}</p>
+	</div>
 {:else}
 	<div class="mb-4 grid gap-3 sm:grid-cols-3">
 		<div class="stat">
@@ -48,9 +60,9 @@
 
 	<section class="card mb-4">
 		<h2 class="mb-3">{t('balance.installmentsTitle')}</h2>
-		<ul class="space-y-2">
+		<ul role="list" class="space-y-2">
 			{#each data.balance.installments as installment (installment.number)}
-				<li class="rounded-xl border border-line bg-paper px-4 py-3">
+				<li class="rounded-control border border-line bg-paper px-4 py-3">
 					<div class="flex flex-wrap items-center justify-between gap-2">
 						<div>
 							<p class="font-semibold">{t('balance.installment', { number: installment.number })}</p>
@@ -62,26 +74,35 @@
 							</p>
 						</div>
 						<span
-							class="badge {installment.status === 'overdue'
+							class={installment.status === 'overdue'
 								? 'badge-alert'
 								: installment.status === 'paid'
 									? 'badge-ok'
 									: installment.status === 'partial'
 										? 'badge-ice'
-										: ''}"
+										: 'badge'}
 						>
 							{t(statusKey[installment.status])}
 						</span>
 					</div>
 					{#if installment.paidCents > 0 && installment.remainingCents > 0}
 						<p class="hint">
-							{formatMoney(installment.paidCents, data.balance.currency)} {t('balance.paid').toLowerCase()}
-							· {formatMoney(installment.remainingCents, data.balance.currency)} {t('balance.outstanding').toLowerCase()}
+							{t('balance.paidOf', {
+								paid: formatMoney(installment.paidCents, data.balance.currency),
+								total: formatMoney(installment.amountCents, data.balance.currency)
+							})}
+							{t('balance.remaining', {
+								amount: formatMoney(installment.remainingCents, data.balance.currency)
+							})}
 						</p>
 					{/if}
 				</li>
 			{/each}
 		</ul>
+		<div class="mt-4 border-t border-line/80 pt-4">
+			<p class="text-sm text-muted">{t('balance.payHelp')}</p>
+			<p class="hint">{t('balance.paymentMethods', { methods })}</p>
+		</div>
 		<p class="hint mt-3">{t('balance.onlyYou')}</p>
 	</section>
 
@@ -90,9 +111,9 @@
 		{#if data.payments.length === 0}
 			<p class="text-sm text-muted">{t('balance.noPayments')}</p>
 		{:else}
-			<ul class="divide-y divide-line/70">
+			<ul role="list" class="divide-y divide-line/70">
 				{#each data.payments as payment (payment.id)}
-					<li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+					<li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm first:pt-0 last:pb-0">
 						<div>
 							<p class="font-semibold">{formatMoney(payment.amountCents, data.balance.currency)}</p>
 							<p class="text-xs text-muted">

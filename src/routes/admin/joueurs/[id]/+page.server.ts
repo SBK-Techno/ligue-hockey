@@ -134,7 +134,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(profileSchema, await request.formData());
 			adminUpdatePlayer(locals.actor, params.id!, parsed);
-			return { message: t('admin.playerSaved') };
+			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -148,7 +148,7 @@ export const actions: Actions = {
 				agility: Number(form.get('agility')),
 				backchecking: Number(form.get('backchecking'))
 			});
-			return { message: t('admin.playerSaved'), ratings: result };
+			return { ok: true, message: t('admin.playerSaved'), ratings: result };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -162,10 +162,10 @@ export const actions: Actions = {
 				firstDueDate: parsed.firstDueDate || null,
 				secondDueDate: parsed.secondDueDate || null
 			});
-			return { message: t('admin.planSaved') };
+			return { ok: true, message: t('admin.planSaved') };
 		} catch (cause) {
 			if (cause instanceof Error && cause.message === 'invalid-money') {
-				return fail(400, { message: t('balance.amountInvalid') });
+				return fail(400, { ok: false, message: t('balance.amountInvalid') });
 			}
 			return actionError(cause);
 		}
@@ -173,7 +173,7 @@ export const actions: Actions = {
 	applyDefaults: async ({ locals, params }) => {
 		try {
 			applyDefaultPlan(locals.actor, params.id!);
-			return { message: t('admin.planSaved') };
+			return { ok: true, message: t('admin.planSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -187,10 +187,10 @@ export const actions: Actions = {
 				method: parsed.method,
 				note: parsed.note || null
 			});
-			return { message: t('admin.paymentSaved') };
+			return { ok: true, message: t('admin.paymentSaved') };
 		} catch (cause) {
 			if (cause instanceof Error && cause.message === 'invalid-money') {
-				return fail(400, { message: t('balance.amountInvalid') });
+				return fail(400, { ok: false, message: t('balance.amountInvalid') });
 			}
 			return actionError(cause);
 		}
@@ -199,7 +199,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(idSchema, await request.formData());
 			removePayment(locals.actor, params.id!, parsed.paymentId);
-			return { message: t('admin.paymentSaved') };
+			return { ok: true, message: t('admin.paymentSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -207,7 +207,7 @@ export const actions: Actions = {
 	resend: async ({ locals, params }) => {
 		try {
 			await resendInvite(locals.actor, params.id!);
-			return { message: t('admin.inviteResent') };
+			return { ok: true, message: t('admin.inviteResent') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -219,7 +219,7 @@ export const actions: Actions = {
 				playerId: params.id!,
 				favorite: parsed.value
 			});
-			return { message: t('admin.playerSaved') };
+			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}

@@ -1,3 +1,4 @@
+import { chmodSync } from 'node:fs';
 import Database from 'better-sqlite3';
 
 const sourcePath = process.env.DATABASE_URL ?? './data/ligue.db';
@@ -6,6 +7,7 @@ const source = new Database(sourcePath, { readonly: true });
 
 try {
 	await source.backup(targetPath);
+	chmodSync(targetPath, 0o600);
 	process.stdout.write(`Backup written to ${targetPath}\n`);
 } finally {
 	source.close();

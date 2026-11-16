@@ -230,6 +230,24 @@ export function listInAppJobs(
 		.all();
 }
 
+export function findInAppJob(
+	userId: string,
+	id: string
+): NotificationJobRow | undefined {
+	return db
+		.select()
+		.from(notificationJobs)
+		.where(
+			and(
+				eq(notificationJobs.userId, userId),
+				eq(notificationJobs.channel, 'in_app'),
+				eq(notificationJobs.status, 'sent'),
+				eq(notificationJobs.id, id)
+			)
+		)
+		.get();
+}
+
 export function countUnread(userId: string): number {
 	const row = db
 		.select({ count: sql<number>`count(*)` })

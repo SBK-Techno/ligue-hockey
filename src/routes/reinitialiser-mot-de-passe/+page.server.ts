@@ -31,7 +31,7 @@ export const actions: Actions = {
 		}
 
 		if (parsed.password !== parsed.confirm) {
-			return fail(400, { message: t('invite.mismatch') });
+			return fail(400, { ok: false, message: t('invite.mismatch') });
 		}
 
 		try {
@@ -44,7 +44,7 @@ export const actions: Actions = {
 		} catch (cause) {
 			const status = (cause as { statusCode?: number }).statusCode;
 			if (status === 400) {
-				return fail(400, { message: t('invite.expired') });
+				return fail(400, { ok: false, message: t('invite.expired') });
 			}
 			throw cause;
 		}

@@ -204,7 +204,7 @@ export async function invitePlayer(
 
 	let inviteSent = true;
 	try {
-		await identity().requestPasswordReset(input.email);
+		await identity().requestPasswordReset(input.email, 'invitation');
 	} catch (error) {
 		inviteSent = false;
 		logger.error('players.invite_email_failed', {
@@ -231,7 +231,7 @@ export async function resendInvite(actor: Actor, playerId: string): Promise<void
 	}
 
 	try {
-		await identity().requestPasswordReset(row.email);
+		await identity().requestPasswordReset(row.email, 'reset');
 	} catch (cause) {
 		throw new AppError('INTERNAL', { key: 'admin.inviteFailed', cause });
 	}
@@ -256,7 +256,8 @@ export function updateOwnProfile(
 	updatePlayer(user.userId, {
 		firstName: input.firstName,
 		lastName: input.lastName,
-		age: input.age
+		age: input.age,
+		position: input.position
 	});
 	recordAudit(actor, {
 		action: 'player.self_update',

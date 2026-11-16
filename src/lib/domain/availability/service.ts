@@ -10,14 +10,19 @@ import {
 	setGamePresence
 } from '#lib/domain/games/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
-import { generationCandidates, getOwnProfile, playersByIds } from '#lib/domain/players/service.ts';
+import {
+	findOwnProfile,
+	generationCandidates,
+	getOwnProfile,
+	playersByIds
+} from '#lib/domain/players/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import {
 	cancelForReturn,
 	createAbsenceRequest
 } from '#lib/domain/subs/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
-import { formatCount, t } from '#lib/shared/i18n/index.ts';
+import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 import { clock, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
 import type { AvailabilityStatus } from '#lib/domain/games/schema.ts';
 
@@ -27,14 +32,23 @@ export type AvailabilityRowView = {
 	status: AvailabilityStatus;
 };
 
+export type AvailabilityPendingView = {
+	playerId: string;
+	fullName: string;
+};
+
 export type AvailabilityView = {
 	rows: AvailabilityRowView[];
+	pending: AvailabilityPendingView[];
 	present: number;
 	absent: number;
 	unknown: number;
 	summary: string;
 	own: AvailabilityStatus | null;
 	locked: boolean;
+	canRespond: boolean;
+	substitute: boolean;
+	closesAtLabel: string;
 };
 
 export type AvailabilityResult = {
@@ -65,14 +79,20 @@ function availabilitySummary(counts: {
 			'availability.absent.one',
 			'availability.absent.many'
 		),
-		t('availability.unknownCount', { count: counts.unknown })
+		...(counts.unknown > 0
+			? [t('availability.unknownCount', { count: counts.unknown })]
+			: [])
 	].join(' · ');
 }
 
-function isLocked(game: GameSummary): boolean {
+function closesAtMs(game: GameSummary): number {
 	const settings = getSettings();
 	const closesHours = settings['games.availabilityClosesHours'];
-	return clock.nowMs() >= startMs(game) - closesHours * 60 * 60 * 1000;
+	return startMs(game) - closesHours * 60 * 60 * 1000;
+}
+
+function isLocked(game: GameSummary): boolean {
+	return clock.nowMs() >= closesAtMs(game);
 }
 
 export function getAvailability(actor: Actor, gameId: string): AvailabilityView {
@@ -90,7 +110,14 @@ export function getAvailability(actor: Actor, gameId: string): AvailabilityView 
 	const own = rows.find((row) => row.playerId === user.userId)?.status ?? null;
 	const present = rows.filter((row) => row.status === 'present').length;
 	const absent = rows.filter((row) => row.status === 'absent').length;
-	const unknown = roster.filter((player) => !answered.has(player.userId)).length;
+	const pending = roster
+		.filter((player) => !answered.has(player.userId))
+		.map((player) => ({
+			playerId: player.userId,
+			fullName: player.fullName
+		}));
+	const profile = findOwnProfile(actor);
+	const locked = isLocked(game);
 
 	return {
 		rows: rows.map((row) => ({
@@ -98,12 +125,17 @@ export function getAvailability(actor: Actor, gameId: string): AvailabilityView 
 			fullName: names.get(row.playerId) ?? row.playerId,
 			status: row.status
 		})),
+		pending,
 		present,
 		absent,
-		unknown,
-		summary: availabilitySummary({ present, absent, unknown }),
+		unknown: pending.length,
+		summary: availabilitySummary({ present, absent, unknown: pending.length }),
 		own,
-		locked: isLocked(game)
+		locked,
+		canRespond:
+			game.status === 'scheduled' && !locked && profile !== null && !profile.isSubstitute,
+		substitute: profile?.isSubstitute ?? false,
+		closesAtLabel: formatTimestamp(closesAtMs(game))
 	};
 }
 

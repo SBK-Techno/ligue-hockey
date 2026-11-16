@@ -20,7 +20,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(pairRuleInputSchema, await request.formData());
 			createRule(locals.actor, parsed);
-			return { message: t('admin.ruleSaved') };
+			return { ok: true, message: t('admin.ruleSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -29,7 +29,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(pairRuleDeleteSchema, await request.formData());
 			deleteRule(locals.actor, parsed.id);
-			return { message: t('admin.ruleDeleted') };
+			return { ok: true, message: t('admin.ruleDeleted') };
 		} catch (cause) {
 			return actionError(cause);
 		}

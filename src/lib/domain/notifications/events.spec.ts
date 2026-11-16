@@ -5,6 +5,7 @@ import {
 	NOTIFICATION_EVENTS,
 	NOTIFICATION_EVENT_KEYS
 } from '#config/notification-events.ts';
+import { renderNotification } from './templates.ts';
 
 describe('notification registry', () => {
 	it('provides French title and body copy for every event', () => {
@@ -59,5 +60,28 @@ describe('notification registry', () => {
 				location: 'Aréna de test'
 			})
 		).toBe('/matchs/game_test');
+	});
+
+	it('builds a branded account-access email with the reset url and expiry', () => {
+		const rendered = renderNotification('account_access', {
+			name: 'Max Simard',
+			url: 'https://hockey.example/api/auth/reset-password/token?callbackURL=x',
+			expiresInDays: 7
+		});
+		expect(rendered.email.actionUrl).toBe(
+			'https://hockey.example/api/auth/reset-password/token?callbackURL=x'
+		);
+		expect(rendered.email.actionLabel).toBeTruthy();
+		expect(rendered.email.note).toContain('7');
+		expect(rendered.body).not.toContain('http');
+	});
+
+	it('renders in-app account-access items queued before the expiry field existed', () => {
+		const rendered = renderNotification('account_access', {
+			name: 'Max Simard',
+			url: 'https://hockey.example/api/auth/reset-password/token?callbackURL=x'
+		});
+		expect(rendered.title).toBeTruthy();
+		expect(rendered.email.note).toBeUndefined();
 	});
 });

@@ -20,22 +20,18 @@
 	}
 </script>
 
-<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-	<div>
-		<p class="font-display text-xs font-bold uppercase tracking-[0.2em] text-ice">{t('nav.admin')}</p>
-		<h1 class="mt-1">{t('admin.title')}</h1>
-	</div>
-</div>
-
-<nav class="mb-5 flex gap-1 overflow-x-auto pb-1" aria-label={t('nav.admin')}>
+<nav
+	class="mb-6 flex gap-1 overflow-x-auto border-b border-line/80 pb-2"
+	aria-label={t('nav.admin')}
+>
 	{#each tabs as tab (tab.href)}
 		<a
 			href={tab.href}
-			class="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold no-underline {active(
+			class="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold no-underline transition-colors {active(
 				tab.href
 			)
-				? 'bg-ink text-paper'
-				: 'text-muted hover:bg-surface hover:text-ink'}"
+				? 'bg-ice text-white'
+				: 'text-muted hover:bg-ink/5 hover:text-ink'}"
 			aria-current={active(tab.href) ? 'page' : undefined}
 		>
 			{t(tab.key)}

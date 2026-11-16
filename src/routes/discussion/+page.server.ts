@@ -41,7 +41,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(messageSchema, await request.formData());
 			sendMessage(locals.actor, parsed);
-			return { message: t('chat.sent') };
+			return { ok: true, message: t('chat.sent') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -55,7 +55,7 @@ export const actions: Actions = {
 				.map((value) => String(value).trim())
 				.filter((value) => value.length > 0);
 			createPoll(locals.actor, { question, options });
-			return { message: t('chat.pollCreated') };
+			return { ok: true, message: t('chat.pollCreated') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -64,7 +64,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(voteSchema, await request.formData());
 			castPollVote(locals.actor, parsed);
-			return { message: t('chat.voteSaved') };
+			return { ok: true, message: t('chat.voteSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -73,7 +73,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(idSchema, await request.formData());
 			deleteChatMessage(locals.actor, parsed.messageId);
-			return { message: t('chat.deleted') };
+			return { ok: true, message: t('chat.deleted') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -82,7 +82,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(idSchema, await request.formData());
 			closePollAsAdmin(locals.actor, parsed.messageId);
-			return { message: t('chat.pollClosedNotice') };
+			return { ok: true, message: t('chat.pollClosedNotice') };
 		} catch (cause) {
 			return actionError(cause);
 		}

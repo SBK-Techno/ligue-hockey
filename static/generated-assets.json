@@ -2,12 +2,13 @@
   "generatedBy": "scripts/generate.ts",
   "source": "config/branding.json",
   "files": {
-    "static/icons/favicon-32.ff64aae4b0ee.png": "ff64aae4b0eee5f0cfab391a6c4072b9277642cee3e27a005d0651422e4cdc27",
-    "static/icons/apple-touch-180.2187212b668e.png": "2187212b668e05b9897c2aead442f9f6613e879a952b1a829d51c709675ce7b1",
-    "static/icons/icon-192-192.a105beaa0e0d.png": "a105beaa0e0d3469b6c7be1f1771138ce4a4c63b0c144239a542581b8b452315",
-    "static/icons/icon-512-512.3227425eb865.png": "3227425eb865042b0c12abd4987168df5ec2ea3bf08a5cfa3c85608785823939",
-    "static/icons/maskable-512-512.0145db463533.png": "0145db463533c06a17005b88d96f458c2a326995c2f0005a9ebe0390b478679b",
-    "static/manifest.webmanifest": "7be9b42cdbafa512792e191644da57a5dc34264aa9ff11e9ae39c5c4e304e19d",
-    "src/lib/generated/branding.ts": "54c37571c710fa3a5d6ad6277f9296b4b2a6463dc65a88e1b57e272d3b5cda64"
+    "static/icons/favicon-32.b38e780a2fd7.png": "b38e780a2fd799ebc1bc4a30a52c00260d8ddbf4d69ec8d772367f0be8390689",
+    "static/icons/apple-touch-180.f5b3ec40470a.png": "f5b3ec40470a819dd70a01da6ce4073576c181b4de3da6f3713deef5873baf4f",
+    "static/icons/icon-192-192.f41cbf210c11.png": "f41cbf210c115f02c035199bd204be10b8b835e82795781eb34b6b8e7dcf8ba6",
+    "static/icons/icon-512-512.e6d2499b9bbd.png": "e6d2499b9bbd5c5148f8fa0b9eda33604ccc313ff528080aad87a7c7de4a7f65",
+    "static/icons/maskable-512-512.91d68c680b54.png": "91d68c680b54fe1a54fd68dbbd1e1ff6375b3143d87f75a2d2f5872df5aaa389",
+    "static/manifest.webmanifest": "81909474e0419e2f7ca5839c94d4358b7e4c71d78da48396eae7970f127d498b",
+    "src/lib/generated/branding.ts": "025a91037bcfed17e77b955faaef2757a3f0480657172527b22c8f59473051f8",
+    "static/social/apercu.jpg": "cef64d6f6c35123e940ca314be06361d0b319c6fa31aa9f66ed6376656ce56d0"
   }
 }

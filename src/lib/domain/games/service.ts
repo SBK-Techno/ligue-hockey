@@ -5,7 +5,7 @@ import {
 	rosterTemplateSchema,
 	type RosterTemplate
 } from '#config/roster.ts';
-import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
+import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { generateTeams, type GeneratorPlayer } from '#lib/domain/teams/generator.ts';
@@ -101,16 +101,17 @@ function snapshotFrom(row: GameRow): GenerationSnapshot | null {
 
 function generationView(
 	row: GameRow,
-	names: Map<string, { fullName: string; position: Position }>
+	names: Map<string, { fullName: string; position: Position }>,
+	includeMetrics: boolean
 ): GameGenerationView | null {
 	const snapshot = snapshotFrom(row);
 	if (!snapshot) return null;
 	return {
-		skillDiff: snapshot.skillDiff,
-		ageDiff: snapshot.ageDiff,
-		sizeDiff: snapshot.sizeDiff,
-		skillDiffLabel: formatDecimal(snapshot.skillDiff, 2),
-		ageDiffLabel: formatDecimal(snapshot.ageDiff, 1),
+		skillDiff: includeMetrics ? snapshot.skillDiff : null,
+		ageDiff: includeMetrics ? snapshot.ageDiff : null,
+		sizeDiff: includeMetrics ? snapshot.sizeDiff : null,
+		skillDiffLabel: includeMetrics ? formatDecimal(snapshot.skillDiff, 2) : null,
+		ageDiffLabel: includeMetrics ? formatDecimal(snapshot.ageDiff, 1) : null,
 		warnings: snapshot.warnings,
 		bench: snapshot.bench.map((entry) => ({
 			playerId: entry.playerId,
@@ -171,7 +172,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		...summary(row),
 		notes: row.notes,
 		slots,
-		generation: generationView(row, names),
+		generation: generationView(row, names, can(actor, 'manageGames')),
 		openSlots,
 		openSlotsLabel: formatCount(
 			openSlots,

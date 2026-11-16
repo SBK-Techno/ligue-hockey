@@ -5,10 +5,27 @@ export type IdentityUserInput = {
 	password: string;
 };
 
+export type PasswordLinkPurpose = 'invitation' | 'reset';
+
+export function passwordLinkPurpose(url: string): PasswordLinkPurpose {
+	try {
+		const callback = new URL(url).searchParams.get('callbackURL');
+		if (!callback) return 'reset';
+		return new URL(callback).searchParams.get('mode') === 'invitation'
+			? 'invitation'
+			: 'reset';
+	} catch {
+		return 'reset';
+	}
+}
+
 export type IdentityProvider = {
 	createUser(input: IdentityUserInput): Promise<{ id: string }>;
 	deleteUser(userId: string): Promise<void>;
-	requestPasswordReset(email: string): Promise<void>;
+	requestPasswordReset(
+		email: string,
+		purpose: PasswordLinkPurpose
+	): Promise<void>;
 };
 
 let provider: IdentityProvider | null = null;

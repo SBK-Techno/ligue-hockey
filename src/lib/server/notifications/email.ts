@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import type { Transporter } from 'nodemailer';
 import { listUserEmails } from '#lib/domain/notifications/queries.ts';
 import type { RenderedNotification } from '#lib/domain/notifications/templates.ts';
+import { renderEmailHtml, renderEmailText } from '#lib/server/notifications/email-html.ts';
 import { env } from '#lib/shared/config/env.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
@@ -29,14 +30,12 @@ async function transport(): Promise<Transporter> {
 	return transporter;
 }
 
-function absoluteUrl(path: string): string {
-	return new URL(path, env.origin).toString();
-}
-
 function writeToOutbox(
 	userId: string,
 	message: RenderedNotification,
-	email: string
+	email: string,
+	html: string,
+	text: string
 ): void {
 	if (env.databaseUrl === ':memory:') {
 		throw new Error('Email is not configured and no outbox is available');
@@ -44,18 +43,16 @@ function writeToOutbox(
 
 	const directory = join(dirname(env.databaseUrl), 'outbox');
 	mkdirSync(directory, { recursive: true });
-	const file = join(directory, `${clock.nowMs()}-${newId('mail')}.txt`);
+	const base = join(directory, `${clock.nowMs()}-${newId('mail')}`);
 	const body = [
 		`To: ${email}`,
 		`Subject: ${message.title}`,
 		'',
-		message.body,
-		'',
-		absoluteUrl(message.url),
-		''
+		text
 	].join('\n');
-	writeFileSync(file, body, { mode: 0o600 });
-	logger.info('mail.outbox', { userId, file });
+	writeFileSync(`${base}.txt`, body, { mode: 0o600 });
+	writeFileSync(`${base}.html`, html, { mode: 0o600 });
+	logger.info('mail.outbox', { userId, file: `${base}.txt` });
 }
 
 export async function sendEmail(
@@ -68,11 +65,13 @@ export async function sendEmail(
 	}
 
 	const smtp = env.smtp;
+	const html = renderEmailHtml(message.email, message.title, env.origin);
+	const text = renderEmailText(message.email, env.origin);
 	if (!smtp) {
 		if (env.isProduction) {
 			throw new Error('SMTP is not configured');
 		}
-		writeToOutbox(userId, message, recipient.email);
+		writeToOutbox(userId, message, recipient.email, html, text);
 		return;
 	}
 
@@ -81,7 +80,8 @@ export async function sendEmail(
 		from: smtp.from,
 		to: recipient.email,
 		subject: message.title,
-		text: `${message.body}\n\n${absoluteUrl(message.url)}\n`
+		text,
+		html
 	});
 	logger.info('mail.sent', { userId });
 }

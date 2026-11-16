@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import type { PageProps } from './$types';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import PasswordField from '#lib/ui/PasswordField.svelte';
+	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 </script>
 
 <div class="card">
-	<h2 class="mb-1">{t('auth.title')}</h2>
-	<p class="mb-6 text-sm text-muted">{t('auth.subtitle')}</p>
+	<h2 class="text-2xl">{t('auth.title')}</h2>
+	<p class="mt-1 text-sm text-muted">{t('auth.subtitle')}</p>
 
 	{#if data.reset}
-		<p class="success mb-5">{t('invite.success')}</p>
+		<p class="success mt-5">{t('auth.reset.success')}</p>
 	{/if}
-	{#if form?.message}
-		<p class="alert mb-5">{form.message}</p>
-	{/if}
+	<FormFeedback {form} class="mt-5" />
 
-	<form method="POST" use:enhance class="space-y-4">
+	<form method="POST" use:progressiveForm class="mt-6 space-y-4">
 		<input type="hidden" name="next" value={data.next} />
 		<div>
 			<label class="label" for="email">{t('auth.email')}</label>
@@ -26,21 +26,26 @@
 				id="email"
 				name="email"
 				type="email"
+				inputmode="email"
 				autocomplete="email"
+				autocapitalize="none"
+				spellcheck="false"
 				required
 			/>
 		</div>
-		<div>
-			<label class="label" for="password">{t('auth.password')}</label>
-			<input
-				class="input"
-				id="password"
-				name="password"
-				type="password"
-				autocomplete="current-password"
-				required
-			/>
+		<PasswordField
+			id="password"
+			name="password"
+			label={t('auth.password')}
+			autocomplete="current-password"
+		/>
+		<div class="flex justify-end">
+			<a class="link text-sm" href="/mot-de-passe-oublie">{t('auth.forgot')}</a>
 		</div>
 		<button class="btn-primary w-full" type="submit">{t('auth.submit')}</button>
 	</form>
+
+	<p class="mt-6 border-t border-line/80 pt-4 text-xs leading-relaxed text-muted">
+		{t('auth.inviteOnly')}
+	</p>
 </div>

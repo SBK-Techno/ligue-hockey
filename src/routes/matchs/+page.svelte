@@ -1,20 +1,21 @@
 <script lang="ts">
-	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import type { I18nKey } from '#config/i18n/fr.ts';
+	import { formatDate, formatTime, formatWeekday, t } from '#lib/shared/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	const statusKey = {
+	const statusKey: Record<string, I18nKey> = {
 		scheduled: 'games.status.scheduled',
 		cancelled: 'games.status.cancelled',
 		completed: 'games.status.completed'
-	} as const;
+	};
 </script>
 
 <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 	<div>
 		<h1>{t('games.title')}</h1>
-		<p class="mt-1 text-sm text-muted">{t('games.subtitle')}</p>
+		<p class="mt-1.5 text-sm text-muted">{t('games.subtitle')}</p>
 	</div>
 	{#if data.actor.kind === 'user' && data.actor.role === 'admin'}
 		<a class="btn-primary btn-sm" href="/admin/matchs">{t('games.adminCreate')}</a>
@@ -23,26 +24,38 @@
 
 <h2 class="mb-3">{t('games.upcoming')}</h2>
 {#if data.upcoming.length === 0}
-	<div class="card text-sm text-muted">{t('games.empty')}</div>
+	<div class="card">
+		<p class="text-sm text-muted">{t('games.empty')}</p>
+		<p class="hint">{t('games.emptyHelp')}</p>
+	</div>
 {:else}
-	<ul class="space-y-3">
-		{#each data.upcoming as game (game.id)}
+	<ul role="list" class="space-y-2.5">
+		{#each data.upcoming as game, index (game.id)}
 			<li>
 				<a
 					href="/matchs/{game.id}"
-					class="card block no-underline transition-colors hover:border-ice"
+					class="card card-link flex items-center gap-4 py-3.5"
 				>
-					<div class="flex flex-wrap items-center justify-between gap-3">
-						<div>
-							<h3 class="text-base normal-case tracking-normal text-ink">
-								{formatDate(game.gameDate)}
-							</h3>
-							<p class="mt-1 text-sm text-muted">
-								{formatTime(game.startTime)} · {game.location}
-							</p>
-						</div>
-						<span class="badge-ok">{t('games.status.scheduled')}</span>
+					<div class="w-16 shrink-0 border-r border-line/80 pr-3 text-center">
+						<p class="text-[11px] font-semibold capitalize text-muted">
+							{formatWeekday(game.gameDate)}
+						</p>
+						<p class="font-display text-2xl font-bold leading-tight text-ink">
+							{formatDate(game.gameDate, 'short')}
+						</p>
 					</div>
+					<div class="min-w-0 flex-1">
+						<p class="truncate text-sm font-semibold text-ink">
+							{formatTime(game.startTime)} · {game.location}
+						</p>
+					</div>
+					{#if index === 0 && game.status === 'scheduled'}
+						<span class="badge-ice shrink-0">{t('games.next')}</span>
+					{:else if game.status === 'cancelled'}
+						<span class="badge-alert shrink-0">{t('games.status.cancelled')}</span>
+					{:else}
+						<span class="badge shrink-0">{t(statusKey[game.status] ?? 'games.status.scheduled')}</span>
+					{/if}
 				</a>
 			</li>
 		{/each}
@@ -51,13 +64,18 @@
 
 {#if data.past.length > 0}
 	<h2 class="mb-3 mt-8">{t('games.past')}</h2>
-	<ul class="space-y-2">
+	<ul role="list" class="space-y-1.5">
 		{#each data.past as game (game.id)}
 			<li>
-				<a href="/matchs/{game.id}" class="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm no-underline hover:border-ice">
-					<span class="font-semibold text-ink">{formatDate(game.gameDate, 'short')}</span>
+				<a
+					href="/matchs/{game.id}"
+					class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-line/80 bg-surface px-4 py-3 text-sm no-underline transition-colors hover:border-ink/25"
+				>
+					<span class="font-semibold text-ink">{formatDate(game.gameDate, 'year')}</span>
 					<span class="text-muted">{formatTime(game.startTime)} · {game.location}</span>
-					<span class="badge">{t(statusKey[game.status])}</span>
+					<span class="ml-auto badge {game.status === 'cancelled' ? 'badge-alert' : 'badge'}">
+						{t(statusKey[game.status] ?? 'games.status.scheduled')}
+					</span>
 				</a>
 			</li>
 		{/each}

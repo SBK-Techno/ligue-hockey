@@ -24,12 +24,26 @@ export const NOTIFICATION_EVENTS = {
 	account_access: defineEvent({
 		schema: z.object({
 			name: z.string().min(1),
-			url: z.string().min(1)
+			url: z.string().min(1),
+			// Optional because in-app items and jobs queued before the branded
+			// email existed carry the same event without an expiry.
+			expiresInDays: z.number().int().min(1).max(365).optional()
 		}),
 		titleKey: 'notifications.accountAccess.title',
 		bodyKey: 'notifications.accountAccess.body',
 		channels: ['email', 'in_app'],
-		url: () => '/connexion'
+		url: () => '/'
+	}),
+	password_reset: defineEvent({
+		schema: z.object({
+			name: z.string().min(1),
+			url: z.string().min(1),
+			expiresInDays: z.number().int().min(1).max(365).optional()
+		}),
+		titleKey: 'notifications.passwordReset.title',
+		bodyKey: 'notifications.passwordReset.body',
+		channels: ['email', 'in_app'],
+		url: () => '/profil'
 	}),
 	sub_request: defineEvent({
 		schema: z.object({

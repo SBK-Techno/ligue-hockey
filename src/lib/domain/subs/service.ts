@@ -16,7 +16,7 @@ import { getSettings } from '#lib/domain/settings/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
-import { clock, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
+import { clock, todayInZone, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
 	computeSubRequestWaves,
@@ -257,6 +257,13 @@ export function notifyRequestWaves(
 		request.requestedByPlayerId
 	);
 
+	const dedupeRoot = request.requestedByPlayerId
+		? `sub_request:${request.gameId}:${request.requestedByPlayerId}:${todayInZone(
+				branding.timezone,
+				now
+			)}`
+		: `sub_request:${request.id}`;
+
 	if (!tooLate) {
 		notify(
 			'sub_request',
@@ -270,7 +277,7 @@ export function notifyRequestWaves(
 				location: game.location
 			},
 			{
-				dedupeKey: `sub_request:${request.id}:favorite`,
+				dedupeKey: `${dedupeRoot}:favorite`,
 				scheduledFor: waves.favoriteAt
 			}
 		);
@@ -287,7 +294,7 @@ export function notifyRequestWaves(
 				location: game.location
 			},
 			{
-				dedupeKey: `sub_request:${request.id}:general`,
+				dedupeKey: `${dedupeRoot}:general`,
 				scheduledFor: waves.generalAt
 			}
 		);

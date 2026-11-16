@@ -46,7 +46,7 @@ export const actions: Actions = {
 		try {
 			const input = settingsInputFromFormData(await request.formData());
 			updateSettings(locals.actor, input as Record<SettingsKey, unknown>);
-			return { message: t('admin.settingsSaved') };
+			return { ok: true, message: t('admin.settingsSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}

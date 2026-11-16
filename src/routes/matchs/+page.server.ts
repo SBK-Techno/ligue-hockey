@@ -11,10 +11,16 @@ export const load: ServerLoad = ({ locals }) => {
 	const today = todayInZone(branding.timezone, clock.nowMs());
 	return {
 		upcoming: schedule.filter(
-			(game) => game.status === 'scheduled' && game.gameDate >= today
+			(game) =>
+				(game.status === 'scheduled' && game.gameDate >= today) ||
+				(game.status === 'cancelled' && game.gameDate >= today)
 		),
 		past: schedule
-			.filter((game) => game.status !== 'scheduled' || game.gameDate < today)
+			.filter(
+				(game) =>
+					game.gameDate < today ||
+					(game.status === 'completed' && game.gameDate === today)
+			)
 			.reverse()
 			.slice(0, 10)
 	};

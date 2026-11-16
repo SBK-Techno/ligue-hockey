@@ -1,18 +1,24 @@
 @theme {
-	--color-ink: #121a21;
-	--color-paper: #f7f5f0;
-	--color-surface: #fffdf9;
-	--color-line: #ded6c8;
-	--color-muted: #5c6a73;
-	--color-ice: #2c6e8f;
-	--color-ice-deep: #16475d;
-	--color-ice-soft: #dceaf2;
-	--color-alert: #b4412a;
-	--color-alert-deep: #93331f;
-	--color-alert-soft: #f8e3de;
-	--color-ok: #2f6b4f;
-	--color-ok-soft: #e0efe5;
-	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-	--font-display: 'Arial Narrow', 'Helvetica Neue', ui-sans-serif, sans-serif;
-	--radius-card: 1rem;
+	/* Palette: encre, papier chaud, bleu SBK, rouge de filet. */
+	--color-ink: #101a22;
+	--color-paper: #f5f2ea;
+	--color-surface: #fffcf6;
+	--color-line: #ded6c7;
+	--color-muted: #58656e;
+	--color-ice: #2453bb;
+	--color-ice-deep: #173b8c;
+	--color-ice-soft: #e5eaf8;
+	--color-alert: #b23a25;
+	--color-alert-deep: #8e2c1b;
+	--color-alert-soft: #f9e4de;
+	--color-ok: #2c6a4c;
+	--color-ok-soft: #e2efe5;
+	--font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, -apple-system,
+		'Segoe UI', sans-serif;
+	--font-display: 'Archivo Variable', 'Helvetica Neue', ui-sans-serif, sans-serif;
+	--radius-card: 1.25rem;
+	--radius-control: 0.75rem;
+	--shadow-card: 0 1px 2px rgb(16 26 34 / 0.05), 0 18px 40px -32px rgb(16 26 34 / 0.35);
+	--shadow-lift: 0 2px 4px rgb(16 26 34 / 0.06), 0 24px 48px -28px rgb(16 26 34 / 0.4);
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }

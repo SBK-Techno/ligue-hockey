@@ -21,7 +21,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(gameInputSchema, await request.formData());
 			updateGame(locals.actor, params.id!, parsed);
-			return { message: t('admin.gameSaved') };
+			return { ok: true, message: t('admin.gameSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -29,7 +29,7 @@ export const actions: Actions = {
 	cancel: async ({ locals, params }) => {
 		try {
 			cancelGame(locals.actor, params.id!);
-			return { message: t('admin.gameCancelled') };
+			return { ok: true, message: t('admin.gameCancelled') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -37,7 +37,7 @@ export const actions: Actions = {
 	generate: async ({ locals, params }) => {
 		try {
 			regenerateAsAdmin(locals.actor, params.id!);
-			return { message: t('games.generated') };
+			return { ok: true, message: t('games.generated') };
 		} catch (cause) {
 			return actionError(cause);
 		}

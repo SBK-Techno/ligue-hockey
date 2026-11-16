@@ -31,11 +31,11 @@ export type GameBenchView = {
 };
 
 export type GameGenerationView = {
-	skillDiff: number;
-	ageDiff: number;
-	sizeDiff: number;
-	skillDiffLabel: string;
-	ageDiffLabel: string;
+	skillDiff: number | null;
+	ageDiff: number | null;
+	sizeDiff: number | null;
+	skillDiffLabel: string | null;
+	ageDiffLabel: string | null;
 	warnings: string[];
 	bench: GameBenchView[];
 	generatedAt: number;

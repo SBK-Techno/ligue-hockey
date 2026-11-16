@@ -2,6 +2,7 @@
 export const branding = {
   "name": "Ligue de hockey du dimanche matin",
   "shortName": "LHDM",
+  "organisation": "SBK Technologies",
   "description": "Horaire, présences, équipes, remplaçants et paiements de la ligue.",
   "locale": "fr-CA",
   "timezone": "America/Toronto",
@@ -10,13 +11,23 @@ export const branding = {
   "display": "standalone",
   "themeColor": "#121A21",
   "backgroundColor": "#F7F5F0",
+  "brandColor": "#2453BB",
+  "emailPalette": {
+    "ink": "#101A22",
+    "paper": "#F5F2EA",
+    "surface": "#FFFCF6",
+    "line": "#DED6C7",
+    "muted": "#58656E",
+    "brand": "#2453BB"
+  },
+  "socialImage": "/social/apercu.jpg",
   "manifestPath": "/manifest.webmanifest",
   "icons": {
-    "favicon": "/icons/favicon-32.ff64aae4b0ee.png",
-    "appleTouch": "/icons/apple-touch-180.2187212b668e.png",
-    "icon192": "/icons/icon-192-192.a105beaa0e0d.png",
-    "icon512": "/icons/icon-512-512.3227425eb865.png",
-    "maskable": "/icons/maskable-512-512.0145db463533.png"
+    "favicon": "/icons/favicon-32.b38e780a2fd7.png",
+    "appleTouch": "/icons/apple-touch-180.f5b3ec40470a.png",
+    "icon192": "/icons/icon-192-192.f41cbf210c11.png",
+    "icon512": "/icons/icon-512-512.e6d2499b9bbd.png",
+    "maskable": "/icons/maskable-512-512.91d68c680b54.png"
   }
 } as const;
 

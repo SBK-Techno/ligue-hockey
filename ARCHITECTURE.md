@@ -22,7 +22,7 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 
 | Fact | Owner | Consumers | Gate |
 |---|---|---|---|
-| App name, colours, icons, locale, timezone | `config/branding.json` | manifest, icons, layout, emails | `verify:generated` |
+| App name, colours, icons, locale, timezone, social image | `config/branding.json` | manifest, icons, layout, emails, OG metadata | `verify:generated` |
 | League-editable settings (roster, fees, lead times, limits) | `config/settings-registry.ts` | settings service, admin form, services | registry test + `verify` |
 | Positions | `config/positions.ts` | schema checks, forms, roster templates, notifications | architecture check |
 | Rating attributes and weights | `config/rating-attributes.ts` | ratings service, admin form, overall calculation | registry test |
@@ -48,7 +48,7 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 Three explicit layers, each with one owner:
 
-1. **Branding** (build time, checked in): `config/branding.json`. Generates `static/manifest.webmanifest` and `static/icons/*`.
+1. **Branding** (build time, checked in): `config/branding.json`. Generates `static/manifest.webmanifest`, `static/icons/*`, `static/social/apercu.jpg`, and `src/lib/generated/branding.ts`.
 2. **League settings** (database): typed registry with a Zod schema, default, French label, and optional min/max. `settings.get()` validates on read and fails loudly on drift. The admin form is generated from the registry. Services ask the settings service; they never read the table.
 3. **Deployment** (environment): `src/lib/shared/config/env.ts` parses once at boot, reports every invalid key, and exports a frozen object. Secrets never enter logs or the client bundle.
 
@@ -95,7 +95,7 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 2. `eslint` — import boundaries and restricted syntax.
 3. `vitest run` — unit, property, and contract tests.
 4. `verify:architecture` — scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist.
-5. `verify:generated` — regenerates manifest and icons in memory and fails if the checked-in bytes differ. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+5. `verify:generated` — regenerates every branding asset, manifest, social image, and generated module in memory and fails if the checked-in bytes differ. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
 
 CI runs the same command plus `npm run build`. A red gate blocks a milestone.
 

@@ -159,6 +159,24 @@ for (const file of sourceFiles.filter(
 			});
 		}
 	}
+
+	const counts = [
+		...content.matchAll(
+			/formatCount\([^,]+,\s*'([^'{}]+)'\s*,\s*'([^'{}]+)'/g
+		)
+	];
+	for (const match of counts) {
+		for (const key of [match[1], match[2]]) {
+			const value = fr[key as keyof typeof fr];
+			if (typeof value !== 'string' || value.includes('{count}')) continue;
+			findings.push({
+				file,
+				line: content.slice(0, match.index).split('\n').length,
+				rule: 'i18n-count-placeholder',
+				detail: `formatCount key must include {count}: ${key}`
+			});
+		}
+	}
 }
 
 const grouped = new Map<string, Finding[]>();

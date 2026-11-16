@@ -36,6 +36,7 @@ export const actions: Actions = {
 			const parsed = parseForm(invitePlayerSchema, await request.formData());
 			const result = await invitePlayer(locals.actor, parsed);
 			return {
+				ok: true,
 				message: result.inviteSent
 					? t('admin.inviteSent', { email: parsed.email })
 					: t('admin.inviteEmailFailed')
@@ -48,7 +49,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(playerActionSchema, await request.formData());
 			await resendInvite(locals.actor, parsed.playerId);
-			return { message: t('admin.inviteResent') };
+			return { ok: true, message: t('admin.inviteResent') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -57,7 +58,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(toggleSchema, await request.formData());
 			adminUpdatePlayer(locals.actor, parsed.playerId, { active: parsed.value });
-			return { message: t('admin.playerSaved') };
+			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -66,7 +67,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(toggleSchema, await request.formData());
 			adminUpdatePlayer(locals.actor, parsed.playerId, { isSubstitute: parsed.value });
-			return { message: t('admin.playerSaved') };
+			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -78,7 +79,7 @@ export const actions: Actions = {
 				playerId: parsed.playerId,
 				favorite: parsed.value
 			});
-			return { message: t('admin.playerSaved') };
+			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);
 		}

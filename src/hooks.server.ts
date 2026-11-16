@@ -7,7 +7,7 @@ import { startup } from '#lib/server/startup.ts';
 import { isAppError } from '#lib/shared/errors.ts';
 import { t, type I18nKey } from '#lib/shared/i18n/index.ts';
 import { newId } from '#lib/shared/ids/id.ts';
-import { logger } from '#lib/shared/logging/logger.ts';
+import { logger, redactPath } from '#lib/shared/logging/logger.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -41,13 +41,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
 		response.headers.set(name, value);
 	}
+	if (
+		event.url.pathname === '/reinitialiser-mot-de-passe' ||
+		event.url.pathname.startsWith('/api/auth/reset-password/')
+	) {
+		response.headers.set('Referrer-Policy', 'no-referrer');
+		response.headers.set('Cache-Control', 'no-store');
+	}
 	if (session?.session) {
 		response.headers.set('Cache-Control', 'private, no-store');
 	}
 
 	logger.info('http.request', {
 		method: event.request.method,
-		path: event.url.pathname,
+		path: redactPath(event.url.pathname),
 		status: response.status,
 		durationMs: clock.nowMs() - startedAt,
 		requestId: event.locals.requestId
@@ -68,14 +75,14 @@ export const handleError: HandleServerError = (input) => {
 	if (isAppError(error)) {
 		logger.warn('http.app_error', {
 			code: error.code,
-			path: event.url.pathname,
+			path: redactPath(event.url.pathname),
 			requestId: event.locals.requestId
 		});
 		return { message: t(error.key), key: error.key, status };
 	}
 
 	logger.error('http.unhandled_error', {
-		path: event.url.pathname,
+		path: redactPath(event.url.pathname),
 		status,
 		requestId: event.locals.requestId,
 		error

@@ -103,6 +103,7 @@ function buildBrandingModule(
 	const value = {
 		name: branding.name,
 		shortName: branding.shortName,
+		organisation: branding.organisation,
 		description: branding.description,
 		locale: branding.locale,
 		timezone: branding.timezone,
@@ -111,6 +112,9 @@ function buildBrandingModule(
 		display: branding.display,
 		themeColor: branding.themeColor,
 		backgroundColor: branding.backgroundColor,
+		brandColor: branding.brandColor,
+		emailPalette: branding.emailPalette,
+		socialImage: branding.socialImage,
 		manifestPath: '/manifest.webmanifest',
 		icons
 	};
@@ -120,6 +124,56 @@ function buildBrandingModule(
 		null,
 		2
 	)} as const;\n\nexport type Branding = typeof branding;\n`;
+}
+
+const SOCIAL_WIDTH = 1200;
+const SOCIAL_HEIGHT = 630;
+const SOCIAL_CREST = 184;
+
+function buildSocialOverlay(): Buffer {
+	return Buffer.from(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="${SOCIAL_WIDTH}" height="${SOCIAL_HEIGHT}" viewBox="0 0 ${SOCIAL_WIDTH} ${SOCIAL_HEIGHT}">
+	<defs>
+		<linearGradient id="side" x1="0" y1="0" x2="1" y2="0">
+			<stop offset="0" stop-color="#101A22" stop-opacity="0.95"/>
+			<stop offset="0.46" stop-color="#101A22" stop-opacity="0.86"/>
+			<stop offset="0.68" stop-color="#101A22" stop-opacity="0.42"/>
+			<stop offset="1" stop-color="#101A22" stop-opacity="0.12"/>
+		</linearGradient>
+		<linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#101A22" stop-opacity="0"/>
+			<stop offset="1" stop-color="#101A22" stop-opacity="0.55"/>
+		</linearGradient>
+	</defs>
+	<rect width="${SOCIAL_WIDTH}" height="${SOCIAL_HEIGHT}" fill="url(#side)"/>
+	<rect y="${SOCIAL_HEIGHT - 150}" width="${SOCIAL_WIDTH}" height="150" fill="url(#base)"/>
+	<rect x="64" y="56" width="${SOCIAL_CREST + 16}" height="${SOCIAL_CREST + 16}" rx="44" fill="#F5F2EA" fill-opacity="0.08"/>
+	<rect y="${SOCIAL_HEIGHT - 8}" width="${SOCIAL_WIDTH}" height="8" fill="#2453BB"/>
+</svg>`
+	);
+}
+
+async function renderSocialImage(
+	root: string,
+	branding: Branding,
+	svg: Buffer
+): Promise<Buffer> {
+	const source = await readFile(path.join(root, branding.socialSource));
+	const background = await sharp(source)
+		.resize(SOCIAL_WIDTH, SOCIAL_HEIGHT, { fit: 'cover', position: 'centre' })
+		.toBuffer();
+	const crest = await sharp(svg)
+		.resize(SOCIAL_CREST, SOCIAL_CREST)
+		.png()
+		.toBuffer();
+
+	return sharp(background)
+		.composite([
+			{ input: buildSocialOverlay(), top: 0, left: 0 },
+			{ input: crest, top: 64, left: 72 }
+		])
+		.jpeg({ quality: 88, mozjpeg: true })
+		.toBuffer();
 }
 
 export async function generateBranding(root: string): Promise<GeneratedFile[]> {
@@ -146,6 +200,9 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 
 	const moduleSource = buildBrandingModule(branding, icons);
 	files.push({ path: 'src/lib/generated/branding.ts', contents: moduleSource });
+
+	const social = await renderSocialImage(root, branding, svg);
+	files.push({ path: `static${branding.socialImage}`, contents: social });
 
 	const checksums = {
 		generatedBy: 'scripts/generate.ts',

@@ -7,6 +7,8 @@ import {
 	INVITE_DAYS,
 	LOGIN_WINDOW_MINUTES,
 	MAX_LOGIN_ATTEMPTS,
+	RESET_REQUESTS_PER_HOUR,
+	PASSWORD_CHANGES_PER_HOUR,
 	VAPID_PRIVATE_KEY,
 	VAPID_SUBJECT,
 	SMTP_HOST,
@@ -42,19 +44,26 @@ const publicKey = VAPID_PUBLIC_KEY || undefined;
 const privateKey = VAPID_PRIVATE_KEY || undefined;
 const subject = VAPID_SUBJECT || undefined;
 
+const origin = required(ORIGIN, 'ORIGIN');
+if (!building && APP_ENV === 'production' && !origin.startsWith('https://')) {
+	throw new Error('ORIGIN must use https in production');
+}
+
 export const env = Object.freeze({
 	appEnv: APP_ENV,
 	isProduction: APP_ENV === 'production',
 	databaseUrl: DATABASE_URL,
 	migrationsDir: MIGRATIONS_DIR,
 	busyTimeoutMs: DATABASE_BUSY_TIMEOUT_MS,
-	origin: required(ORIGIN, 'ORIGIN'),
+	origin,
 	betterAuthSecret: required(BETTER_AUTH_SECRET, 'BETTER_AUTH_SECRET'),
 	security: Object.freeze({
 		sessionDays: SESSION_DAYS,
 		inviteDays: INVITE_DAYS,
 		loginWindowMinutes: LOGIN_WINDOW_MINUTES,
-		maxLoginAttempts: MAX_LOGIN_ATTEMPTS
+		maxLoginAttempts: MAX_LOGIN_ATTEMPTS,
+		resetRequestsPerHour: RESET_REQUESTS_PER_HOUR,
+		passwordChangesPerHour: PASSWORD_CHANGES_PER_HOUR
 	}),
 	logLevel: LOG_LEVEL,
 	notificationTickMs: NOTIFICATION_TICK_MS,

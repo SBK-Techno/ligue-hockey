@@ -11,6 +11,7 @@ export type ActionMessage = {
 export function actionError(cause: unknown) {
 	if (isAppError(cause)) {
 		return fail(cause.status, {
+			ok: false,
 			message: t(cause.key, cause.params),
 			key: cause.key
 		});

@@ -9,6 +9,8 @@ import { getRequestEvent } from '$app/server';
 import { branding } from '#lib/generated/branding.ts';
 import { env } from '#lib/shared/config/env.ts';
 import { publicEnv } from '#lib/shared/config/public-env.ts';
+import { passwordLinkPurpose } from '#lib/domain/auth/identity.ts';
+import { logger } from '#lib/shared/logging/logger.ts';
 import { db } from '#lib/server/db/index.ts';
 
 // Route analysis imports this module during `vite build`, where deployment
@@ -34,14 +36,34 @@ export const auth = betterAuth({
 		resetPasswordTokenExpiresIn: env.security.inviteDays * 24 * 60 * 60,
 		revokeSessionsOnPasswordReset: true,
 		sendResetPassword: async ({ user, url }) => {
-			const { sendAccountAccess } = await import(
+			const { sendAccountAccess, sendPasswordReset } = await import(
 				'#lib/domain/notifications/service.ts'
 			);
 			const { triggerNotificationTick } = await import(
 				'#lib/server/notifications/scheduler.ts'
 			);
-			sendAccountAccess({ userId: user.id, name: user.name, url });
-			triggerNotificationTick();
+			const purpose = passwordLinkPurpose(url);
+			const payload = {
+				userId: user.id,
+				name: user.name,
+				url,
+				expiresInDays: env.security.inviteDays
+			};
+			try {
+				if (purpose === 'invitation') {
+					sendAccountAccess(payload);
+				} else {
+					sendPasswordReset(payload);
+				}
+				triggerNotificationTick();
+			} catch (error) {
+				logger.error('auth.password_link_failed', {
+					userId: user.id,
+					purpose,
+					error
+				});
+				throw error;
+			}
 		}
 	},
 	session: {
@@ -59,7 +81,7 @@ export const auth = betterAuth({
 			},
 			'/request-password-reset': {
 				window: 60 * 60,
-				max: 3
+				max: env.security.resetRequestsPerHour
 			}
 		}
 	},

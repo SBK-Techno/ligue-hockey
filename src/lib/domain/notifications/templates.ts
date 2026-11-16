@@ -18,6 +18,10 @@ const RENDERERS: RendererMap = {
 		name: payload.name,
 		url: payload.url
 	}),
+	password_reset: (payload) => ({
+		name: payload.name,
+		url: payload.url
+	}),
 	sub_request: (payload) => ({
 		position: t(positionDefinition(payload.position).labelKey),
 		date: formatDate(payload.gameDate),
@@ -46,11 +50,22 @@ const RENDERERS: RendererMap = {
 	})
 };
 
+export type EmailView = {
+	heading: string;
+	greeting?: string;
+	paragraphs: string[];
+	actionLabel: string;
+	actionUrl: string;
+	note?: string;
+	ignore?: string;
+};
+
 export type RenderedNotification = {
 	title: string;
 	body: string;
 	url: string;
 	tag: string;
+	email: EmailView;
 };
 
 export function renderNotification<K extends NotificationEventKey>(
@@ -61,12 +76,51 @@ export function renderNotification<K extends NotificationEventKey>(
 	const params = (RENDERERS[eventKey] as (value: NotificationPayload<K>) => Params)(
 		payload
 	);
+	const title = t(definition.titleKey as I18nKey, params);
+	const body = t(definition.bodyKey as I18nKey, params);
+	const url = (definition.url as (value: NotificationPayload<K>) => string)(payload);
+
+	const email: EmailView = {
+		heading: title,
+		paragraphs: [body],
+		actionLabel: t('email.openApp'),
+		actionUrl: url
+	};
+
+	if (eventKey === 'account_access') {
+		const account = payload as NotificationPayload<'account_access'>;
+		email.greeting = t('email.greeting', { name: account.name });
+		email.paragraphs = [t('email.accountAccess.lead')];
+		email.actionLabel = t('email.accountAccess.cta');
+		email.actionUrl = account.url;
+		if (account.expiresInDays !== undefined) {
+			email.note = t('email.accountAccess.expiry', {
+				count: account.expiresInDays
+			});
+		}
+		email.ignore = t('email.accountAccess.ignore');
+	}
+
+	if (eventKey === 'password_reset') {
+		const account = payload as NotificationPayload<'password_reset'>;
+		email.greeting = t('email.greeting', { name: account.name });
+		email.paragraphs = [t('email.passwordReset.lead')];
+		email.actionLabel = t('email.passwordReset.cta');
+		email.actionUrl = account.url;
+		if (account.expiresInDays !== undefined) {
+			email.note = t('email.accountAccess.expiry', {
+				count: account.expiresInDays
+			});
+		}
+		email.ignore = t('email.passwordReset.ignore');
+	}
 
 	return {
-		title: t(definition.titleKey as I18nKey, params),
-		body: t(definition.bodyKey as I18nKey, params),
-		url: (definition.url as (value: NotificationPayload<K>) => string)(payload),
-		tag: eventKey
+		title,
+		body,
+		url,
+		tag: eventKey,
+		email
 	};
 }
 

@@ -30,6 +30,8 @@ export const envSchema = z.object({
 	INVITE_DAYS: integer(7, 1, 30),
 	LOGIN_WINDOW_MINUTES: integer(15, 1, 1440),
 	MAX_LOGIN_ATTEMPTS: integer(5, 1, 50),
+	RESET_REQUESTS_PER_HOUR: integer(3, 1, 50),
+	PASSWORD_CHANGES_PER_HOUR: integer(5, 1, 50),
 	PASSWORD_MIN_LENGTH: integer(10, 8, 128),
 	VAPID_PUBLIC_KEY: optionalString,
 	VAPID_PRIVATE_KEY: optionalString,
@@ -44,7 +46,8 @@ export const envSchema = z.object({
 	ADMIN_PASSWORD: z
 		.string()
 		.optional()
-		.transform((value) => value || undefined),
+		.transform((value) => value || undefined)
+		.pipe(z.string().min(12).optional()),
 	LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 	NOTIFICATION_TICK_MS: integer(60_000, 1000, 3_600_000),
 	NOTIFICATION_MAX_ATTEMPTS: integer(5, 1, 20),

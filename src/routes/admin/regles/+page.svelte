@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -9,21 +11,20 @@
 	);
 </script>
 
-{#if form?.message}
-	<p class="success mb-4">{form.message}</p>
-{/if}
+<FormFeedback {form} class="mb-4" />
 
-<div class="mb-4">
-	<h2>{t('admin.rulesTitle')}</h2>
-	<p class="mt-1 text-sm text-muted">{t('admin.rulesHelp')}</p>
+<div class="mb-5">
+	<h1>{t('admin.rulesTitle')}</h1>
+	<p class="mt-1.5 text-sm text-muted">{t('admin.rulesHelp')}</p>
 </div>
 
 <section class="card mb-5">
-	<h3 class="mb-3">{t('admin.addRule')}</h3>
-	<form method="POST" action="?/create" use:enhance class="grid gap-3 sm:grid-cols-3">
+	<h2 class="mb-3">{t('admin.addRule')}</h2>
+	<form method="POST" action="?/create" use:progressiveForm class="grid gap-3 sm:grid-cols-3">
 		<div>
 			<label class="label" for="playerAId">{t('admin.rulePlayerA')}</label>
 			<select class="input" id="playerAId" name="playerAId" required>
+				<option value="">{t('admin.choosePlayer')}</option>
 				{#each data.players as player (player.userId)}
 					<option value={player.userId}>{player.fullName}</option>
 				{/each}
@@ -32,6 +33,7 @@
 		<div>
 			<label class="label" for="playerBId">{t('admin.rulePlayerB')}</label>
 			<select class="input" id="playerBId" name="playerBId" required>
+				<option value="">{t('admin.choosePlayer')}</option>
 				{#each data.players as player (player.userId)}
 					<option value={player.userId}>{player.fullName}</option>
 				{/each}
@@ -51,24 +53,32 @@
 </section>
 
 {#if data.rules.length === 0}
-	<div class="card text-sm text-muted">{t('common.none')}</div>
+	<div class="card">
+		<p class="text-sm text-muted">{t('admin.rulesEmpty')}</p>
+	</div>
 {:else}
-	<ul class="space-y-2">
+	<ul role="list" class="space-y-2">
 		{#each data.rules as rule (rule.id)}
-			<li class="card flex flex-wrap items-center justify-between gap-3">
-				<div>
+			<li class="card flex flex-wrap items-center justify-between gap-3 py-3.5">
+				<div class="min-w-0">
 					<p class="text-sm font-semibold">
 						{names.get(rule.playerAId) ?? rule.playerAId}
-						{rule.kind === 'must' ? ' + ' : ' ≠ '}
+						<span class="font-normal text-muted"> · </span>
 						{names.get(rule.playerBId) ?? rule.playerBId}
 					</p>
-					<p class="text-xs text-muted">
-						{rule.kind === 'must' ? t('admin.ruleMust') : t('admin.ruleMustNot')}
+					<p class="mt-1">
+						<span class="badge {rule.kind === 'must' ? 'badge-ok' : 'badge-alert'}">
+							{rule.kind === 'must' ? t('admin.ruleMust') : t('admin.ruleMustNot')}
+						</span>
 					</p>
 				</div>
-				<form method="POST" action="?/delete" use:enhance>
+				<form method="POST" action="?/delete" use:progressiveForm>
 					<input type="hidden" name="id" value={rule.id} />
-					<button class="btn-ghost btn-sm" type="submit">{t('admin.deleteRule')}</button>
+					<ConfirmSubmit
+						label={t('admin.deleteRule')}
+						question={t('admin.deleteRuleConfirm')}
+						class="btn-ghost btn-sm"
+					/>
 				</form>
 			</li>
 		{/each}

@@ -16,19 +16,19 @@
   ],
   "icons": [
     {
-      "src": "/icons/icon-192-192.a105beaa0e0d.png",
+      "src": "/icons/icon-192-192.f41cbf210c11.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512-512.3227425eb865.png",
+      "src": "/icons/icon-512-512.e6d2499b9bbd.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/maskable-512-512.0145db463533.png",
+      "src": "/icons/maskable-512-512.91d68c680b54.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

@@ -1,31 +1,32 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	const statusKey = {
+	const statusKey: Record<string, I18nKey> = {
 		scheduled: 'games.status.scheduled',
 		cancelled: 'games.status.cancelled',
 		completed: 'games.status.completed'
-	} as const;
+	};
 </script>
 
-{#if form?.message}
-	<p class="success mb-4">{form.message}</p>
-{/if}
+<FormFeedback {form} class="mb-4" />
 
-<div class="mb-4">
-	<h2>{t('admin.games')}</h2>
+<div class="mb-5">
+	<h1>{t('admin.games')}</h1>
+	<p class="mt-1.5 text-sm text-muted">{t('admin.gamesHelp')}</p>
 </div>
 
 <section class="card mb-5">
-	<h3 class="mb-3">{t('games.adminCreate')}</h3>
-	<form method="POST" action="?/create" use:enhance class="grid gap-3 sm:grid-cols-2">
+	<h2 class="mb-3">{t('games.adminCreate')}</h2>
+	<form method="POST" action="?/create" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
 		<div>
 			<label class="label" for="gameDate">{t('games.date')}</label>
-			<input class="input" id="gameDate" name="gameDate" type="date" required />
+			<input class="input" id="gameDate" name="gameDate" type="date" value={data.defaults.date} required />
 		</div>
 		<div>
 			<label class="label" for="startTime">{t('games.time')}</label>
@@ -40,25 +41,40 @@
 			<textarea class="input" id="notes" name="notes" rows="2" maxlength="1000"></textarea>
 		</div>
 		<div class="sm:col-span-2">
-			<button class="btn-primary" type="submit">{t('common.create')}</button>
+			<button class="btn-primary" type="submit">{t('games.adminCreate')}</button>
 		</div>
 	</form>
 </section>
 
 {#if data.games.length === 0}
-	<div class="card text-sm text-muted">{t('games.empty')}</div>
+	<div class="card">
+		<p class="text-sm text-muted">{t('games.empty')}</p>
+		<p class="hint">{t('games.emptyHelp')}</p>
+	</div>
 {:else}
-	<ul class="space-y-2">
+	<ul role="list" class="space-y-2">
 		{#each data.games as game (game.id)}
 			<li>
-				<a href="/admin/matchs/{game.id}" class="card flex flex-wrap items-center justify-between gap-3 no-underline hover:border-ice">
+				<a href="/admin/matchs/{game.id}" class="card card-link flex flex-wrap items-center justify-between gap-3 py-3.5">
 					<div>
-						<p class="font-semibold text-ink">{formatDate(game.gameDate)}</p>
-						<p class="text-sm text-muted">{formatTime(game.startTime)} · {game.location}</p>
+						<p class="font-semibold capitalize text-ink">{formatDate(game.gameDate)}</p>
+						<p class="mt-0.5 text-sm text-muted">{formatTime(game.startTime)} · {game.location}</p>
 					</div>
-					<span class="badge {game.status === 'scheduled' ? 'badge-ok' : ''}">
-						{t(statusKey[game.status])}
-					</span>
+					<div class="flex flex-wrap items-center gap-2">
+						{#if game.status === 'cancelled'}
+							<span class="badge-alert">{t('games.status.cancelled')}</span>
+						{:else}
+							<span class="badge">{t(statusKey[game.status] ?? 'games.status.scheduled')}</span>
+						{/if}
+						{#if game.generated}
+							<span class="badge-ice">{t('games.generated')}</span>
+						{:else if game.status === 'scheduled'}
+							<span class="badge">{t('games.notGenerated')}</span>
+						{/if}
+						{#if game.generated && game.openSlots > 0}
+							<span class="badge-alert">{game.openSlotsLabel}</span>
+						{/if}
+					</div>
 				</a>
 			</li>
 		{/each}

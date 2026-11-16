@@ -15,13 +15,14 @@ Le schéma fait foi : `config/env-schema.ts`. Le fichier `.env.example` contient
 
 | Variable | Rôle |
 |---|---|
-| `ORIGIN` | URL publique exacte, sans barre oblique finale. Utilisée dans les liens de courriel. |
+| `ORIGIN` | URL publique exacte, sans barre oblique finale. Doit utiliser `https://` lorsque `APP_ENV=production`. Utilisée dans les liens de courriel et les cookies de session. |
+| `APP_ENV` | `production` en déploiement. Active les erreurs génériques, exige HTTPS et désactive la boîte d'envoi locale. Compose le fixe déjà à `production`. |
 | `BETTER_AUTH_SECRET` | Secret de session, 32 caractères minimum. Ne jamais le changer sans invalider les sessions. |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Premier administrateur, créé au démarrage s'il n'existe aucun compte. |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Premier administrateur, créé au démarrage s'il n'existe aucun compte. Mot de passe de 12 caractères minimum. |
 | `DATABASE_URL` | Chemin SQLite. En conteneur : `/app/data/ligue.db`. |
 | `SMTP_*` | Courriel. Sans SMTP en production, les envois échouent et sont réessayés. |
 | `VAPID_*` | Push. Sans clés, les abonnements push ne peuvent pas être créés. |
-| `SESSION_DAYS`, `INVITE_DAYS`, `LOGIN_WINDOW_MINUTES`, `MAX_LOGIN_ATTEMPTS`, `PASSWORD_MIN_LENGTH` | Politique de connexion. |
+| `SESSION_DAYS`, `INVITE_DAYS`, `LOGIN_WINDOW_MINUTES`, `MAX_LOGIN_ATTEMPTS`, `RESET_REQUESTS_PER_HOUR`, `PASSWORD_CHANGES_PER_HOUR`, `PASSWORD_MIN_LENGTH` | Politique de connexion et limites de récupération de mot de passe. |
 | `NOTIFICATION_TICK_MS`, `NOTIFICATION_MAX_ATTEMPTS`, `NOTIFICATION_BATCH_SIZE`, `NOTIFICATION_CLAIM_TIMEOUT_MS` | File de notifications. |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error`. |
 
@@ -44,7 +45,7 @@ curl -fsS https://votre-domaine/api/health
 
 Au démarrage, le conteneur applique les migrations Drizzle, crée l'administrateur initial si nécessaire, puis démarre le planificateur de notifications. Le volume nommé `ligue-data` contient la base et, en développement seulement, la boîte d'envoi locale. `docker compose down` le conserve; `docker compose down -v` le supprime.
 
-Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, puis invite les joueurs depuis **Administration → Joueurs**. Chaque invitation produit un lien d'activation valide `INVITE_DAYS` jours.
+Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, puis invite les joueurs depuis **Administration → Joueurs**. Chaque invitation produit un courriel d'activation valide `INVITE_DAYS` jours. Un joueur qui a déjà un compte peut utiliser **Mot de passe oublié?** sur la page de connexion; le lien reçu est distinct du courriel d'invitation.
 
 ## Santé et supervision
 
@@ -99,9 +100,11 @@ Ne copiez jamais une base WAL active fichier par fichier : utilisez `.backup` ou
 
 - Les demandes de remplaçants sont créées par une absence ou manuellement par un administrateur.
 - Les favoris sont avisés `notifications.priorityGapHours` avant la liste générale; les deux délais se règlent dans **Administration → Paramètres**.
-- Les liens de notification pointent vers `/matchs/<id>`.
+- Les liens de notification pointent vers `/matchs/<id>`, sauf les avis de compte qui mènent à l'accueil ou au profil.
+- Les invitations et les réinitialisations de mot de passe utilisent des courriels HTML et texte distincts, avec identité de la ligue, lien de secours et durée de validité.
 - En développement sans SMTP, les courriels sont écrits dans `data/outbox/` avec un mode `0600`. En production, l'absence de SMTP fait échouer la tâche et la réessaie.
 - Un abonnement push iOS exige l'installation de la PWA sur l'écran d'accueil.
+- Les icônes, le manifeste, l'image de partage sociale et le module de marque sont générés par `npm run generate` depuis `config/branding.json` et `config/branding/`. `npm run verify:generated` refuse un actif périmé.
 
 ## Dépannage
 
@@ -111,13 +114,14 @@ Ne copiez jamais une base WAL active fichier par fichier : utilisez `.backup` ou
 | Connexion impossible | Vérifier `ORIGIN`, `BETTER_AUTH_SECRET`, l'horloge système et `MAX_LOGIN_ATTEMPTS`. |
 | Courriels absents | Vérifier `SMTP_*`, `notifications.emailEnabled`, et `notification_jobs.last_error`. |
 | Push absent | Vérifier les clés VAPID, l'installation de la PWA et l'autorisation du navigateur. |
-| Lien d'activation expiré | Un administrateur renvoie l'invitation depuis la fiche du joueur. |
+| Lien d'activation expiré | Le joueur utilise **Mot de passe oublié?** ou un administrateur renvoie un lien depuis la fiche du joueur. |
+| Mot de passe oublié sans courriel | Vérifier `SMTP_*`, `RESET_REQUESTS_PER_HOUR` et `notification_jobs.last_error`; les réponses restent génériques pour ne pas révéler les comptes. |
 | Équipes refusées | Vérifier que tous les joueurs retenus ont leurs quatre notes; les règles de paires peuvent rendre l'alignement impossible. |
 
 ## Limites connues
 
 - Une seule ligue par déploiement; pas de multi-tenant.
 - Pas de sauvegarde/restauration depuis l'interface; ces opérations restent des commandes d'exploitation.
-- Pas de récupération autonome du mot de passe administrateur; prévoyez un second compte administrateur.
+- Le courriel de contact de la ligue et les instructions de paiement détaillées ne sont pas encore des réglages; elles restent à ajouter si la ligue les veut dans l'application.
 - Aucun SMS.
 - Les notes et les soldes des autres joueurs ne quittent jamais les services sous forme de DTO pour un joueur.

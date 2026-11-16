@@ -2,6 +2,12 @@ import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
 import { auth } from '#lib/server/auth.ts';
 import { actionError } from '#lib/server/action.ts';
+import {
+	clearAttempts,
+	recordAttempt,
+	tooManyAttempts
+} from '#lib/server/security/throttle.ts';
+import { env } from '#lib/shared/config/env.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
@@ -12,7 +18,15 @@ const loginSchema = z.object({
 });
 
 function safeNext(value: string | null | undefined): string {
-	if (!value || !value.startsWith('/') || value.startsWith('//')) return '/';
+	if (
+		!value ||
+		!value.startsWith('/') ||
+		value.startsWith('//') ||
+		value.includes('\\') ||
+		[...value].some((character) => character.charCodeAt(0) < 32)
+	) {
+		return '/';
+	}
 	return value;
 }
 
@@ -24,13 +38,19 @@ export const load: ServerLoad = ({ url }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request }) => {
+	default: async ({ request, getClientAddress }) => {
 		const form = await request.formData();
 		let parsed;
 		try {
 			parsed = parseForm(loginSchema, form);
 		} catch (cause) {
 			return actionError(cause);
+		}
+
+		const key = `login:${getClientAddress()}:${parsed.email}`;
+		const windowMs = env.security.loginWindowMinutes * 60 * 1000;
+		if (tooManyAttempts(key, env.security.maxLoginAttempts)) {
+			return fail(429, { ok: false, message: t('auth.throttled') });
 		}
 
 		try {
@@ -41,14 +61,16 @@ export const actions: Actions = {
 				},
 				headers: request.headers
 			});
+			clearAttempts(key);
 		} catch (cause) {
+			recordAttempt(key, windowMs);
 			const status =
 				(cause as { statusCode?: number; status?: number }).statusCode ??
 				(cause as { status?: number }).status;
 			if (status === 429) {
-				return fail(429, { message: t('auth.throttled') });
+				return fail(429, { ok: false, message: t('auth.throttled') });
 			}
-			return fail(400, { message: t('auth.invalid') });
+			return fail(400, { ok: false, message: t('auth.invalid') });
 		}
 
 		redirect(303, safeNext(parsed.next));

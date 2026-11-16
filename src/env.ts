@@ -37,6 +37,14 @@ export const variables = defineEnvVars({
 		description: 'Authentication attempts allowed per window.',
 		schema: fields.MAX_LOGIN_ATTEMPTS
 	},
+	RESET_REQUESTS_PER_HOUR: {
+		description: 'Password-reset emails allowed per hour and per identity.',
+		schema: fields.RESET_REQUESTS_PER_HOUR
+	},
+	PASSWORD_CHANGES_PER_HOUR: {
+		description: 'Failed password-change attempts allowed per hour and per account.',
+		schema: fields.PASSWORD_CHANGES_PER_HOUR
+	},
 	PASSWORD_MIN_LENGTH: {
 		description: 'Minimum password length shown to users and enforced by Better Auth.',
 		public: true,

@@ -1,11 +1,15 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
 	import { refreshAll } from '$app/navigation';
 	import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 	let showPoll = $state(false);
+	let bottom: HTMLDivElement | undefined = $state();
 	// Seeded once from the server limits; the user owns the list afterwards.
 	// svelte-ignore state_referenced_locally
 	let pollOptions = $state<string[]>(
@@ -24,6 +28,10 @@
 		return () => clearInterval(timer);
 	});
 
+	onMount(() => {
+		bottom?.scrollIntoView({ block: 'end' });
+	});
+
 	function addOption() {
 		pollOptions = [...pollOptions, ''];
 	}
@@ -33,24 +41,31 @@
 	}
 </script>
 
-{#if form?.message}
-	<p class="success mb-4">{form.message}</p>
-{/if}
+<FormFeedback
+	{form}
+	class="fixed inset-x-4 bottom-24 z-40 mx-auto max-w-md shadow-lift sm:bottom-6"
+/>
 
 <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 	<div>
 		<h1>{t('chat.title')}</h1>
-		<p class="mt-1 text-sm text-muted">{t('chat.subtitle')}</p>
+		<p class="mt-1.5 text-sm text-muted">{t('chat.subtitle')}</p>
 	</div>
-	<button class="btn-secondary btn-sm" type="button" onclick={() => (showPoll = !showPoll)}>
-		{t('chat.newPoll')}
+	<button
+		class="btn-secondary btn-sm"
+		type="button"
+		onclick={() => (showPoll = !showPoll)}
+		aria-expanded={showPoll}
+		aria-controls="poll-form"
+	>
+		{showPoll ? t('common.close') : t('chat.newPoll')}
 	</button>
 </div>
 
 {#if showPoll}
-	<section class="card mb-5">
+	<section class="card mb-5" id="poll-form">
 		<h2 class="mb-3">{t('chat.newPoll')}</h2>
-		<form method="POST" action="?/poll" use:enhance class="space-y-3">
+		<form method="POST" action="?/poll" use:progressiveForm class="space-y-3">
 			<div>
 				<label class="label" for="question">{t('chat.pollQuestion')}</label>
 				<input
@@ -61,11 +76,16 @@
 					maxlength={data.limits.questionMax}
 				/>
 			</div>
-			<div class="space-y-2">
+			<fieldset class="space-y-2">
+				<legend class="sr-only">{t('chat.pollOptions')}</legend>
 				{#each pollOptions as option, index (index)}
 					<div class="flex gap-2">
+						<label class="sr-only" for="poll-option-{index}">
+							{t('chat.optionNumber', { number: index + 1 })}
+						</label>
 						<input
 							class="input"
+							id="poll-option-{index}"
 							name="options"
 							placeholder={option || t('chat.pollOptions')}
 							required={index < data.limits.pollMinOptions}
@@ -84,7 +104,7 @@
 						{/if}
 					</div>
 				{/each}
-			</div>
+			</fieldset>
 			<div class="flex flex-wrap gap-2">
 				<button
 					class="btn-secondary btn-sm"
@@ -94,16 +114,19 @@
 				>
 					{t('chat.addOption')}
 				</button>
-				<button class="btn-primary btn-sm" type="submit">{t('chat.newPoll')}</button>
+				<button class="btn-primary btn-sm" type="submit">{t('chat.publishPoll')}</button>
 			</div>
 		</form>
 	</section>
 {/if}
 
 {#if messages.length === 0}
-	<div class="card text-sm text-muted">{t('chat.empty')}</div>
+	<div class="card">
+		<p class="text-sm text-muted">{t('chat.empty')}</p>
+		<p class="hint">{t('chat.emptyHelp')}</p>
+	</div>
 {:else}
-	<ul class="space-y-3">
+	<ul role="list" class="space-y-3">
 		{#each messages as message (message.id)}
 			<li class="card">
 				<div class="flex items-start justify-between gap-3">
@@ -112,9 +135,13 @@
 						<p class="text-xs text-muted">{formatTimestamp(message.createdAt)}</p>
 					</div>
 					{#if message.canDelete}
-						<form method="POST" action="?/delete" use:enhance>
+						<form method="POST" action="?/delete" use:progressiveForm>
 							<input type="hidden" name="messageId" value={message.id} />
-							<button class="btn-ghost btn-sm" type="submit">{t('chat.delete')}</button>
+							<ConfirmSubmit
+								label={t('chat.delete')}
+								question={t('chat.deleteConfirm')}
+								class="btn-ghost btn-sm"
+							/>
 						</form>
 					{/if}
 				</div>
@@ -127,18 +154,19 @@
 						{#if message.poll.closed}
 							<p class="badge mt-2">{t('chat.pollClosed')}</p>
 						{/if}
-						<ul class="mt-3 space-y-2">
+						<ul role="list" class="mt-3 space-y-2">
 							{#each message.poll.options as option (option.id)}
 								<li>
-									<form method="POST" action="?/vote" use:enhance class="flex items-center gap-2">
+									<form method="POST" action="?/vote" use:progressiveForm class="flex items-center gap-2">
 										<input type="hidden" name="messageId" value={message.id} />
 										<input type="hidden" name="optionId" value={option.id} />
 										<button
-											class="flex min-h-10 flex-1 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm {option.myVote
+											class="flex min-h-11 flex-1 items-center justify-between gap-3 rounded-control border px-3 py-2 text-left text-sm transition-colors disabled:opacity-60 {option.myVote
 												? 'border-ice bg-ice-soft font-semibold text-ice-deep'
 												: 'border-line bg-paper'}"
 											type="submit"
 											disabled={message.poll.closed}
+											aria-pressed={option.myVote}
 										>
 											<span>{option.label}</span>
 											<span class="badge">
@@ -150,9 +178,13 @@
 							{/each}
 						</ul>
 						{#if message.canDelete && !message.poll.closed}
-							<form method="POST" action="?/closePoll" use:enhance class="mt-3">
+							<form method="POST" action="?/closePoll" use:progressiveForm class="mt-3">
 								<input type="hidden" name="messageId" value={message.id} />
-								<button class="btn-ghost btn-sm" type="submit">{t('chat.closePoll')}</button>
+								<ConfirmSubmit
+									label={t('chat.closePoll')}
+									question={t('chat.closePollConfirm')}
+									class="btn-ghost btn-sm"
+								/>
 							</form>
 						{/if}
 					</div>
@@ -164,10 +196,14 @@
 	</ul>
 {/if}
 
-<form method="POST" action="?/send" use:enhance class="sticky bottom-20 mt-4 sm:bottom-4">
-	<div class="flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 shadow-lg">
+<div bind:this={bottom}></div>
+
+<form method="POST" action="?/send" use:progressiveForm class="sticky bottom-20 mt-4 sm:bottom-4">
+	<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
+	<div class="flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 shadow-card">
 		<textarea
-			class="input min-h-11 resize-none border-0 bg-transparent focus:ring-0"
+			id="chat-body"
+			class="min-h-11 flex-1 resize-none rounded-control border-0 bg-transparent px-2 py-2 text-base text-ink outline-none placeholder:text-muted/70 focus-visible:ring-2 focus-visible:ring-ice"
 			name="body"
 			rows="1"
 			placeholder={t('chat.placeholder')}

@@ -1,32 +1,56 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
-	import { t } from '#lib/shared/i18n/index.ts';
+	import { formatAge, formatCount, t } from '#lib/shared/i18n/index.ts';
+	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 	let showInvite = $state(false);
+	let query = $state('');
+
+	const filtered = $derived(
+		data.players.filter((player) => {
+			const needle = query.trim().toLowerCase();
+			if (!needle) return true;
+			return (
+				player.fullName.toLowerCase().includes(needle) ||
+				player.email.toLowerCase().includes(needle)
+			);
+		})
+	);
 </script>
 
-{#if form?.message}
-	<p class="success mb-4">{form.message}</p>
-{/if}
+<FormFeedback {form} class="mb-4" />
 
-<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
 	<div>
-		<h2>{t('admin.players')}</h2>
-		<p class="mt-1 text-sm text-muted">{data.players.length}</p>
+		<h1>{t('admin.players')}</h1>
+		<p class="mt-1.5 text-sm text-muted">
+			{formatCount(
+				data.players.length,
+				'common.playerCount.one',
+				'common.playerCount.many'
+			)}
+		</p>
 	</div>
-	<button class="btn-primary btn-sm" type="button" onclick={() => (showInvite = !showInvite)}>
-		{t('admin.addPlayer')}
+	<button
+		class="btn-primary btn-sm"
+		type="button"
+		onclick={() => (showInvite = !showInvite)}
+		aria-expanded={showInvite}
+		aria-controls="invite-form"
+	>
+		{showInvite ? t('common.close') : t('admin.addPlayer')}
 	</button>
 </div>
 
 {#if showInvite}
-	<section class="card mb-5">
-		<h3 class="mb-3">{t('admin.addPlayer')}</h3>
-		<form method="POST" action="?/invite" use:enhance class="grid gap-4 sm:grid-cols-2">
+	<section class="card mb-5" id="invite-form">
+		<h2 class="mb-3">{t('admin.addPlayer')}</h2>
+		<form method="POST" action="?/invite" use:progressiveForm class="grid gap-4 sm:grid-cols-2">
 			<div>
 				<label class="label" for="firstName">{t('profile.firstName')}</label>
 				<input
@@ -35,6 +59,7 @@
 					name="firstName"
 					required
 					maxlength={PLAYER_LIMITS.nameMax}
+					autocomplete="given-name"
 				/>
 			</div>
 			<div>
@@ -45,6 +70,7 @@
 					name="lastName"
 					required
 					maxlength={PLAYER_LIMITS.nameMax}
+					autocomplete="family-name"
 				/>
 			</div>
 			<div class="sm:col-span-2">
@@ -54,13 +80,19 @@
 					id="email"
 					name="email"
 					type="email"
+					inputmode="email"
+					autocomplete="email"
+					autocapitalize="none"
+					spellcheck="false"
 					required
 					maxlength={PLAYER_LIMITS.emailMax}
 				/>
+				<p class="hint">{t('admin.emailHint')}</p>
 			</div>
 			<div>
 				<label class="label" for="position">{t('profile.position')}</label>
-				<select class="input" id="position" name="position">
+				<select class="input" id="position" name="position" required>
+					<option value="">{t('admin.choosePosition')}</option>
 					{#each POSITIONS as position (position.key)}
 						<option value={position.key}>{t(position.labelKey)}</option>
 					{/each}
@@ -73,14 +105,16 @@
 					id="age"
 					name="age"
 					type="number"
+					inputmode="numeric"
 					min={PLAYER_LIMITS.ageMin}
 					max={PLAYER_LIMITS.ageMax}
-					value={PLAYER_LIMITS.defaultAge}
+					placeholder="30"
 					required
 				/>
+				<p class="hint">{t('admin.ageHint')}</p>
 			</div>
-			<label class="flex items-center gap-3 text-sm font-medium sm:col-span-2">
-				<input type="checkbox" name="isSubstitute" class="h-4 w-4 accent-[var(--color-ice)]" />
+			<label class="flex min-h-11 items-center gap-3 text-sm font-medium sm:col-span-2">
+				<input type="checkbox" name="isSubstitute" class="h-4 w-4" />
 				{t('profile.substitute')}
 			</label>
 			<div class="sm:col-span-2">
@@ -90,16 +124,35 @@
 	</section>
 {/if}
 
+{#if data.players.length > 0}
+	<div class="mb-3">
+		<label class="sr-only" for="player-search">{t('admin.searchPlayers')}</label>
+		<input
+			class="input max-w-sm"
+			id="player-search"
+			type="search"
+			placeholder={t('admin.searchPlayers')}
+			bind:value={query}
+		/>
+	</div>
+{/if}
+
 {#if data.players.length === 0}
-	<div class="card text-sm text-muted">{t('admin.noPlayers')}</div>
+	<div class="card">
+		<p class="text-sm text-muted">{t('admin.noPlayers')}</p>
+	</div>
+{:else if filtered.length === 0}
+	<div class="card">
+		<p class="text-sm text-muted">{t('admin.noResults')}</p>
+	</div>
 {:else}
-	<ul class="space-y-2">
-		{#each data.players as player (player.userId)}
+	<ul role="list" class="space-y-2">
+		{#each filtered as player (player.userId)}
 			<li class="card">
 				<div class="flex flex-wrap items-start justify-between gap-3">
 					<div class="min-w-0">
 						<div class="flex flex-wrap items-center gap-2">
-							<a href="/admin/joueurs/{player.userId}" class="font-semibold text-ink">
+							<a href="/admin/joueurs/{player.userId}" class="font-semibold text-ink no-underline hover:underline">
 								{player.fullName}
 							</a>
 							{#if player.role === 'admin'}
@@ -116,24 +169,27 @@
 							{/if}
 						</div>
 						<p class="mt-1 text-sm text-muted">
-							{player.email} · {t(positionDefinition(player.position).labelKey)} · {player.age}
-							{t('common.years')}
+							{player.email} · {t(positionDefinition(player.position).labelKey)} ·
+							{formatAge(player.age)}
 						</p>
 					</div>
 					<div class="flex flex-wrap gap-1">
-						<form method="POST" action="?/resend" use:enhance>
+						<a class="btn-secondary btn-sm" href="/admin/joueurs/{player.userId}">
+							{t('common.edit')}
+						</a>
+						<form method="POST" action="?/resend" use:progressiveForm>
 							<input type="hidden" name="playerId" value={player.userId} />
-							<button class="btn-ghost btn-sm" type="submit">{t('admin.reinvite')}</button>
+							<button class="btn-ghost btn-sm" type="submit">{t('admin.resetPassword')}</button>
 						</form>
-						<form method="POST" action="?/substitute" use:enhance>
+						<form method="POST" action="?/substitute" use:progressiveForm>
 							<input type="hidden" name="playerId" value={player.userId} />
 							<input type="hidden" name="value" value={player.isSubstitute ? 'false' : 'true'} />
 							<button class="btn-ghost btn-sm" type="submit">
-								{player.isSubstitute ? t('subs.remove') : t('subs.add')}
+								{player.isSubstitute ? t('admin.removeSub') : t('admin.addSub')}
 							</button>
 						</form>
 						{#if player.isSubstitute}
-							<form method="POST" action="?/favorite" use:enhance>
+							<form method="POST" action="?/favorite" use:progressiveForm>
 								<input type="hidden" name="playerId" value={player.userId} />
 								<input
 									type="hidden"
@@ -141,20 +197,29 @@
 									value={data.favorites.get(player.userId) ? 'false' : 'true'}
 								/>
 								<button class="btn-ghost btn-sm" type="submit">
-									{t('subs.favorite')}
+									{data.favorites.get(player.userId)
+										? t('subs.removeFavorite')
+										: t('subs.addFavorite')}
 								</button>
 							</form>
 						{/if}
-						<form method="POST" action="?/active" use:enhance>
-							<input type="hidden" name="playerId" value={player.userId} />
-							<input type="hidden" name="value" value={player.active ? 'false' : 'true'} />
-							<button class="btn-ghost btn-sm" type="submit">
-								{player.active ? t('admin.deactivate') : t('admin.activate')}
-							</button>
-						</form>
-						<a class="btn-secondary btn-sm" href="/admin/joueurs/{player.userId}">
-							{t('common.edit')}
-						</a>
+						{#if player.active}
+							<form method="POST" action="?/active" use:progressiveForm>
+								<input type="hidden" name="playerId" value={player.userId} />
+								<input type="hidden" name="value" value="false" />
+								<ConfirmSubmit
+									label={t('admin.deactivate')}
+									question={t('admin.deactivateConfirm', { name: player.fullName })}
+									class="btn-ghost btn-sm"
+								/>
+							</form>
+						{:else}
+							<form method="POST" action="?/active" use:progressiveForm>
+								<input type="hidden" name="playerId" value={player.userId} />
+								<input type="hidden" name="value" value="true" />
+								<button class="btn-ghost btn-sm" type="submit">{t('admin.activate')}</button>
+							</form>
+						{/if}
 					</div>
 				</div>
 			</li>

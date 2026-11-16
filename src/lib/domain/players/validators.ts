@@ -29,7 +29,8 @@ export const invitePlayerSchema = z.object({
 export const updateOwnProfileSchema = z.object({
 	firstName: name,
 	lastName: name,
-	age
+	age,
+	position: z.enum(POSITION_KEYS)
 });
 
 export const adminUpdatePlayerSchema = z.object({

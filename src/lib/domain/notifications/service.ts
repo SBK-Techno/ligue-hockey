@@ -17,6 +17,7 @@ import {
 	claimDueJobs,
 	countUnread,
 	deletePushSubscriptionForUser,
+	findInAppJob,
 	findPreferences,
 	insertJobs,
 	listInAppJobs,
@@ -126,12 +127,27 @@ export function sendAccountAccess(input: {
 	userId: string;
 	name: string;
 	url: string;
+	expiresInDays: number;
 }): number {
 	return notify(
 		'account_access',
 		[{ userId: input.userId }],
-		{ name: input.name, url: input.url },
+		{ name: input.name, url: input.url, expiresInDays: input.expiresInDays },
 		{ dedupeKey: newId('account_access') }
+	);
+}
+
+export function sendPasswordReset(input: {
+	userId: string;
+	name: string;
+	url: string;
+	expiresInDays: number;
+}): number {
+	return notify(
+		'password_reset',
+		[{ userId: input.userId }],
+		{ name: input.name, url: input.url, expiresInDays: input.expiresInDays },
+		{ dedupeKey: newId('password_reset') }
 	);
 }
 
@@ -217,6 +233,16 @@ export function unreadCount(actor: Actor): number {
 export function markInboxRead(actor: Actor, ids: readonly string[]): number {
 	const user = requireUser(actor);
 	return markJobsRead(user.userId, ids, clock.nowMs());
+}
+
+export function openInboxItem(actor: Actor, id: string): string {
+	const user = requireUser(actor);
+	const job = findInAppJob(user.userId, id);
+	if (!job) {
+		throw new AppError('NOT_FOUND', { key: 'error.notFound' });
+	}
+	markJobsRead(user.userId, [id], clock.nowMs());
+	return renderJob(job.eventKey, job.payloadJson).url;
 }
 
 export function claimJobs(now: number, limit: number): NotificationJobRow[] {

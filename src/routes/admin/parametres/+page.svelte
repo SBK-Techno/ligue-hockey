@@ -1,16 +1,20 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 </script>
 
-{#if form?.message}
-	<p class="success mb-4">{form.message}</p>
-{/if}
+<FormFeedback {form} class="mb-4" />
 
-<form method="POST" action="?/save" use:enhance class="space-y-5">
+<div class="mb-5">
+	<h1>{t('admin.settings')}</h1>
+	<p class="mt-1.5 text-sm text-muted">{t('admin.settingsHelp')}</p>
+</div>
+
+<form method="POST" action="?/save" use:progressiveForm class="space-y-5">
 	{#each data.groups as group (group.key)}
 		<section class="card">
 			<h2 class="mb-4">{t(group.labelKey)}</h2>
@@ -93,5 +97,7 @@
 		</section>
 	{/each}
 
-	<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
+	<div class="sticky bottom-20 z-20 rounded-card border border-line bg-paper/95 p-2 shadow-card backdrop-blur sm:bottom-4">
+		<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
+	</div>
 </form>

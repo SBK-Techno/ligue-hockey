@@ -10,6 +10,7 @@ import {
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
+import { can } from '#lib/domain/auth/policy.ts';
 import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
@@ -54,7 +55,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		availability: getAvailability(actor, gameId),
 		requests: listRequestsForGame(actor, gameId),
 		isSubstitute: isSubstitutePlayer(actor),
-		canManage: actor.role === 'admin'
+		canManage: can(actor, 'manageGames')
 	};
 };
 
@@ -64,6 +65,7 @@ export const actions: Actions = {
 			const parsed = parseForm(availabilitySchema, await request.formData());
 			const result = markAvailability(locals.actor, params.id!, parsed.status);
 			return {
+				ok: true,
 				message: result.warning ? t(result.warning) : t('availability.saved')
 			};
 		} catch (cause) {
@@ -73,7 +75,7 @@ export const actions: Actions = {
 	generate: async ({ locals, params }) => {
 		try {
 			regenerateAsAdmin(locals.actor, params.id!);
-			return { message: t('games.generated') };
+			return { ok: true, message: t('games.generated') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -83,6 +85,7 @@ export const actions: Actions = {
 			const parsed = parseForm(requestSchema, await request.formData());
 			const result = claimSubstitute(locals.actor, params.id!, parsed.requestId);
 			return {
+				ok: true,
 				message: result.warning ? t(result.warning) : t('subs.claimed')
 			};
 		} catch (cause) {
@@ -94,6 +97,7 @@ export const actions: Actions = {
 			const parsed = parseForm(requestSchema, await request.formData());
 			const result = releaseSubstitute(locals.actor, params.id!, parsed.requestId);
 			return {
+				ok: true,
 				message: result.warning ? t(result.warning) : t('subs.declined')
 			};
 		} catch (cause) {
@@ -104,7 +108,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(requestSchema, await request.formData());
 			cancelRequest(locals.actor, params.id!, parsed.requestId);
-			return { message: t('subs.requestCancelled') };
+			return { ok: true, message: t('subs.requestCancelled') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -113,7 +117,7 @@ export const actions: Actions = {
 		try {
 			const parsed = parseForm(manualRequestSchema, await request.formData());
 			createManualRequest(locals.actor, params.id!, parsed.position);
-			return { message: t('subs.requestCreated') };
+			return { ok: true, message: t('subs.requestCreated') };
 		} catch (cause) {
 			return actionError(cause);
 		}
