@@ -236,7 +236,7 @@ export async function updateOwnProfile(
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 
-	updatePlayer(user.userId, {
+	const cleared = updatePlayer(user.userId, {
 		firstName: input.firstName,
 		lastName: input.lastName,
 		age: input.age,
@@ -247,7 +247,8 @@ export async function updateOwnProfile(
 	recordAudit(actor, {
 		action: 'player.self_update',
 		entityType: 'player',
-		entityId: user.userId
+		entityId: user.userId,
+		metadata: cleared.length > 0 ? { positionRatingsCleared: cleared } : undefined
 	});
 	regenerateUpcomingGeneratedGames();
 	return getOwnProfile(actor);
@@ -273,7 +274,7 @@ export async function adminUpdatePlayer(
 	if (input.isSubstitute !== undefined) patch.isSubstitute = input.isSubstitute;
 	if (input.active !== undefined) patch.active = input.active;
 
-	updatePlayer(playerId, patch);
+	const cleared = updatePlayer(playerId, patch);
 	if (input.firstName !== undefined || input.lastName !== undefined) {
 		const updated = findPlayerWithEmail(playerId);
 		if (updated) {
@@ -284,7 +285,10 @@ export async function adminUpdatePlayer(
 		action: 'player.admin_update',
 		entityType: 'player',
 		entityId: playerId,
-		metadata: { fields: Object.keys(patch) }
+		metadata: {
+			fields: Object.keys(patch),
+			...(cleared.length > 0 ? { positionRatingsCleared: cleared } : {})
+		}
 	});
 	regenerateUpcomingGeneratedGames();
 

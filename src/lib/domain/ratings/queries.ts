@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, notInArray } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { games } from '#lib/domain/games/schema.ts';
 import { playerRatings, gamePlayerRatings, type PlayerRatingRow } from './schema.ts';
@@ -53,6 +53,7 @@ export type GameRatingRow = {
 	playerId: string;
 	attribute: string;
 	value: number;
+	updatedAt: number;
 };
 
 export function listGameRatings(gameId: string): GameRatingRow[] {
@@ -61,21 +62,41 @@ export function listGameRatings(gameId: string): GameRatingRow[] {
 			gameId: gamePlayerRatings.gameId,
 			playerId: gamePlayerRatings.playerId,
 			attribute: gamePlayerRatings.attribute,
-			value: gamePlayerRatings.value
+			value: gamePlayerRatings.value,
+			updatedAt: gamePlayerRatings.updatedAt
 		})
 		.from(gamePlayerRatings)
 		.where(eq(gamePlayerRatings.gameId, gameId))
 		.all();
 }
 
+/**
+ * Remplace l'évaluation d'un joueur et supprime, dans la même transaction,
+ * les notes des joueurs qui ne font plus partie de l'alignement habillé.
+ */
 export function replaceGameRatings(
 	gameId: string,
 	playerId: string,
 	values: Record<string, number>,
 	updatedAt: number,
-	updatedBy: string | null
+	updatedBy: string | null,
+	dressedPlayerIds: readonly string[]
 ): void {
 	db.transaction((tx) => {
+		if (dressedPlayerIds.length === 0) {
+			tx.delete(gamePlayerRatings)
+				.where(eq(gamePlayerRatings.gameId, gameId))
+				.run();
+		} else {
+			tx.delete(gamePlayerRatings)
+				.where(
+					and(
+						eq(gamePlayerRatings.gameId, gameId),
+						notInArray(gamePlayerRatings.playerId, [...dressedPlayerIds])
+					)
+				)
+				.run();
+		}
 		tx.delete(gamePlayerRatings)
 			.where(
 				and(
@@ -102,6 +123,7 @@ export function replaceGameRatings(
 export type PlayerGameRatingHistoryRow = {
 	gameId: string;
 	gameDate: string;
+	startTime: string;
 	attribute: string;
 	value: number;
 };
@@ -113,37 +135,13 @@ export function listPlayerGameRatings(
 		.select({
 			gameId: gamePlayerRatings.gameId,
 			gameDate: games.gameDate,
+			startTime: games.startTime,
 			attribute: gamePlayerRatings.attribute,
 			value: gamePlayerRatings.value
 		})
 		.from(gamePlayerRatings)
 		.innerJoin(games, eq(games.id, gamePlayerRatings.gameId))
 		.where(eq(gamePlayerRatings.playerId, playerId))
-		.orderBy(desc(games.gameDate))
-		.all();
-}
-
-export type RecentAssessmentRow = {
-	gameId: string;
-	gameDate: string;
-	location: string;
-	status: string;
-	players: number;
-};
-
-export function listRecentAssessments(limit: number): RecentAssessmentRow[] {
-	return db
-		.select({
-			gameId: gamePlayerRatings.gameId,
-			gameDate: games.gameDate,
-			location: games.location,
-			status: games.status,
-			players: sql<number>`count(distinct ${gamePlayerRatings.playerId})`
-		})
-		.from(gamePlayerRatings)
-		.innerJoin(games, eq(games.id, gamePlayerRatings.gameId))
-		.groupBy(gamePlayerRatings.gameId, games.gameDate, games.location, games.status)
-		.orderBy(desc(games.gameDate))
-		.limit(limit)
+		.orderBy(desc(games.gameDate), desc(games.startTime), desc(games.id), asc(gamePlayerRatings.attribute))
 		.all();
 }

@@ -6,7 +6,7 @@
 		name,
 		label,
 		help,
-		value,
+		value = $bindable<number | undefined>(undefined),
 		disabled = false,
 		clearable = false
 	}: {
@@ -18,9 +18,8 @@
 		clearable?: boolean;
 	} = $props();
 
-	// La valeur initiale vient du serveur; les changements suivants sont locaux.
-	// svelte-ignore state_referenced_locally
-	let current = $state<number | undefined>(value ?? undefined);
+	const id = $props.id();
+	const helpId = `${id}-help`;
 
 	const values = Array.from(
 		{ length: RATING_SCALE.max - RATING_SCALE.min + 1 },
@@ -28,20 +27,26 @@
 	);
 </script>
 
-<div class="grid gap-1.5 py-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+<fieldset
+	class="grid gap-1.5 py-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4"
+	{disabled}
+	aria-describedby={help ? helpId : undefined}
+>
+	<legend class="sr-only">{label}</legend>
 	<div class="min-w-0">
-		<p class="text-sm font-semibold leading-snug">{label}</p>
+		<p class="text-sm font-semibold leading-snug" aria-hidden="true">{label}</p>
 		{#if help}
-			<p class="mt-0.5 text-[11px] leading-snug text-muted">{help}</p>
+			<p id={helpId} class="mt-0.5 text-[11px] leading-snug text-muted">{help}</p>
 		{/if}
 	</div>
-	<div class="flex items-center gap-1">
+	<div class="flex items-center gap-1 {disabled ? 'opacity-60' : ''}">
 		{#each values as rating (rating)}
 			<label
-				class="grid h-11 w-11 cursor-pointer place-items-center border text-sm font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice {current ===
-				rating
-					? 'border-ink bg-ink text-paper'
-					: 'border-line-strong bg-surface text-ink hover:border-ink'}"
+				class="grid h-11 w-11 cursor-pointer place-items-center border text-sm font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice {disabled
+					? 'cursor-not-allowed border-line bg-surface'
+					: value === rating
+						? 'border-ink bg-ink text-paper'
+						: 'border-line-strong bg-surface text-ink hover:border-ink'}"
 				title="{label} : {rating}"
 			>
 				<input
@@ -49,7 +54,7 @@
 					type="radio"
 					{name}
 					value={rating}
-					bind:group={current}
+					bind:group={value}
 					{disabled}
 					aria-label="{label} : {rating}"
 				/>
@@ -60,10 +65,12 @@
 			<button
 				class="grid h-11 min-w-11 place-items-center border border-line-strong bg-surface px-2 text-[11px] font-medium text-muted hover:border-ink hover:text-ink"
 				type="button"
-				onclick={() => (current = undefined)}
+				{disabled}
+				aria-label="{label} : {t('rating.notObserved')}"
+				onclick={() => (value = undefined)}
 			>
 				{t('rating.notObserved')}
 			</button>
 		{/if}
 	</div>
-</div>
+</fieldset>

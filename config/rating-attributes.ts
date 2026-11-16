@@ -7,8 +7,7 @@ import type { I18nKey } from './i18n/fr.ts';
  */
 export const RATING_SCALE = {
   min: 1,
-  max: 5,
-  step: 1
+  max: 5
 } as const;
 
 export const RATING_ATTRIBUTES = [
@@ -25,13 +24,6 @@ export const RATING_ATTRIBUTE_KEYS = RATING_ATTRIBUTES.map(
 ) as [RatingAttribute, ...RatingAttribute[]];
 
 export type RatingValues = Partial<Record<RatingAttribute, number>>;
-
-export const RATING_COMPLETE_VALUES: Record<RatingAttribute, number> = {
-  passing: 3,
-  speed: 3,
-  agility: 3,
-  backchecking: 3
-};
 
 /**
  * Les critères de position complètent la fiche sans changer l'équilibre des
@@ -220,24 +212,24 @@ export function isRatingValue(value: number): boolean {
   );
 }
 
-export function ratingAttributeDefinition(attribute: RatingAttribute) {
-  const definition = RATING_ATTRIBUTES.find((entry) => entry.key === attribute);
-  if (!definition) {
-    throw new Error(`Unknown rating attribute: ${attribute}`);
-  }
-  return definition;
-}
-
 export function positionRatingAttributes(position: Position) {
   return POSITION_RATING_ATTRIBUTES[position];
 }
 
-export function isPositionRatingAttribute(
+/**
+ * Critères de position devenus invalides quand le joueur change de poste.
+ * Les quatre notes de la ligue ne sont jamais touchées.
+ */
+export function positionRatingKeysToClear(
   position: Position,
-  attribute: string
-): boolean {
-  return POSITION_RATING_ATTRIBUTES[position].some(
-    (entry) => entry.key === attribute
+  stored: readonly string[]
+): string[] {
+  const allowed = new Set<string>(
+    POSITION_RATING_ATTRIBUTES[position].map((entry) => entry.key)
+  );
+  const positionKeys = new Set<string>(POSITION_RATING_KEYS);
+  return stored.filter(
+    (attribute) => positionKeys.has(attribute) && !allowed.has(attribute)
   );
 }
 

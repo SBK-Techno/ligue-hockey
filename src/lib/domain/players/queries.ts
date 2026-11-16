@@ -1,10 +1,12 @@
 import { and, asc, eq, gte, inArray } from 'drizzle-orm';
+import { positionRatingKeysToClear } from '#config/rating-attributes.ts';
 import { db } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { paymentPlans, payments } from '#lib/domain/finance/schema.ts';
 import { gameSlots, games } from '#lib/domain/games/schema.ts';
 import { subRequests } from '#lib/domain/subs/schema.ts';
 import { clock } from '#lib/shared/time/clock.ts';
+import { playerRatings, type PlayerRatingRow } from '#lib/domain/ratings/schema.ts';
 import { players, type NewPlayerRow, type PlayerRow } from './schema.ts';
 
 export type PlayerWithEmail = PlayerRow & {
@@ -89,12 +91,47 @@ export type PlayerPatch = Partial<
 	>
 >;
 
-export function updatePlayer(playerId: string, patch: PlayerPatch): void {
-	if (Object.keys(patch).length === 0) return;
-	db.update(players)
-		.set({ ...patch, updatedAt: clock.nowMs() })
-		.where(eq(players.userId, playerId))
-		.run();
+/**
+ * Met à jour le joueur et, si son poste change, supprime dans la même
+ * transaction les critères de position qui ne s'appliquent plus. Retourne les
+ * critères supprimés pour que le service puisse les auditer.
+ */
+export function updatePlayer(playerId: string, patch: PlayerPatch): string[] {
+	if (Object.keys(patch).length === 0) return [];
+	return db.transaction((tx) => {
+		let cleared: string[] = [];
+		if (patch.position !== undefined) {
+			const current = tx
+				.select({ position: players.position })
+				.from(players)
+				.where(eq(players.userId, playerId))
+				.get();
+			if (current && current.position !== patch.position) {
+				const stored = tx
+					.select({ attribute: playerRatings.attribute })
+					.from(playerRatings)
+					.where(eq(playerRatings.playerId, playerId))
+					.all()
+					.map((row) => row.attribute);
+				cleared = positionRatingKeysToClear(patch.position, stored);
+				if (cleared.length > 0) {
+					tx.delete(playerRatings)
+						.where(
+							and(
+								eq(playerRatings.playerId, playerId),
+								inArray(playerRatings.attribute, cleared as PlayerRatingRow['attribute'][])
+							)
+						)
+						.run();
+				}
+			}
+		}
+		tx.update(players)
+			.set({ ...patch, updatedAt: clock.nowMs() })
+			.where(eq(players.userId, playerId))
+			.run();
+		return cleared;
+	});
 }
 
 /**

@@ -24,7 +24,8 @@
 
 <FormFeedback {form} class="mb-4" />
 
-<form method="POST" action="?/save" use:progressiveForm class="space-y-4">
+{#key data.ratings.updatedAt}
+<form method="POST" action="?/save" use:progressiveForm={{ reset: false }} class="space-y-4">
 	<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
 		<div class="space-y-4">
 			<SectionCard title={t('rating.seasonTitle')}>
@@ -58,13 +59,29 @@
 
 		<aside class="space-y-3">
 			<section class="sheet p-4">
-				<p class="serial">{t('rating.positionOverall')}</p>
+				<p class="serial">{t('rating.overall')}</p>
 				<p class="numeric mt-2 text-4xl">
+					{data.ratings.overall === null
+						? t('rating.notRated')
+						: formatDecimal(data.ratings.overall, 2)}
+				</p>
+				<p class="mt-2 text-xs text-muted">{t('rating.overallHelp')}</p>
+			</section>
+
+			<section class="sheet p-4">
+				<div class="flex items-start justify-between gap-2">
+					<p class="serial">{t('rating.positionOverall')}</p>
+					{#if !data.ratings.positionComplete && data.ratings.positionOverall !== null}
+						<span class="badge">{t('rating.partial')}</span>
+					{/if}
+				</div>
+				<p class="numeric mt-2 text-2xl">
 					{data.ratings.positionOverall === null
-						? '—'
+						? t('rating.notAvailable')
 						: formatDecimal(data.ratings.positionOverall, 2)}
 				</p>
-				<p class="mt-2 text-xs text-muted">
+				<p class="mt-2 text-xs text-muted">{t('rating.positionDescriptive')}</p>
+				<p class="mt-1 text-xs text-muted">
 					{t('rating.positionCriteria', {
 						done: Object.keys(data.ratings.positionValues).length,
 						total: data.ratings.positionTotal
@@ -75,18 +92,10 @@
 			<section class="sheet p-4">
 				<dl class="divide-y divide-line">
 					<div class="fact">
-						<dt>{t('rating.overall')}</dt>
-						<dd>
-							{data.ratings.overall === null
-								? t('rating.notRated')
-								: formatDecimal(data.ratings.overall, 2)}
-						</dd>
-					</div>
-					<div class="fact">
 						<dt>{t('rating.form')}</dt>
 						<dd>
 							{data.ratings.form.average === null
-								? '—'
+								? t('rating.notAvailable')
 								: formatDecimal(data.ratings.form.average, 2)}
 						</dd>
 					</div>
@@ -101,6 +110,9 @@
 						</div>
 					{/if}
 				</dl>
+				<p class="mt-2 text-xs text-muted">
+					{t('rating.formHelp', { count: data.ratings.form.games })}
+				</p>
 			</section>
 		</aside>
 	</div>
@@ -109,3 +121,4 @@
 		<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
 	</div>
 </form>
+{/key}

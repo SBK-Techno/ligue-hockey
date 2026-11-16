@@ -20,21 +20,25 @@ export const load: ServerLoad = ({ locals, params }) => {
 
 export const actions: Actions = {
 	save: async ({ request, locals, params }) => {
+		let playerId = '';
 		try {
 			requirePermission(locals.actor, 'editRatings');
 			const form = await request.formData();
-			const playerId = String(form.get('playerId') ?? '');
+			playerId = String(form.get('playerId') ?? '');
 			const assessment = getGameAssessment(locals.actor, params.id!);
 			const player = assessment.players.find((entry) => entry.playerId === playerId);
 			if (!player) {
 				throw new AppError('VALIDATION', { key: 'rating.playerNotInGame' });
 			}
-			const input = Object.fromEntries(
-				gameRatingAttributes(player.position).map((attribute) => [
-					attribute.key,
-					form.get(attribute.key)
-				])
-			);
+			const input =
+				form.get('clear') === '1'
+					? {}
+					: Object.fromEntries(
+							gameRatingAttributes(player.position).map((attribute) => [
+								attribute.key,
+								form.get(attribute.key)
+							])
+						);
 			const result = saveGameAssessment(
 				locals.actor,
 				params.id!,
@@ -45,10 +49,11 @@ export const actions: Actions = {
 				ok: true,
 				message: t('rating.saved'),
 				playerId,
+				next: form.get('next') === '1',
 				assessment: result
 			};
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { playerId });
 		}
 	}
 };

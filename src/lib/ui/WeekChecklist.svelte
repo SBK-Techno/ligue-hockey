@@ -78,7 +78,7 @@
 			id: 'team',
 			title: t('home.steps.team'),
 			state: line ? 'done' : 'idle',
-			label: !line && generated ? '—' : undefined,
+			label: !line && generated ? t('home.steps.noPlace') : undefined,
 			detail: line ?? (generated ? t('home.steps.notInLineup') : t('home.steps.teamWaiting')),
 			action: { href: `/matchs/${gameId}`, label: t('home.steps.viewLineup') }
 		});

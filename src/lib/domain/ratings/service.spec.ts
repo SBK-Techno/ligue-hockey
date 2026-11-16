@@ -30,6 +30,7 @@ const {
 			(playerId: string) => Array<{
 				gameId: string;
 				gameDate: string;
+				startTime: string;
 				attribute: string;
 				value: number;
 			}>
@@ -45,8 +46,7 @@ vi.mock('./queries.ts', () => ({
 	listPlayerGameRatings,
 	listRatingsForPlayers,
 	upsertGameRating: vi.fn(),
-	replaceGameRatings: vi.fn(),
-	listRecentAssessments: vi.fn(() => [])
+	replaceGameRatings: vi.fn()
 }));
 
 vi.mock('#lib/domain/players/service.ts', () => ({
@@ -167,10 +167,10 @@ describe('setRatings', () => {
 	it('computes recent form from the last evaluated games only', async () => {
 		const { getRatings } = await import('./service.ts');
 		listPlayerGameRatings.mockReturnValue([
-			{ gameId: 'g5', gameDate: '2026-11-16', attribute: 'impact', value: 5 },
-			{ gameId: 'g5', gameDate: '2026-11-16', attribute: 'effort', value: 5 },
-			{ gameId: 'g4', gameDate: '2026-11-09', attribute: 'impact', value: 3 },
-			{ gameId: 'g4', gameDate: '2026-11-09', attribute: 'effort', value: 3 }
+			{ gameId: 'g5', gameDate: '2026-11-16', startTime: '09:00', attribute: 'impact', value: 5 },
+			{ gameId: 'g5', gameDate: '2026-11-16', startTime: '09:00', attribute: 'effort', value: 5 },
+			{ gameId: 'g4', gameDate: '2026-11-09', startTime: '09:00', attribute: 'impact', value: 3 },
+			{ gameId: 'g4', gameDate: '2026-11-09', startTime: '09:00', attribute: 'effort', value: 3 }
 		]);
 
 		const view = getRatings(admin, 'target');
@@ -199,6 +199,96 @@ describe('setRatings', () => {
 		expect(overview.positionTotal).toBe(3);
 	});
 
+	it('keeps the official overall null when only position criteria exist', async () => {
+		const { getRatings } = await import('./service.ts');
+		listRatings.mockReturnValue([
+			{
+				playerId: 'target',
+				attribute: 'forecheck',
+				value: 5,
+				updatedAt: 1,
+				updatedBy: 'admin'
+			}
+		]);
+
+		const view = getRatings(admin, 'target');
+
+		expect(view.overall).toBeNull();
+		expect(view.positionOverall).toBe(5);
+		expect(view.positionComplete).toBe(false);
+	});
+
+	it('scopes position values to the current poste', async () => {
+		const { getRatings } = await import('./service.ts');
+		listRatings.mockReturnValue([
+			{
+				playerId: 'target',
+				attribute: 'goaliePositioning',
+				value: 5,
+				updatedAt: 1,
+				updatedBy: 'admin'
+			},
+			{
+				playerId: 'target',
+				attribute: 'forecheck',
+				value: 4,
+				updatedAt: 1,
+				updatedBy: 'admin'
+			}
+		]);
+
+		const view = getRatings(admin, 'target');
+
+		expect(view.positionValues).toEqual({ forecheck: 4 });
+		expect(view.positionTotal).toBe(3);
+	});
+
+	it('orders recent form by date then start time and keeps five games', async () => {
+		const { getRatings } = await import('./service.ts');
+		listPlayerGameRatings.mockReturnValue([
+			{ gameId: 'old', gameDate: '2026-11-10', startTime: '08:00', attribute: 'impact', value: 1 },
+			{ gameId: 'a', gameDate: '2026-11-10', startTime: '09:00', attribute: 'impact', value: 2 },
+			{ gameId: 'b', gameDate: '2026-11-10', startTime: '09:00', attribute: 'impact', value: 3 },
+			{ gameId: 'c', gameDate: '2026-11-10', startTime: '09:00', attribute: 'impact', value: 4 },
+			{ gameId: 'd', gameDate: '2026-11-10', startTime: '09:00', attribute: 'impact', value: 5 },
+			{ gameId: 'e', gameDate: '2026-11-10', startTime: '09:00', attribute: 'impact', value: 5 }
+		]);
+
+		const view = getRatings(admin, 'target');
+
+		expect(view.form.games).toBe(5);
+		expect(view.form.average).toBe(3.8);
+	});
+
+	it('ignores recent-form rows for another poste', async () => {
+		const { getRatings } = await import('./service.ts');
+		listPlayerGameRatings.mockReturnValue([
+			{ gameId: 'g1', gameDate: '2026-11-10', startTime: '09:00', attribute: 'goaliePositioning', value: 5 },
+			{ gameId: 'g2', gameDate: '2026-11-11', startTime: '09:00', attribute: 'impact', value: 3 }
+		]);
+
+		expect(getRatings(admin, 'target').form).toEqual({ average: 3, games: 1 });
+	});
+
+	it('marks a season with a partial poste as incomplete', async () => {
+		const { evaluationOverviews } = await import('./service.ts');
+		listAdminPlayers.mockReturnValue([
+			{ userId: 'p1', fullName: 'Alex Tremblay', position: 'forward' }
+		] as never);
+		listRatingsForPlayers.mockReturnValue([
+			{ playerId: 'p1', attribute: 'passing', value: 4 },
+			{ playerId: 'p1', attribute: 'speed', value: 4 },
+			{ playerId: 'p1', attribute: 'agility', value: 4 },
+			{ playerId: 'p1', attribute: 'backchecking', value: 4 },
+			{ playerId: 'p1', attribute: 'forecheck', value: 5 }
+		] as never);
+
+		const [overview] = evaluationOverviews(admin);
+
+		expect(overview.overall).toBe(4);
+		expect(overview.complete).toBe(false);
+	});
+
 	it('denies an actor without the rating capability', async () => {
 		const { setRatings } = await import('./service.ts');
 
@@ -206,5 +296,25 @@ describe('setRatings', () => {
 			code: 'FORBIDDEN'
 		});
 		expect(upsertRatings).not.toHaveBeenCalled();
+	});
+});
+
+describe('positionRatingKeysToClear', () => {
+	it.each([
+		['forward', 'defense', ['forecheck', 'netFront', 'wallPlay']],
+		['defense', 'goalie', ['gapControl', 'firstPass', 'netFrontDefence']]
+	] as const)('clears the %s criteria when moving to %s', async (from, to, keys) => {
+		const { positionRatingKeysToClear } = await import('#config/rating-attributes.ts');
+
+		expect(positionRatingKeysToClear(to, keys)).toEqual([...keys]);
+		expect(positionRatingKeysToClear(from, keys)).toEqual([]);
+	});
+
+	it('keeps the four league notes when the poste changes', async () => {
+		const { positionRatingKeysToClear } = await import('#config/rating-attributes.ts');
+
+		expect(
+			positionRatingKeysToClear('defense', ['passing', 'forecheck', 'impact'])
+		).toEqual(['forecheck']);
 	});
 });

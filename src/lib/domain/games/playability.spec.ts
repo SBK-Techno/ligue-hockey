@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest';
+import { isGamePlayable } from './playability.ts';
+
+/** 16 novembre 2026, 13 h à Toronto (UTC-5). */
+const NOW = Date.UTC(2026, 10, 16, 18, 0);
+const ZONE = 'America/Toronto';
+
+function game(overrides: Partial<Parameters<typeof isGamePlayable>[0]> = {}) {
+	return {
+		status: 'scheduled',
+		gameDate: '2026-11-16',
+		startTime: '13:00',
+		generated: true,
+		...overrides
+	};
+}
+
+describe('isGamePlayable', () => {
+	it.each([
+		['annulé dans le passé', game({ status: 'cancelled', gameDate: '2026-11-01' }), false],
+		['annulé plus tard aujourd’hui', game({ status: 'cancelled', startTime: '20:00' }), false],
+		['sans alignement généré', game({ generated: false, gameDate: '2026-11-01' }), false],
+		['complété dans le futur', game({ status: 'completed', gameDate: '2026-12-01' }), true],
+		['complété sans alignement généré', game({ status: 'completed', generated: false }), false],
+		['programmé plus tôt aujourd’hui', game({ startTime: '12:00' }), true],
+		['programmé exactement à l’heure de départ', game({ startTime: '13:00' }), true],
+		['programmé plus tard aujourd’hui', game({ startTime: '14:00' }), false],
+		['programmé hier', game({ gameDate: '2026-11-15' }), true],
+		['programmé demain', game({ gameDate: '2026-11-17', startTime: '09:00' }), false]
+	])('%s', (_label, value, expected) => {
+		expect(isGamePlayable(value, NOW, ZONE)).toBe(expected);
+	});
+});

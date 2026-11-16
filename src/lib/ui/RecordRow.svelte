@@ -8,6 +8,7 @@
 		meta,
 		trailing,
 		badge,
+		badgeLabel,
 		badgeTone = 'neutral',
 		current = false
 	}: {
@@ -17,6 +18,7 @@
 		meta?: string;
 		trailing?: string;
 		badge?: string;
+		badgeLabel?: string;
 		badgeTone?: BadgeTone;
 		current?: boolean;
 	} = $props();
@@ -36,7 +38,9 @@
 		<span class="numeric shrink-0 text-sm">{trailing}</span>
 	{/if}
 	{#if badge}
-		<span class="{badgeClass(badgeTone)} shrink-0">{badge}</span>
+		<span class="{badgeClass(badgeTone)} shrink-0" aria-label={badgeLabel} title={badgeLabel}>
+			{badge}
+		</span>
 	{/if}
 	{#if href}
 		<svg

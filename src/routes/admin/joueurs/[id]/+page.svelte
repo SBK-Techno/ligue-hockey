@@ -10,6 +10,7 @@
 	import { SETTINGS } from '#config/settings-registry.ts';
 	import {
 		formatAge,
+		formatCount,
 		formatDate,
 		formatDecimal,
 		formatMoney,
@@ -217,10 +218,14 @@
 					<dt>{t('rating.form')}</dt>
 					<dd>
 						{data.ratings?.form.average == null
-							? '—'
+							? t('rating.notAvailable')
 							: formatDecimal(data.ratings.form.average, 2)}
 						<span class="ml-1 text-xs font-normal text-muted">
-							({t('rating.gamesRated.many', { count: data.ratings?.form.games ?? 0 })})
+							({formatCount(
+								data.ratings?.form.games ?? 0,
+								'rating.gamesRated.one',
+								'rating.gamesRated.many'
+							)})
 						</span>
 					</dd>
 				</div>

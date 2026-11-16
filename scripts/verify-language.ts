@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { fr } from '../config/i18n/fr.ts';
 
 /**
@@ -17,6 +19,26 @@ const EM_DASH = '—';
 const PLACEHOLDER = /\{([^}]*)\}/g;
 
 const failures: string[] = [];
+
+/** Le tiret cadratin est banni aussi des textes Svelte, pas seulement du registre. */
+function svelteFiles(directory: string): string[] {
+	const files: string[] = [];
+	for (const entry of readdirSync(directory, { withFileTypes: true })) {
+		const path = join(directory, entry.name);
+		if (entry.isDirectory()) files.push(...svelteFiles(path));
+		else if (entry.name.endsWith('.svelte')) files.push(path);
+	}
+	return files;
+}
+
+for (const file of svelteFiles('src')) {
+	const lines = readFileSync(file, 'utf8').split('\n');
+	lines.forEach((line, index) => {
+		if (line.includes(EM_DASH)) {
+			failures.push(`${file}:${index + 1}: tiret cadratin`);
+		}
+	});
+}
 
 for (const [key, value] of Object.entries(fr)) {
 	if (typeof value !== 'string' || value.length === 0) {
@@ -57,4 +79,4 @@ if (failures.length > 0) {
 	process.exit(1);
 }
 
-console.log(`registre: ${Object.keys(fr).length} valeurs conformes`);
+console.log(`registre: ${Object.keys(fr).length} valeurs conformes, aucun tiret cadratin dans les composants`);

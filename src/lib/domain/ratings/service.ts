@@ -1,6 +1,5 @@
 import {
 	RATING_ATTRIBUTE_KEYS,
-	RATING_SCALE,
 	gameRatingAttributes,
 	isGameRatingAttribute,
 	isRatingValue,
@@ -14,28 +13,27 @@ import {
 } from '#config/rating-attributes.ts';
 import { RATING_FORM_WINDOW } from '#config/ratings.ts';
 import type { Position } from '#config/positions.ts';
-import { branding } from '#lib/generated/branding.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { getGame, listSchedule } from '#lib/domain/games/service.ts';
+import { isGamePlayable } from '#lib/domain/games/playability.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
 import {
 	listAdminPlayers,
 	getPlayer
 } from '#lib/domain/players/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
-import { clock, todayInZone } from '#lib/shared/time/clock.ts';
+import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
 	listGameRatings,
 	listPlayerGameRatings,
 	listRatings,
 	listRatingsForPlayers,
-	listRecentAssessments,
 	replaceGameRatings,
 	upsertRatings,
-	type RecentAssessmentRow
+	type GameRatingRow
 } from './queries.ts';
 import { ratingsInputSchema, type RatingsInput } from './validators.ts';
 
@@ -63,6 +61,7 @@ export type EvaluationOverview = {
 	overall: number | null;
 	positionCompleted: number;
 	positionTotal: number;
+	complete: boolean;
 	updatedAt: number | null;
 };
 
@@ -71,8 +70,12 @@ export type GameAssessmentPlayer = {
 	fullName: string;
 	position: Position;
 	jerseyNumber: number | null;
-	values: Record<string, number>;
+	values: Partial<Record<GameRatingAttribute, number>>;
 	rated: number;
+	total: number;
+	complete: boolean;
+	/** Révision serveur : une sauvegarde remonte cette clé et remonte le formulaire. */
+	version: number;
 };
 
 export type GameAssessmentView = {
@@ -84,6 +87,24 @@ export type GameAssessmentView = {
 	canRate: boolean;
 	players: GameAssessmentPlayer[];
 	ratedPlayers: number;
+	totalPlayers: number;
+};
+
+type AssessmentGame = {
+	id: string;
+	gameDate: string;
+	startTime: string;
+	location: string;
+	status: string;
+	generated: boolean;
+	slots: {
+		player: {
+			playerId: string;
+			fullName: string;
+			position: Position;
+			jerseyNumber: number | null;
+		} | null;
+	}[];
 };
 
 function overallOf(values: RatingValues): number | null {
@@ -105,8 +126,27 @@ function positionValuesFor(
 	);
 }
 
-function formFor(playerId: string): RatingsForm {
-	const rows = listPlayerGameRatings(playerId);
+/**
+ * La forme récente ne garde que les cinq derniers matchs évalués, du plus
+ * récent au plus ancien. Un match partiellement évalué pèse autant qu'un
+ * match complet : sa moyenne porte sur les critères réellement observés.
+ */
+function formFor(playerId: string, position: Position): RatingsForm {
+	const allowed = new Set(
+		gameRatingAttributes(position).map((attribute) => attribute.key)
+	);
+	const rows = listPlayerGameRatings(playerId)
+		.filter((row) => allowed.has(row.attribute as GameRatingAttribute))
+		.sort((left, right) => {
+			if (left.gameDate !== right.gameDate) {
+				return left.gameDate < right.gameDate ? 1 : -1;
+			}
+			if (left.startTime !== right.startTime) {
+				return left.startTime < right.startTime ? 1 : -1;
+			}
+			return left.gameId < right.gameId ? 1 : left.gameId > right.gameId ? -1 : 0;
+		});
+
 	const games = new Map<string, number[]>();
 	for (const row of rows) {
 		const values = games.get(row.gameId) ?? [];
@@ -150,7 +190,7 @@ export function getRatings(actor: Actor, playerId: string): RatingsView {
 		positionOverall: meanRating(Object.values(positionValues)),
 		positionComplete: Object.keys(positionValues).length === allowed.length,
 		positionTotal: allowed.length,
-		form: formFor(playerId),
+		form: formFor(playerId, player.position),
 		updatedAt
 	};
 }
@@ -222,37 +262,39 @@ export function evaluationOverviews(actor: Actor): EvaluationOverview[] {
 			if (all[key] !== undefined) core[key] = all[key];
 		}
 		const position = positionValuesFor(player.position, all);
+		const overall = overallOf(core);
+		const positionCompleted = Object.keys(position).length;
+		const positionTotal = positionRatingAttributes(player.position).length;
 		return {
 			playerId: player.userId,
 			fullName: player.fullName,
 			position: player.position,
-			overall: overallOf(core),
-			positionCompleted: Object.keys(position).length,
-			positionTotal: positionRatingAttributes(player.position).length,
+			overall,
+			positionCompleted,
+			positionTotal,
+			complete: overall !== null && positionCompleted === positionTotal,
 			updatedAt: updated.get(player.userId) ?? null
 		};
 	});
 }
 
-function canRateGame(game: {
-	status: string;
-	gameDate: string;
-}): boolean {
-	const today = todayInZone(branding.timezone, clock.nowMs());
-	return game.status === 'completed' || game.gameDate <= today;
-}
-
-export function getGameAssessment(
-	actor: Actor,
-	gameId: string
-): GameAssessmentView {
-	requirePermission(actor, 'editRatings');
-	const game = getGame(actor, gameId);
-	const rows = listGameRatings(gameId);
-	const grouped = new Map<string, Record<string, number>>();
+/**
+ * Construit l'évaluation d'un match à partir de l'alignement habillé et des
+ * critères autorisés au poste de chaque joueur. Une note enregistrée pour un
+ * ancien poste ne compte ni dans les valeurs ni dans les totaux.
+ */
+function buildAssessmentPlayers(
+	game: AssessmentGame,
+	rows: readonly GameRatingRow[]
+): GameAssessmentPlayer[] {
+	const grouped = new Map<
+		string,
+		Map<string, { value: number; updatedAt: number }>
+	>();
 	for (const row of rows) {
-		const values = grouped.get(row.playerId) ?? {};
-		values[row.attribute] = row.value;
+		const values =
+			grouped.get(row.playerId) ?? new Map<string, { value: number; updatedAt: number }>();
+		values.set(row.attribute, { value: row.value, updatedAt: row.updatedAt });
 		grouped.set(row.playerId, values);
 	}
 
@@ -261,16 +303,39 @@ export function getGameAssessment(
 	for (const slot of game.slots) {
 		if (!slot.player || seen.has(slot.player.playerId)) continue;
 		seen.add(slot.player.playerId);
-		const values = grouped.get(slot.player.playerId) ?? {};
+		const allowed = gameRatingAttributes(slot.player.position);
+		const stored = grouped.get(slot.player.playerId) ?? new Map();
+		const values: Partial<Record<GameRatingAttribute, number>> = {};
+		let version = 0;
+		for (const attribute of allowed) {
+			const entry = stored.get(attribute.key);
+			if (!entry) continue;
+			values[attribute.key] = entry.value;
+			version = Math.max(version, entry.updatedAt);
+		}
+		const rated = Object.keys(values).length;
 		players.push({
 			playerId: slot.player.playerId,
 			fullName: slot.player.fullName,
 			position: slot.player.position,
 			jerseyNumber: slot.player.jerseyNumber,
 			values,
-			rated: Object.keys(values).length
+			rated,
+			total: allowed.length,
+			complete: rated === allowed.length,
+			version
 		});
 	}
+	return players;
+}
+
+export function getGameAssessment(
+	actor: Actor,
+	gameId: string
+): GameAssessmentView {
+	requirePermission(actor, 'editRatings');
+	const game = getGame(actor, gameId);
+	const players = buildAssessmentPlayers(game, listGameRatings(gameId));
 
 	return {
 		gameId,
@@ -278,9 +343,10 @@ export function getGameAssessment(
 		startTime: game.startTime,
 		location: game.location,
 		status: game.status,
-		canRate: canRateGame(game),
+		canRate: isGamePlayable(game),
 		players,
-		ratedPlayers: players.filter((player) => player.rated > 0).length
+		ratedPlayers: players.filter((player) => player.complete).length,
+		totalPlayers: players.length
 	};
 }
 
@@ -292,7 +358,13 @@ export function saveGameAssessment(
 ): GameAssessmentView {
 	const user = requirePermission(actor, 'editRatings');
 	const game = getGame(actor, gameId);
-	if (!canRateGame(game)) {
+	if (game.status === 'cancelled') {
+		throw new AppError('CONFLICT', { key: 'rating.gameCancelled' });
+	}
+	if (!game.generated) {
+		throw new AppError('CONFLICT', { key: 'rating.gameNotGenerated' });
+	}
+	if (!isGamePlayable(game)) {
 		throw new AppError('CONFLICT', { key: 'rating.gameNotPlayed' });
 	}
 	const slot = game.slots.find((entry) => entry.player?.playerId === playerId);
@@ -301,19 +373,17 @@ export function saveGameAssessment(
 			key: 'rating.playerNotInGame'
 		});
 	}
-	if (!game.generated) {
-		throw new AppError('CONFLICT', { key: 'rating.gameNotGenerated' });
-	}
 
 	const allowed = gameRatingAttributes(slot.player.position);
+	const allowedKeys = new Set<string>(allowed.map((attribute) => attribute.key));
 	const values: Record<string, number> = {};
 	for (const [key, raw] of Object.entries(input)) {
-		if (raw === undefined || raw === null || raw === '') continue;
 		if (!isGameRatingAttribute(slot.player.position, key)) {
 			throw new AppError('VALIDATION', {
 				details: [{ path: key, code: 'unknown_attribute' }]
 			});
 		}
+		if (raw === undefined || raw === null || raw === '') continue;
 		const value = Number(raw);
 		if (!isRatingValue(value)) {
 			throw new AppError('VALIDATION', {
@@ -322,21 +392,38 @@ export function saveGameAssessment(
 		}
 		values[key] = value;
 	}
-	for (const attribute of allowed) {
-		const value = values[attribute.key];
-		if (value !== undefined && (value < RATING_SCALE.min || value > RATING_SCALE.max)) {
-			throw new AppError('VALIDATION', {
-				details: [{ path: attribute.key, code: 'invalid_rating' }]
-			});
-		}
-	}
 
-	replaceGameRatings(gameId, playerId, values, clock.nowMs(), user.userId);
+	const dressedPlayerIds = [
+		...new Set(
+			game.slots
+				.map((entry) => entry.player?.playerId)
+				.filter((id): id is string => Boolean(id))
+		)
+	];
+	const previousAttributes = listGameRatings(gameId).filter(
+		(row) => row.playerId === playerId && allowedKeys.has(row.attribute)
+	).length;
+
+	replaceGameRatings(
+		gameId,
+		playerId,
+		values,
+		clock.nowMs(),
+		user.userId,
+		dressedPlayerIds
+	);
+	// L'audit garde le nombre de critères avant et après, jamais les notes :
+	// une évaluation reste privée même pour les administrateurs.
 	recordAudit(actor, {
 		action: 'ratings.game',
 		entityType: 'game',
 		entityId: gameId,
-		metadata: { playerId, attributes: Object.keys(values) }
+		metadata: {
+			playerId,
+			attributes: Object.keys(values),
+			previousAttributes,
+			cleared: previousAttributes > 0 && Object.keys(values).length === 0
+		}
 	});
 
 	return getGameAssessment(actor, gameId);
@@ -350,47 +437,38 @@ export type PlayedGameAssessment = {
 	status: string;
 	players: number;
 	rated: number;
+	complete: boolean;
 };
 
 /**
- * Les matchs déjà joués, avec le nombre de joueurs alignés et évalués.
- * Un match sans note reste visible : c'est justement celui à remplir.
+ * Les matchs déjà joués, avec le nombre de joueurs alignés et complètement
+ * évalués. Un match sans note reste visible : c'est justement celui à remplir.
  */
 export function playedGamesForAssessment(
 	actor: Actor,
 	limit = 8
 ): PlayedGameAssessment[] {
 	requirePermission(actor, 'editRatings');
-	const today = todayInZone(branding.timezone, clock.nowMs());
-	const counts = new Map(
-		listRecentAssessments(50).map((row) => [row.gameId, row.players])
-	);
-	return listSchedule(actor)
-		.filter((game) => game.status === 'completed' || game.gameDate <= today)
-		.slice(-limit)
-		.reverse()
-		.map((summary) => {
-			const game = getGame(actor, summary.id);
-			const players = new Set(
-				game.slots
-					.map((slot) => slot.player?.playerId)
-					.filter((playerId): playerId is string => Boolean(playerId))
-			);
-			return {
-				gameId: game.id,
-				gameDate: game.gameDate,
-				startTime: game.startTime,
-				location: game.location,
-				status: game.status,
-				players: players.size,
-				rated: counts.get(game.id) ?? 0
-			};
+	const games: PlayedGameAssessment[] = [];
+	for (const summary of [...listSchedule(actor)].reverse()) {
+		const game = getGame(actor, summary.id);
+		if (!isGamePlayable(game)) continue;
+		const players = buildAssessmentPlayers(game, listGameRatings(game.id));
+		if (players.length === 0) continue;
+		const rated = players.filter((player) => player.complete).length;
+		games.push({
+			gameId: game.id,
+			gameDate: game.gameDate,
+			startTime: game.startTime,
+			location: game.location,
+			status: game.status,
+			players: players.length,
+			rated,
+			complete: rated === players.length
 		});
-}
-
-export function recentAssessmentGames(actor: Actor): RecentAssessmentRow[] {
-	requirePermission(actor, 'editRatings');
-	return listRecentAssessments(10);
+		if (games.length === limit) break;
+	}
+	return games;
 }
 
 export type { GameRatingAttribute, PositionRatingAttribute };

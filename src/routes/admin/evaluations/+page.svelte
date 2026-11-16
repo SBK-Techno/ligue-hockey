@@ -32,12 +32,10 @@
 						trailing={player.overall === null
 							? t('rating.notRated')
 							: formatDecimal(player.overall, 2)}
-						badge={player.overall !== null && player.positionCompleted === player.positionTotal
+						badge={player.complete
 							? t('admin.seasonComplete')
 							: t('admin.seasonIncomplete')}
-						badgeTone={player.overall !== null && player.positionCompleted === player.positionTotal
-							? 'ok'
-							: 'neutral'}
+						badgeTone={player.complete ? 'ok' : 'neutral'}
 					/>
 				</li>
 			{/each}
@@ -56,13 +54,14 @@
 						href="/admin/evaluations/matchs/{game.gameId}"
 						title="{formatTime(game.startTime)} · {game.location}"
 						meta={formatDate(game.gameDate, 'short')}
-						badge={t('rating.ratedPlayers', {
+						badge="{game.rated}/{game.players}"
+						badgeLabel={t('rating.ratedPlayers', {
 							done: game.rated,
 							total: game.players
 						})}
 						badgeTone={game.rated === 0
 							? 'neutral'
-							: game.players > 0 && game.rated >= game.players
+							: game.complete
 								? 'ok'
 								: 'ice'}
 					/>

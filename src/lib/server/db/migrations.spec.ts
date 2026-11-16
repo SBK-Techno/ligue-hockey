@@ -375,6 +375,51 @@ describe('migrations vs registres', () => {
 		expect(missing.length).toBe(SETTINGS_KEYS.length - 1);
 	});
 
+	it('borne les notes de saison et de match entre 1 et 5', () => {
+		const db = migrateInMemory();
+		db.prepare(
+			`insert into user (id, name, email, email_verified, created_at, updated_at)
+			 values ('rating-user', 'Joueur', 'rating@example.test', 1, ?, ?)`
+		).run(NOW, NOW);
+		db.prepare(
+			`insert into players (user_id, first_name, last_name, position, age, created_at, updated_at)
+			 values ('rating-user', 'Joueur', 'Test', 'forward', 30, ?, ?)`
+		).run(NOW, NOW);
+		db.prepare(
+			`insert into locations (id, name, created_at, updated_at)
+			 values ('rating-location', 'Aréna test', ?, ?)`
+		).run(NOW, NOW);
+		db.prepare(
+			`insert into games (id, game_date, start_time, location_id, location, roster_template_json, created_at, updated_at)
+			 values ('rating-game', '2026-11-16', '09:00', 'rating-location', 'Aréna test', '{}', ?, ?)`
+		).run(NOW, NOW);
+
+		const season = db.prepare(
+			`insert into player_ratings (player_id, attribute, value, updated_at)
+			 values ('rating-user', 'passing', ?, ?)`
+		);
+		const game = db.prepare(
+			`insert into game_player_ratings (game_id, player_id, attribute, value, updated_at)
+			 values ('rating-game', 'rating-user', 'impact', ?, ?)`
+		);
+
+		for (const value of [0, 6]) {
+			expect(() => season.run(value, NOW), `saison ${value}`).toThrow(
+				/CHECK constraint failed/i
+			);
+			expect(() => game.run(value, NOW), `match ${value}`).toThrow(
+				/CHECK constraint failed/i
+			);
+		}
+		for (const value of [1, 5]) {
+			expect(() => season.run(value, NOW)).not.toThrow();
+			db.prepare("delete from player_ratings where player_id = 'rating-user'").run();
+			expect(() => game.run(value, NOW)).not.toThrow();
+			db.prepare("delete from game_player_ratings where game_id = 'rating-game'").run();
+		}
+		db.close();
+	});
+
 	it('refuse une clé de réglage inconnue', () => {
 		expect(() =>
 			sqlite
