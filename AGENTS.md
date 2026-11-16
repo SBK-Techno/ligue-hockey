@@ -17,7 +17,10 @@ npm run dev              # local development
 npm run check            # svelte-check
 npm run lint             # eslint
 npm run test             # vitest
-npm run verify           # check, lint, tests, language, architecture, generated, shell, docs
+npm run verify           # check, lint, tests, language, architecture, version, generated, shell, docs
+npm run verify:release   # package.json, package-lock.json et .env.example portent la même version
+npm run release:plan     # calcule la prochaine version depuis les commits
+npm run release:apply -- --version x.y.z  # applique la version aux surfaces générées
 npm run docs:check       # génère et valide le site de documentation
 npm run gate             # verify + build, la porte exacte de CI
 npm run build            # production build
@@ -30,9 +33,9 @@ Demo data is created through the admin screens; there is no seed command.
 
 GitHub Actions exécute `.github/workflows/ci.yml` sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. `verify` installe Node depuis `.nvmrc` et appelle `npm run gate`; `container` construit l'image et vérifie `/api/health`; `required` agrège les deux résultats et constitue le statut exigé par la protection de `main`. Aucune étape de vérification n'est copiée dans un workflow.
 
-`pages.yml` publie le site généré par `scripts/docs/` sur `https://sbk-techno.github.io/ligue-hockey/`. `release.yml` publie l'image sur GHCR et crée la version GitHub à partir d'une étiquette `v*`.
+`pages.yml` publie le site généré par `scripts/docs/` sur `https://sbk-techno.github.io/ligue-hockey/`. `auto-release.yml` calcule la prochaine version, prépare ou met à jour la demande de fusion `release/next` et lance la porte dessus. La fusion de cette demande approuve la version; `auto-release.yml` crée alors l'étiquette `v*` et appelle `release.yml`, qui publie l'image sur GHCR et crée la version GitHub. La politique de montée vit dans `config/release.ts`; les surfaces de version sont écrites par `scripts/release/apply.ts` et contrôlées par `npm run verify:release`. Ne créez pas d'étiquette à la main.
 
-`npm run verify:architecture` valide le contrat de publication dans `scripts/lib/ci-contract.ts`: déclencheurs, tâches `verify`, `container` et `required`, étape exacte `npm run gate`, `npm ci`, `setup-node` avec `.nvmrc` et cache, actions épinglées, permissions Pages, étiquettes de publication, cible GHCR, scripts `gate` et `verify`, major Node identique dans `package.json`, `.nvmrc` et le Dockerfile, et métadonnées OCI de l'image.
+`npm run verify:architecture` valide le contrat de publication dans `scripts/lib/ci-contract.ts`: déclencheurs, tâches `verify`, `container` et `required`, étape exacte `npm run gate`, `npm ci`, `setup-node` avec `.nvmrc` et cache, actions épinglées, permissions Pages, plan de version avec porte et demande de fusion, appel unique à `release.yml`, cible GHCR, scripts `gate`, `verify` et `verify:release`, major Node identique dans `package.json`, `.nvmrc` et le Dockerfile, et métadonnées OCI de l'image.
 
 ## Boundaries
 

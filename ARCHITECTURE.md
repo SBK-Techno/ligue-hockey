@@ -37,6 +37,8 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Rating attributes and weights | `config/rating-attributes.ts` | ratings service, admin form, overall calculation | registry test |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
+| Application version | `package.json` | `package-lock.json` root, `.env.example` image suffix, Docker OCI label, GHCR tags, GitHub release | `verify:release` + release workflow |
+| Release bump policy | `config/release.ts` | release planner, auto-release workflow | release tests + `verify:architecture` |
 | Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
@@ -134,11 +136,24 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 3. `vitest run`: unit, property, and contract tests.
 4. `verify:language`: rejects vouvoiement, second-person plural imperatives, em dashes and malformed placeholders in the French dictionary.
 5. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
-6. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
-7. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
-8. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
+6. `verify:release`: refuses any disagreement between `package.json`, the two root versions in `package-lock.json`, and the `LIGUE_IMAGE` suffix in `.env.example`.
+7. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+8. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
+9. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
 
 CI runs `npm run gate`, which is the same verify plus `npm run build`. The `required` job aggregates `verify` and `container`, and branch protection on `main` requires that check and refuses direct pushes. A red gate blocks the merge. The check runs on the pull request head, not on a merge commit.
+
+## Release automation
+
+`package.json` owns the application version. Every other version surface is derived or checked:
+
+- `scripts/release/plan.ts` reads the latest `v*` tag and the commits since it, then applies the bump policy from `config/release.ts`. Breaking changes win, `feat` bumps the minor, everything else falls back to the configured default, and ignored types produce no release.
+- `scripts/release/apply.ts` is the only writer of the version surfaces. It applies the exact version to `package.json` and the lockfile, then synchronises the `LIGUE_IMAGE` suffix in `.env.example`.
+- `.github/workflows/auto-release.yml` runs on every push to `main`. It prepares or updates one `release/next` branch and release pull request, and dispatches `ci.yml` on that branch so the protected `required` check exists. Merging that pull request is the human release approval.
+- The next push to `main` creates the annotated `v<version>` tag and calls `.github/workflows/release.yml` through `workflow_call`. Tagging and publication therefore have one owner; a tag pushed with `GITHUB_TOKEN` cannot trigger a second workflow.
+- `release.yml` also remains callable by a manual `v*` tag for recovery. It verifies the tag against `package.json` before building, pushing the version, revision and `latest` image tags, and creating the GitHub release.
+
+No module writes a version literal outside these owners. The release planner and version surfaces are pure functions with table-driven tests; the CI contract refuses a workflow that skips the gate, the release pull request, or the shared publisher.
 
 ## Web delivery
 
