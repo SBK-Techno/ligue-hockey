@@ -62,7 +62,15 @@ if [ "$signin_status" != 200 ]; then
 	exit 1
 fi
 
-profile_body="$(curl -sS --max-time 10 -b "$COOKIES" -w '\n%{http_code}' \
+# Le cookie de production porte l'attribut Secure (ORIGIN est en https).
+# curl refuse de le renvoyer sur http, donc on l'envoie comme en-tête explicite.
+session_cookie="$(awk 'NF >= 7 { printf "%s%s=%s", sep, $6, $7; sep="; " }' "$COOKIES")"
+if [ -z "$session_cookie" ]; then
+	printf 'erreur: aucun cookie de session après la connexion\n' >&2
+	exit 1
+fi
+
+profile_body="$(curl -sS --max-time 10 -H "Cookie: $session_cookie" -w '\n%{http_code}' \
 	"http://127.0.0.1:$PORT/profil")"
 profile_status="${profile_body##*$'\n'}"
 if [ "$profile_status" != 200 ]; then
