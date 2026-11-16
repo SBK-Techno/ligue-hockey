@@ -51,12 +51,18 @@ Le guide complet est publié à <https://sbk-techno.github.io/ligue-hockey/>. Le
 L'image est publiée sur GHCR:
 
 ```bash
-docker pull ghcr.io/sbk-techno/ligue-hockey:1.0.0
-docker compose up -d --no-build
+cp .env.example .env
+# Remplir ORIGIN, BETTER_AUTH_SECRET, ADMIN_*, SMTP_*, VAPID_*
+docker compose pull
+docker compose up -d
 curl -fsS https://votre-domaine/api/health
 ```
 
-Pour construire localement, `docker compose up -d --build`. Toutes les valeurs d'exploitation, la sauvegarde, les mises à jour, le retour arrière et le dépannage sont décrits dans [OPERATIONS.md](OPERATIONS.md). L'architecture et les frontières de modules sont dans [ARCHITECTURE.md](ARCHITECTURE.md).
+Pour construire l'image depuis les sources, utilisez la surcharge prévue:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+``` Toutes les valeurs d'exploitation, la sauvegarde, les mises à jour, le retour arrière et le dépannage sont décrits dans [OPERATIONS.md](OPERATIONS.md). L'architecture et les frontières de modules sont dans [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Pile
 

@@ -38,9 +38,16 @@ npx web-push generate-vapid-keys # VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
 ```bash
 cp .env.example .env
 # Remplir ORIGIN, BETTER_AUTH_SECRET, ADMIN_*, SMTP_*, VAPID_*
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose ps
 curl -fsS https://votre-domaine/api/health
+```
+
+Pour construire l'image depuis les sources au lieu de la tirer de GHCR:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
 Au démarrage, le conteneur applique les migrations Drizzle, crée l'administrateur initial si nécessaire, puis démarre le planificateur de notifications. Le volume nommé `ligue-data` contient la base et, en développement seulement, la boîte d'envoi locale. `docker compose down` le conserve; `docker compose down -v` le supprime.
@@ -93,16 +100,16 @@ docker pull ghcr.io/sbk-techno/ligue-hockey:1.0.0
 
 ## Mise à jour et retour arrière
 
-L'image de production vient de GHCR. `LIGUE_IMAGE` choisit la version déployée; la valeur par défaut est `ghcr.io/sbk-techno/ligue-hockey:latest`.
+L'image de production vient de GHCR. `LIGUE_IMAGE` choisit la version déployée; la valeur par défaut est `ghcr.io/sbk-techno/ligue-hockey:1.0.0`.
 
 ```bash
 docker compose pull
-docker compose up -d --no-build
+docker compose up -d
 curl -fsS https://votre-domaine/api/health
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
 ```
 
-Pour construire localement, `docker compose up -d --build`. Les migrations sont appliquées automatiquement et ne sont pas réversibles. Avant chaque mise à jour :
+Pour construire localement, utilisez `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`. Les migrations sont appliquées automatiquement et ne sont pas réversibles. Avant chaque mise à jour :
 
 ```bash
 mkdir -p backups
@@ -111,7 +118,7 @@ docker cp ligue-hockey:/app/data/backup.db "backups/ligue-$(date +%Y%m%dT%H%M%S)
 docker compose exec -T --user app ligue rm /app/data/backup.db
 ```
 
-Pour revenir à une version précédente, épinglez son étiquette ou son digest dans `LIGUE_IMAGE`, relancez `docker compose pull` et `docker compose up -d --no-build`, puis restaurez la base correspondante. Ne rétrogradez jamais le schéma sans restaurer la base.
+Pour revenir à une version précédente, épinglez son étiquette ou son digest dans `LIGUE_IMAGE`, relancez `docker compose pull` et `docker compose up -d`, puis restaurez la base correspondante. Ne rétrogradez jamais le schéma sans restaurer la base.
 
 ## Sauvegarde et restauration
 
