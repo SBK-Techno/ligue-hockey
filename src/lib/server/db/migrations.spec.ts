@@ -9,7 +9,11 @@ import { NOTIFICATION_CHANNEL_KEYS } from '#config/notification-channels.ts';
 import { NOTIFICATION_EVENT_KEYS } from '#config/notification-events.ts';
 import { PAYMENT_METHOD_KEYS } from '#config/payment-methods.ts';
 import { POSITION_KEYS } from '#config/positions.ts';
-import { RATING_ATTRIBUTE_KEYS } from '#config/rating-attributes.ts';
+import {
+	RATING_ATTRIBUTE_KEYS,
+	POSITION_RATING_KEYS,
+	GAME_RATING_KEYS
+} from '#config/rating-attributes.ts';
 import { SETTINGS_KEYS, SETTINGS } from '#config/settings-registry.ts';
 import { TEAM_KEYS } from '#config/teams.ts';
 
@@ -69,7 +73,13 @@ const COVERAGE: readonly Coverage[] = [
 		label: 'player_ratings.attribute',
 		table: 'player_ratings',
 		constraint: 'player_ratings_attribute_check',
-		values: RATING_ATTRIBUTE_KEYS
+		values: [...RATING_ATTRIBUTE_KEYS, ...POSITION_RATING_KEYS]
+	},
+	{
+		label: 'game_player_ratings.attribute',
+		table: 'game_player_ratings',
+		constraint: 'game_player_ratings_attribute_check',
+		values: GAME_RATING_KEYS
 	},
 	{
 		label: 'payments.method',

@@ -29,7 +29,14 @@
 				· <span class="badge">{t(gameStatus(game.status).labelKey)}</span>
 			</p>
 		</div>
-		<a class="btn-secondary btn-sm" href="/matchs/{game.id}">{t('home.viewGame')}</a>
+		<div class="flex flex-wrap gap-2">
+			{#if data.canAssess}
+				<a class="btn-primary btn-sm" href="/admin/evaluations/matchs/{game.id}">
+					{t('rating.editGame')}
+				</a>
+			{/if}
+			<a class="btn-secondary btn-sm" href="/matchs/{game.id}">{t('home.viewGame')}</a>
+		</div>
 	</div>
 
 	{#if game.status === 'cancelled'}

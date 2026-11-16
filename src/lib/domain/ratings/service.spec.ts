@@ -6,29 +6,52 @@ import {
 import type { Actor } from '../auth/types.ts';
 import type { RatingsInput } from './validators.ts';
 
-const { upsertRatings, listRatings, getPlayer } = vi.hoisted(() => ({
-	upsertRatings: vi.fn<
-		(playerId: string, values: Record<string, number>, at: number, by: string | null) => void
-	>(),
-	listRatings: vi.fn<
-		(playerId: string) => Array<{
-			playerId: string;
-			attribute: string;
-			value: number;
-			updatedAt: number;
-			updatedBy: string | null;
-		}>
-	>(() => []),
-	getPlayer: vi.fn()
-}));
+const {
+	upsertRatings,
+	listRatings,
+	listPlayerGameRatings,
+	listRatingsForPlayers,
+	getPlayer,
+	listAdminPlayers
+} = vi.hoisted(() => ({
+		upsertRatings: vi.fn<
+			(playerId: string, values: Record<string, number>, at: number, by: string | null) => void
+		>(),
+		listRatings: vi.fn<
+			(playerId: string) => Array<{
+				playerId: string;
+				attribute: string;
+				value: number;
+				updatedAt: number;
+				updatedBy: string | null;
+			}>
+		>(() => []),
+		listPlayerGameRatings: vi.fn<
+			(playerId: string) => Array<{
+				gameId: string;
+				gameDate: string;
+				attribute: string;
+				value: number;
+			}>
+		>(() => []),
+		listRatingsForPlayers: vi.fn(() => []),
+		getPlayer: vi.fn(() => ({ position: 'forward' })),
+		listAdminPlayers: vi.fn(() => [])
+	}));
 
 vi.mock('./queries.ts', () => ({
 	upsertRatings,
-	listRatings
+	listRatings,
+	listPlayerGameRatings,
+	listRatingsForPlayers,
+	upsertGameRating: vi.fn(),
+	replaceGameRatings: vi.fn(),
+	listRecentAssessments: vi.fn(() => [])
 }));
 
 vi.mock('#lib/domain/players/service.ts', () => ({
-	getPlayer
+	getPlayer,
+	listAdminPlayers
 }));
 
 vi.mock('#lib/domain/audit/service.ts', () => ({
@@ -63,7 +86,11 @@ describe('setRatings', () => {
 		upsertRatings.mockClear();
 		listRatings.mockClear();
 		listRatings.mockReturnValue([]);
+		listPlayerGameRatings.mockReturnValue([]);
+		listRatingsForPlayers.mockReturnValue([]);
+		listAdminPlayers.mockReturnValue([]);
 		getPlayer.mockClear();
+		getPlayer.mockReturnValue({ position: 'forward' });
 	});
 
 	it.each([
@@ -111,6 +138,65 @@ describe('setRatings', () => {
 		expect(view.playerId).toBe('target');
 		expect(view.overall).not.toBeNull();
 		expect(view.updatedAt).toBe(1_700_000_000_000);
+	});
+
+	it('keeps position criteria beside the four league notes', async () => {
+		const { setRatings } = await import('./service.ts');
+
+		setRatings(admin, 'target', completeRatings(), { forecheck: 4 });
+
+		expect(upsertRatings).toHaveBeenCalledWith(
+			'target',
+			{ ...completeRatings(), forecheck: 4 },
+			expect.any(Number),
+			'admin'
+		);
+	});
+
+	it('rejects a position criterion that does not belong to the player', async () => {
+		const { setRatings } = await import('./service.ts');
+
+		expect(
+			thrownBy(() =>
+				setRatings(admin, 'target', completeRatings(), { goaliePositioning: 4 })
+			)
+		).toMatchObject({ code: 'VALIDATION' });
+		expect(upsertRatings).not.toHaveBeenCalled();
+	});
+
+	it('computes recent form from the last evaluated games only', async () => {
+		const { getRatings } = await import('./service.ts');
+		listPlayerGameRatings.mockReturnValue([
+			{ gameId: 'g5', gameDate: '2026-11-16', attribute: 'impact', value: 5 },
+			{ gameId: 'g5', gameDate: '2026-11-16', attribute: 'effort', value: 5 },
+			{ gameId: 'g4', gameDate: '2026-11-09', attribute: 'impact', value: 3 },
+			{ gameId: 'g4', gameDate: '2026-11-09', attribute: 'effort', value: 3 }
+		]);
+
+		const view = getRatings(admin, 'target');
+
+		expect(view.form.games).toBe(2);
+		expect(view.form.average).toBe(4);
+	});
+
+	it('summarises the season and position completion for the hub', async () => {
+		const { evaluationOverviews } = await import('./service.ts');
+		listAdminPlayers.mockReturnValue([
+			{ userId: 'p1', fullName: 'Alex Tremblay', position: 'forward' }
+		] as never);
+		listRatingsForPlayers.mockReturnValue([
+			{ playerId: 'p1', attribute: 'passing', value: 4 },
+			{ playerId: 'p1', attribute: 'speed', value: 4 },
+			{ playerId: 'p1', attribute: 'agility', value: 4 },
+			{ playerId: 'p1', attribute: 'backchecking', value: 4 },
+			{ playerId: 'p1', attribute: 'forecheck', value: 5 }
+		] as never);
+
+		const [overview] = evaluationOverviews(admin);
+
+		expect(overview.overall).toBe(4);
+		expect(overview.positionCompleted).toBe(1);
+		expect(overview.positionTotal).toBe(3);
 	});
 
 	it('denies an actor without the rating capability', async () => {

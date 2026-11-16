@@ -5,15 +5,19 @@ import {
 	regenerateAsAdmin,
 	updateGame
 } from '#lib/domain/games/service.ts';
+import { branding } from '#lib/generated/branding.ts';
 import { actionError } from '#lib/server/action.ts';
+import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 import { gameInputSchema } from '#lib/domain/games/validators.ts';
 
 export const load: ServerLoad = ({ locals, params }) => {
 	const actor = locals.actor;
-	if (actor.kind !== 'user' || !params.id) return { game: null };
-	return { game: getGame(actor, params.id) };
+	if (actor.kind !== 'user' || !params.id) return { game: null, canAssess: false };
+	const game = getGame(actor, params.id);
+	const today = todayInZone(branding.timezone, clock.nowMs());
+	return { game, canAssess: game.gameDate <= today };
 };
 
 export const actions: Actions = {

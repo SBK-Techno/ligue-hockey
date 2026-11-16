@@ -30,11 +30,12 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | League-editable settings (roster, fees, lead times, limits) | `config/settings-registry.ts` | settings service, admin form, services | registry test + `verify` |
 | Positions | `config/positions.ts` | schema checks, forms, roster templates, notifications | architecture check |
 | Roles and capabilities | `config/capabilities.ts`, `config/roles.ts` | policy, navigation, admin role editor | policy tests |
-| Navigation surfaces | `config/surfaces.ts` | header, bottom bar, account menu | surface tests |
-| Admin screens and their capability | `config/admin-tabs.ts` | admin sidebar, admin mobile tabs, home shortcuts | typecheck |
+| Navigation surfaces | `config/surfaces.ts` | header, mobile bar, mobile priorities | surface tests |
+| Admin screens and their capability | `config/admin-tabs.ts` | admin sidebar, admin mobile selector | typecheck |
 | Game status label and tone | `config/game-status.ts` | schedule rows, game detail, admin game lists | typecheck |
 | Alignment rule modes | `config/rule-modes.ts` | rule form, rule list, generator, badges | mode round-trip test |
-| Rating attributes and weights | `config/rating-attributes.ts` | ratings service, admin form, overall calculation | registry test |
+| Rating attributes, position criteria and game criteria | `config/rating-attributes.ts` | ratings service, evaluation sheets, overall calculation | registry test |
+| Recent-form window | `config/ratings.ts` | ratings service | rating tests |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
@@ -89,11 +90,20 @@ No module may define its own default for a value owned by one of these layers.
 
 One policy surface: `src/lib/domain/auth/policy.ts`. It answers capability questions (`canManageGames`, `canManagePlayers`, `canModerateChat`, …) from an `Actor` value. A role is only a named set of capabilities in `config/roles.ts`; services ask for a capability, never for a role. Adding a role therefore touches one declaration, not the domain. Current roles: joueur, responsable, admin.
 
-Navigation is derived the same way. `config/surfaces.ts` declares each destination with the capabilities that open it, and `src/lib/domain/auth/surfaces.ts` filters that registry for the current actor. `AppNav` and the account menu render the result, so a surface cannot appear for a role that cannot use it.
+Navigation is derived the same way. `config/surfaces.ts` declares each destination with the capabilities that open it and a mobile priority, and `src/lib/domain/auth/surfaces.ts` filters that registry for the current actor. The header renders the primary surfaces; the mobile bar keeps the five lowest priorities, so Gestion replaces Mon profil for a manager. A surface cannot appear for a role that cannot use it.
 
 Services call policy before every read/write; routes call the same functions only to hide controls. The `/admin` layout calls `requireAdmin` once, but services still enforce it, so an API call cannot bypass the UI. `requireUser` is not enough when the action changes league data.
 
 Ratings and other players' balances are removed from view models in the service, not hidden in the template. Player-facing DTOs carry no rating fields and no other player's money fields. Profile presence (`hasPlayerProfile`, `isSubstitute`) is resolved once in the root layout load and consumed by pages; a page must never infer "player" from a role.
+
+## Evaluations
+
+Two layers, never merged:
+
+- **Season sheet.** `player_ratings` keeps the four league notes that drive team balancing (Passeur, Rapidité, Agilité, Replis défensif) plus optional position criteria: three for forwards, three for defence, six for goalies. The season overall is the mean of the four league notes only; position criteria are descriptive and never block lineup generation.
+- **Game sheet.** `game_player_ratings` stores four observations from 1 to 5 per dressed player and game, adapted to the position (impact, engagement, décisions, discipline for skaters; positionnement, rebonds, manipulation, sang-froid for goalies). A missing observation means “pas vu”, never zero. Game sheets never overwrite or average into the season sheet.
+
+The recent-form value is a derived mean of the last `RATING_FORM_WINDOW` evaluated games and is shown separately from the season overall. Every write requires `editRatings`; every read that exposes ratings does the same. The evaluation hub, season sheet and game sheet are the only editing surfaces; the player admin page links to the season sheet instead of duplicating it.
 
 ## Notifications
 

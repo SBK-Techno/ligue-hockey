@@ -7,13 +7,13 @@
 	import { capabilityDefinition } from '#config/capabilities.ts';
 	import { ROLES, roleDefinition, type Role } from '#config/roles.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
-	import { RATING_ATTRIBUTES, RATING_SCALE } from '#config/rating-attributes.ts';
 	import { SETTINGS } from '#config/settings-registry.ts';
 	import {
 		formatAge,
 		formatDate,
 		formatDecimal,
 		formatMoney,
+		formatTimestamp,
 		t
 	} from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
@@ -110,10 +110,10 @@
 				{/if}
 			</form>
 			<div>
-				<p class="label">{t('admin.status')}</p>
-				<p class="text-sm font-semibold">
-					{player.active ? t('admin.active') : t('admin.inactive')}
-				</p>
+				<dl class="fact">
+					<dt>{t('admin.status')}</dt>
+					<dd>{player.active ? t('admin.active') : t('admin.inactive')}</dd>
+				</dl>
 				<p class="hint">{t('admin.statusHelp')}</p>
 				{#if !isSelf}
 					<form method="POST" action="?/status" use:progressiveForm class="mt-3">
@@ -199,41 +199,47 @@
 		</section>
 
 		<section class="card">
-			<h2 class="mb-1">{t('admin.ratings')}</h2>
-			<p class="hint mb-3">
-				{t('admin.ratingsHelp', {
-					min: RATING_SCALE.min,
-					max: RATING_SCALE.max
-				})}
-			</p>
-			<form
-				method="POST"
-				action="?/ratings"
-				use:progressiveForm
-				class="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 lg:grid-cols-3"
-			>
-				{#each RATING_ATTRIBUTES as attribute (attribute.key)}
-					<div>
-						<label class="label" for={attribute.key}>{t(attribute.labelKey)}</label>
-						<select class="input" id={attribute.key} name={attribute.key} required>
-							{#each Array.from({ length: RATING_SCALE.max - RATING_SCALE.min + 1 }, (_, index) => RATING_SCALE.min + index) as value (value)}
-								<option value={value} selected={data.ratings?.values[attribute.key] === value}>
-									{value}
-								</option>
-							{/each}
-						</select>
-					</div>
-				{/each}
-				<div class="col-span-full flex items-center justify-between gap-2">
-					<span class="badge">
-						{t('rating.overall')} :
+			<div class="section-title">
+				<h2>{t('admin.ratings')}</h2>
+				<a class="link text-sm" href="/admin/evaluations/{player.userId}">{t('rating.edit')}</a>
+			</div>
+			<p class="hint mt-1">{t('admin.ratingsHelp', { min: 1, max: 5 })}</p>
+			<dl class="mt-3 divide-y divide-line">
+				<div class="fact">
+					<dt>{t('rating.overall')}</dt>
+					<dd>
 						{data.ratings?.overall == null
 							? t('rating.notRated')
 							: formatDecimal(data.ratings.overall, 2)}
-					</span>
-					<button class="btn-primary btn-sm" type="submit">{t('common.save')}</button>
+					</dd>
 				</div>
-			</form>
+				<div class="fact">
+					<dt>{t('rating.form')}</dt>
+					<dd>
+						{data.ratings?.form.average == null
+							? '—'
+							: formatDecimal(data.ratings.form.average, 2)}
+						<span class="ml-1 text-xs font-normal text-muted">
+							({t('rating.gamesRated.many', { count: data.ratings?.form.games ?? 0 })})
+						</span>
+					</dd>
+				</div>
+				<div class="fact">
+					<dt>{t('rating.positionTitle')}</dt>
+					<dd>
+						{t('rating.positionCriteria', {
+							done: data.ratings ? Object.keys(data.ratings.positionValues).length : 0,
+							total: data.ratings?.positionTotal ?? 0
+						})}
+					</dd>
+				</div>
+				{#if data.ratings?.updatedAt}
+					<div class="fact">
+						<dt>{t('rating.lastUpdated')}</dt>
+						<dd>{formatTimestamp(data.ratings.updatedAt)}</dd>
+					</div>
+				{/if}
+			</dl>
 		</section>
 	</div>
 
