@@ -1,0 +1,70 @@
+{
+	"name": "ligue-hockey",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": ">=24"
+	},
+	"imports": {
+		"#lib": "./src/lib/index.js",
+		"#lib/*": "./src/lib/*",
+		"#config": "./config/index.ts",
+		"#config/*": "./config/*"
+	},
+	"scripts": {
+		"dev": "npm run generate && vite dev",
+		"build": "npm run generate && vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"generate": "tsx scripts/generate.ts",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"lint": "eslint .",
+		"test:unit": "vitest",
+		"test": "npm run test:unit -- --run",
+		"verify:architecture": "tsx scripts/verify-architecture.ts",
+		"verify:generated": "tsx scripts/verify-generated.ts",
+		"verify": "npm run check && npm run lint && npm run test && npm run verify:architecture && npm run verify:generated",
+		"db:push": "drizzle-kit push",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "tsx scripts/migrate.ts",
+		"db:studio": "drizzle-kit studio",
+		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@sveltejs/adapter-node": "^6.0.0",
+		"@sveltejs/kit": "^3.0.0",
+		"@sveltejs/vite-plugin-svelte": "^7.2.0",
+		"@tailwindcss/vite": "^4.3.0",
+		"@types/better-sqlite3": "^9.6.0",
+		"@types/node": "^24",
+		"@types/nodemailer": "^8.0.2",
+		"@types/web-push": "^3.6.4",
+		"auth": "^1.6.24",
+		"drizzle-kit": "^0.31.10",
+		"eslint": "^10.4.1",
+		"eslint-plugin-svelte": "^3.19.0",
+		"fast-check": "^4.10.2",
+		"globals": "^17.6.0",
+		"sharp": "^0.35.5",
+		"svelte": "^5.57.2",
+		"svelte-check": "^4.6.0",
+		"tailwindcss": "^4.3.0",
+		"tsx": "^4.23.15",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.60.1",
+		"vite": "^8.3.0",
+		"vitest": "^4.1.8"
+	},
+	"dependencies": {
+		"better-auth": "^1.6.24",
+		"better-sqlite3": "^13.0.2",
+		"drizzle-orm": "^0.45.2",
+		"drizzle-zod": "^0.8.3",
+		"nodemailer": "^10.6.0",
+		"web-push": "^4.0.0",
+		"zod": "^4.6.7"
+	}
+}

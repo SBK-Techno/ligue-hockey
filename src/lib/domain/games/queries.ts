@@ -1,0 +1,167 @@
+import { and, asc, desc, eq } from 'drizzle-orm';
+import { db } from '#lib/server/db/index.ts';
+import { players } from '#lib/domain/players/schema.ts';
+import { gameAvailability, gameSlots, games } from './schema.ts';
+
+export type NewGame = typeof games.$inferInsert;
+export type NewGameSlot = typeof gameSlots.$inferInsert;
+
+export function insertGameWithSlots(
+	game: NewGame,
+	slots: readonly NewGameSlot[]
+): void {
+	db.transaction((tx) => {
+		tx.insert(games).values(game).run();
+		for (const slot of slots) {
+			tx.insert(gameSlots).values(slot).run();
+		}
+	});
+}
+
+export function findGame(gameId: string) {
+	return db.select().from(games).where(eq(games.id, gameId)).get();
+}
+
+export function listGames() {
+	return db
+		.select()
+		.from(games)
+		.orderBy(asc(games.gameDate), asc(games.startTime))
+		.all();
+}
+
+export function listRecentGames(limit: number) {
+	return db
+		.select()
+		.from(games)
+		.orderBy(desc(games.gameDate), desc(games.startTime))
+		.limit(limit)
+		.all();
+}
+
+export function listSlots(gameId: string) {
+	return db
+		.select()
+		.from(gameSlots)
+		.where(eq(gameSlots.gameId, gameId))
+		.orderBy(asc(gameSlots.team), asc(gameSlots.position), asc(gameSlots.slotIndex))
+		.all();
+}
+
+export function listSlotAssignments(gameId: string) {
+	return db
+		.select({
+			team: gameSlots.team,
+			position: gameSlots.position,
+			slotIndex: gameSlots.slotIndex,
+			playerId: gameSlots.assignedPlayerId,
+			assignmentKind: gameSlots.assignmentKind,
+			firstName: players.firstName,
+			lastName: players.lastName
+		})
+		.from(gameSlots)
+		.leftJoin(players, eq(players.userId, gameSlots.assignedPlayerId))
+		.where(eq(gameSlots.gameId, gameId))
+		.orderBy(asc(gameSlots.team), asc(gameSlots.position), asc(gameSlots.slotIndex))
+		.all();
+}
+
+export type SlotAssignment = {
+	team: (typeof gameSlots.$inferSelect)['team'];
+	position: (typeof gameSlots.$inferSelect)['position'];
+	slotIndex: number;
+	playerId: string;
+	kind: (typeof gameSlots.$inferSelect)['assignmentKind'];
+};
+
+export function saveAssignments(
+	gameId: string,
+	assignments: readonly SlotAssignment[],
+	generatedAt: number,
+	generationJson: string,
+	updatedAt: number
+): void {
+	db.transaction((tx) => {
+		tx.update(gameSlots)
+			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt })
+			.where(eq(gameSlots.gameId, gameId))
+			.run();
+
+		for (const assignment of assignments) {
+			tx.update(gameSlots)
+				.set({
+					assignedPlayerId: assignment.playerId,
+					assignmentKind: assignment.kind,
+					updatedAt
+				})
+				.where(
+					and(
+						eq(gameSlots.gameId, gameId),
+						eq(gameSlots.team, assignment.team),
+						eq(gameSlots.position, assignment.position),
+						eq(gameSlots.slotIndex, assignment.slotIndex)
+					)
+				)
+				.run();
+		}
+
+		tx.update(games)
+			.set({ generatedAt, generationJson, updatedAt })
+			.where(eq(games.id, gameId))
+			.run();
+	});
+}
+
+export function updateGame(
+	gameId: string,
+	patch: Partial<Pick<NewGame, 'gameDate' | 'startTime' | 'location' | 'notes' | 'status'>>,
+	updatedAt: number
+): void {
+	db.update(games)
+		.set({ ...patch, updatedAt })
+		.where(eq(games.id, gameId))
+		.run();
+}
+
+export function cancelGame(gameId: string, updatedAt: number): void {
+	db.update(games)
+		.set({ status: 'cancelled', updatedAt })
+		.where(eq(games.id, gameId))
+		.run();
+}
+
+export function listAvailability(gameId: string) {
+	return db
+		.select()
+		.from(gameAvailability)
+		.where(eq(gameAvailability.gameId, gameId))
+		.all();
+}
+
+export function findAvailability(gameId: string, playerId: string) {
+	return db
+		.select()
+		.from(gameAvailability)
+		.where(
+			and(
+				eq(gameAvailability.gameId, gameId),
+				eq(gameAvailability.playerId, playerId)
+			)
+		)
+		.get();
+}
+
+export function upsertAvailability(
+	gameId: string,
+	playerId: string,
+	status: 'present' | 'absent',
+	updatedAt: number
+): void {
+	db.insert(gameAvailability)
+		.values({ gameId, playerId, status, updatedAt })
+		.onConflictDoUpdate({
+			target: [gameAvailability.gameId, gameAvailability.playerId],
+			set: { status, updatedAt }
+		})
+		.run();
+}

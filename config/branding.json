@@ -1,0 +1,22 @@
+{
+  "name": "Ligue de hockey du dimanche matin",
+  "shortName": "LHDM",
+  "description": "Horaire, présences, équipes, remplaçants et paiements de la ligue.",
+  "locale": "fr-CA",
+  "timezone": "America/Toronto",
+  "startUrl": "/",
+  "scope": "/",
+  "display": "standalone",
+  "themeColor": "#121A21",
+  "backgroundColor": "#F7F5F0",
+  "categories": ["sports", "productivity"],
+  "iconSource": "config/branding/icon.svg",
+  "icons": {
+    "favicon": 32,
+    "appleTouch": 180,
+    "icon192": 192,
+    "icon512": 512,
+    "maskable": 512
+  },
+  "maskableScale": 0.82
+}

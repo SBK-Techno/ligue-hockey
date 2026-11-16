@@ -1,0 +1,13 @@
+{
+  "generatedBy": "scripts/generate.ts",
+  "source": "config/branding.json",
+  "files": {
+    "static/icons/favicon-32.ff64aae4b0ee.png": "ff64aae4b0eee5f0cfab391a6c4072b9277642cee3e27a005d0651422e4cdc27",
+    "static/icons/apple-touch-180.2187212b668e.png": "2187212b668e05b9897c2aead442f9f6613e879a952b1a829d51c709675ce7b1",
+    "static/icons/icon-192-192.a105beaa0e0d.png": "a105beaa0e0d3469b6c7be1f1771138ce4a4c63b0c144239a542581b8b452315",
+    "static/icons/icon-512-512.3227425eb865.png": "3227425eb865042b0c12abd4987168df5ec2ea3bf08a5cfa3c85608785823939",
+    "static/icons/maskable-512-512.0145db463533.png": "0145db463533c06a17005b88d96f458c2a326995c2f0005a9ebe0390b478679b",
+    "static/manifest.webmanifest": "7be9b42cdbafa512792e191644da57a5dc34264aa9ff11e9ae39c5c4e304e19d",
+    "src/lib/generated/branding.ts": "54c37571c710fa3a5d6ad6277f9296b4b2a6463dc65a88e1b57e272d3b5cda64"
+  }
+}

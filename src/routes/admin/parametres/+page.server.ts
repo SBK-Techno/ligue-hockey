@@ -1,0 +1,54 @@
+import type { Actions, ServerLoad } from '@sveltejs/kit';
+import {
+	SETTINGS,
+	SETTING_GROUPS,
+	SETTINGS_KEYS,
+	type SettingsKey
+} from '#config/settings-registry.ts';
+import { getSettings, updateSettings } from '#lib/domain/settings/service.ts';
+import { settingDescription } from '#lib/domain/settings/descriptions.ts';
+import { settingsFormValues, settingsInputFromFormData } from '#lib/domain/settings/form.ts';
+import { actionError } from '#lib/server/action.ts';
+import { t } from '#lib/shared/i18n/index.ts';
+
+export const load: ServerLoad = ({ locals }) => {
+	const actor = locals.actor;
+	if (actor.kind !== 'user') return { groups: [], values: {}, descriptions: {} };
+
+	const values = getSettings();
+	const descriptions: Record<string, string> = {};
+	for (const key of SETTINGS_KEYS) {
+		descriptions[key] = settingDescription(key, values);
+	}
+
+	return {
+		groups: SETTING_GROUPS.map((group) => ({
+			...group,
+			settings: SETTINGS_KEYS.filter(
+				(key) => SETTINGS[key].group === group.key
+			).map((key) => ({
+				key,
+				kind: SETTINGS[key].kind,
+				labelKey: SETTINGS[key].labelKey,
+				min: SETTINGS[key].min,
+				max: SETTINGS[key].max,
+				step: SETTINGS[key].step,
+				options: SETTINGS[key].options ?? []
+			}))
+		})),
+		values: settingsFormValues(values),
+		descriptions
+	};
+};
+
+export const actions: Actions = {
+	save: async ({ request, locals }) => {
+		try {
+			const input = settingsInputFromFormData(await request.formData());
+			updateSettings(locals.actor, input as Record<SettingsKey, unknown>);
+			return { message: t('admin.settingsSaved') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	}
+};

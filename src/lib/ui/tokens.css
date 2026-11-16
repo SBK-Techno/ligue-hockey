@@ -1,0 +1,18 @@
+@theme {
+	--color-ink: #121a21;
+	--color-paper: #f7f5f0;
+	--color-surface: #fffdf9;
+	--color-line: #ded6c8;
+	--color-muted: #5c6a73;
+	--color-ice: #2c6e8f;
+	--color-ice-deep: #16475d;
+	--color-ice-soft: #dceaf2;
+	--color-alert: #b4412a;
+	--color-alert-deep: #93331f;
+	--color-alert-soft: #f8e3de;
+	--color-ok: #2f6b4f;
+	--color-ok-soft: #e0efe5;
+	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-display: 'Arial Narrow', 'Helvetica Neue', ui-sans-serif, sans-serif;
+	--radius-card: 1rem;
+}

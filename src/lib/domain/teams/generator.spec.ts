@@ -1,0 +1,185 @@
+import { describe, expect, it } from 'vitest';
+import type { RosterTemplate } from '#config/roster.ts';
+import { generateTeams, type GeneratorInput, type GeneratorPlayer } from './generator.ts';
+
+const template: RosterTemplate = {
+	forwardsPerTeam: 3,
+	defensePerTeam: 2,
+	goaliesPerTeam: 1
+};
+
+function player(
+	id: string,
+	position: GeneratorPlayer['position'],
+	overall = 3,
+	age = 30
+): GeneratorPlayer {
+	return { id, position, overall, age, kind: 'regular' };
+}
+
+function fullPool(): GeneratorPlayer[] {
+	return [
+		player('f1', 'forward', 4),
+		player('f2', 'forward', 3),
+		player('f3', 'forward', 2),
+		player('f4', 'forward', 4),
+		player('f5', 'forward', 3),
+		player('f6', 'forward', 2),
+		player('d1', 'defense', 4),
+		player('d2', 'defense', 2),
+		player('d3', 'defense', 4),
+		player('d4', 'defense', 2),
+		player('g1', 'goalie', 3),
+		player('g2', 'goalie', 3)
+	];
+}
+
+function input(overrides: Partial<GeneratorInput> = {}): GeneratorInput {
+	return {
+		players: fullPool(),
+		template,
+		rules: [],
+		skillTolerance: 0.25,
+		maxPlayers: 24,
+		...overrides
+	};
+}
+
+describe('generateTeams', () => {
+	it('fills every slot with the exact positional template', () => {
+		const result = generateTeams(input());
+
+		expect(result.assignments).toHaveLength(12);
+		expect(result.unfilled).toHaveLength(0);
+
+		for (const team of ['white', 'black'] as const) {
+			expect(
+				result.assignments.filter((entry) => entry.team === team && entry.position === 'forward')
+			).toHaveLength(3);
+			expect(
+				result.assignments.filter((entry) => entry.team === team && entry.position === 'defense')
+			).toHaveLength(2);
+			expect(
+				result.assignments.filter((entry) => entry.team === team && entry.position === 'goalie')
+			).toHaveLength(1);
+		}
+	});
+
+	it('assigns each player at most once and keeps their position', () => {
+		const result = generateTeams(input());
+		const ids = result.assignments.map((entry) => entry.playerId);
+		expect(new Set(ids).size).toBe(ids.length);
+
+		const byId = new Map(fullPool().map((entry) => [entry.id, entry.position]));
+		for (const assignment of result.assignments) {
+			expect(byId.get(assignment.playerId)).toBe(assignment.position);
+		}
+	});
+
+	it('is deterministic regardless of input order', () => {
+		const first = generateTeams(input());
+		const shuffled = [...fullPool()].reverse();
+		const second = generateTeams(input({ players: shuffled }));
+
+		expect(second.assignments).toEqual(first.assignments);
+		expect(second.candidateKey).toBe(first.candidateKey);
+	});
+
+	it('honours must-play-together rules', () => {
+		const result = generateTeams(
+			input({
+				rules: [
+					{ id: 'r1', playerAId: 'f1', playerBId: 'f2', kind: 'must' }
+				]
+			})
+		);
+
+		const teamOf = new Map(result.assignments.map((entry) => [entry.playerId, entry.team]));
+		expect(teamOf.get('f1')).toBe(teamOf.get('f2'));
+		expect(result.violations).toHaveLength(0);
+	});
+
+	it('honours must-not-play-together rules', () => {
+		const result = generateTeams(
+			input({
+				rules: [
+					{ id: 'r1', playerAId: 'f1', playerBId: 'f2', kind: 'must_not' }
+				]
+			})
+		);
+
+		const teamOf = new Map(result.assignments.map((entry) => [entry.playerId, entry.team]));
+		expect(teamOf.get('f1')).not.toBe(teamOf.get('f2'));
+		expect(result.violations).toHaveLength(0);
+	});
+
+	it('reports the rule conflict instead of silently violating it', () => {
+		const players = [
+			player('a', 'forward'),
+			player('b', 'forward'),
+			player('c', 'forward')
+		];
+		const result = generateTeams(
+			input({
+				players,
+				template: { forwardsPerTeam: 2, defensePerTeam: 0, goaliesPerTeam: 0 },
+				rules: [
+					{ id: 'ab', playerAId: 'a', playerBId: 'b', kind: 'must' },
+					{ id: 'bc', playerAId: 'b', playerBId: 'c', kind: 'must' },
+					{ id: 'ac', playerAId: 'a', playerBId: 'c', kind: 'must_not' }
+				]
+			})
+		);
+
+		expect(result.violations.length).toBeGreaterThan(0);
+		expect(result.warnings).toContain('rule-conflict');
+	});
+
+	it('uses age to break a skill tie', () => {
+		const players = [
+			player('a', 'forward', 3, 20),
+			player('b', 'forward', 3, 20),
+			player('c', 'forward', 3, 40),
+			player('d', 'forward', 3, 40)
+		];
+		const result = generateTeams(
+			input({
+				players,
+				template: { forwardsPerTeam: 2, defensePerTeam: 0, goaliesPerTeam: 0 }
+			})
+		);
+
+		expect(result.skillDiff).toBe(0);
+		expect(result.ageDiff).toBe(0);
+	});
+
+	it('balances short rosters across both teams', () => {
+		const players = [player('a', 'forward'), player('b', 'forward')];
+		const result = generateTeams(
+			input({
+				players,
+				template: { forwardsPerTeam: 3, defensePerTeam: 0, goaliesPerTeam: 0 }
+			})
+		);
+
+		expect(result.sizeDiff).toBe(0);
+		expect(result.unfilled).toHaveLength(4);
+	});
+
+	it('does not put two goalies on the same team', () => {
+		const players = [player('g1', 'goalie'), player('g2', 'goalie')];
+		const result = generateTeams(
+			input({
+				players,
+				template: { forwardsPerTeam: 0, defensePerTeam: 0, goaliesPerTeam: 1 }
+			})
+		);
+
+		const teams = result.assignments.map((entry) => entry.team).sort();
+		expect(teams).toEqual(['black', 'white']);
+	});
+
+	it('rejects a pool larger than the configured maximum', () => {
+		expect(() => generateTeams(input({ maxPlayers: 5 }))).toThrow();
+	});
+});

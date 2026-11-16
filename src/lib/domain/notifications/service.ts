@@ -1,0 +1,259 @@
+import {
+	NOTIFICATION_EVENTS,
+	isNotificationEventKey,
+	type NotificationEventDefinition,
+	type NotificationEventKey,
+	type NotificationPayload
+} from '#config/notification-events.ts';
+import type { NotificationChannel } from '#config/notification-channels.ts';
+import { requireUser } from '#lib/domain/auth/policy.ts';
+import type { Actor } from '#lib/domain/auth/types.ts';
+import { getSettings } from '#lib/domain/settings/service.ts';
+import { newId } from '#lib/shared/ids/id.ts';
+import { AppError } from '#lib/shared/errors.ts';
+import { clock } from '#lib/shared/time/clock.ts';
+import { parseSchema } from '#lib/shared/validation.ts';
+import {
+	claimDueJobs,
+	countUnread,
+	deletePushSubscriptionForUser,
+	findPreferences,
+	insertJobs,
+	listInAppJobs,
+	listPreferences,
+	listPushSubscriberIds,
+	markFailed,
+	markJobsRead,
+	markSent,
+	requeueStaleSending,
+	reschedule,
+	upsertPreferences,
+	upsertPushSubscription,
+	type NewJob
+} from './queries.ts';
+import { renderJob, type RenderedNotification } from './templates.ts';
+import type { NotificationJobRow } from './schema.ts';
+import {
+	notificationPreferencesSchema,
+	pushSubscriptionSchema
+} from './validators.ts';
+
+export type Recipient = { userId: string };
+
+export type NotifyOptions = {
+	dedupeKey: string;
+	scheduledFor?: number;
+};
+
+export type InboxItem = {
+	id: string;
+	eventKey: string;
+	title: string;
+	body: string;
+	url: string;
+	createdAt: number;
+	readAt: number | null;
+};
+
+function channelEnabled(channel: NotificationChannel): boolean {
+	if (channel === 'in_app') return true;
+	const settings = getSettings();
+	return channel === 'email'
+		? settings['notifications.emailEnabled']
+		: settings['notifications.pushEnabled'];
+}
+
+function preferenceEnabled(
+	channel: NotificationChannel,
+	playerId: string,
+	preferences: Map<string, { emailEnabled: boolean; pushEnabled: boolean }>
+): boolean {
+	const preference = preferences.get(playerId);
+	if (!preference) return true;
+	return channel === 'email' ? preference.emailEnabled : preference.pushEnabled;
+}
+
+export function notify<K extends NotificationEventKey>(
+	eventKey: K,
+	recipients: readonly Recipient[],
+	payload: NotificationPayload<K>,
+	options: NotifyOptions
+): number {
+	const definition = NOTIFICATION_EVENTS[
+		eventKey
+	] as unknown as NotificationEventDefinition<NotificationPayload<K>>;
+	const validated = parseSchema(definition.schema, payload);
+	const userIds = [...new Set(recipients.map((recipient) => recipient.userId))];
+	if (userIds.length === 0) return 0;
+
+	const preferences = new Map(
+		listPreferences(userIds).map((row) => [
+			row.playerId,
+			{ emailEnabled: row.emailEnabled, pushEnabled: row.pushEnabled }
+		])
+	);
+	const pushSubscribers = new Set(listPushSubscriberIds(userIds));
+	const now = clock.nowMs();
+	const scheduledFor = options.scheduledFor ?? now;
+	const jobs: NewJob[] = [];
+
+	for (const userId of userIds) {
+		for (const channel of definition.channels) {
+			if (!channelEnabled(channel)) continue;
+			if (channel !== 'in_app' && !preferenceEnabled(channel, userId, preferences)) {
+				continue;
+			}
+			if (channel === 'push' && !pushSubscribers.has(userId)) continue;
+
+			jobs.push({
+				id: newId('job'),
+				eventKey,
+				userId,
+				channel,
+				scheduledFor,
+				status: 'pending',
+				payloadJson: JSON.stringify(validated),
+				dedupeKey: `${options.dedupeKey}:${channel}:${userId}`,
+				createdAt: now
+			});
+		}
+	}
+
+	return insertJobs(jobs);
+}
+
+export function sendAccountAccess(input: {
+	userId: string;
+	name: string;
+	url: string;
+}): number {
+	return notify(
+		'account_access',
+		[{ userId: input.userId }],
+		{ name: input.name, url: input.url },
+		{ dedupeKey: newId('account_access') }
+	);
+}
+
+export type NotificationPreferencesView = {
+	emailEnabled: boolean;
+	pushEnabled: boolean;
+};
+
+export function getNotificationPreferences(
+	actor: Actor
+): NotificationPreferencesView {
+	const user = requireUser(actor);
+	const row = findPreferences(user.userId);
+	return {
+		emailEnabled: row?.emailEnabled ?? true,
+		pushEnabled: row?.pushEnabled ?? true
+	};
+}
+
+export function updateNotificationPreferences(
+	actor: Actor,
+	input: { emailEnabled: unknown; pushEnabled: unknown }
+): NotificationPreferencesView {
+	const user = requireUser(actor);
+	const parsed = parseSchema(notificationPreferencesSchema, input);
+	upsertPreferences({
+		playerId: user.userId,
+		emailEnabled: parsed.emailEnabled,
+		pushEnabled: parsed.pushEnabled,
+		updatedAt: clock.nowMs()
+	});
+	return parsed;
+}
+
+export function subscribeToPush(
+	actor: Actor,
+	input: { endpoint: string; keys: { p256dh: string; auth: string }; userAgent?: string }
+): void {
+	const user = requireUser(actor);
+	const parsed = parseSchema(pushSubscriptionSchema, input);
+	upsertPushSubscription({
+		id: newId('push'),
+		userId: user.userId,
+		endpoint: parsed.endpoint,
+		p256dh: parsed.keys.p256dh,
+		auth: parsed.keys.auth,
+		userAgent: parsed.userAgent ?? null,
+		createdAt: clock.nowMs()
+	});
+}
+
+export function unsubscribeFromPush(actor: Actor, endpoint: string): void {
+	const user = requireUser(actor);
+	deletePushSubscriptionForUser(user.userId, endpoint);
+}
+
+export function listInbox(
+	actor: Actor,
+	options: { limit: number; before?: number | null }
+): InboxItem[] {
+	const user = requireUser(actor);
+	const limit = Math.min(Math.max(options.limit, 1), 100);
+
+	return listInAppJobs(user.userId, limit, options.before ?? null).map((job) => {
+		const rendered = renderJob(job.eventKey, job.payloadJson);
+		return {
+			id: job.id,
+			eventKey: job.eventKey,
+			title: rendered.title,
+			body: rendered.body,
+			url: rendered.url,
+			createdAt: job.createdAt,
+			readAt: job.readAt
+		};
+	});
+}
+
+export function unreadCount(actor: Actor): number {
+	const user = requireUser(actor);
+	return countUnread(user.userId);
+}
+
+export function markInboxRead(actor: Actor, ids: readonly string[]): number {
+	const user = requireUser(actor);
+	return markJobsRead(user.userId, ids, clock.nowMs());
+}
+
+export function claimJobs(now: number, limit: number): NotificationJobRow[] {
+	return claimDueJobs(now, limit);
+}
+
+export function requeueStale(cutoff: number): number {
+	return requeueStaleSending(cutoff);
+}
+
+export function completeJob(jobId: string): void {
+	markSent(jobId, clock.nowMs());
+}
+
+export function jobMessage(job: NotificationJobRow): RenderedNotification {
+	if (!isNotificationEventKey(job.eventKey)) {
+		throw new AppError('INTERNAL', {
+			message: `Unknown notification event: ${job.eventKey}`
+		});
+	}
+	const rendered = renderJob(job.eventKey, job.payloadJson);
+	if (!rendered.title || !rendered.body) {
+		throw new AppError('INTERNAL', {
+			message: `Empty notification template: ${job.eventKey}`
+		});
+	}
+	return rendered;
+}
+
+export function failJob(jobId: string, error: unknown): void {
+	markFailed(jobId, error instanceof Error ? error.message : String(error));
+}
+
+export function retryJob(job: NotificationJobRow, error: unknown, retryAt: number): void {
+	reschedule(
+		job.id,
+		retryAt,
+		error instanceof Error ? error.message : String(error)
+	);
+}
