@@ -19,14 +19,3 @@ const FALLBACK = STATUSES.scheduled;
 export function gameStatus(status: string): GameStatusDefinition {
 	return STATUSES[status] ?? FALLBACK;
 }
-
-export function gameStatusClass(status: string): string {
-	switch (gameStatus(status).tone) {
-		case 'alert':
-			return 'badge-alert';
-		case 'ok':
-			return 'badge-ok';
-		default:
-			return 'badge';
-	}
-}

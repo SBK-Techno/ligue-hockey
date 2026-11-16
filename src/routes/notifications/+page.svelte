@@ -45,9 +45,6 @@
 		<p class="hint">
 			{isManager ? t('notifications.emptyHelpAdmin') : t('notifications.emptyHelp')}
 		</p>
-		<a class="btn-secondary btn-sm mt-3" href="/profil#notifications">
-			{t('notifications.settings')}
-		</a>
 	</div>
 {:else}
 	<div class="card-flush overflow-hidden">
@@ -60,13 +57,13 @@
 							type="submit"
 							class="flex min-h-14 w-full items-start gap-3 px-4 py-3 text-left transition-colors {item.readAt ===
 							null
-								? 'bg-ice-soft/60 hover:bg-ice-soft'
+								? 'bg-ochre/10 hover:bg-ochre/15'
 								: 'bg-surface hover:bg-paper'}"
 						>
 							<span
 								aria-hidden="true"
 								class="mt-1.5 h-2 w-2 shrink-0 rounded-full {item.readAt === null
-									? 'bg-ice'
+									? 'bg-ochre'
 									: 'bg-line-strong'}"
 							></span>
 							<span class="block min-w-0 flex-1">

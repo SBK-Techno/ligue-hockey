@@ -1,6 +1,7 @@
 import { POSITIONS, type Position } from '#config/positions.ts';
 import type { RosterTemplate, SlotDefinition } from '#config/roster.ts';
 import { TEAM_GENERATION, TEAMS, type Team } from '#config/teams.ts';
+import { gameWarningsInOrder, type GameWarning } from '#config/game-warnings.ts';
 import type { PairRuleKind } from '#config/rule-modes.ts';
 
 export type GeneratorPlayer = {
@@ -55,7 +56,7 @@ export type GeneratorResult = {
 	ageDiff: number;
 	sizeDiff: number;
 	violations: GeneratorViolation[];
-	warnings: string[];
+	warnings: GameWarning[];
 	candidateKey: string;
 };
 
@@ -184,7 +185,7 @@ function buildPositionOptions(
 	return options;
 }
 
-function pairViolations(
+export function pairViolations(
 	teamOf: Map<string, Team>,
 	rules: readonly GeneratorRule[]
 ): GeneratorViolation[] {
@@ -314,23 +315,24 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	});
 
 	if (candidates.length === 0) {
+		const unfilled = [...POSITIONS].flatMap((position) => {
+			const slots = slotsForPosition(input.template, position.key);
+			return TEAMS.flatMap((team) =>
+				Array.from({ length: slots }, (_, index) => ({
+					team: team.key,
+					position: position.key,
+					index
+				}))
+			);
+		});
 		return {
 			assignments: [],
-			unfilled: [...POSITIONS].flatMap((position) => {
-				const slots = slotsForPosition(input.template, position.key);
-				return TEAMS.flatMap((team) =>
-					Array.from({ length: slots }, (_, index) => ({
-						team: team.key,
-						position: position.key,
-						index
-					}))
-				);
-			}),
+			unfilled,
 			skillDiff: 0,
 			ageDiff: 0,
 			sizeDiff: 0,
 			violations: [],
-			warnings: ['no-players'],
+			warnings: unfilled.length > 0 ? ['unfilled-slots'] : [],
 			candidateKey: ''
 		};
 	}
@@ -406,7 +408,7 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	);
 	const chosen = tolerant[0] ?? best;
 
-	const warnings: string[] = [];
+	const warnings: GameWarning[] = [];
 	if (chosen.candidate.unfilled.length > 0) {
 		warnings.push('unfilled-slots');
 	}
@@ -432,7 +434,7 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 		ageDiff: Number(chosen.ageDiff.toFixed(2)),
 		sizeDiff: chosen.sizeDiff,
 		violations: chosen.candidate.violations,
-		warnings,
+		warnings: gameWarningsInOrder(warnings),
 		candidateKey: chosen.key
 	};
 }

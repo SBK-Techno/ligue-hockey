@@ -30,19 +30,22 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | League-editable settings (roster, fees, lead times, limits) | `config/settings-registry.ts` | settings service, admin form, services | registry test + `verify` |
 | Positions | `config/positions.ts` | schema checks, forms, roster templates, notifications | architecture check |
 | Roles and capabilities | `config/capabilities.ts`, `config/roles.ts` | policy, navigation, admin role editor | policy tests |
-| Navigation surfaces | `config/surfaces.ts` | header, bottom bar, account menu | surface tests |
-| Admin screens and their capability | `config/admin-tabs.ts` | admin sidebar, admin mobile tabs, home shortcuts | typecheck |
+| Navigation surfaces | `config/surfaces.ts` | header, mobile bar, mobile priorities | surface tests |
+| Admin screens and their capability | `config/admin-tabs.ts` | admin sidebar, admin mobile selector | typecheck |
 | Game status label and tone | `config/game-status.ts` | schedule rows, game detail, admin game lists | typecheck |
+| Reusable game locations (name, address, map URL, notes) | `src/lib/domain/locations/schema.ts` | admin locations, game picker, game detail, location metrics | locations tests + migration test |
+| Map provider URL template and fallback | `config/maps.ts` | game detail, admin locations | map-link test |
+| Historical game location label | `games.location` snapshot | schedule, game detail, notifications, history | migration test |
 | Alignment rule modes | `config/rule-modes.ts` | rule form, rule list, generator, badges | mode round-trip test |
-| Rating attributes and weights | `config/rating-attributes.ts` | ratings service, admin form, overall calculation | registry test |
+| Rating attributes, position criteria and game criteria | `config/rating-attributes.ts` | ratings service, evaluation sheets, overall calculation | registry test |
+| Recent-form window | `config/ratings.ts` | ratings service | rating tests |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
-| Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | drizzle-kit diff |
-| Derived validation | `drizzle-zod` from the schema | routes and services | typecheck |
+| Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | `migrations.spec.ts` drift guard |
 
 Static literals for these facts are prohibited. A repeated value gets an owner and a derived consumer; it is never copied.
 
@@ -56,13 +59,12 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 ## Visual system
 
-The interface is a printed arena match sheet, not a dashboard. It carries its own identity through three type voices and one restrained accent:
+The interface is a printed arena match sheet, not a dashboard. It carries its own identity through two type families and three voices, plus one restrained accent:
 
-- **Display: Fraunces Variable** for page titles, the wordmark, the match-sheet date and section headings. Soft serif, optical sizing on, `SOFT` around 20 to 40, `WONK 1` only on the wordmark. Never used for figures, because its digits are proportional.
-- **Text: IBM Plex Sans Variable** for body, labels, buttons and every numeral. Its digits are tabular by default, so money, clock times, jersey numbers and counts align without extra rules. `.numeric` and `.stat-value` are the only numeral classes.
-- **Data: IBM Plex Mono** for measured stamps only: micro-labels, dates in ruled lists, jersey plates. Never for body copy.
+- **Display and text: Anybody Variable.** Display uses the wider optical range for page titles, the wordmark, the match-sheet date and section headings; text uses the same family at reading sizes for body, labels and buttons. Its digits are tabular, so money, clock times, jersey numbers and counts align without extra rules. `.numeric` and `.stat-value` are the only numeral classes.
+- **Data: Spline Sans Mono Variable** for measured stamps only: micro-labels, dates in ruled lists, jersey plates. Never for body copy.
 
-Surfaces are sheets: `--radius-card` 0.5rem, `--radius-sheet` 0.375rem, `--radius-control` 0.375rem, a 1px border and a single low shadow. Lists are ruled with `divide-y`; card stacks are reserved for genuinely separate objects. The background is a faint 32px paper rule.
+Surfaces are sheets: `--radius-card` 0, `--radius-sheet` 0, `--radius-control` 2px, a 1px border and no card shadow. A lifted panel uses one hard short shadow (`--shadow-lift`), never a halo. Lists are ruled with `divide-y`; card stacks are reserved for genuinely separate objects. The background is a faint 32px paper rule.
 
 Colour is semantic:
 
@@ -89,11 +91,28 @@ No module may define its own default for a value owned by one of these layers.
 
 One policy surface: `src/lib/domain/auth/policy.ts`. It answers capability questions (`canManageGames`, `canManagePlayers`, `canModerateChat`, …) from an `Actor` value. A role is only a named set of capabilities in `config/roles.ts`; services ask for a capability, never for a role. Adding a role therefore touches one declaration, not the domain. Current roles: joueur, responsable, admin.
 
-Navigation is derived the same way. `config/surfaces.ts` declares each destination with the capabilities that open it, and `src/lib/domain/auth/surfaces.ts` filters that registry for the current actor. `AppNav` and the account menu render the result, so a surface cannot appear for a role that cannot use it.
+Navigation is derived the same way. `config/surfaces.ts` declares each destination with the capabilities that open it and a mobile priority, and `src/lib/domain/auth/surfaces.ts` filters that registry for the current actor. The header renders the primary surfaces; the mobile bar keeps the five lowest priorities, so Gestion replaces Mon profil for a manager. A surface cannot appear for a role that cannot use it.
 
 Services call policy before every read/write; routes call the same functions only to hide controls. The `/admin` layout calls `requireAdmin` once, but services still enforce it, so an API call cannot bypass the UI. `requireUser` is not enough when the action changes league data.
 
 Ratings and other players' balances are removed from view models in the service, not hidden in the template. Player-facing DTOs carry no rating fields and no other player's money fields. Profile presence (`hasPlayerProfile`, `isSubstitute`) is resolved once in the root layout load and consumed by pages; a page must never infer "player" from a role.
+
+## Evaluations
+
+Two layers, never merged:
+
+- **Season sheet.** `player_ratings` keeps the four league notes that drive team balancing (Passeur, Rapidité, Agilité, Replis défensif) plus optional position criteria: three for forwards, three for defence, six for goalies. The season overall is the mean of the four league notes only; position criteria are descriptive and never block lineup generation.
+- **Game sheet.** `game_player_ratings` stores four observations from 1 to 5 per dressed player and game, adapted to the position (impact, engagement, décisions, discipline for skaters; positionnement, rebonds, manipulation, sang-froid for goalies). A missing observation means “pas vu”, never zero. Game sheets never overwrite or average into the season sheet.
+
+The recent-form value is a derived mean of the last `RATING_FORM_WINDOW` evaluated games and is shown separately from the season overall. Every write requires `editRatings`; every read that exposes ratings does the same. The evaluation hub, season sheet and game sheet are the only editing surfaces; the player admin page links to the season sheet instead of duplicating it.
+
+## Locations
+
+A location is a reusable league entity in `locations`: name, optional address, optional map URL and notes. Games reference it through `location_id` with `ON DELETE RESTRICT`, so a location used by a game cannot be deleted. The admin screen at `/admin/lieux` owns create, edit and delete; the game form only selects an existing location.
+
+`games.location` remains on the row as a historical snapshot label. It is written from the location name when a game is created or its location changes, and it is never edited independently. Renaming a location changes future pickers and map links, but it does not rewrite past game labels or notification payloads.
+
+Map links come from `config/maps.ts`: an explicit location map URL wins, otherwise the address fills the provider-agnostic search template, otherwise there is no link. Location metrics (game count, completed count, next and last game dates) are one grouped query in `locations/queries.ts`; the admin screen reads that result and never queries per row.
 
 ## Notifications
 
@@ -123,7 +142,7 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 - Exhaustive over position-scoped combinations. The search space is bounded by the roster cap in settings; the cap is enforced before generation.
 - If the strict pair rules make the roster infeasible, return `violations` naming the rules. Hard violations produce `rule-conflict`; unmet preferences produce `rule-preference`, a warning rather than a conflict.
 - The game snapshot stores the violations (rule, kind, strength, player ids) so the admin view can name both players after a reload, without re-running the generator.
-- Property tests assert: exact slot counts, no duplicate assignment, every hard rule honoured, determinism, and that a better skill split cannot be found by a single swap.
+- Table-driven generator tests assert: exact slot counts, no duplicate assignment, every hard rule honoured, determinism, and that a better skill split cannot be found by a single swap.
 
 ## Mechanical gates
 
@@ -131,10 +150,10 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 
 1. `svelte-check`: types and Svelte diagnostics.
 2. `eslint`: import boundaries and restricted syntax.
-3. `vitest run`: unit, property, and contract tests.
+3. `vitest run`: unit, table-driven, integration and contract tests. The suite declares its runtime environment once in the committed `.env.test`, which Vite loads in test mode; it never reads a developer `.env`, so a clean machine, a worktree and CI run the same gate.
 4. `verify:language`: rejects vouvoiement, second-person plural imperatives, em dashes and malformed placeholders in the French dictionary.
 5. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
-6. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+6. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link that resolves to an existing route.
 7. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
 8. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
 

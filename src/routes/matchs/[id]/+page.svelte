@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { gameStatus, gameStatusClass } from '#config/game-status.ts';
+	import { gameStatus } from '#config/game-status.ts';
+	import { gameWarningDefinition } from '#config/game-warnings.ts';
+	import { mapUrlFor } from '#config/maps.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
@@ -20,6 +22,9 @@
 	const availability = $derived(data.availability);
 	const hasProfile = $derived(data.hasPlayerProfile);
 	const isManager = $derived(actor !== null && can(actor, 'manageGames'));
+	const mapUrl = $derived(
+		game ? mapUrlFor(game.locationAddress, game.locationMapUrl) : null
+	);
 	const ownSlot = $derived(
 		game && actor
 			? game.slots.find((slot) => slot.player?.playerId === actor.userId)
@@ -64,7 +69,7 @@
 		back={{ href: '/matchs', label: t('games.title') }}
 	>
 		{#snippet actions()}
-			<span class={gameStatusClass(game.status)}>{t(gameStatus(game.status).labelKey)}</span>
+			<span class={badgeClass(gameStatus(game.status).tone)}>{t(gameStatus(game.status).labelKey)}</span>
 			{#if ownTeam}
 				<span class="badge-ice">
 					{t('home.team')} · {t(teamDefinition(ownTeam).labelKey)}
@@ -75,6 +80,29 @@
 			{/if}
 		{/snippet}
 	</PageHeader>
+
+	{#if mapUrl}
+		<p class="-mt-3 mb-4">
+			<a
+				class="link inline-flex items-center gap-1 text-sm"
+				href={mapUrl}
+				target="_blank"
+				rel="noreferrer"
+			>
+				{t('games.openMap')}
+				<svg
+					viewBox="0 0 24 24"
+					class="h-3.5 w-3.5"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+				>
+					<path d="M14 5h5v5M19 5l-8 8M18 13v6H5V6h6" />
+				</svg>
+			</a>
+		</p>
+	{/if}
 
 	{#if game.notes}
 		<div class="notice mb-4 whitespace-pre-wrap break-words">{game.notes}</div>
@@ -87,7 +115,7 @@
 	{/if}
 
 	<section class="card">
-		<h2>{hasProfile ? t('home.availability') : t('home.attendance')}</h2>
+		<h2>{hasProfile ? t('home.availability') : t('availability.title')}</h2>
 
 		{#if game.status === 'cancelled'}
 			<p class="mt-2 text-sm text-muted">{t('games.cancelledNotice')}</p>
@@ -136,7 +164,7 @@
 					<button
 						class="min-h-11 rounded-control border px-4 text-sm font-semibold transition-colors sm:border-0 {availability.own ===
 						'present'
-							? 'border-ice bg-ice text-on-brand'
+							? 'border-ink bg-ink text-paper'
 							: 'border-line-strong bg-surface text-ink hover:bg-paper sm:bg-transparent sm:text-muted sm:hover:bg-ink/5 sm:hover:text-ink'}"
 						name="status"
 						value="present"
@@ -164,12 +192,16 @@
 			{/if}
 		{/if}
 
-		{#if availability && availability.rows.length + availability.pending.length > 0}
-			<div class="mt-4">
+	</section>
+
+	{#if availability && availability.rows.length + availability.pending.length > 0}
+		<section class="card mt-4">
+			<h2>{t('home.attendance')}</h2>
+			<div class="mt-3">
 				<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
 			</div>
-		{/if}
-	</section>
+		</section>
+	{/if}
 
 	{#if data.requests.length > 0 || isManager}
 		<section class="card mt-4">
@@ -193,7 +225,7 @@
 								aria-hidden="true"
 								class="absolute inset-y-2 left-0 w-0.5 rounded-full {request.status ===
 								'open'
-									? 'bg-ice'
+									? 'bg-ochre'
 									: 'bg-ok'}"
 							></span>
 							<div class="flex flex-wrap items-center justify-between gap-3">
@@ -202,12 +234,8 @@
 										{t(positionDefinition(request.position).labelKey)}
 									</p>
 									<p class="mt-0.5 text-xs text-muted">
-										{#if request.status === 'filled' && request.filledByName}
-											{t('subs.filledBy', { name: request.filledByName })}
-										{:else if request.requestedByName}
+										{#if request.requestedByName}
 											{t('subs.requestedBy', { name: request.requestedByName })}
-										{:else}
-											{t('subs.placeOpen')}
 										{/if}
 									</p>
 								</div>
@@ -245,7 +273,7 @@
 				{#if filledRequests.length > 0}
 					<details class="group mt-3 border-t border-line/70 pt-1">
 						<summary
-							class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-ice marker:content-none"
+							class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm marker:content-none"
 						>
 							<svg
 								viewBox="0 0 24 24"
@@ -329,26 +357,19 @@
 				<span class="badge-ok">{t('games.generated')}</span>
 			</div>
 
-			<div class="relative mt-4 grid gap-8 sm:grid-cols-2 sm:gap-12">
-				<span
-					aria-hidden="true"
-					class="absolute inset-y-0 left-1/2 hidden w-0.5 -translate-x-1/2 bg-ice sm:block"
-				></span>
+			<div class="mt-4 grid gap-4 sm:grid-cols-2 sm:gap-0 sm:divide-x sm:divide-line">
 
 				{#each orderedTeams as team (team.key)}
-					<div class="min-w-0 overflow-hidden rounded-sheet border border-line">
+					<div class="min-w-0 overflow-hidden border border-line">
 						<div
-							class="flex items-center justify-between gap-2 px-3 py-2 {team.tone === 'black'
-								? 'bg-ink text-paper'
-								: 'bg-surface text-ink'}"
+							class="flex items-center justify-between gap-2 border-t-[6px] px-3 py-2 {team.tone ===
+							'black'
+								? 'border-ink bg-surface'
+								: 'border-line-strong bg-surface'}"
 						>
-							<h3 class="text-base font-semibold {team.tone === 'black' ? 'text-paper' : ''}">
-								{t(team.labelKey)}
-							</h3>
+							<h3 class="text-base font-semibold">{t(team.labelKey)}</h3>
 							{#if ownTeam === team.key}
-								<span class="text-[11px] font-medium {team.tone === 'black'
-									? 'text-paper/70'
-									: 'text-muted'}">{t('home.team')}</span>
+								<span class="stamp border-ochre bg-ochre/10 text-ink">{t('home.team')}</span>
 							{/if}
 						</div>
 
@@ -359,33 +380,22 @@
 								<ul role="list">
 									{#each rows as slot (slot.slotIndex)}
 										{@const isMe = slot.player?.playerId === actor?.userId}
-										<li
-											class="flex min-h-9 items-center gap-3 border-b border-line/60 px-3 py-1 last:border-b-0"
-										>
-											<span
-												class="numeric w-7 shrink-0 text-right text-sm {isMe
-													? 'text-ice-deep'
-													: 'text-muted'}"
-											>
-												{slot.player?.jerseyNumber ?? ''}
-											</span>
+										<li class="ledger-row border-b border-line/70 last:border-b-0" data-you={isMe}>
+											<span class="jersey">{slot.player?.jerseyNumber ?? '-'}</span>
 											{#if slot.player}
-												<span
-													class="min-w-0 flex-1 truncate text-sm {isMe
-														? 'font-semibold text-ice-deep'
-														: 'text-ink'}"
-												>
+												<span class="min-w-0 truncate text-sm {isMe ? 'font-semibold' : ''}">
 													{slot.player.fullName}
 												</span>
 												{#if isMe}
-													<span class="badge-ice shrink-0">{t('common.you')}</span>
+													<span class="stamp border-ochre bg-ochre/10 text-ink">{t('common.you')}</span>
 												{:else if slot.player.kind === 'sub'}
 													<span class="badge shrink-0">{t('games.substitutes')}</span>
+												{:else}
+													<span></span>
 												{/if}
 											{:else}
-												<span class="min-w-0 flex-1 truncate text-sm text-muted">
-													{t('games.unassigned')}
-												</span>
+												<span class="min-w-0 truncate text-sm text-muted">{t('games.unassigned')}</span>
+												<span></span>
 											{/if}
 										</li>
 									{/each}
@@ -401,7 +411,6 @@
 			<section class="card mt-6">
 				<div class="section-title">
 					<h2>{t('team.balance')}</h2>
-					<a class="link text-sm" href="/admin/matchs/{game.id}">{t('home.manageGame')}</a>
 				</div>
 				<p class="mt-2 text-sm text-muted">
 					{t('games.teamBalance', {
@@ -409,20 +418,26 @@
 						age: game.generation.ageDiffLabel ?? ''
 					})}
 				</p>
-				{#if data.canManage && game.generation.warnings.includes('rule-limit')}
-					<div class="alert mt-3">
-						<p class="font-semibold">{t('games.limitConflict')}</p>
-						<p class="mt-1">{t('games.limitConflictHelp')}</p>
-					</div>
-				{/if}
-				{#if game.generation.warnings.includes('rule-conflict')}
-					<div class="notice mt-3">
-						<p class="font-semibold">{t('games.rulesConflict')}</p>
-						<p class="mt-1">
-							{data.canManage ? t('games.rulesConflictHelp') : t('games.rulesConflictPlayer')}
-						</p>
-					</div>
-				{/if}
+				{#each game.generation.warnings as warning (warning)}
+					{@const definition = gameWarningDefinition(warning)}
+					{#if !definition.managerOnly || data.canManage}
+						<div class={definition.tone === 'alert' ? 'alert mt-3' : 'notice mt-3'}>
+							<p class="font-semibold">{t(definition.labelKey)}</p>
+							{#if definition.helpKey}
+								<p class="mt-1">
+									{t(
+										data.canManage || !definition.playerHelpKey
+											? definition.helpKey
+											: definition.playerHelpKey
+									)}
+								</p>
+							{/if}
+							{#if definition.detail === 'open-slots'}
+								<p class="mt-1 text-sm">{game.openSlotsLabel}</p>
+							{/if}
+						</div>
+					{/if}
+				{/each}
 				{#if data.canManage && game.generation.ruleViolations.length > 0}
 					<div class="notice mt-3">
 						<p class="font-semibold">{t('admin.ruleViolations')}</p>
@@ -452,7 +467,7 @@
 						{/each}
 					</ul>
 				{/if}
-				{#if data.canManage}
+				{#if data.canManage && data.editable}
 					<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
 						<button class="btn-secondary btn-sm" type="submit">{t('games.regenerate')}</button>
 					</form>
@@ -465,7 +480,7 @@
 			<p class="measure mt-2 text-sm text-muted">
 				{data.canManage ? t('games.lineupSoonAdmin') : t('games.lineupSoon')}
 			</p>
-			{#if data.canManage}
+			{#if data.canManage && data.editable}
 				<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
 					<button class="btn-primary" type="submit">{t('games.generate')}</button>
 				</form>

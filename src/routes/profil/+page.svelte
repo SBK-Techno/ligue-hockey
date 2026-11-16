@@ -1,16 +1,17 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/env';
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
 	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { roleDefinition } from '#config/roles.ts';
-	import { formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
 	import PasswordField from '#lib/ui/PasswordField.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
 	import { managementTabs } from '#lib/domain/auth/destinations.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import type { PageProps } from './$types';
@@ -161,16 +162,25 @@
 			!window.matchMedia('(display-mode: standalone)').matches
 	);
 
+	const passwordError = $derived(fieldErrorFor(form, 'securite', 'currentPassword'));
+
+	$effect(() => {
+		const field = (form as { field?: string } | null)?.field;
+		if (!form || form.ok !== false || form.section !== 'securite' || !field) return;
+		const control = document.getElementById(field);
+		const group = control?.closest('details');
+		if (group instanceof HTMLDetailsElement) group.open = true;
+		void tick().then(() => control?.focus());
+	});
+
 	const sections = $derived([
-		...(!profile ? [{ id: 'compte', label: t('profile.tab.account') }] : []),
+		{ id: 'compte', label: t('profile.tab.account') },
 		...(profile ? [{ id: 'joueur', label: t('profile.tab.player') }] : []),
 		{ id: 'notifications', label: t('profile.tab.notifications') },
 		{ id: 'securite', label: t('profile.tab.security') },
 		...(isManager ? [{ id: 'administration', label: t('profile.tab.admin') }] : [])
 	]);
 </script>
-
-<FormFeedback {form} class="mb-4" />
 
 <h1 class="sr-only">{t('profile.title')}</h1>
 
@@ -180,26 +190,9 @@
 	</div>
 {:else}
 	<div class="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
-		<aside
-			class="space-y-4 lg:sticky lg:top-[4.75rem]"
-		>
-			<section class="relative overflow-hidden rounded-card bg-ink p-5 text-paper">
-				<svg
-					aria-hidden="true"
-					viewBox="0 0 600 600"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					class="pointer-events-none absolute -right-20 -top-24 h-72 w-72 text-paper/[0.08]"
-				>
-					<circle cx="300" cy="300" r="232" />
-					<circle cx="300" cy="300" r="92" />
-					<path d="M0 300h600M300 0v600" />
-					<circle cx="300" cy="300" r="7" fill="currentColor" stroke="none" />
-					<path d="M68 208h56v184H68M532 208h-56v184h56" />
-				</svg>
-
-				<div class="relative flex items-start gap-4">
+		<aside class="space-y-4 lg:sticky lg:top-[calc(3.75rem+1px+env(safe-area-inset-top)+1rem)]">
+			<section class="border-t-[6px] border-ochre bg-ink p-5 text-paper">
+				<div class="flex items-start gap-4">
 					<span
 						class="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-paper/25 bg-paper/10 text-2xl font-semibold tracking-tight"
 					>
@@ -213,7 +206,7 @@
 					</div>
 				</div>
 
-				<div class="relative mt-4 flex flex-wrap gap-2">
+				<div class="mt-4 flex flex-wrap gap-2">
 					<span class="rounded-[0.2rem] border border-paper/25 px-2 py-0.5 text-[11px] font-medium">
 						{roleLabel}
 					</span>
@@ -227,7 +220,7 @@
 					{/if}
 				</div>
 
-				<p class="relative mt-5 border-t border-paper/10 pt-3 text-xs text-paper/55">
+				<p class="mt-5 border-t border-paper/10 pt-3 text-xs text-paper/55">
 					{t('profile.memberSince', { date: formatMonthYear(account.createdAt) })}
 				</p>
 			</section>
@@ -252,49 +245,39 @@
 
 			<nav
 				aria-label={t('profile.sections')}
-				class="-mx-4 flex gap-1 overflow-x-auto border-y border-line/80 bg-paper/95 px-4 py-1.5 lg:mx-0 lg:flex-col lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0 lg:pb-0"
+				class="grid grid-cols-2 gap-1 border-y border-line bg-paper/95 py-1.5 lg:grid-cols-1 lg:border-0 lg:bg-transparent lg:py-0"
 			>
 				{#each sections as section (section.id)}
 					<a
 						href="#{section.id}"
-						class="flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-control px-3 text-sm font-medium text-muted no-underline transition-colors hover:bg-ink/5 hover:text-ink"
+						class="flex min-h-11 items-center border-l-[3px] border-transparent px-2.5 text-sm font-medium text-muted no-underline transition-colors hover:bg-ink/5 hover:text-ink"
 					>
 						{section.label}
 					</a>
 				{/each}
 			</nav>
-
-			<div class="hidden lg:block">
-				<p class="micro-label mb-1">{t('profile.quickLinks')}</p>
-				<ul role="list" class="text-sm">
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/matchs">{t('nav.games')}</a></li>
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/remplacants">{t('subs.title')}</a></li>
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/discussion">{t('nav.chat')}</a></li>
-					<li><a class="flex min-h-11 items-center text-ice no-underline hover:underline" href="/notifications">{t('profile.inbox')}</a></li>
-				</ul>
-			</div>
 		</aside>
 
 		<div class="mt-4 space-y-4 lg:mt-0">
-			{#if !profile}
 			<section id="compte" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.account')}</h2>
 				<p class="hint mt-1">{t('profile.accountHelp')}</p>
+				<FormFeedback {form} section="compte" class="mt-3" />
 
 				{#if profile}
-					<dl class="mt-4 grid gap-3 sm:grid-cols-2">
-						<div class="min-w-0">
-							<dt class="label">{t('profile.displayName')}</dt>
-							<dd class="break-words text-sm">{account.name}</dd>
+					<dl class="mt-3 divide-y divide-line">
+						<div class="fact">
+							<dt>{t('profile.displayName')}</dt>
+							<dd>{account.name}</dd>
 						</div>
-						<div class="min-w-0">
-							<dt class="label">{t('profile.email')}</dt>
-							<dd class="break-all text-sm">{account.email}</dd>
+						<div class="fact">
+							<dt>{t('profile.email')}</dt>
+							<dd>{account.email}</dd>
 						</div>
 					</dl>
-					<p class="hint mt-3">{t('profile.playerNameManaged')}</p>
+					<p class="hint mt-2">{t('profile.playerNameManaged')}</p>
 				{:else}
-					<form method="POST" action="?/identity" use:progressiveForm class="mt-4 space-y-4">
+					<form method="POST" action="?/identity" use:progressiveForm class="mt-3 space-y-3">
 						<div>
 							<label class="label" for="displayName">{t('profile.displayName')}</label>
 							<input
@@ -308,21 +291,21 @@
 							/>
 							<p class="hint">{t('profile.displayNameHelp')}</p>
 						</div>
-						<div>
-							<p class="label">{t('profile.email')}</p>
-							<p class="break-all text-sm">{account.email}</p>
-							<p class="hint">{t('profile.emailReadOnly')}</p>
-						</div>
+						<dl class="fact">
+							<dt>{t('profile.email')}</dt>
+							<dd>{account.email}</dd>
+						</dl>
+						<p class="hint">{t('profile.emailReadOnly')}</p>
 						<button class="btn-primary" type="submit">{t('common.save')}</button>
 					</form>
 				{/if}
 			</section>
-			{/if}
 
 			{#if profile}
 				<section id="joueur" class="card scroll-mt-[var(--anchor-offset)]">
 					<h2>{t('profile.playerSection')}</h2>
 					<p class="hint mt-1">{t('profile.playerSectionHelp')}</p>
+					<FormFeedback {form} section="joueur" class="mt-3" />
 					<form method="POST" action="?/profile" use:progressiveForm class="mt-5 grid gap-4 sm:grid-cols-2">
 						<div>
 							<label class="label" for="firstName">{t('profile.firstName')}</label>
@@ -401,14 +384,15 @@
 				</section>
 
 				{#if data.isSubstitute}
-					<section class="card">
+					<section id="positions" class="card scroll-mt-[var(--anchor-offset)]">
 						<h2>{t('subs.positions')}</h2>
 						<p class="mt-1 text-sm text-muted">{t('subs.positionsHelp')}</p>
+						<FormFeedback {form} section="positions" class="mt-3" />
 						<form method="POST" action="?/positions" use:progressiveForm class="mt-4">
 							<div class="flex flex-wrap gap-2">
 								{#each POSITIONS as position (position.key)}
 									<label
-										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
+										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ochre has-[:checked]:bg-ochre/10"
 									>
 										<input
 											type="checkbox"
@@ -430,8 +414,9 @@
 			<section id="notifications" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.notifications')}</h2>
 				<p class="hint mt-1">{t('profile.notificationsHelp')}</p>
+				<FormFeedback {form} section="notifications" class="mt-3" />
 				<form method="POST" action="?/notifications" use:progressiveForm class="mt-4 space-y-3">
-					<label class="flex items-center gap-3 text-sm font-medium">
+					<label class="flex min-h-11 items-center gap-3 text-sm font-medium">
 						<input
 							type="checkbox"
 							name="emailEnabled"
@@ -440,7 +425,7 @@
 						/>
 						{t('profile.emailNotifications')}
 					</label>
-					<label class="flex items-center gap-3 text-sm font-medium">
+					<label class="flex min-h-11 items-center gap-3 text-sm font-medium">
 						<input
 							type="checkbox"
 							name="pushEnabled"
@@ -488,21 +473,22 @@
 				</div>
 			</section>
 
-			<div class="lg:hidden">
-				<InstallPrompt variant="full" />
-			</div>
-
 			<section id="securite" class="card scroll-mt-[var(--anchor-offset)]">
 				<h2>{t('profile.security')}</h2>
 				<p class="hint mt-1">{t('profile.securityHelp')}</p>
+				<FormFeedback {form} section="securite" class="mt-3" />
 
-				<form method="POST" action="?/password" use:progressiveForm class="mt-5 space-y-4">
-					<h3 class="text-sm font-semibold">{t('profile.changePassword')}</h3>
+				<details class="mt-4">
+					<summary class="link flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold marker:content-none">
+						{t('profile.changePassword')}
+					</summary>
+				<form method="POST" action="?/password" use:progressiveForm class="mt-1 space-y-4">
 					<PasswordField
 						id="currentPassword"
 						name="currentPassword"
 						label={t('profile.currentPassword')}
 						autocomplete="current-password"
+						error={passwordError}
 					/>
 					<PasswordField
 						id="newPassword"
@@ -511,15 +497,18 @@
 						autocomplete="new-password"
 						minlength={data.minLength}
 						hint={t('invite.tooShort', { count: data.minLength })}
+						error={fieldErrorFor(form, 'securite', 'newPassword')}
 					/>
 					<PasswordField
 						id="confirmPassword"
 						name="confirm"
 						label={t('invite.confirm')}
 						autocomplete="new-password"
+						error={fieldErrorFor(form, 'securite', 'confirmPassword')}
 					/>
 					<button class="btn-secondary" type="submit">{t('common.save')}</button>
 				</form>
+				</details>
 
 				<div class="mt-6 border-t border-line/80 pt-5">
 					<h3 class="text-sm font-semibold">{t('profile.sessions')}</h3>
@@ -540,7 +529,7 @@
 								</div>
 							</li>
 						{/if}
-						{#each otherSessions as session (session.id)}
+						{#each otherSessions.slice(0, 2) as session (session.id)}
 							<li class="py-3">
 								<div class="min-w-0">
 									<p class="break-words text-sm font-semibold">
@@ -553,6 +542,28 @@
 							</li>
 						{/each}
 					</ul>
+
+					{#if otherSessions.length > 2}
+						<details class="mt-1">
+							<summary class="link flex min-h-11 cursor-pointer list-none items-center text-sm marker:content-none">
+								{formatCount(
+								otherSessions.length - 2,
+								'profile.moreSessions.one',
+								'profile.moreSessions.many'
+							)}
+							</summary>
+							<ul role="list" class="divide-y divide-line/70">
+								{#each otherSessions.slice(2) as session (session.id)}
+									<li class="py-3">
+										<p class="break-words text-sm font-semibold">
+											{deviceLabel(session.userAgent)}
+										</p>
+										<p class="hint">{formatTimestamp(session.updatedAt)}</p>
+									</li>
+								{/each}
+							</ul>
+						</details>
+					{/if}
 
 					{#if otherSessions.length > 0}
 						<form method="POST" action="?/sessions" use:progressiveForm class="mt-3">
@@ -586,6 +597,10 @@
 					{/if}
 				</section>
 			{/if}
+
+			<div class="lg:hidden">
+				<InstallPrompt variant="full" />
+			</div>
 
 			{#if isManager}
 				<section id="administration" class="card scroll-mt-[var(--anchor-offset)]">

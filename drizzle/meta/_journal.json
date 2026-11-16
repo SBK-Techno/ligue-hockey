@@ -36,6 +36,20 @@
       "when": 1794861329482,
       "tag": "0004_romantic_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794865646552,
+      "tag": "0005_bored_vermin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794866863885,
+      "tag": "0006_known_beast",
+      "breakpoints": true
     }
   ]
 }

@@ -8,12 +8,16 @@ export type ActionMessage = {
 	key?: I18nKey;
 };
 
-export function actionError(cause: unknown) {
+export function actionError(
+	cause: unknown,
+	extra: Record<string, unknown> = {}
+) {
 	if (isAppError(cause)) {
 		return fail(cause.status, {
 			ok: false,
 			message: t(cause.key, cause.params),
-			key: cause.key
+			key: cause.key,
+			...extra
 		});
 	}
 	throw cause;

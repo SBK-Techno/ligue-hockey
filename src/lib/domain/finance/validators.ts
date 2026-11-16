@@ -18,7 +18,7 @@ export const paymentPlanInputSchema = z.object({
 	totalCents: z.coerce
 		.number()
 		.int()
-		.min(settingBound('finance.totalCents', 'min'))
+		.min(1)
 		.max(settingBound('finance.totalCents', 'max')),
 	firstPercent: z.coerce
 		.number()

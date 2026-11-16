@@ -44,7 +44,7 @@
 				<div class="flex flex-wrap gap-2">
 					{#each POSITIONS as position (position.key)}
 						<label
-							class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
+							class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ochre has-[:checked]:bg-ochre/10"
 						>
 							<input
 								type="checkbox"

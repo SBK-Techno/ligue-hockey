@@ -65,6 +65,15 @@ export function formatDate(
 	return formatter.format(dateOnlyToDate(date));
 }
 
+const weekdayShortFormat = new Intl.DateTimeFormat(branding.locale, {
+	weekday: 'short',
+	timeZone: branding.timezone
+});
+
+export function formatWeekdayShort(date: string): string {
+	return weekdayShortFormat.format(dateOnlyToDate(date));
+}
+
 const timestampFormat = new Intl.DateTimeFormat(branding.locale, {
 	day: 'numeric',
 	month: 'short',
@@ -105,6 +114,14 @@ export function formatDateTime(date: string, time: string): string {
 	return `${formatDate(date)} · ${formatTime(time)}`;
 }
 
+export function currencySymbol(currency: string): string {
+	const parts = new Intl.NumberFormat(branding.locale, {
+		style: 'currency',
+		currency
+	}).formatToParts(0);
+	return parts.find((part) => part.type === 'currency')?.value ?? currency;
+}
+
 export function formatMoney(cents: number, currency: string): string {
 	return new Intl.NumberFormat(branding.locale, {
 		style: 'currency',
@@ -135,9 +152,15 @@ export function formatAge(age: number): string {
 const pluralRules = new Intl.PluralRules(branding.locale);
 const decimalFormats = new Map<number, Intl.NumberFormat>();
 
-export function formatCount(count: number, singularKey: I18nKey, pluralKey: I18nKey): string {
+export function formatCount(
+	count: number,
+	singularKey: I18nKey,
+	pluralKey: I18nKey,
+	params: Params = {}
+): string {
 	return t(pluralRules.select(count) === 'one' ? singularKey : pluralKey, {
-		count
+		count,
+		...params
 	});
 }
 

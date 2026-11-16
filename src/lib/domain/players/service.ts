@@ -93,6 +93,15 @@ export function listAdminPlayers(actor: Actor): AdminPlayer[] {
 	return listAllPlayersWithEmail().map(toAdmin);
 }
 
+/**
+ * Liste minimale pour les évaluations : la capacité de noter suffit, sans
+ * exiger l'administration complète des joueurs.
+ */
+export function listRatingPlayers(actor: Actor): PublicPlayer[] {
+	requirePermission(actor, 'editRatings');
+	return listAllPlayersWithEmail().map(toPublic);
+}
+
 export function findOwnProfile(actor: Actor): SelfProfile | null {
 	const user = requireUser(actor);
 	const row = findPlayerWithEmail(user.userId);
@@ -236,7 +245,7 @@ export async function updateOwnProfile(
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 
-	updatePlayer(user.userId, {
+	const cleared = updatePlayer(user.userId, {
 		firstName: input.firstName,
 		lastName: input.lastName,
 		age: input.age,
@@ -247,7 +256,8 @@ export async function updateOwnProfile(
 	recordAudit(actor, {
 		action: 'player.self_update',
 		entityType: 'player',
-		entityId: user.userId
+		entityId: user.userId,
+		metadata: cleared.length > 0 ? { positionRatingsCleared: cleared } : undefined
 	});
 	regenerateUpcomingGeneratedGames();
 	return getOwnProfile(actor);
@@ -273,7 +283,7 @@ export async function adminUpdatePlayer(
 	if (input.isSubstitute !== undefined) patch.isSubstitute = input.isSubstitute;
 	if (input.active !== undefined) patch.active = input.active;
 
-	updatePlayer(playerId, patch);
+	const cleared = updatePlayer(playerId, patch);
 	if (input.firstName !== undefined || input.lastName !== undefined) {
 		const updated = findPlayerWithEmail(playerId);
 		if (updated) {
@@ -284,7 +294,10 @@ export async function adminUpdatePlayer(
 		action: 'player.admin_update',
 		entityType: 'player',
 		entityId: playerId,
-		metadata: { fields: Object.keys(patch) }
+		metadata: {
+			fields: Object.keys(patch),
+			...(cleared.length > 0 ? { positionRatingsCleared: cleared } : {})
+		}
 	});
 	regenerateUpcomingGeneratedGames();
 

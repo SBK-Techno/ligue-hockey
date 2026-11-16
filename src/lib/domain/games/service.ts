@@ -1,19 +1,18 @@
 import type { Position } from '#config/positions.ts';
-import {
-	buildSlotDefinitions,
-	rosterTemplateFromSettings,
-	rosterTemplateSchema,
-	type RosterTemplate
-} from '#config/roster.ts';
+import { buildSlotDefinitions, rosterTemplateFromSettings } from '#config/roster.ts';
 import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
-import { generateTeams, type GeneratorPlayer } from '#lib/domain/teams/generator.ts';
-import { requireCompleteRatings } from '#lib/domain/ratings/overall.ts';
+import { anonymousActor } from '#lib/domain/auth/types.ts';
+import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
+import { isLineupEditable } from './playability.ts';
+import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
+import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
+import { gameWarningsInOrder } from '#config/game-warnings.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
+import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import { cancelAllForGame, claimsForGeneration } from '#lib/domain/subs/generation.ts';
+import { cancelAllForGame } from '#lib/domain/subs/generation.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
@@ -22,7 +21,7 @@ import { newId } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
-import { selectPool as choosePool } from './selection.ts';
+
 import {
 	cancelGame as cancelGameRow,
 	findGame,
@@ -35,6 +34,7 @@ import {
 	upsertAvailability,
 	type SlotAssignment
 } from './queries.ts';
+import { generationPlan, lineupPool, type PoolSlot } from './pool.ts';
 import type { GameRow } from './schema.ts';
 import type { GameBenchView, GameGenerationView, GameSlotView, GameSummary } from './types.ts';
 import {
@@ -46,6 +46,8 @@ import {
 
 export type GameView = GameSummary & {
 	notes: string | null;
+	locationAddress: string | null;
+	locationMapUrl: string | null;
 	slots: GameSlotView[];
 	generation: GameGenerationView | null;
 	openSlots: number;
@@ -63,20 +65,10 @@ function summary(row: GameRow): GameSummary {
 		id: row.id,
 		gameDate: row.gameDate,
 		startTime: row.startTime,
+		locationId: row.locationId,
 		location: row.location,
 		status: row.status
 	};
-}
-
-function templateFrom(row: GameRow): RosterTemplate {
-	try {
-		return rosterTemplateSchema.parse(JSON.parse(row.rosterTemplateJson));
-	} catch (cause) {
-		throw new AppError('INTERNAL', {
-			message: 'Invalid roster template snapshot',
-			cause
-		});
-	}
 }
 
 function snapshotFrom(row: GameRow): GenerationSnapshot | null {
@@ -102,9 +94,12 @@ function generationView(
 		skillDiff: includeMetrics ? snapshot.skillDiff : null,
 		ageDiff: includeMetrics ? snapshot.ageDiff : null,
 		sizeDiff: includeMetrics ? snapshot.sizeDiff : null,
-		skillDiffLabel: includeMetrics ? formatDecimal(snapshot.skillDiff, 2) : null,
+		skillDiffLabel:
+			includeMetrics && snapshot.skillDiff !== null
+				? formatDecimal(snapshot.skillDiff, 2)
+				: null,
 		ageDiffLabel: includeMetrics ? formatDecimal(snapshot.ageDiff, 1) : null,
-		warnings: snapshot.warnings,
+		warnings: gameWarningsInOrder(snapshot.warnings),
 		ruleViolations: includeMetrics
 			? snapshot.ruleViolations.map((violation) => ({
 			ruleId: violation.ruleId,
@@ -178,10 +173,13 @@ export function getGame(actor: Actor, gameId: string): GameView {
 	}));
 
 	const openSlots = slots.filter((slot) => !slot.player).length;
+	const location = getLocationDetails(actor, row.locationId);
 
 	return {
 		...summary(row),
 		notes: row.notes,
+		locationAddress: location.address,
+		locationMapUrl: location.mapUrl,
 		slots,
 		generation: generationView(row, names, can(actor, 'manageGames')),
 		openSlots,
@@ -193,6 +191,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 export function createGame(actor: Actor, input: GameInput): GameSummary {
 	requirePermission(actor, 'manageGames');
 	const parsed = parseSchema(gameInputSchema, input);
+	const location = getLocation(actor, parsed.locationId);
 	const settings = getSettings();
 	const rosterTemplate = rosterTemplateFromSettings(settings);
 
@@ -214,7 +213,8 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 				id: gameId,
 				gameDate: parsed.gameDate,
 				startTime: parsed.startTime,
-				location: parsed.location,
+				locationId: location.id,
+				location: location.name,
 				notes: parsed.notes,
 				status: 'scheduled',
 				rosterTemplateJson: JSON.stringify(rosterTemplate),
@@ -242,7 +242,8 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 		id: gameId,
 		gameDate: parsed.gameDate,
 		startTime: parsed.startTime,
-		location: parsed.location,
+		locationId: location.id,
+		location: location.name,
 		status: 'scheduled'
 	};
 }
@@ -257,6 +258,8 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
 	const parsed = parseSchema(gameInputSchema, input);
+	const location = getLocation(actor, parsed.locationId);
+	const locationChanged = parsed.locationId !== row.locationId;
 
 	try {
 		updateGameRow(
@@ -264,7 +267,10 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 			{
 				gameDate: parsed.gameDate,
 				startTime: parsed.startTime,
-				location: parsed.location,
+				locationId: location.id,
+				// Le libellé est figé pour les matchs déjà créés : seule une
+				// changement de lieu le réécrit.
+				...(locationChanged ? { location: location.name } : {}),
 				notes: parsed.notes
 			},
 			clock.nowMs()
@@ -282,7 +288,13 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 		entityId: gameId
 	});
 
-	return summary({ ...row, ...parsed, notes: parsed.notes });
+	return summary({
+		...row,
+		gameDate: parsed.gameDate,
+		startTime: parsed.startTime,
+		locationId: location.id,
+		location: locationChanged ? location.name : row.location
+	});
 }
 
 export function cancelGame(actor: Actor, gameId: string): void {
@@ -319,7 +331,10 @@ export function cancelGame(actor: Actor, gameId: string): void {
 	});
 }
 
-export function regenerateGame(gameId: string): GenerationResult {
+export function regenerateGame(
+	gameId: string,
+	actor: Actor = anonymousActor
+): GenerationResult {
 	const row = findGame(gameId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
@@ -327,34 +342,32 @@ export function regenerateGame(gameId: string): GenerationResult {
 	if (row.status !== 'scheduled') {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
+	if (
+		!isLineupEditable({
+			status: row.status,
+			gameDate: row.gameDate,
+			startTime: row.startTime
+		})
+	) {
+		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
+	}
 
-	const settings = getSettings();
-	const template = templateFrom(row);
-	const { selected, bench } = choosePool({
-		template,
-		players: generationCandidates().map((player) => ({
-			playerId: player.userId,
-			position: player.position,
-			age: player.age,
-			isSubstitute: player.isSubstitute,
-			active: player.active
-		})),
-		availability: listAvailability(gameId),
-		claims: claimsForGeneration(gameId)
-	});
-	const overalls = requireCompleteRatings(selected.map((player) => player.playerId));
-
-	const pool: GeneratorPlayer[] = selected.map((player) => ({
-		id: player.playerId,
-		position: player.position,
-		age: player.age,
-		overall: overalls.get(player.playerId) ?? 0,
-		kind: player.kind
+	const previousRatedPlayerIds = listGameRatingPlayerIds(gameId);
+	const slotRows: PoolSlot[] = listSlotAssignments(gameId).map((slot) => ({
+		team: slot.team,
+		position: slot.position,
+		slotIndex: slot.slotIndex,
+		player:
+			slot.playerId && slot.assignmentKind
+				? { playerId: slot.playerId, kind: slot.assignmentKind }
+				: null
 	}));
-	const kindOf = new Map(selected.map((player) => [player.playerId, player.kind]));
+	const pool = lineupPool(row, slotRows);
+	const plan = generationPlan(pool);
+	const { settings, template } = pool;
 
 	const result = generateTeams({
-		players: pool,
+		players: plan.players,
 		template,
 		rules: rulesForGeneration(),
 		skillTolerance: settings['teams.skillTolerance'],
@@ -371,25 +384,55 @@ export function regenerateGame(gameId: string): GenerationResult {
 		position: assignment.position,
 		slotIndex: assignment.slotIndex,
 		playerId: assignment.playerId,
-		kind: kindOf.get(assignment.playerId) ?? 'regular'
+		kind: plan.kindOf.get(assignment.playerId) ?? 'regular'
 	}));
 
 	const generatedAt = clock.nowMs();
+	const dressed = new Set(assignments.map((assignment) => assignment.playerId));
+	const removedRatedPlayerIds = previousRatedPlayerIds.filter(
+		(playerId) => !dressed.has(playerId)
+	);
 	const snapshot: GenerationSnapshot = {
 		skillDiff: result.skillDiff,
 		ageDiff: result.ageDiff,
 		sizeDiff: result.sizeDiff,
-		warnings: result.warnings,
+		warnings: gameWarningsInOrder(result.warnings),
 		ruleViolations: result.violations,
-		bench,
+		bench: plan.bench,
 		candidateKey: result.candidateKey,
 		generatedAt
 	};
 
-	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt);
+	// L'audit du calcul entre dans la même transaction que les places : une
+	// écriture échouée ne laisse ni alignement publié ni trace partielle.
+	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt, {
+		removedRatedPlayerIds,
+		audits: [
+			...(removedRatedPlayerIds.length > 0
+				? [
+						auditEntry(actor, {
+							action: 'ratings.game_removed',
+							entityType: 'game',
+							entityId: gameId,
+							metadata: { playerIds: removedRatedPlayerIds }
+						})
+					]
+				: []),
+			auditEntry(actor, {
+				action: 'game.generate',
+				entityType: 'game',
+				entityId: gameId,
+				metadata: {
+					skillDiff: result.skillDiff,
+					ageDiff: result.ageDiff,
+					assignments: assignments.length
+				}
+			})
+		]
+	});
 
 	const namedIds = [
-		...bench.map((entry) => entry.playerId),
+		...plan.bench.map((entry) => entry.playerId),
 		...result.violations.flatMap((violation) => violation.playerIds)
 	];
 	const names = new Map(
@@ -402,7 +445,7 @@ export function regenerateGame(gameId: string): GenerationResult {
 			}
 		])
 	);
-	const benchViews: GameBenchView[] = bench.map((entry) => ({
+	const benchViews: GameBenchView[] = plan.bench.map((entry) => ({
 		playerId: entry.playerId,
 		fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
 		position: entry.position,
@@ -417,7 +460,7 @@ export function regenerateGame(gameId: string): GenerationResult {
 		sizeDiff: result.sizeDiff,
 		skillDiffLabel: formatDecimal(result.skillDiff, 2),
 		ageDiffLabel: formatDecimal(result.ageDiff, 1),
-		warnings: result.warnings,
+		warnings: gameWarningsInOrder(result.warnings),
 		ruleViolations: result.violations.map((violation) => ({
 			ruleId: violation.ruleId,
 			kind: violation.kind,
@@ -436,18 +479,7 @@ export function regenerateGame(gameId: string): GenerationResult {
 
 export function regenerateAsAdmin(actor: Actor, gameId: string): GenerationResult {
 	requirePermission(actor, 'manageGames');
-	const result = regenerateGame(gameId);
-	recordAudit(actor, {
-		action: 'game.generate',
-		entityType: 'game',
-		entityId: gameId,
-		metadata: {
-			skillDiff: result.skillDiff,
-			ageDiff: result.ageDiff,
-			assignments: result.assignments
-		}
-	});
-	return result;
+	return regenerateGame(gameId, actor);
 }
 
 export function listGamePresence(gameId: string) {

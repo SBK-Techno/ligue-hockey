@@ -74,7 +74,7 @@ function buildOfflinePage(branding: Branding, palette: EmailPalette): string {
 				place-items: center;
 				background: ${palette.paper};
 				color: ${palette.ink};
-				font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+				font-family: 'Anybody Variable', 'Anybody', ui-sans-serif, system-ui, sans-serif;
 				padding: 24px;
 			}
 			main {
@@ -82,14 +82,19 @@ function buildOfflinePage(branding: Branding, palette: EmailPalette): string {
 				text-align: center;
 			}
 			.brand {
-				font-weight: 700;
-				letter-spacing: -0.03em;
-				color: ${palette.brand};
+				font-family: 'Spline Sans Mono Variable', ui-monospace, monospace;
+				font-weight: 600;
+				letter-spacing: 0.12em;
+				text-transform: uppercase;
+				font-size: 0.625rem;
+				color: ${palette.muted};
 			}
 			h1 {
 				font-size: 1.75rem;
+				font-weight: 650;
+				font-stretch: 112%;
 				margin: 12px 0 8px;
-				letter-spacing: -0.02em;
+				letter-spacing: -0.015em;
 			}
 			p {
 				color: ${palette.muted};
@@ -98,11 +103,11 @@ function buildOfflinePage(branding: Branding, palette: EmailPalette): string {
 			a {
 				display: inline-block;
 				margin-top: 20px;
-				background: ${palette.brand};
+				background: ${palette.ink};
 				color: ${palette.surface};
 				text-decoration: none;
 				padding: 13px 22px;
-				border-radius: 8px;
+				border-radius: 2px;
 				font-weight: 600;
 			}
 		</style>

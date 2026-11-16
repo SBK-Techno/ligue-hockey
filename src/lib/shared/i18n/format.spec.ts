@@ -10,7 +10,7 @@ describe('formatCount', () => {
 	it('uses the plural from two onwards', () => {
 		expect(formatCount(2, 'chat.votes.one', 'chat.votes.many')).toBe('2 votes');
 		expect(formatCount(14, 'games.openSlots.one', 'games.openSlots.many')).toBe(
-			'14 positions à pourvoir'
+			'14 places ouvertes'
 		);
 	});
 });

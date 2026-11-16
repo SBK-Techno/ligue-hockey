@@ -15,7 +15,9 @@ export type AdminTab = {
 export const ADMIN_TABS: readonly AdminTab[] = [
 	{ href: '/admin', labelKey: 'admin.dashboard', capability: 'viewAdmin' },
 	{ href: '/admin/joueurs', labelKey: 'admin.players', capability: 'managePlayers' },
+	{ href: '/admin/evaluations', labelKey: 'rating.title', capability: 'editRatings' },
 	{ href: '/admin/matchs', labelKey: 'admin.games', capability: 'manageGames' },
+	{ href: '/admin/lieux', labelKey: 'admin.locations', capability: 'manageGames' },
 	{ href: '/admin/regles', labelKey: 'admin.rules', capability: 'manageRules' },
 	{ href: '/admin/soldes', labelKey: 'admin.balances', capability: 'viewAllBalances' },
 	{ href: '/admin/parametres', labelKey: 'admin.settings', capability: 'manageSettings' }

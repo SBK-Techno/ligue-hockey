@@ -1,11 +1,10 @@
 import { z } from 'zod';
 import { POSITION_KEYS } from '#config/positions.ts';
-import { settingBound } from '#config/settings-registry.ts';
+import { GAME_WARNING_KEYS } from '#config/game-warnings.ts';
 import { DATE_PATTERN, TIME_PATTERN } from '#config/time.ts';
 import { isRealDate } from '#lib/shared/time/clock.ts';
 
 export const GAME_LIMITS = {
-	locationMax: settingBound('games.defaultLocation', 'max'),
 	notesMax: 1000
 } as const;
 
@@ -16,11 +15,7 @@ export const gameInputSchema = z.object({
 		.regex(DATE_PATTERN, 'invalid-date')
 		.refine(isRealDate, 'invalid-date'),
 	startTime: z.string().trim().regex(TIME_PATTERN, 'invalid-time'),
-	location: z
-		.string()
-		.trim()
-		.min(1)
-		.max(GAME_LIMITS.locationMax),
+	locationId: z.string().trim().min(1),
 	notes: z.preprocess(
 		(value) => (value === '' || value === undefined ? null : value),
 		z.string().trim().max(GAME_LIMITS.notesMax).nullable()
@@ -28,10 +23,10 @@ export const gameInputSchema = z.object({
 });
 
 export const generationSnapshotSchema = z.object({
-	skillDiff: z.number(),
+	skillDiff: z.number().nullable(),
 	ageDiff: z.number(),
 	sizeDiff: z.number(),
-	warnings: z.array(z.string()),
+	warnings: z.array(z.enum(GAME_WARNING_KEYS)),
 	ruleViolations: z
 		.array(
 			z.object({

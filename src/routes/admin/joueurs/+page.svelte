@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { PLAYER_LIMITS } from '#config/players.ts';
+	import { roleDefinition } from '#config/roles.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { formatAge, formatCount, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
@@ -163,7 +164,7 @@
 					type="button"
 					class="min-h-11 rounded-control border px-2.5 text-[13px] font-medium transition-colors {filter ===
 					option.key
-						? 'border-ice bg-ice-soft text-ice-deep'
+						? 'border-ochre bg-ochre/10 text-ink'
 						: 'border-line-strong bg-surface text-muted hover:bg-paper'}"
 					aria-pressed={filter === option.key}
 					onclick={() => (filter = option.key)}
@@ -189,25 +190,24 @@
 		<p class="text-sm text-muted">{t('admin.noResults')}</p>
 	</div>
 {:else}
-	<div class="card-flush overflow-hidden">
+	<div class="card-flush">
 		<ul role="list" class="divide-y divide-line/70">
-			{#each filtered as player (player.userId)}
-				<li class="flex min-h-14 items-center gap-3 px-4 py-2.5">
-					<span class="w-7 shrink-0 text-right font-mono text-[11px] text-muted">
-						{player.jerseyNumber ?? '–'}
+			{#each filtered as player, index (player.userId)}
+				{@const menuUp = index >= filtered.length - 2}
+				<li class="relative flex min-h-14 items-center gap-3 px-4 py-2.5">
+					<span class="relative z-10 w-7 shrink-0 text-right font-mono text-[11px] text-muted">
+						{player.jerseyNumber ?? '-'}
 					</span>
 					<div class="min-w-0 flex-1">
-						<div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-							<a
-								href="/admin/joueurs/{player.userId}"
-								class="min-w-0 truncate font-semibold text-ink no-underline hover:underline"
-							>
-								{player.fullName}
-							</a>
+						<a
+							class="absolute inset-0 z-0"
+							href="/admin/joueurs/{player.userId}"
+							aria-label={player.fullName}
+						></a>
+						<div class="pointer-events-none relative z-10 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+							<span class="min-w-0 truncate font-semibold text-ink">{player.fullName}</span>
 							{#if player.role !== 'player'}
-								<span class="badge-ice">
-									{t(player.role === 'admin' ? 'admin.role.admin' : 'admin.role.manager')}
-								</span>
+								<span class="badge-ice">{t(roleDefinition(player.role)?.labelKey ?? 'admin.role.player')}</span>
 							{/if}
 							{#if player.isSubstitute}
 								<span class="badge">{t('profile.substitute')}</span>
@@ -219,17 +219,14 @@
 								<span class="badge-alert">{t('admin.status.inactive')}</span>
 							{/if}
 						</div>
-						<p class="mt-0.5 truncate text-xs text-muted">
+						<p class="pointer-events-none relative z-10 mt-0.5 truncate text-xs text-muted">
 							{t(positionDefinition(player.position).labelKey)} · {formatAge(player.age)}
 						</p>
 					</div>
-					<a class="btn-ghost btn-sm hidden shrink-0 sm:inline-flex" href="/admin/joueurs/{player.userId}">
-						{t('common.edit')}
-					</a>
-					<details class="group relative shrink-0">
+					<details class="group relative z-20 shrink-0">
 						<summary
 							class="grid h-11 w-11 cursor-pointer list-none place-items-center rounded-control border border-line-strong bg-surface text-muted marker:content-none hover:bg-paper"
-							aria-label={t('admin.moreActions')}
+							aria-label="{t('admin.moreActions')} · {player.fullName}"
 						>
 							<svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
 								<circle cx="5" cy="12" r="1.6" />
@@ -238,14 +235,10 @@
 							</svg>
 						</summary>
 						<div
-							class="absolute right-0 top-[calc(100%+0.35rem)] z-20 w-52 rounded-sheet border border-line bg-surface p-1 shadow-lift"
+							class="absolute right-0 z-20 w-52 rounded-sheet border border-line bg-surface p-1 shadow-lift {menuUp
+								? 'bottom-[calc(100%+0.35rem)]'
+								: 'top-[calc(100%+0.35rem)]'}"
 						>
-							<a
-								class="flex min-h-11 items-center rounded-control px-2.5 text-sm font-medium no-underline hover:bg-ink/5 sm:hidden"
-								href="/admin/joueurs/{player.userId}"
-							>
-								{t('common.edit')}
-							</a>
 							<form method="POST" action="?/resend" use:progressiveForm>
 								<input type="hidden" name="playerId" value={player.userId} />
 								<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-sm font-medium hover:bg-ink/5" type="submit">
@@ -289,7 +282,7 @@
 									<input type="hidden" name="playerId" value={player.userId} />
 									<input type="hidden" name="value" value="true" />
 									<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-sm font-medium hover:bg-ink/5" type="submit">
-										{t('admin.activate')}
+										{t('admin.reactivate')}
 									</button>
 								</form>
 							{/if}

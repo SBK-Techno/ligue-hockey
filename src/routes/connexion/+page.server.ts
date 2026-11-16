@@ -12,6 +12,7 @@ import {
 import { env } from '#lib/shared/config/env.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
+import { resetMode } from '#lib/ui/reset-mode.ts';
 
 const loginSchema = z.object({
 	email: z.string().trim().toLowerCase().email().max(PLAYER_LIMITS.emailMax),
@@ -35,24 +36,26 @@ function safeNext(value: string | null | undefined): string {
 export const load: ServerLoad = ({ url }) => {
 	return {
 		next: safeNext(url.searchParams.get('prochaine')),
-		reset: url.searchParams.get('reinitialise') === '1'
+		reset: url.searchParams.get('reinitialise') === '1',
+		mode: resetMode(url.searchParams.get('mode'))
 	};
 };
 
 export const actions: Actions = {
 	default: async ({ request, getClientAddress }) => {
 		const form = await request.formData();
+		const email = String(form.get('email') ?? '').trim();
 		let parsed;
 		try {
 			parsed = parseForm(loginSchema, form);
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { email });
 		}
 
 		const key = `login:${getClientAddress()}:${parsed.email}`;
 		const windowMs = env.security.loginWindowMinutes * 60 * 1000;
 		if (tooManyAttempts(key, env.security.maxLoginAttempts)) {
-			return fail(429, { ok: false, message: t('auth.throttled') });
+			return fail(429, { ok: false, email, message: t('auth.throttled') });
 		}
 
 		try {
@@ -70,7 +73,7 @@ export const actions: Actions = {
 				(cause as { statusCode?: number; status?: number }).statusCode ??
 				(cause as { status?: number }).status;
 			if (status === 429) {
-				return fail(429, { ok: false, message: t('auth.throttled') });
+				return fail(429, { ok: false, email, message: t('auth.throttled') });
 			}
 			return fail(400, { ok: false, message: t('auth.invalid') });
 		}

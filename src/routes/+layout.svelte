@@ -5,6 +5,7 @@
 	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import AppNav from '#lib/ui/AppNav.svelte';
+	import AppNavBottom from '#lib/ui/AppNavBottom.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
 	import type { LayoutProps } from './$types';
 
@@ -16,6 +17,8 @@
 		['/admin/regles', 'admin.rules'],
 		['/admin/soldes', 'admin.balances'],
 		['/admin/parametres', 'admin.settings'],
+		['/admin/lieux', 'admin.locations'],
+		['/admin/evaluations', 'admin.evaluationsSeason'],
 		['/admin', 'admin.title'],
 		['/matchs', 'games.title'],
 		['/remplacants', 'subs.title'],
@@ -93,7 +96,11 @@
 			</div>
 
 			<div class="relative mt-8 max-w-md lg:mt-0">
-				<h1 class="text-paper">{t('auth.welcome')}</h1>
+				<p
+					class="font-display text-[length:var(--text-display)] font-[650] leading-none tracking-[-0.015em] text-paper [font-stretch:112%]"
+				>
+					{t('auth.welcome')}
+				</p>
 				<p class="mt-4 hidden text-sm leading-relaxed text-paper/70 sm:block sm:text-base">
 					{branding.description}
 				</p>
@@ -102,7 +109,8 @@
 
 		<main
 			id="contenu"
-			class="flex items-start justify-center px-4 py-8 sm:px-8 sm:py-12 lg:min-h-dvh lg:items-center"
+			tabindex="-1"
+			class="flex scroll-mt-[var(--anchor-offset)] items-start justify-center px-4 py-8 sm:px-8 sm:py-12 lg:min-h-dvh lg:items-center"
 		>
 			<div class="w-full max-w-sm">
 				{@render children()}
@@ -112,10 +120,15 @@
 {:else}
 	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
 	<AppNav actor={data.actor} unread={data.unread} />
-	<main id="contenu" tabindex="-1" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 sm:pt-8 lg:pb-12">
+	<main
+		id="contenu"
+		tabindex="-1"
+		class="mx-auto w-full max-w-6xl scroll-mt-[var(--anchor-offset)] px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
+	>
 		{@render children()}
 		<div aria-live="polite" class="sr-only">{pageTitle}</div>
 	</main>
+	<AppNavBottom actor={data.actor} />
 	<footer class="mx-auto w-full max-w-6xl px-4 pb-[calc(var(--bottom-bar-offset)+0.5rem)] pt-2 lg:pb-8">
 		<div
 			class="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 pt-5 text-[11px] font-medium text-muted"

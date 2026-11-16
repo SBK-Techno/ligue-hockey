@@ -49,7 +49,7 @@
 </script>
 
 {#if browser && !installed && (variant === 'full' || (!dismissed && deferred))}
-	<section class="card {variant === 'compact' ? 'mt-4 border-ice/20 bg-ice-soft/50' : 'mb-4'}">
+	<section class="card {variant === 'compact' ? 'mt-4 border-line bg-paper-deep' : 'mb-4'}">
 		<div class="flex flex-wrap items-start justify-between gap-3">
 			<div class="min-w-0">
 				<h2 class={variant === 'compact' ? 'text-base' : ''}>{t('install.title')}</h2>

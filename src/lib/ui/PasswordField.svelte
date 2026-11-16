@@ -8,6 +8,7 @@
 		autocomplete = 'current-password',
 		minlength,
 		hint,
+		error,
 		required = true,
 		value = ''
 	}: {
@@ -17,12 +18,17 @@
 		autocomplete?: 'current-password' | 'new-password';
 		minlength?: number;
 		hint?: string;
+		error?: string | null;
 		required?: boolean;
 		value?: string;
 	} = $props();
 
 	let visible = $state(false);
 	const hintId = $derived(`${id}-hint`);
+	const errorId = $derived(`${id}-error`);
+	const describedBy = $derived(
+		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
+	);
 </script>
 
 <div>
@@ -37,7 +43,8 @@
 			{minlength}
 			{required}
 			{value}
-			aria-describedby={hint ? hintId : undefined}
+			aria-invalid={error ? 'true' : undefined}
+			aria-describedby={describedBy}
 		/>
 		<button
 			type="button"
@@ -60,5 +67,8 @@
 	</div>
 	{#if hint}
 		<p class="hint" id={hintId}>{hint}</p>
+	{/if}
+	{#if error}
+		<p class="field-error" id={errorId}>{error}</p>
 	{/if}
 </div>

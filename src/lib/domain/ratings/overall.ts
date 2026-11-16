@@ -4,7 +4,6 @@ import {
 	type RatingAttribute,
 	type RatingValues
 } from '#config/rating-attributes.ts';
-import { AppError } from '#lib/shared/errors.ts';
 import { listRatingsForPlayers } from './queries.ts';
 
 /**
@@ -28,18 +27,4 @@ export function overallsForPlayers(
 		}
 	}
 	return result;
-}
-
-export function requireCompleteRatings(
-	playerIds: readonly string[]
-): Map<string, number> {
-	const overalls = overallsForPlayers(playerIds);
-	const missing = playerIds.filter((playerId) => !overalls.has(playerId));
-	if (missing.length > 0) {
-		throw new AppError('CONFLICT', {
-			key: 'games.ratingsMissing',
-			details: { playerIds: missing }
-		});
-	}
-	return overalls;
 }

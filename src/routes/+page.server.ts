@@ -1,14 +1,13 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
-import { branding } from '#lib/generated/branding.ts';
 import { markAvailability, getAvailability } from '#lib/domain/availability/service.ts';
 import { listChat } from '#lib/domain/chat/service.ts';
 import { getMyBalance } from '#lib/domain/finance/service.ts';
 import { getGame, listSchedule } from '#lib/domain/games/service.ts';
+import { nextGameId, splitSchedule } from '#lib/domain/games/schedule.ts';
 import { listOpenRequests } from '#lib/domain/roster/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
-import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
 const availabilitySchema = z.object({
@@ -29,17 +28,16 @@ export const load: ServerLoad = ({ locals }) => {
 		};
 	}
 
-	const today = todayInZone(branding.timezone, clock.nowMs());
-	const upcoming = listSchedule(actor).filter(
-		(game) => game.status === 'scheduled' && game.gameDate >= today
-	);
-	const next = upcoming[0] ?? null;
+	const schedule = listSchedule(actor);
+	const { upcoming } = splitSchedule(schedule);
+	const nextId = nextGameId(schedule);
+	const next = nextId ? (upcoming.find((game) => game.id === nextId) ?? null) : null;
 	const game = next ? getGame(actor, next.id) : null;
 	const availability = next ? getAvailability(actor, next.id) : null;
 	const openRequests = listOpenRequests(actor);
 
 	return {
-		games: upcoming.slice(0, 3),
+		games: upcoming,
 		game,
 		availability,
 		balance: getMyBalance(actor),

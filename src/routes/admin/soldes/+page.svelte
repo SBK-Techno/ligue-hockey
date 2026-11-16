@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { balanceStatusDefinition } from '#config/balance-status.ts';
 	import { formatMoney, t } from '#lib/shared/i18n/index.ts';
+	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import type { PageProps } from './$types';
 
@@ -18,14 +20,15 @@
 	const rows = $derived(
 		data.balances
 			.filter((row) => {
-				if (filter === 'overdue') return row.isOverdue;
+				if (filter === 'overdue') return row.status === 'overdue';
 				if (filter === 'outstanding') return row.outstandingCents > 0;
 				if (filter === 'noPlan') return !row.hasPlan;
 				return true;
 			})
 			.sort(
 				(a, b) =>
-					Number(b.isOverdue) - Number(a.isOverdue) || b.outstandingCents - a.outstandingCents
+					Number(b.status === 'overdue') - Number(a.status === 'overdue') ||
+					b.outstandingCents - a.outstandingCents
 			)
 	);
 </script>
@@ -60,7 +63,7 @@
 				type="button"
 				class="min-h-11 rounded-control border px-2.5 text-[13px] font-medium transition-colors {filter ===
 				option.key
-					? 'border-ice bg-ice-soft text-ice-deep'
+					? 'border-ochre bg-ochre/10 text-ink'
 					: 'border-line-strong bg-surface text-muted hover:bg-paper'}"
 				aria-pressed={filter === option.key}
 				onclick={() => (filter = option.key)}
@@ -113,14 +116,9 @@
 							<span class="mt-0.5 block">
 								{#if !row.hasPlan}
 									<span class="badge">{t('balance.noPlanShort')}</span>
-								{:else if row.isOverdue}
-									<span class="badge-alert">{t('balance.status.overdue')}</span>
-								{:else if row.outstandingCents === 0}
-									<span class="badge-ok">{t('balance.status.paid')}</span>
-								{:else if row.installments.some((installment) => installment.status === 'partial')}
-									<span class="badge-ice">{t('balance.status.partial')}</span>
 								{:else}
-									<span class="badge">{t('balance.status.upcoming')}</span>
+									{@const status = balanceStatusDefinition(row.status)}
+									<span class={badgeClass(status.tone)}>{t(status.labelKey)}</span>
 								{/if}
 							</span>
 						</span>

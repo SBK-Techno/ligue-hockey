@@ -12,7 +12,8 @@ export const SURFACES = [
     labelKey: 'nav.home',
     icon: 'home',
     capabilities: ['member'],
-    placement: 'primary'
+    placement: 'primary',
+    mobilePriority: 10
   },
   {
     key: 'games',
@@ -20,7 +21,8 @@ export const SURFACES = [
     labelKey: 'nav.games',
     icon: 'puck',
     capabilities: ['member'],
-    placement: 'primary'
+    placement: 'primary',
+    mobilePriority: 20
   },
   {
     key: 'subs',
@@ -28,7 +30,8 @@ export const SURFACES = [
     labelKey: 'subs.title',
     icon: 'sub',
     capabilities: ['claimSubs', 'manageSubs'],
-    placement: 'primary'
+    placement: 'primary',
+    mobilePriority: 30
   },
   {
     key: 'chat',
@@ -36,7 +39,8 @@ export const SURFACES = [
     labelKey: 'nav.chat',
     icon: 'chat',
     capabilities: ['member'],
-    placement: 'primary'
+    placement: 'primary',
+    mobilePriority: 40
   },
   {
     key: 'account',
@@ -44,7 +48,8 @@ export const SURFACES = [
     labelKey: 'nav.profile',
     icon: 'user',
     capabilities: ['member'],
-    placement: 'primary'
+    placement: 'primary',
+    mobilePriority: 60
   },
   {
     key: 'management',
@@ -52,7 +57,8 @@ export const SURFACES = [
     labelKey: 'nav.admin',
     icon: 'shield',
     capabilities: ['viewAdmin'],
-    placement: 'account'
+    placement: 'primary',
+    mobilePriority: 50
   }
 ] as const satisfies readonly {
   key: string;
@@ -61,6 +67,8 @@ export const SURFACES = [
   icon: string;
   capabilities: readonly Capability[];
   placement: 'primary' | 'account';
+  /** Ordre dans la barre mobile. Les cinq plus petits gagnent. */
+  mobilePriority: number;
 }[];
 
 export type Surface = (typeof SURFACES)[number];

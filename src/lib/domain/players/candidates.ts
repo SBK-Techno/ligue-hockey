@@ -21,3 +21,12 @@ export function generationCandidates(): PlayerCandidate[] {
 export function playersByIds(playerIds: readonly string[]): PublicPlayer[] {
 	return findPlayersByIds(playerIds).map(toPublic);
 }
+
+export function playerCandidatesByIds(
+	playerIds: readonly string[]
+): PlayerCandidate[] {
+	return findPlayersByIds(playerIds).map((row) => ({
+		...toPublic(row),
+		age: row.age
+	}));
+}

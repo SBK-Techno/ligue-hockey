@@ -10,6 +10,7 @@ import {
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
+import { isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
 import type { Position } from '#config/positions.ts';
@@ -41,7 +42,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 			requests: [],
 			isSubstitute: false,
 			positions,
-			canManage: false
+			canManage: false,
+			editable: false
 		};
 	}
 	const gameId = params.id;
@@ -52,12 +54,15 @@ export const load: ServerLoad = ({ locals, params }) => {
 			requests: [],
 			isSubstitute: false,
 			positions,
-			canManage: false
+			canManage: false,
+			editable: false
 		};
 	}
 
+	const game = getGame(actor, gameId);
 	return {
-		game: getGame(actor, gameId),
+		game,
+		editable: isLineupEditable(game),
 		availability: getAvailability(actor, gameId),
 		requests: listRequestsForGame(actor, gameId),
 		isSubstitute: isSubstitutePlayer(actor),
