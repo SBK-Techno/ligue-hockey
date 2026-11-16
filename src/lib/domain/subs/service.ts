@@ -5,6 +5,7 @@ import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts'
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import {
+	findOwnProfile,
 	getOwnProfile,
 	generationCandidates,
 	getPlayer,
@@ -19,6 +20,7 @@ import { newId } from '#lib/shared/ids/id.ts';
 import { clock, todayInZone, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
+	claimablePositions,
 	computeSubRequestWaves,
 	isTooLateForSubRequest
 } from './policy.ts';
@@ -121,7 +123,13 @@ function namesFor(requests: readonly SubRequestRow[]): Map<string, string> {
 export function getMySubProfile(actor: Actor): { positions: Position[] } {
 	const user = requireUser(actor);
 	const profile = findSubProfile(user.userId);
-	return { positions: profile ? parsePositions(profile.positionsJson) : [] };
+	const player = findOwnProfile(user);
+	return {
+		positions: claimablePositions(
+			profile ? parsePositions(profile.positionsJson) : [],
+			player?.position ?? null
+		)
+	};
 }
 
 export function saveMySubProfile(
@@ -410,9 +418,10 @@ export function claimSubstitute(
 	}
 
 	const profile = findSubProfile(user.userId);
-	const positions = profile
-		? parsePositions(profile.positionsJson)
-		: [player.position];
+	const positions = claimablePositions(
+		profile ? parsePositions(profile.positionsJson) : [],
+		player.position
+	);
 	if (!positions.includes(request.position)) {
 		throw new AppError('FORBIDDEN', { key: 'subs.notEligible' });
 	}

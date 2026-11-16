@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { RULE_MODES, ruleModeDefinition, type RuleMode } from '#config/rule-modes.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
@@ -9,6 +10,13 @@
 	const names = $derived(
 		new Map(data.players.map((player) => [player.userId, player.fullName]))
 	);
+	let selectedMode = $state<RuleMode>('together');
+	const selectedModeDefinition = $derived(ruleModeDefinition(selectedMode));
+	const badgeClass = {
+		ok: 'badge-ok',
+		alert: 'badge-alert',
+		ice: 'badge-ice'
+	} as const;
 </script>
 
 <FormFeedback {form} class="mb-4" />
@@ -40,11 +48,21 @@
 			</select>
 		</div>
 		<div>
-			<label class="label" for="kind">{t('admin.ruleKind')}</label>
-			<select class="input" id="kind" name="kind">
-				<option value="must">{t('admin.ruleMust')}</option>
-				<option value="must_not">{t('admin.ruleMustNot')}</option>
+			<label class="label" for="mode">{t('admin.ruleKind')}</label>
+			<select
+				class="input"
+				id="mode"
+				name="mode"
+				value={selectedMode}
+				onchange={(event) => (selectedMode = event.currentTarget.value as RuleMode)}
+			>
+				{#each RULE_MODES as mode (mode.key)}
+					<option value={mode.key}>{t(mode.labelKey)}</option>
+				{/each}
 			</select>
+			{#if selectedModeDefinition}
+				<p class="hint">{t(selectedModeDefinition.descriptionKey)}</p>
+			{/if}
 		</div>
 		<div class="sm:col-span-3">
 			<button class="btn-primary btn-sm" type="submit">{t('admin.addRule')}</button>
@@ -59,6 +77,7 @@
 {:else}
 	<ul role="list" class="space-y-2">
 		{#each data.rules as rule (rule.id)}
+			{@const mode = ruleModeDefinition(rule.mode)}
 			<li class="card flex flex-wrap items-center justify-between gap-3 py-3.5">
 				<div class="min-w-0">
 					<p class="text-sm font-semibold">
@@ -67,8 +86,8 @@
 						{names.get(rule.playerBId) ?? rule.playerBId}
 					</p>
 					<p class="mt-1">
-						<span class="badge {rule.kind === 'must' ? 'badge-ok' : 'badge-alert'}">
-							{rule.kind === 'must' ? t('admin.ruleMust') : t('admin.ruleMustNot')}
+						<span class="badge {mode ? badgeClass[mode.tone] : 'badge'}">
+							{mode ? t(mode.labelKey) : rule.mode}
 						</span>
 					</p>
 				</div>

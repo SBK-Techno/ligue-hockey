@@ -26,6 +26,12 @@ Le schéma fait foi : `config/env-schema.ts`. Le fichier `.env.example` contient
 | `NOTIFICATION_TICK_MS`, `NOTIFICATION_MAX_ATTEMPTS`, `NOTIFICATION_BATCH_SIZE`, `NOTIFICATION_CLAIM_TIMEOUT_MS` | File de notifications. |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error`. |
 
+### SMTP et TLS
+
+Le port 587 utilise STARTTLS : garde `SMTP_SECURE=false`, nodemailer négocie le chiffrement sur la connexion existante. `SMTP_SECURE=true` réserve le TLS implicite au port 465. Un `true` sur 587 fait échouer chaque envoi avec `wrong version number`, et la tâche reste en échec dans `notification_jobs.last_error`.
+
+Après un changement dans `.env`, recrée le conteneur pour que l'application relise la valeur. Vérifie ensuite l'envoi réel depuis l'écran d'invitation ou de réinitialisation, puis `notification_jobs.last_error`.
+
 Génération des secrets :
 
 ```bash

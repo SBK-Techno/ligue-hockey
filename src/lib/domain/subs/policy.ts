@@ -1,3 +1,5 @@
+import type { Position } from '#config/positions.ts';
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
@@ -8,6 +10,19 @@ export type SubRequestWaveInput = {
 	priorityGapHours: number;
 	lastCallMinutes: number;
 };
+
+/**
+ * Un remplaçant peut toujours prendre sa position principale, même s'il n'a
+ * jamais enregistré de préférences. La règle vit ici pour que l'affichage et
+ * le service de réclamation répondent la même chose.
+ */
+export function claimablePositions(
+	saved: readonly Position[],
+	primary: Position | null
+): Position[] {
+	if (saved.length > 0) return [...saved];
+	return primary ? [primary] : [];
+}
 
 export type SubRequestWaves = {
 	favoriteAt: number;

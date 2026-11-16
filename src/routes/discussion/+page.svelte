@@ -43,7 +43,7 @@
 
 <FormFeedback
 	{form}
-	class="fixed inset-x-4 bottom-24 z-40 mx-auto max-w-md shadow-lift sm:bottom-6"
+	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+0.75rem)] z-40 mx-auto max-w-md shadow-lift lg:bottom-6"
 />
 
 <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -51,15 +51,17 @@
 		<h1>{t('chat.title')}</h1>
 		<p class="mt-1.5 text-sm text-muted">{t('chat.subtitle')}</p>
 	</div>
-	<button
-		class="btn-secondary btn-sm"
-		type="button"
-		onclick={() => (showPoll = !showPoll)}
-		aria-expanded={showPoll}
-		aria-controls="poll-form"
-	>
-		{showPoll ? t('common.close') : t('chat.newPoll')}
-	</button>
+	{#if data.canCreatePoll}
+		<button
+			class="btn-secondary btn-sm"
+			type="button"
+			onclick={() => (showPoll = !showPoll)}
+			aria-expanded={showPoll}
+			aria-controls="poll-form"
+		>
+			{showPoll ? t('common.close') : t('chat.newPoll')}
+		</button>
+	{/if}
 </div>
 
 {#if showPoll}
@@ -150,7 +152,7 @@
 					<p class="mt-3 text-sm italic text-muted">{t('chat.deleted')}</p>
 				{:else if message.poll}
 					<div class="mt-3">
-						<p class="font-semibold">{message.poll.question}</p>
+						<p class="break-words font-semibold">{message.poll.question}</p>
 						{#if message.poll.closed}
 							<p class="badge mt-2">{t('chat.pollClosed')}</p>
 						{/if}
@@ -168,8 +170,8 @@
 											disabled={message.poll.closed}
 											aria-pressed={option.myVote}
 										>
-											<span>{option.label}</span>
-											<span class="badge">
+											<span class="min-w-0 break-words">{option.label}</span>
+											<span class="badge shrink-0">
 												{formatCount(option.votes, 'chat.votes.one', 'chat.votes.many')}
 											</span>
 										</button>
@@ -198,7 +200,12 @@
 
 <div bind:this={bottom}></div>
 
-<form method="POST" action="?/send" use:progressiveForm class="sticky bottom-20 mt-4 sm:bottom-4">
+<form
+	method="POST"
+	action="?/send"
+	use:progressiveForm
+	class="sticky bottom-[var(--bottom-bar-offset)] mt-4 lg:bottom-4"
+>
 	<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
 	<div class="flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 shadow-card">
 		<textarea

@@ -10,8 +10,8 @@ export const fr = {
   'common.close': 'Fermer',
   'common.none': 'Aucun',
   'common.unknown': 'Inconnu',
-  'common.optional': 'Facultatif',
-  'common.required': 'Requis',
+  'common.optional': 'Pas obligé',
+  'common.required': 'Obligatoire',
   'common.yes': 'Oui',
   'common.no': 'Non',
   'common.today': "Aujourd'hui",
@@ -25,7 +25,7 @@ export const fr = {
   'common.playerCount.one': '{count} joueur',
   'common.playerCount.many': '{count} joueurs',
   'common.administrator': 'Administrateur',
-  'common.you': 'Vous',
+  'common.you': 'Toi',
   'common.seeAll': 'Tout voir',
   'common.retry': 'Réessayer',
   'common.saved': 'Enregistré',
@@ -34,7 +34,7 @@ export const fr = {
   'common.hourShort': 'h',
   'common.minuteShort': 'min',
   'common.years': 'ans',
-  'common.optionalField': 'Facultatif',
+  'common.optionalField': 'Pas obligé',
   'common.showPassword': 'Afficher le mot de passe',
   'common.hidePassword': 'Masquer le mot de passe',
 
@@ -42,15 +42,15 @@ export const fr = {
   'brand.league': 'Ligue de hockey du dimanche matin',
   'install.title': 'Installer l’application',
   'install.body':
-    'Ajoutez la ligue à votre écran d’accueil pour l’ouvrir plus vite et recevoir les notifications.',
+    'Ajoute la ligue à ton écran d’accueil pour l’ouvrir plus vite et recevoir les notifications.',
   'install.action': 'Installer',
   'install.later': 'Plus tard',
   'install.ios':
-    'Sur iPhone, ouvrez cette page dans Safari, touchez Partager, puis Ajouter à l’écran d’accueil.',
+    'Sur iPhone, ouvre cette page dans Safari, touche Partager, puis Ajouter à l’écran d’accueil.',
   'install.android':
-    'Sur Android, ouvrez le menu du navigateur, puis touchez Installer l’application ou Ajouter à l’écran d’accueil.',
+    'Sur Android, ouvre le menu du navigateur, puis touche Installer l’application ou Ajouter à l’écran d’accueil.',
   'install.desktop':
-    'Dans Chrome ou Edge, cliquez sur l’icône d’installation dans la barre d’adresse.',
+    'Dans Chrome ou Edge, clique sur l’icône d’installation dans la barre d’adresse.',
 
   'nav.home': 'Accueil',
   'nav.games': 'Matchs',
@@ -62,43 +62,49 @@ export const fr = {
   'nav.openMenu': 'Ouvrir le menu',
   'nav.closeMenu': 'Fermer le menu',
   'nav.mainMenu': 'Menu principal',
+  'nav.accountMenu': 'Menu du compte',
+  'nav.backToLeague': 'Retour à la ligue',
   'nav.skip': 'Aller au contenu',
 
   'auth.title': 'Connexion',
-  'auth.subtitle': 'Entrez avec votre courriel et votre mot de passe.',
+  'auth.subtitle': 'Entre avec ton courriel et ton mot de passe.',
   'auth.welcome': 'Le hockey du dimanche matin',
-  'auth.lead': 'Horaire, présences, équipes, remplacements et paiements, réunis au même endroit.',
+  'auth.lead':
+    'Horaire, présences, équipes, remplacements et paiements, réunis au même endroit.',
   'auth.inviteOnly':
-    "L'accès se fait par invitation. Demandez-la à un responsable de la ligue.",
+    'L’accès se fait par invitation. Demande-la à un responsable de la ligue.',
   'auth.forgot': 'Mot de passe oublié?',
   'auth.reset.title': 'Mot de passe oublié',
   'auth.reset.lead':
-    'Entrez votre courriel. Si un compte existe, vous recevrez un lien pour choisir un nouveau mot de passe.',
+    'Entre ton courriel. Si un compte existe, tu recevras un lien pour choisir un nouveau mot de passe.',
   'auth.reset.submit': 'Envoyer le lien',
-  'auth.reset.sent': 'Si un compte existe pour ce courriel, le lien est en route.',
-  'auth.reset.success': 'Votre mot de passe a été modifié. Connectez-vous.',
+  'auth.reset.sent':
+    'Si un compte existe pour ce courriel, le lien est en route.',
+  'auth.reset.success': 'Ton mot de passe est modifié. Connecte-toi.',
   'auth.reset.back': 'Retour à la connexion',
   'auth.email': 'Adresse courriel',
   'auth.password': 'Mot de passe',
   'auth.submit': 'Se connecter',
   'auth.invalid': 'Adresse courriel ou mot de passe invalide.',
-  'auth.throttled': 'Trop de tentatives. Réessayez dans quelques minutes.',
-  'auth.loggedOut': 'Vous êtes déconnecté.',
-  'auth.sessionExpired': 'Votre session a expiré. Reconnectez-vous.',
+  'auth.throttled': 'Trop de tentatives. Réessaie dans quelques minutes.',
+  'auth.loggedOut': 'Tu es déconnecté.',
+  'auth.sessionExpired': 'Ta session a expiré. Reconnecte-toi.',
 
-  'invite.title': 'Choisissez votre mot de passe',
-  'invite.subtitle': 'Choisissez votre mot de passe.',
+  'invite.title': 'Choisis ton mot de passe',
+  'invite.subtitle': 'Choisis ton mot de passe.',
   'invite.lead':
-    'Choisissez un mot de passe pour accéder à votre horaire, vos présences et votre solde.',
+    'Choisis un mot de passe pour accéder à ton horaire, tes présences et ton solde.',
   'invite.password': 'Nouveau mot de passe',
-  'invite.confirm': 'Confirmez le mot de passe',
+  'invite.confirm': 'Confirme le mot de passe',
   'invite.submit': 'Enregistrer le mot de passe',
   'invite.mismatch': 'Les mots de passe ne correspondent pas.',
-  'invite.tooShort': 'Le mot de passe doit contenir au moins {count} caractères.',
+  'invite.tooShort':
+    'Le mot de passe doit contenir au moins {count} caractères.',
   'invite.expiry': 'Ce lien est valable {count} jours.',
   'invite.expired': 'Cette invitation est expirée ou a déjà été utilisée.',
-  'invite.expiredHelp': 'Demandez une nouvelle invitation à un responsable de la ligue.',
-  'invite.success': 'Votre mot de passe est enregistré. Connectez-vous.',
+  'invite.expiredHelp':
+    'Demande une nouvelle invitation à un responsable de la ligue.',
+  'invite.success': 'Ton mot de passe est enregistré. Connecte-toi.',
 
   'position.forward': 'Attaquant',
   'position.forward.short': 'ATT',
@@ -153,8 +159,7 @@ export const fr = {
   'settings.seasonLabel.description':
     'Affiché dans l’application et les rappels.',
   'settings.defaultLocation.label': 'Aréna par défaut',
-  'settings.defaultLocation.description':
-    'Prérempli à la création d’un match.',
+  'settings.defaultLocation.description': 'Prérempli à la création d’un match.',
   'settings.defaultStartTime.label': 'Heure par défaut',
   'settings.defaultStartTime.description':
     'Heure préremplie à la création d’un match.',
@@ -205,6 +210,15 @@ export const fr = {
   'settings.installment1Due.label': 'Date du premier versement',
   'settings.installment2Due.label': 'Date du deuxième versement',
   'settings.currency.label': 'Devise',
+  'settings.maxSkillSpread.label': 'Écart de notes maximal',
+  'settings.maxSkillSpread.description':
+    'Refuse un alignement dont la moyenne de notes dépasse cet écart. 0 laisse le générateur choisir.',
+  'settings.maxAgeSpread.label': 'Écart d’âge maximal',
+  'settings.maxAgeSpread.description':
+    'Refuse un alignement dont la moyenne d’âge dépasse cet écart. 0 laisse le générateur choisir.',
+  'settings.maxSizeSpread.label': 'Écart de joueurs maximal',
+  'settings.maxSizeSpread.description':
+    'Refuse un alignement avec trop de joueurs d’un côté. 0 laisse le générateur choisir.',
   'settings.skillTolerance.label': 'Tolérance d’écart de note',
   'settings.skillTolerance.description':
     'Écart maximal de notes combinées avant de considérer l’âge. Échelle de {min} à {max}.',
@@ -212,8 +226,7 @@ export const fr = {
   'settings.maxPlayers.description':
     'Limite de sécurité pour la génération des équipes. Au moins {minimum} joueurs pour couvrir toutes les positions d’un match.',
   'settings.maxMessageLength.label': 'Longueur des messages',
-  'settings.maxMessageLength.description':
-    'Caractères maximaux par message.',
+  'settings.maxMessageLength.description': 'Caractères maximaux par message.',
   'settings.maxPollOptions.label': 'Options de sondage',
   'settings.maxPollOptions.description': 'Nombre maximal de choix.',
   'settings.pollMinOptions.label': 'Options minimales',
@@ -230,18 +243,17 @@ export const fr = {
     'La date du premier versement doit précéder celle du deuxième.',
   'settings.invariant.notificationWindow':
     'La fenêtre de notification dépasse le maximum autorisé.',
-  'settings.invariant.roster':
-    'Une équipe doit avoir au moins un joueur.',
+  'settings.invariant.roster': 'Une équipe doit avoir au moins un joueur.',
   'settings.invariant.maxPlayers':
     'Le maximum de joueurs doit couvrir toutes les positions d’un match.',
 
   'home.greeting': 'Bonjour, {name}',
   'home.nextGame': 'Prochain match',
   'home.noGame': 'Aucun match à l’horaire',
-  'home.availability': 'Votre présence',
-  'home.team': 'Votre équipe',
+  'home.availability': 'Ta présence',
+  'home.team': 'Ton équipe',
   'home.openSlots': 'Positions à pourvoir',
-  'home.balance': 'Votre solde',
+  'home.balance': 'Ton solde',
   'home.balanceOwed': '{amount} à payer',
   'home.balanceClear': 'À jour',
   'home.balanceOverdue': 'En retard',
@@ -249,14 +261,27 @@ export const fr = {
   'home.admin': 'Raccourcis',
   'home.manageGame': 'Gérer le match',
   'home.viewGame': 'Voir le match',
-  'home.noGameHelp': 'La prochaine date sera affichée dès qu’elle sera publiée.',
-  'home.awaitingReply': 'Vous n’avez pas encore répondu.',
+  'home.noGameHelp':
+    'La prochaine date sera affichée dès qu’elle sera publiée.',
+  'home.noGameHelpAdmin':
+    'Crée le prochain match pour ouvrir les présences et préparer l’alignement.',
+  'home.createGame': 'Créer un match',
+  'home.adminHero':
+    'Tu vois le prochain match comme les joueurs. L’horaire et les alignements se gèrent dans la gestion.',
+  'home.manageSchedule': 'Gérer l’horaire',
+  'home.adminOpenSlots':
+    'Aucune place ouverte. Ouvre une demande depuis un match de l’horaire.',
+  'home.openRequest': 'Ouvrir une demande',
+  'home.management': 'Gestion de la ligue',
+  'home.managementHelp': 'Les raccourcis de la semaine.',
+  'home.manageBalances': 'Voir les soldes',
+  'home.awaitingReply': 'Tu n’as pas encore répondu.',
   'home.replyPresent': 'Présence confirmée.',
   'home.replyAbsent': 'Absence indiquée.',
   'home.upcoming': 'À venir',
   'home.allGames': 'Tout l’horaire',
   'home.substituteNotice':
-    'Vous êtes remplaçant. Les demandes de dernière minute apparaissent ici.',
+    'Tu es remplaçant. Les demandes de dernière minute apparaissent ici.',
   'home.balanceNone': 'Aucun montant à payer pour le moment.',
   'home.chatPreview': 'Dans la discussion',
   'home.attendance': 'Présences',
@@ -265,14 +290,16 @@ export const fr = {
   'home.pending': 'Pas encore répondu',
   'home.deadline': 'Réponse attendue avant le {date}.',
   'home.cancelled': 'Ce match est annulé.',
-  'home.lineupSoon': 'Les équipes seront publiées après la fermeture des présences.',
+  'home.lineupSoon':
+    'Les équipes seront publiées après la fermeture des présences.',
   'home.balanceDue': 'À payer',
   'home.substituteCta': 'Voir les places',
   'home.everyoneAnswered': 'Tout le monde a répondu.',
   'home.noPlayerProfile':
-    'Votre compte n’est pas lié à un profil de joueur. Un responsable peut vous en créer un.',
-  'subs.emptyHelp': 'Les places s’affichent dès qu’un joueur régulier se désiste.',
-  'subs.ownRequestOpen': 'Votre place est offerte à un remplaçant.',
+    'Ton compte n’est pas lié à un profil de joueur. Un responsable peut t’en créer un.',
+  'subs.emptyHelp':
+    'Les places s’affichent dès qu’un joueur régulier se désiste.',
+  'subs.ownRequestOpen': 'Ta place est offerte à un remplaçant.',
   'chat.pollTag': 'Sondage',
   'chat.emptyHelp': 'La discussion de la ligue apparaîtra ici.',
 
@@ -305,13 +332,17 @@ export const fr = {
   'games.adminCancel': 'Annuler le match',
   'games.notes': 'Notes',
   'games.noNotes': 'Aucune note.',
-  'games.teamBalance':
-    'Écart de notes : {skill} · écart d’âge : {age} ans',
+  'games.teamBalance': 'Écart de notes : {skill} · écart d’âge : {age} ans',
   'games.balanceNote':
     'L’alignement tient compte du niveau et de l’âge des joueurs. Les notes restent confidentielles.',
   'games.rulesConflict': 'Règles incompatibles',
+  'games.limitConflict': 'Les écarts demandés ne sont pas respectés',
+  'games.limitConflictHelp':
+    'Aucun alignement ne respecte les écarts de notes, d’âge ou de joueurs. Ajuste les réglages ou les présences.',
+  'games.rulesConflictPlayer':
+    'Un ajustement est nécessaire. Un responsable va corriger l’alignement.',
   'games.rulesConflictHelp':
-    'Aucun alignement ne respecte toutes les règles. Ajustez les règles ou l’alignement.',
+    'Aucun alignement ne respecte toutes les règles. Ajuste les règles ou l’alignement.',
   'games.ratingsMissing':
     'Certains joueurs n’ont pas encore d’évaluations complètes.',
   'games.noMatch': 'Ce match est introuvable.',
@@ -341,6 +372,8 @@ export const fr = {
   'subs.requestedBy': 'Demandée par {name}',
   'subs.rules':
     'Les favoris sont avisés en premier, puis la banque de remplaçants. La première personne admissible qui prend la place est confirmée.',
+  'games.lineupSoonAdmin':
+    'Génère l’alignement quand les présences sont prêtes.',
   'games.lineupSoon':
     'L’alignement sera publié après la fermeture des présences.',
   'subs.subtitle': 'Les places ouvertes et la banque de remplaçants.',
@@ -349,22 +382,24 @@ export const fr = {
   'subs.poolEmpty': 'Aucun remplaçant inscrit.',
   'subs.viewGame': 'Voir le match',
   'subs.notInPoolHelp':
-    'Demandez à un responsable de la ligue de vous ajouter à la banque.',
+    'Demande à un responsable de la ligue de t’ajouter à la banque.',
+  'subs.adminNotice':
+    'Tu vois les places ouvertes et la banque. Les favoris et les positions se gèrent dans la gestion des joueurs.',
+  'subs.managePool': 'Gérer la banque',
   'subs.favorite': 'Favori',
   'subs.addFavorite': 'Marquer comme favori',
   'subs.removeFavorite': 'Retirer des favoris',
-  'subs.favoriteHelp':
-    'Les favoris sont avisés avant la liste générale.',
+  'subs.favoriteHelp': 'Les favoris sont avisés avant la liste générale.',
   'subs.positions': 'Positions acceptées',
   'subs.positionsHelp':
-    'Vous recevrez seulement les demandes pour ces positions.',
+    'Tu recevras seulement les demandes pour ces positions.',
   'subs.openRequest': 'Position ouverte',
   'subs.requestFor': '{position} recherché(e)',
   'subs.claim': 'Je prends cette position',
   'subs.release': 'Me retirer du match',
-  'subs.claimed': 'Position confirmée. Vous êtes assigné à ce match.',
+  'subs.claimed': 'Position confirmée. Tu es dans ce match.',
   'subs.claimTaken': 'Cette position vient d’être prise.',
-  'subs.notEligible': 'Vous ne pouvez pas prendre cette position.',
+  'subs.notEligible': 'Tu ne peux pas prendre cette position.',
   'subs.requestCreated': 'Demande de remplaçant créée.',
   'subs.requestCancelled': 'Demande annulée.',
   'subs.cancelRequest': 'Annuler la demande',
@@ -372,31 +407,34 @@ export const fr = {
   'subs.choosePosition': 'Position recherchée',
   'subs.noneOpen': 'Aucune position ouverte.',
   'subs.substituteList': 'Banque de remplaçants',
-  'subs.notInPool': 'Vous n’êtes pas inscrit comme remplaçant.',
-  'subs.profileSaved': 'Vos positions ont été enregistrées.',
+  'subs.notInPool': 'Tu n’es pas inscrit comme remplaçant.',
+  'subs.profileSaved': 'Tes positions sont enregistrées.',
   'subs.add': 'Ajouter un remplaçant',
   'subs.remove': 'Retirer',
   'subs.notifyFavorites': 'Favoris avisés en premier',
   'subs.notifyGeneral': 'Liste générale avisée ensuite',
   'subs.requestedAt': 'Demandé {when}',
   'subs.filledBy': 'Comblé par {name}',
-  'subs.yourRequests': 'Vos demandes',
-  'subs.declined':
-    'Position retirée. Vous n’êtes plus assigné à ce match.',
+  'subs.yourRequests': 'Tes demandes',
+  'subs.declined': 'Position retirée. Tu n’es plus dans ce match.',
   'subs.notSubstitute': 'Ce joueur n’est pas inscrit comme remplaçant.',
   'subs.gameStarted': 'Ce match est déjà commencé.',
-  'subs.alreadyPlaying': 'Vous êtes déjà assigné à ce match.',
+  'subs.alreadyPlaying': 'Tu es déjà dans ce match.',
   'subs.requestNotFound': 'Demande introuvable.',
   'subs.requestNotActive': 'Cette demande n’est plus active.',
   'subs.gameNotScheduled': 'Ce match n’est pas ouvert aux remplaçants.',
 
   'balance.title': 'Solde',
-  'balance.subtitle': 'Ce que vous avez payé et ce qu’il reste.',
+  'balance.subtitle': 'Ce que tu as payé et ce qu’il reste.',
+  'balance.subtitleAdmin': 'Les cotisations et les paiements de la saison.',
+  'balance.adminNoProfile':
+    'Ton compte n’a pas de fiche de joueur. Les soldes des joueurs se gèrent dans l’administration.',
+  'balance.manageAll': 'Voir tous les soldes',
   'balance.noPlanHelp':
-    'Un responsable vous informera du montant et des dates de versement.',
+    'Un responsable va t’informer du montant et des dates de paiement.',
   'balance.paymentMethods': 'Modes de paiement : {methods}.',
   'balance.payHelp':
-    'Pour payer, utilisez la méthode convenue avec un responsable. Le versement apparaîtra ici dès qu’il sera enregistré.',
+    'Pour payer, utilise la méthode convenue avec un responsable. Le paiement apparaîtra ici dès qu’il sera enregistré.',
   'balance.paidOf': 'Payé {paid} sur {total}.',
   'balance.remaining': 'Reste {amount}.',
   'balance.total': 'Frais de saison',
@@ -419,7 +457,7 @@ export const fr = {
   'balance.method': 'Méthode',
   'balance.note': 'Note',
   'balance.history': 'Historique',
-  'balance.onlyYou': 'Visible par vous et les administrateurs.',
+  'balance.onlyYou': 'Visible par toi et l’administration.',
   'balance.adminTitle': 'Soldes des joueurs',
   'balance.overdueNotice': 'Un montant de {amount} est en retard.',
   'balance.editPlan': 'Modifier le plan',
@@ -427,7 +465,7 @@ export const fr = {
   'balance.firstDue': 'Première date',
   'balance.secondDue': 'Deuxième date',
   'balance.firstPercent': 'Part du premier versement',
-  'balance.amountInvalid': 'Entrez un montant valide.',
+  'balance.amountInvalid': 'Entre un montant valide.',
   'balance.paymentNotFound': 'Versement introuvable.',
   'balance.applyDefaults': 'Appliquer les frais par défaut',
 
@@ -435,13 +473,14 @@ export const fr = {
   'chat.subtitle': 'Les messages et les sondages de la ligue.',
   'chat.publishPoll': 'Publier le sondage',
   'chat.optionNumber': 'Choix {number}',
-  'chat.messageLabel': 'Votre message',
-  'chat.deleteConfirm': 'Supprimer ce message? Il disparaîtra pour tout le monde.',
+  'chat.messageLabel': 'Ton message',
+  'chat.deleteConfirm':
+    'Supprimer ce message? Il disparaîtra pour tout le monde.',
   'chat.closePollConfirm': 'Clôturer ce sondage? Les votes seront figés.',
-  'chat.placeholder': 'Écrivez un message…',
+  'chat.placeholder': 'Écris un message…',
   'chat.send': 'Envoyer',
   'chat.sent': 'Message envoyé.',
-  'chat.empty': 'Aucun message. Lancez la discussion.',
+  'chat.empty': 'Aucun message. Lance la discussion.',
   'chat.newPoll': 'Créer un sondage',
   'chat.pollQuestion': 'Question',
   'chat.pollOptions': 'Choix',
@@ -456,7 +495,7 @@ export const fr = {
   'chat.delete': 'Supprimer',
   'chat.deleted': 'Message supprimé',
   'chat.tooLong': 'Le message est trop long.',
-  'chat.pollNeedsOptions': 'Ajoutez au moins {min} choix.',
+  'chat.pollNeedsOptions': 'Ajoute au moins {min} choix.',
   'chat.pollCreated': 'Sondage créé.',
   'chat.voteSaved': 'Vote enregistré.',
   'chat.voteClosed': 'Ce sondage est clôturé.',
@@ -468,7 +507,6 @@ export const fr = {
   'chat.messageNotFound': 'Message introuvable.',
 
   'profile.title': 'Mon profil',
-  'profile.subtitle': 'Vos renseignements',
   'profile.firstName': 'Prénom',
   'profile.lastName': 'Nom',
   'profile.email': 'Adresse courriel',
@@ -482,34 +520,82 @@ export const fr = {
   'profile.pushDisable': 'Désactiver sur cet appareil',
   'profile.pushEnabled': 'Notifications activées sur cet appareil.',
   'profile.pushUnsupported':
-    'Votre navigateur ne prend pas en charge les notifications push.',
+    'Ton navigateur ne prend pas en charge les notifications push.',
   'profile.pushDenied':
     'Les notifications sont bloquées dans les réglages du navigateur.',
   'profile.pushUnconfigured':
-    'Les notifications push ne sont pas configurées pour la ligue.',
-  'profile.pushFailed': 'Impossible d’activer les notifications. Réessayez.',
+    'Les notifications push ne sont pas activées pour la ligue.',
+  'profile.pushFailed': 'Impossible d’activer les notifications. Réessaie.',
   'profile.notificationsHelp':
-    'Choisissez comment la ligue vous avise. Le courriel et cet appareil se règlent séparément.',
+    'Choisis comment la ligue t’avise. Le courriel et cet appareil se règlent séparément.',
   'profile.pushIosInstall':
-    'Sur iPhone, ajoutez d’abord l’application à l’écran d’accueil.',
+    'Sur iPhone, ajoute d’abord l’application à l’écran d’accueil.',
   'profile.saved': 'Profil enregistré.',
   'profile.changePassword': 'Changer le mot de passe',
   'profile.currentPassword': 'Mot de passe actuel',
   'profile.newPassword': 'Nouveau mot de passe',
   'profile.passwordChanged': 'Mot de passe modifié.',
-  'profile.balance': 'Votre solde',
+  'profile.balance': 'Ton solde',
   'profile.ratingsHidden':
     'Les notes restent confidentielles. Elles servent seulement à balancer les équipes.',
   'profile.ageHelp': 'Sert à équilibrer l’âge des deux équipes.',
   'profile.positionHelp':
-    'Votre position principale. Elle guide le balancement des équipes.',
+    'Ta position principale. Elle guide le balancement des équipes.',
   'profile.currentPasswordInvalid': 'Le mot de passe actuel est incorrect.',
-  'profile.ageInvalid': 'Entrez un âge valide.',
+  'profile.ageInvalid': 'Entre un âge valide.',
 
+  'profile.account': 'Ton compte',
+  'profile.accountHelp': 'Ton nom, ton courriel et ton rôle dans la ligue.',
+  'profile.displayName': 'Nom affiché',
+  'profile.displayNameHelp': 'Le nom que les autres voient dans l’application.',
+  'profile.identitySaved': 'Ton nom est enregistré.',
+  'profile.playerNameManaged':
+    'Ton nom de joueur se change dans ta fiche de joueur.',
+  'profile.playerSection': 'Ta fiche de joueur',
+  'profile.playerSectionHelp':
+    'Ces infos servent aux alignements et à la banque de remplaçants.',
+  'profile.jersey': 'Numéro de chandail',
+  'profile.jerseyHelp': 'Entre 1 et 99. Il apparaît dans les alignements.',
+  'profile.memberSince': 'Membre depuis {date}',
+  'profile.sections': 'Sections du profil',
+  'profile.tab.account': 'Compte',
+  'profile.tab.player': 'Fiche de joueur',
+  'profile.tab.notifications': 'Notifications',
+  'profile.tab.security': 'Sécurité',
+  'profile.tab.admin': 'Administration',
+  'profile.emailReadOnly':
+    'Ton courriel sert à te connecter. Il ne se change pas dans l’application.',
+  'profile.noPlayerSheetAdmin':
+    'Ton compte n’a pas de fiche de joueur. Les fiches des joueurs se gèrent dans l’administration.',
+  'profile.createPlayerSheet': 'Gérer les joueurs',
+  'profile.quickLinks': 'Raccourcis',
+  'profile.inbox': 'Tes notifications',
+  'profile.inboxHelp': 'Les avis de match, de remplacement et de solde.',
+  'profile.notificationsInbox': 'Ouvrir mes notifications',
+  'profile.security': 'Sécurité',
+  'profile.securityHelp':
+    'Ton mot de passe et les appareils connectés à ton compte.',
+  'profile.sessions': 'Appareils connectés',
+  'profile.sessionsHelp':
+    'Les navigateurs qui ont ouvert ton compte. Déconnecte ceux que tu ne reconnais pas.',
+  'profile.currentDevice': 'Cet appareil',
+  'profile.unknownDevice': 'Appareil inconnu',
+  'profile.revokeOthers': 'Déconnecter les autres appareils',
+  'profile.revokeOthersConfirm':
+    'Déconnecter tous les autres appareils? Ils devront se reconnecter.',
+  'profile.noOtherSessions': 'Aucun autre appareil n’était connecté.',
+  'profile.sessionsRevoked.one': '{count} appareil déconnecté.',
+  'profile.sessionsRevoked.many': '{count} appareils déconnectés.',
+  'profile.adminSection': 'Administration',
+  'profile.adminHelp':
+    'Tu gères la ligue. Ces raccourcis ouvrent les écrans d’administration.',
+  'profile.signOutHelp': 'Tu peux fermer ta session sur cet appareil.',
   'notifications.title': 'Notifications',
   'notifications.empty': 'Aucune notification.',
   'notifications.emptyHelp':
     'Les avis de match, de remplacement et de solde apparaîtront ici.',
+  'notifications.emptyHelpAdmin':
+    'Les avis de remplacement comblé apparaissent ici. Les alertes de gestion restent dans l’administration.',
   'notifications.noneUnread': 'Tout est lu.',
   'notifications.markAll': 'Tout marquer comme lu',
   'notifications.allRead': 'Toutes les notifications sont marquées comme lues.',
@@ -524,46 +610,70 @@ export const fr = {
     'Position {position} comblée par {name} pour le match du {date}.',
   'notifications.subBumped.title': 'Position retirée',
   'notifications.subBumped.body':
-    'Le joueur régulier est de retour. Vous n’êtes plus assigné au match du {date}.',
-  'notifications.accountAccess.title': 'Votre accès à la ligue',
+    'Le joueur régulier est de retour. Tu n’es plus dans le match du {date}.',
+  'notifications.accountAccess.title': 'Ton accès à la ligue',
   'notifications.accountAccess.body':
-    'Choisissez votre mot de passe pour entrer dans l’application.',
+    'Choisis ton mot de passe pour entrer dans l’application.',
   'notifications.passwordReset.title': 'Réinitialisation du mot de passe',
   'notifications.passwordReset.body':
-    'Choisissez un nouveau mot de passe pour votre compte.',
+    'Choisis un nouveau mot de passe pour ton compte.',
   'notifications.gameCancelled.title': 'Match annulé',
-  'notifications.gameCancelled.body':
-    'Le match du {date} à {time} est annulé.',
+  'notifications.gameCancelled.body': 'Le match du {date} à {time} est annulé.',
   'notifications.channel.inApp': 'Dans l’application',
   'notifications.channel.email': 'Courriel',
   'notifications.channel.push': 'Notification push',
   'notifications.balanceOverdue.title': 'Solde en retard',
   'notifications.balanceOverdue.body':
-    'Un montant de {amount} est exigible depuis le {date}.',
+    'Le montant de {amount} est à payer depuis le {date}.',
 
   'email.greeting': 'Bonjour {name},',
   'email.accountAccess.lead':
-    'Votre place dans la ligue est prête. Il ne reste qu’à choisir votre mot de passe.',
+    'Ta place dans la ligue est prête. Il reste juste à choisir ton mot de passe.',
   'email.accountAccess.cta': 'Choisir mon mot de passe',
   'email.accountAccess.expiry': 'Ce lien est valable {count} jours.',
   'email.accountAccess.ignore':
-    'Si vous n’avez pas demandé ce lien, vous pouvez ignorer ce courriel.',
+    'Si tu n’as pas demandé ce lien, tu peux ignorer ce courriel.',
   'email.passwordReset.lead':
-    'Vous avez demandé un nouveau mot de passe pour votre compte de la ligue.',
+    'Tu as demandé un nouveau mot de passe pour ton compte de la ligue.',
   'email.passwordReset.cta': 'Choisir un nouveau mot de passe',
   'email.passwordReset.ignore':
-    'Si vous n’avez pas demandé ce changement, ignorez ce courriel. Votre mot de passe actuel reste valide.',
+    'Si tu n’as pas demandé ce changement, ignore ce courriel. Ton mot de passe actuel reste bon.',
   'email.fallback':
-    'Le bouton ne fonctionne pas? Copiez ce lien dans votre navigateur.',
+    'Le bouton ne fonctionne pas? Copie ce lien dans ton navigateur.',
   'email.footer.league': 'Ligue de hockey du dimanche matin',
   'email.footer.organisation': 'Présenté par SBK Technologies',
   'email.openApp': 'Ouvrir l’application',
   'email.manage': 'Gérer mes avis',
-  'email.unsubscribe': 'Vous recevez ce courriel parce que vous faites partie de la ligue.',
+  'email.unsubscribe':
+    'Tu reçois ce courriel parce que tu fais partie de la ligue.',
 
   'admin.title': 'Administration',
+  'admin.account': 'Compte du membre',
+  'admin.accountHelp': 'Le rôle, l’accès et les infos du membre.',
+  'admin.role': 'Rôle',
+  'admin.roleHelp':
+    'Chaque rôle ouvre un ensemble de capacités. Les capacités du rôle choisi sont listées dessous.',
+  'admin.roleSaved': 'Rôle enregistré.',
+  'admin.status': 'Accès',
+  'admin.statusHelp':
+    'Un joueur désactivé reste dans l’historique, mais sort des alignements et de la banque de remplaçants.',
+  'admin.statusSaved': 'Accès enregistré.',
+  'admin.active': 'Actif',
+  'admin.inactive': 'Désactivé',
+  'admin.deletePlayer': 'Supprimer le joueur',
+  'admin.deletePlayerTitle': 'Supprimer {name}?',
+  'admin.deletePlayerConfirm':
+    'Le compte, la fiche, les présences, les évaluations, les paiements, les messages et les règles seront supprimés. Cette action est définitive.',
+  'admin.deletePlayerHelp':
+    'Pour garder l’historique, désactive le joueur au lieu de le supprimer.',
+  'admin.roleSelf': 'Tu ne peux pas changer ton propre rôle.',
+  'admin.deleteSelf': 'Tu ne peux pas supprimer ton propre compte.',
+  'admin.deleteAdmin': 'Retire le rôle d’admin avant de supprimer ce compte.',
+  'admin.playerDeleteFailed': 'Le joueur n’a pas pu être supprimé.',
+  'admin.jerseyNumber': 'Numéro de chandail',
+
   'admin.dashboard': 'Tableau de bord',
-  'admin.dashboardHelp': 'Ce qui demande votre attention cette semaine.',
+  'admin.dashboardHelp': 'Ce qui presse cette semaine.',
   'admin.players': 'Joueurs',
   'admin.searchPlayers': 'Rechercher un joueur',
   'admin.resetPassword': 'Réinitialiser le mot de passe',
@@ -575,10 +685,11 @@ export const fr = {
     'Désactiver {name}? Il ne sera plus considéré pour les alignements.',
   'admin.games': 'Matchs',
   'admin.gamesHelp':
-    'La prochaine date est proposée automatiquement. Vérifiez l’heure et l’aréna avant de créer.',
+    'La prochaine date est proposée automatiquement. Vérifie l’heure et l’aréna avant de créer.',
   'admin.backToGames': 'Retour aux matchs',
-  'admin.generatedSummary': 'Joueurs placés : {players}. Places libres : {open}.',
-  'admin.dangerZone': 'Zone sensible',
+  'admin.generatedSummary':
+    'Joueurs placés : {players}. Places libres : {open}.',
+  'admin.dangerZone': 'Zone à risque',
   'admin.cancelHelp':
     'L’annulation avise tous les joueurs et ne peut pas être annulée.',
   'admin.cancelGameQuestion':
@@ -591,18 +702,19 @@ export const fr = {
   'admin.backToPlayers': 'Retour aux joueurs',
   'balance.deletePaymentConfirm':
     'Supprimer ce versement? Le solde sera recalculé.',
-  'admin.settings': 'Paramètres',
+  'admin.settings': 'Réglages',
   'admin.settingsHelp':
     'Les réglages de la ligue. Les changements s’appliquent dès l’enregistrement.',
   'admin.substitutes': 'Remplaçants',
   'admin.addPlayer': 'Ajouter un joueur',
   'admin.editPlayer': 'Modifier le joueur',
   'admin.invite': 'Envoyer l’invitation',
-  'admin.inviteSent': 'Invitation envoyée à {email}.',
+  'admin.inviteSent':
+    'Invitation créée pour {email}. Le courriel est en file d’envoi.',
   'admin.inviteEmailFailed':
-    'Joueur créé, mais l’invitation n’a pas pu être envoyée. Vous pouvez la renvoyer.',
+    'Joueur créé, mais le courriel n’a pas pu être mis en file. Tu peux renvoyer le lien.',
   'admin.reinvite': 'Réinitialiser le mot de passe',
-  'admin.inviteResent': 'Lien de réinitialisation envoyé.',
+  'admin.inviteResent': 'Nouveau lien en file d’envoi.',
   'admin.paymentDeleted': 'Versement supprimé.',
   'rating.notRated': 'Non noté',
   'balance.applyDefaultsConfirm':
@@ -613,25 +725,39 @@ export const fr = {
   'admin.finance': 'Cotisation',
   'admin.rulesTitle': 'Règles d’alignement',
   'admin.rulesHelp':
-    'Les paires qui doivent jouer ensemble ou qui ne doivent jamais jouer ensemble.',
+    'Les paires qui doivent jouer ensemble, celles qui doivent rester séparées, et les préférences plus souples.',
   'admin.addRule': 'Ajouter une règle',
   'admin.choosePlayer': 'Choisir un joueur',
   'admin.choosePosition': 'Choisir une position',
   'admin.noResults': 'Aucun joueur ne correspond à la recherche.',
   'admin.rulesEmpty':
     'Aucune règle. Les équipes sont générées sans contrainte de paire.',
-  'admin.deleteRuleConfirm': 'Supprimer cette règle? Elle ne s’appliquera plus aux prochains alignements.',
-  'admin.ruleMust': 'Doivent jouer ensemble',
-  'admin.ruleMustNot': 'Ne doivent pas jouer ensemble',
+  'admin.deleteRuleConfirm':
+    'Supprimer cette règle? Elle ne s’appliquera plus aux prochains alignements.',
+  'ruleMode.together': 'Doivent jouer ensemble',
+  'ruleMode.togetherHelp': 'L’alignement place toujours ces deux joueurs dans la même équipe.',
+  'ruleMode.togetherShort': 'Ensemble',
+  'ruleMode.apart': 'Ne doivent pas jouer ensemble',
+  'ruleMode.apartHelp': 'L’alignement place toujours ces deux joueurs dans des équipes différentes.',
+  'ruleMode.apartShort': 'Séparés',
+  'ruleMode.preferTogether': 'Devraient jouer ensemble',
+  'ruleMode.preferTogetherHelp':
+    'L’alignement essaie de les mettre ensemble, sans bloquer une meilleure répartition.',
+  'ruleMode.preferTogetherShort': 'Ensemble si possible',
+  'ruleMode.preferApart': 'Devraient éviter de jouer ensemble',
+  'ruleMode.preferApartHelp':
+    'L’alignement essaie de les séparer, sans bloquer une meilleure répartition.',
+  'ruleMode.preferApartShort': 'Séparés si possible',
+  'admin.ruleViolations': 'Règles à vérifier',
   'admin.rulePlayerA': 'Joueur A',
   'admin.rulePlayerB': 'Joueur B',
   'admin.ruleKind': 'Type de règle',
   'admin.ruleExists': 'Une règle existe déjà pour cette paire.',
-  'admin.ruleSelf': 'Choisissez deux joueurs différents.',
+  'admin.ruleSelf': 'Choisis deux joueurs différents.',
   'admin.ruleSaved': 'Règle enregistrée.',
   'admin.ruleDeleted': 'Règle supprimée.',
   'admin.deleteRule': 'Supprimer',
-  'admin.settingsSaved': 'Paramètres enregistrés.',
+  'admin.settingsSaved': 'Réglages enregistrés.',
   'admin.playerSaved': 'Joueur enregistré.',
   'admin.gameSaved': 'Match enregistré.',
   'admin.gameCancelled': 'Match annulé.',
@@ -644,6 +770,37 @@ export const fr = {
   'admin.search': 'Rechercher',
   'admin.roles': 'Rôles',
   'admin.role.admin': 'Administrateur',
+  'capability.member': 'Membre',
+  'capability.memberHelp': 'Utiliser l’application de la ligue.',
+  'capability.claimSubs': 'Prendre des remplacements',
+  'capability.claimSubsHelp': 'Voir les places ouvertes et prendre celle qui convient.',
+  'capability.manageOwnAvailability': 'Gérer sa présence',
+  'capability.manageOwnAvailabilityHelp': 'Répondre présent ou absent aux matchs.',
+  'capability.managePlayers': 'Gérer les joueurs',
+  'capability.managePlayersHelp': 'Créer, modifier, désactiver et supprimer des comptes.',
+  'capability.editRatings': 'Gérer les notes',
+  'capability.editRatingsHelp': 'Voir et modifier les notes confidentielles.',
+  'capability.manageGames': 'Gérer les matchs',
+  'capability.manageGamesHelp': 'Créer l’horaire et générer les alignements.',
+  'capability.manageRules': 'Gérer les règles',
+  'capability.manageRulesHelp': 'Créer et retirer les règles d’alignement.',
+  'capability.manageSettings': 'Gérer les réglages',
+  'capability.manageSettingsHelp': 'Modifier le fonctionnement de la ligue.',
+  'capability.manageSubs': 'Gérer les remplaçants',
+  'capability.manageSubsHelp': 'Ouvrir, combler et annuler des demandes.',
+  'capability.moderateChat': 'Modérer la discussion',
+  'capability.moderateChatHelp': 'Supprimer des messages et créer des sondages.',
+  'capability.recordPayments': 'Enregistrer les paiements',
+  'capability.recordPaymentsHelp': 'Entrer les montants reçus.',
+  'capability.viewAllBalances': 'Voir tous les soldes',
+  'capability.viewAllBalancesHelp': 'Consulter le solde de chaque joueur.',
+  'capability.viewAdmin': 'Accéder à la gestion',
+  'capability.viewAdminHelp': 'Ouvrir l’espace de gestion de la ligue.',
+  'admin.role.playerHelp': 'Un joueur gère sa présence, son profil et son solde.',
+  'admin.role.managerHelp':
+    'Un responsable gère les matchs, les remplaçants et la discussion, sans toucher aux comptes ni aux réglages.',
+  'admin.role.adminHelp': 'Un admin gère tout, y compris les comptes, les rôles et les réglages.',
+  'admin.role.manager': 'Responsable',
   'admin.role.player': 'Joueur',
   'admin.makeAdmin': 'Nommer administrateur',
   'admin.removeAdmin': 'Retirer administrateur',
@@ -659,26 +816,26 @@ export const fr = {
   'admin.totalPlayers': 'Joueurs actifs',
   'admin.totalSubs': 'Remplaçants',
 
-  'error.generic': 'Une erreur est survenue. Réessayez.',
+  'error.generic': 'Une erreur est survenue. Réessaie.',
   'error.title.notFound': 'Page introuvable',
   'error.title.forbidden': 'Accès refusé',
   'error.title.generic': 'Un pépin est survenu',
-  'error.help': 'Revenez à l’accueil ou réessayez dans un instant.',
+  'error.help': 'Reviens à l’accueil ou réessaie dans un instant.',
   'error.home': 'Retour à l’accueil',
   'error.forbidden': 'Accès refusé.',
   'error.notFound': 'Introuvable.',
-  'error.validation': 'Vérifiez les champs du formulaire.',
-  'error.conflict':
-    'Cette action entre en conflit avec l’état actuel.',
-  'error.rateLimited': 'Trop de requêtes. Réessayez dans un instant.',
-  'error.sessionRequired': 'Connectez-vous pour continuer.',
+  'error.validation': 'Vérifie les champs du formulaire.',
+  'error.conflict': 'Cette action ne marche plus avec l’état actuel.',
+  'error.rateLimited': 'Trop de requêtes. Réessaie dans un instant.',
+  'error.sessionRequired': 'Connecte-toi pour continuer.',
   'error.invalidDate': 'Date invalide.',
   'error.invalidTime': 'Heure invalide.',
   'error.playerNotFound': 'Joueur introuvable.',
+  'error.accountNotFound': 'Compte introuvable.',
   'admin.emailExists': 'Un compte existe déjà avec ce courriel.',
   'admin.playerCreateFailed': 'Le joueur n’a pas pu être créé.',
-  'admin.inviteFailed': 'L’invitation n’a pas pu être envoyée.',
-  'error.csrf': 'Requête invalide. Rechargez la page.'
+  'admin.inviteFailed': 'Le lien n’a pas pu être mis en file d’envoi.',
+  'error.csrf': 'Requête invalide. Recharge la page.'
 } as const;
 
 export type I18nKey = keyof typeof fr;

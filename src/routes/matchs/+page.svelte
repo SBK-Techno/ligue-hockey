@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { I18nKey } from '#config/i18n/fr.ts';
+	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatDate, formatTime, formatWeekday, t } from '#lib/shared/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'manageGames'));
 
 	const statusKey: Record<string, I18nKey> = {
 		scheduled: 'games.status.scheduled',
@@ -17,7 +20,7 @@
 		<h1>{t('games.title')}</h1>
 		<p class="mt-1.5 text-sm text-muted">{t('games.subtitle')}</p>
 	</div>
-	{#if data.actor.kind === 'user' && data.actor.role === 'admin'}
+	{#if isManager}
 		<a class="btn-primary btn-sm" href="/admin/matchs">{t('games.adminCreate')}</a>
 	{/if}
 </div>
@@ -26,7 +29,10 @@
 {#if data.upcoming.length === 0}
 	<div class="card">
 		<p class="text-sm text-muted">{t('games.empty')}</p>
-		<p class="hint">{t('games.emptyHelp')}</p>
+		<p class="hint">{isManager ? t('home.noGameHelpAdmin') : t('games.emptyHelp')}</p>
+		{#if isManager}
+			<a class="btn-primary btn-sm mt-3" href="/admin/matchs">{t('home.createGame')}</a>
+		{/if}
 	</div>
 {:else}
 	<ul role="list" class="space-y-2.5">

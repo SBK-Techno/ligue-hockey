@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
+	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
+	import { can } from '#lib/domain/auth/policy.ts';
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
@@ -13,6 +15,8 @@
 	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
 	const game = $derived(data.game);
 	const availability = $derived(data.availability);
+	const hasProfile = $derived(data.hasPlayerProfile);
+	const isManager = $derived(actor !== null && can(actor, 'manageGames'));
 	const ownSlot = $derived(
 		game && actor
 			? game.slots.find((slot) => slot.player?.playerId === actor.userId)
@@ -32,6 +36,11 @@
 	const filledRequests = $derived(
 		data.requests.filter((request) => request.status === 'filled')
 	);
+	const badgeClass = {
+		ok: 'badge-ok',
+		alert: 'badge-alert',
+		ice: 'badge-ice'
+	} as const;
 	const orderedTeams = $derived(
 		ownTeam
 			? [...TEAMS].sort((a, b) =>
@@ -65,7 +74,8 @@
 {:else}
 	<div class="mb-5 flex flex-wrap items-start justify-between gap-3">
 		<div>
-			<h1 class="capitalize">{formatDate(game.gameDate)}</h1>
+			<a class="link text-sm" href="/matchs">← {t('games.title')}</a>
+			<h1 class="mt-2 first-letter:uppercase">{formatDate(game.gameDate)}</h1>
 			<p class="mt-1.5 text-sm text-muted">
 				{formatTime(game.startTime)} · {game.location}
 			</p>
@@ -86,7 +96,7 @@
 	</div>
 
 	{#if game.notes}
-		<div class="notice mb-4">{game.notes}</div>
+		<div class="notice mb-4 whitespace-pre-wrap break-words">{game.notes}</div>
 	{/if}
 
 	{#if game.status === 'cancelled'}
@@ -97,7 +107,7 @@
 
 	<section class="card mb-4">
 		<div class="flex flex-wrap items-center justify-between gap-2">
-			<h2>{t('home.availability')}</h2>
+			<h2>{hasProfile ? t('home.availability') : t('home.attendance')}</h2>
 			{#if availability}
 				<span class="text-sm text-muted">{availability.summary}</span>
 			{/if}
@@ -105,6 +115,8 @@
 
 		{#if game.status === 'cancelled'}
 			<p class="mt-3 text-sm text-muted">{t('games.cancelledNotice')}</p>
+		{:else if isManager && !hasProfile}
+			<p class="mt-3 text-sm text-muted">{t('home.adminHero')}</p>
 		{:else if availability?.substitute}
 			<p class="mt-3 text-sm text-muted">{t('availability.substituteHint')}</p>
 			<a class="btn-secondary btn-sm mt-3" href="/remplacants">{t('home.substituteCta')}</a>
@@ -202,10 +214,14 @@
 									{request.status === 'filled' ? t('subs.status.filled') : t('subs.placeOpen')}
 								</span>
 								{#if request.status === 'open' && data.isSubstitute}
-									<form method="POST" action="?/claim" use:progressiveForm>
-										<input type="hidden" name="requestId" value={request.id} />
-										<button class="btn-primary btn-sm" type="submit">{t('subs.claim')}</button>
-									</form>
+									{#if data.positions.includes(request.position)}
+										<form method="POST" action="?/claim" use:progressiveForm>
+											<input type="hidden" name="requestId" value={request.id} />
+											<button class="btn-primary btn-sm" type="submit">{t('subs.claim')}</button>
+										</form>
+									{:else}
+										<span class="badge">{t('subs.positionNotSelected')}</span>
+									{/if}
 								{/if}
 								{#if request.status === 'filled' && actor && request.filledByPlayerId === actor.userId}
 									<form method="POST" action="?/release" use:progressiveForm>
@@ -273,7 +289,12 @@
 											: 'bg-paper'}"
 									>
 										{#if slot.player}
-											<span>{slot.player.fullName}</span>
+											<span class="flex min-w-0 items-center gap-2">
+												{#if slot.player.jerseyNumber}
+													<span class="data text-xs text-muted">#{slot.player.jerseyNumber}</span>
+												{/if}
+												<span class="truncate">{slot.player.fullName}</span>
+											</span>
 											{#if slot.player.playerId === actor?.userId}
 												<span class="text-[10px] font-bold">{t('common.you')}</span>
 											{:else if slot.player.kind === 'sub'}
@@ -307,17 +328,50 @@
 				{:else}
 					<p class="mt-2 text-sm text-muted">{t('games.balanceNote')}</p>
 				{/if}
+				{#if data.canManage && game.generation.warnings.includes('rule-limit')}
+					<div class="alert mt-3">
+						<p class="font-semibold">{t('games.limitConflict')}</p>
+						<p class="mt-1">{t('games.limitConflictHelp')}</p>
+					</div>
+				{/if}
 				{#if game.generation.warnings.includes('rule-conflict')}
 					<div class="notice mt-3">
 						<p class="font-semibold">{t('games.rulesConflict')}</p>
-						<p class="mt-1">{t('games.rulesConflictHelp')}</p>
+						<p class="mt-1">
+							{data.canManage
+								? t('games.rulesConflictHelp')
+								: t('games.rulesConflictPlayer')}
+						</p>
+					</div>
+				{/if}
+				{#if data.canManage && game.generation.ruleViolations.length > 0}
+					<div class="notice mt-3">
+						<p class="font-semibold">{t('admin.ruleViolations')}</p>
+						<ul role="list" class="mt-2 space-y-1 text-sm">
+							{#each game.generation.ruleViolations as violation (violation.ruleId)}
+								{@const mode = ruleModeDefinition(
+									ruleModeFor(violation.kind, violation.strict)
+								)}
+								<li class="flex flex-wrap items-center gap-2">
+									<span class="badge {mode ? badgeClass[mode.tone] : ''}">
+										{mode ? t(mode.shortLabelKey) : ''}
+									</span>
+									<span>
+										{violation.names[0]} · {violation.names[1]}
+									</span>
+								</li>
+							{/each}
+						</ul>
 					</div>
 				{/if}
 				{#if game.generation.bench.length > 0}
 					<h3 class="mt-4 text-xs font-semibold text-muted">{t('games.bench')}</h3>
 					<ul role="list" class="mt-2 flex flex-wrap gap-2">
 						{#each game.generation.bench as entry (entry.playerId)}
-							<li class="badge">{entry.fullName} · {t(positionDefinition(entry.position).shortLabelKey)}</li>
+							<li class="badge">
+								{#if entry.jerseyNumber}<span class="data">#{entry.jerseyNumber}</span>{/if}
+								{entry.fullName} · {t(positionDefinition(entry.position).shortLabelKey)}
+							</li>
 						{/each}
 					</ul>
 				{/if}
@@ -331,7 +385,9 @@
 	{:else}
 		<section class="card">
 			<h2>{t('games.notGenerated')}</h2>
-			<p class="mt-2 text-sm text-muted">{t('games.lineupSoon')}</p>
+			<p class="mt-2 text-sm text-muted">
+				{data.canManage ? t('games.lineupSoonAdmin') : t('games.lineupSoon')}
+			</p>
 			{#if data.canManage}
 				<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
 					<button class="btn-primary" type="submit">{t('games.generate')}</button>

@@ -92,7 +92,7 @@ export const auth = betterAuth({
 		admin({
 			defaultRole: 'player',
 			adminRoles: ['admin'],
-			roles: { player: userAc, admin: adminAc } as Record<string, Role>
+			roles: { player: userAc, manager: userAc, admin: adminAc } as Record<string, Role>
 		}),
 		sveltekitCookies(getRequestEvent)
 	]

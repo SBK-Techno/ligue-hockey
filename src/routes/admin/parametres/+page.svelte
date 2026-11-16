@@ -97,7 +97,7 @@
 		</section>
 	{/each}
 
-	<div class="sticky bottom-20 z-20 rounded-card border border-line bg-paper/95 p-2 shadow-card backdrop-blur sm:bottom-4">
+	<div class="sticky bottom-[var(--bottom-bar-offset)] z-20 rounded-card border border-line bg-paper/95 p-2 shadow-card backdrop-blur lg:bottom-4">
 		<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
 	</div>
 </form>

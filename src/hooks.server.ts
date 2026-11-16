@@ -20,6 +20,7 @@ const SECURITY_HEADERS: Record<string, string> = {
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.requestId = newId('req');
 	event.locals.actor = actorFromUser(null);
+	event.locals.sessionId = null;
 
 	if (building) {
 		return resolve(event);
@@ -30,6 +31,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const startedAt = clock.nowMs();
 	const session = await auth.api.getSession({ headers: event.request.headers });
 	event.locals.actor = actorFromUser(session?.user);
+	event.locals.sessionId = session?.session?.id ?? null;
 
 	const response = await svelteKitHandler({
 		event,

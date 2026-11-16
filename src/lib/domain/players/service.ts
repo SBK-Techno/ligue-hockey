@@ -1,14 +1,16 @@
 import type { Position } from '#config/positions.ts';
 import { DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
-import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
+import { branding } from '#lib/generated/branding.ts';
+import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { identity } from '#lib/domain/auth/identity.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
-import { clock } from '#lib/shared/time/clock.ts';
+import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import {
+	deletePlayerAccount,
 	findPlayer,
 	findPlayerWithEmail,
 	findPlayersByIds,
@@ -30,6 +32,7 @@ export type PublicPlayer = {
 	lastName: string;
 	fullName: string;
 	position: Position;
+	jerseyNumber: number | null;
 	isSubstitute: boolean;
 	active: boolean;
 };
@@ -59,6 +62,7 @@ function toPublic(row: PlayerRow): PublicPlayer {
 		lastName: row.lastName,
 		fullName: fullName(row),
 		position: row.position,
+		jerseyNumber: row.jerseyNumber,
 		isSubstitute: row.isSubstitute,
 		active: row.active
 	};
@@ -70,8 +74,8 @@ function requireVisible(actor: Actor, playerId: string) {
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
-	if (user.role === 'admin' || user.userId === playerId) {
-		return { row, isAdmin: user.role === 'admin' };
+	if (can(user, 'managePlayers') || user.userId === playerId) {
+		return { row, isAdmin: can(user, 'managePlayers') };
 	}
 	if (!row.active) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
@@ -149,10 +153,19 @@ export function getPlayer(actor: Actor, playerId: string): SelfProfile | PublicP
 	return toPublic(row);
 }
 
+export function getAdminPlayer(actor: Actor, playerId: string): AdminPlayer {
+	requirePermission(actor, 'managePlayers');
+	const row = findPlayerWithEmail(playerId);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+	}
+	return toAdmin(row);
+}
+
 export async function invitePlayer(
 	actor: Actor,
 	input: InvitePlayerInput
-): Promise<{ userId: string; inviteSent: boolean }> {
+): Promise<{ userId: string; inviteQueued: boolean }> {
 	requirePermission(actor, 'managePlayers');
 
 	let created: { id: string };
@@ -178,6 +191,7 @@ export async function invitePlayer(
 			lastName: input.lastName,
 			position: input.position,
 			age: input.age,
+			jerseyNumber: input.jerseyNumber ?? null,
 			isSubstitute: input.isSubstitute,
 			active: true,
 			createdAt: now,
@@ -202,11 +216,11 @@ export async function invitePlayer(
 		});
 	}
 
-	let inviteSent = true;
+	let inviteQueued = true;
 	try {
 		await identity().requestPasswordReset(input.email, 'invitation');
 	} catch (error) {
-		inviteSent = false;
+		inviteQueued = false;
 		logger.error('players.invite_email_failed', {
 			userId: created.id,
 			error
@@ -217,10 +231,10 @@ export async function invitePlayer(
 		action: 'player.invite',
 		entityType: 'player',
 		entityId: created.id,
-		metadata: { position: input.position, inviteSent }
+		metadata: { position: input.position, inviteQueued }
 	});
 
-	return { userId: created.id, inviteSent };
+	return { userId: created.id, inviteQueued };
 }
 
 export async function resendInvite(actor: Actor, playerId: string): Promise<void> {
@@ -243,10 +257,10 @@ export async function resendInvite(actor: Actor, playerId: string): Promise<void
 	});
 }
 
-export function updateOwnProfile(
+export async function updateOwnProfile(
 	actor: Actor,
 	input: UpdateOwnProfileInput
-): SelfProfile {
+): Promise<SelfProfile> {
 	const user = requireUser(actor);
 	const row = findPlayer(user.userId);
 	if (!row) {
@@ -257,8 +271,10 @@ export function updateOwnProfile(
 		firstName: input.firstName,
 		lastName: input.lastName,
 		age: input.age,
-		position: input.position
+		position: input.position,
+		jerseyNumber: input.jerseyNumber
 	});
+	await identity().updateName(user.userId, `${input.firstName} ${input.lastName}`);
 	recordAudit(actor, {
 		action: 'player.self_update',
 		entityType: 'player',
@@ -267,11 +283,11 @@ export function updateOwnProfile(
 	return getOwnProfile(actor);
 }
 
-export function adminUpdatePlayer(
+export async function adminUpdatePlayer(
 	actor: Actor,
 	playerId: string,
 	input: AdminUpdatePlayerInput
-): AdminPlayer {
+): Promise<AdminPlayer> {
 	requirePermission(actor, 'managePlayers');
 	const row = findPlayerWithEmail(playerId);
 	if (!row) {
@@ -283,10 +299,17 @@ export function adminUpdatePlayer(
 	if (input.lastName !== undefined) patch.lastName = input.lastName;
 	if (input.age !== undefined) patch.age = input.age;
 	if (input.position !== undefined) patch.position = input.position;
+	if (input.jerseyNumber !== undefined) patch.jerseyNumber = input.jerseyNumber;
 	if (input.isSubstitute !== undefined) patch.isSubstitute = input.isSubstitute;
 	if (input.active !== undefined) patch.active = input.active;
 
 	updatePlayer(playerId, patch);
+	if (input.firstName !== undefined || input.lastName !== undefined) {
+		const updated = findPlayerWithEmail(playerId);
+		if (updated) {
+			await identity().updateName(playerId, `${updated.firstName} ${updated.lastName}`);
+		}
+	}
 	recordAudit(actor, {
 		action: 'player.admin_update',
 		entityType: 'player',
@@ -295,4 +318,52 @@ export function adminUpdatePlayer(
 	});
 
 	return toAdmin(findPlayerWithEmail(playerId));
+}
+
+export async function setPlayerRole(
+	actor: Actor,
+	playerId: string,
+	role: Role
+): Promise<AdminPlayer> {
+	requirePermission(actor, 'managePlayers');
+	if (actor.kind === 'user' && actor.userId === playerId) {
+		throw new AppError('FORBIDDEN', { key: 'admin.roleSelf' });
+	}
+	const row = findPlayerWithEmail(playerId);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+	}
+	await identity().setRole(playerId, role);
+	recordAudit(actor, {
+		action: 'player.role_update',
+		entityType: 'player',
+		entityId: playerId,
+		metadata: { role }
+	});
+	return toAdmin(findPlayerWithEmail(playerId));
+}
+
+export async function deletePlayer(actor: Actor, playerId: string): Promise<void> {
+	requirePermission(actor, 'managePlayers');
+	if (actor.kind === 'user' && actor.userId === playerId) {
+		throw new AppError('FORBIDDEN', { key: 'admin.deleteSelf' });
+	}
+	const row = findPlayerWithEmail(playerId);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+	}
+	const role = row.role && isRole(row.role) ? row.role : DEFAULT_ROLE;
+	if (role === 'admin') {
+		throw new AppError('FORBIDDEN', { key: 'admin.deleteAdmin' });
+	}
+	deletePlayerAccount(playerId, todayInZone(branding.timezone, clock.nowMs()));
+	if (findPlayer(playerId)) {
+		throw new AppError('INTERNAL', { key: 'admin.playerDeleteFailed' });
+	}
+	recordAudit(actor, {
+		action: 'player.delete',
+		entityType: 'player',
+		entityId: playerId,
+		metadata: { role }
+	});
 }

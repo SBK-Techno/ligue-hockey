@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'viewAdmin'));
 	const unreadIds = $derived(data.items.filter((item) => item.readAt === null).map((item) => item.id));
 </script>
 
@@ -38,7 +41,9 @@
 {#if data.items.length === 0}
 	<div class="card">
 		<p class="text-sm text-muted">{t('notifications.empty')}</p>
-		<p class="hint">{t('notifications.emptyHelp')}</p>
+		<p class="hint">
+			{isManager ? t('notifications.emptyHelpAdmin') : t('notifications.emptyHelp')}
+		</p>
 	</div>
 {:else}
 	<ul role="list" class="space-y-2">
@@ -54,9 +59,11 @@
 							: 'border-line bg-surface hover:border-ink/25'}"
 					>
 						<span class="flex items-start justify-between gap-3">
-							<span class="block">
-								<span class="block text-sm font-semibold text-ink">{item.title}</span>
-								<span class="mt-1 block text-sm leading-relaxed text-ink/80">{item.body}</span>
+							<span class="block min-w-0">
+								<span class="block break-words text-sm font-semibold text-ink">{item.title}</span>
+								<span class="mt-1 block break-words text-sm leading-relaxed text-ink/80">
+									{item.body}
+								</span>
 							</span>
 							{#if item.readAt === null}
 								<span class="badge-ice shrink-0">{t('notifications.unread')}</span>

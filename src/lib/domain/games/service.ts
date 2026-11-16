@@ -13,10 +13,7 @@ import { requireCompleteRatings } from '#lib/domain/ratings/service.ts';
 import { rulesForGeneration } from '#lib/domain/rules/service.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import {
-	cancelAllForGame,
-	claimsForGeneration
-} from '#lib/domain/subs/service.ts';
+import { cancelAllForGame, claimsForGeneration } from '#lib/domain/subs/service.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
@@ -39,12 +36,7 @@ import {
 	type SlotAssignment
 } from './queries.ts';
 import type { GameRow } from './schema.ts';
-import type {
-	GameBenchView,
-	GameGenerationView,
-	GameSlotView,
-	GameSummary
-} from './types.ts';
+import type { GameBenchView, GameGenerationView, GameSlotView, GameSummary } from './types.ts';
 import {
 	gameInputSchema,
 	generationSnapshotSchema,
@@ -101,7 +93,7 @@ function snapshotFrom(row: GameRow): GenerationSnapshot | null {
 
 function generationView(
 	row: GameRow,
-	names: Map<string, { fullName: string; position: Position }>,
+	names: Map<string, { fullName: string; position: Position; jerseyNumber: number | null }>,
 	includeMetrics: boolean
 ): GameGenerationView | null {
 	const snapshot = snapshotFrom(row);
@@ -113,10 +105,23 @@ function generationView(
 		skillDiffLabel: includeMetrics ? formatDecimal(snapshot.skillDiff, 2) : null,
 		ageDiffLabel: includeMetrics ? formatDecimal(snapshot.ageDiff, 1) : null,
 		warnings: snapshot.warnings,
+		ruleViolations: includeMetrics
+			? snapshot.ruleViolations.map((violation) => ({
+			ruleId: violation.ruleId,
+			kind: violation.kind,
+			strict: violation.strict,
+			playerIds: violation.playerIds,
+					names: [
+						names.get(violation.playerIds[0])?.fullName ?? violation.playerIds[0],
+						names.get(violation.playerIds[1])?.fullName ?? violation.playerIds[1]
+					]
+				}))
+			: [],
 		bench: snapshot.bench.map((entry) => ({
 			playerId: entry.playerId,
 			fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
 			position: entry.position,
+			jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
 			kind: entry.kind
 		})),
 		generatedAt: snapshot.generatedAt
@@ -141,13 +146,18 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		...assignments
 			.map((assignment) => assignment.playerId)
 			.filter((playerId): playerId is string => playerId !== null),
-		...(snapshot?.bench.map((entry) => entry.playerId) ?? [])
+		...(snapshot?.bench.map((entry) => entry.playerId) ?? []),
+		...(snapshot?.ruleViolations.flatMap((violation) => violation.playerIds) ?? [])
 	];
 	const players = playersByIds([...new Set(playerIds)]);
 	const names = new Map(
 		players.map((player) => [
 			player.userId,
-			{ fullName: player.fullName, position: player.position }
+			{
+				fullName: player.fullName,
+				position: player.position,
+				jerseyNumber: player.jerseyNumber
+			}
 		])
 	);
 
@@ -161,6 +171,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 						playerId: assignment.playerId,
 						fullName: names.get(assignment.playerId)?.fullName ?? assignment.playerId,
 						position: assignment.position,
+						jerseyNumber: names.get(assignment.playerId)?.jerseyNumber ?? null,
 						kind: assignment.assignmentKind
 					}
 				: null
@@ -174,11 +185,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		slots,
 		generation: generationView(row, names, can(actor, 'manageGames')),
 		openSlots,
-		openSlotsLabel: formatCount(
-			openSlots,
-			'games.openSlots.one',
-			'games.openSlots.many'
-		),
+		openSlotsLabel: formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many'),
 		generated: snapshot !== null
 	};
 }
@@ -240,11 +247,7 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 	};
 }
 
-export function updateGame(
-	actor: Actor,
-	gameId: string,
-	input: GameInput
-): GameSummary {
+export function updateGame(actor: Actor, gameId: string, input: GameInput): GameSummary {
 	requirePermission(actor, 'manageGames');
 	const row = findGame(gameId);
 	if (!row) {
@@ -355,7 +358,12 @@ export function regenerateGame(gameId: string): GenerationResult {
 		template,
 		rules: rulesForGeneration(),
 		skillTolerance: settings['teams.skillTolerance'],
-		maxPlayers: settings['teams.maxPlayers']
+		maxPlayers: settings['teams.maxPlayers'],
+		limits: {
+			skill: settings['teams.maxSkillSpread'],
+			age: settings['teams.maxAgeSpread'],
+			size: settings['teams.maxSizeSpread']
+		}
 	});
 
 	const assignments: SlotAssignment[] = result.assignments.map((assignment) => ({
@@ -372,29 +380,33 @@ export function regenerateGame(gameId: string): GenerationResult {
 		ageDiff: result.ageDiff,
 		sizeDiff: result.sizeDiff,
 		warnings: result.warnings,
+		ruleViolations: result.violations,
 		bench,
 		candidateKey: result.candidateKey,
 		generatedAt
 	};
 
-	saveAssignments(
-		gameId,
-		assignments,
-		generatedAt,
-		JSON.stringify(snapshot),
-		generatedAt
-	);
+	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt);
 
+	const namedIds = [
+		...bench.map((entry) => entry.playerId),
+		...result.violations.flatMap((violation) => violation.playerIds)
+	];
 	const names = new Map(
-		playersByIds(bench.map((entry) => entry.playerId)).map((player) => [
+		playersByIds([...new Set(namedIds)]).map((player) => [
 			player.userId,
-			{ fullName: player.fullName, position: player.position }
+			{
+				fullName: player.fullName,
+				position: player.position,
+				jerseyNumber: player.jerseyNumber
+			}
 		])
 	);
 	const benchViews: GameBenchView[] = bench.map((entry) => ({
 		playerId: entry.playerId,
 		fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
 		position: entry.position,
+		jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
 		kind: entry.kind
 	}));
 
@@ -406,6 +418,16 @@ export function regenerateGame(gameId: string): GenerationResult {
 		skillDiffLabel: formatDecimal(result.skillDiff, 2),
 		ageDiffLabel: formatDecimal(result.ageDiff, 1),
 		warnings: result.warnings,
+		ruleViolations: result.violations.map((violation) => ({
+			ruleId: violation.ruleId,
+			kind: violation.kind,
+			strict: violation.strict,
+			playerIds: violation.playerIds,
+			names: [
+				names.get(violation.playerIds[0])?.fullName ?? violation.playerIds[0],
+				names.get(violation.playerIds[1])?.fullName ?? violation.playerIds[1]
+			]
+		})),
 		bench: benchViews,
 		generatedAt,
 		assignments: assignments.length

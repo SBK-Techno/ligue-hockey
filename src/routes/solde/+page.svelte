@@ -1,10 +1,16 @@
 <script lang="ts">
 	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { PAYMENT_METHODS, paymentDefinition } from '#config/payment-methods.ts';
+	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatDate, formatMoney, t } from '#lib/shared/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const canViewAllBalances = $derived(
+		data.actor.kind === 'user' && can(data.actor, 'viewAllBalances')
+	);
+	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'viewAdmin'));
 
 	const statusKey: Record<string, I18nKey> = {
 		paid: 'balance.status.paid',
@@ -20,17 +26,34 @@
 	);
 </script>
 
-<div class="mb-6">
-	<h1>{t('balance.title')}</h1>
-	<p class="mt-1.5 text-sm text-muted">
-		{data.seasonLabel} · {t('balance.subtitle')}
-	</p>
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+	<div>
+		<h1>{t('balance.title')}</h1>
+		<p class="mt-1.5 text-sm text-muted">
+			{data.seasonLabel} ·
+			{isManager && !data.hasPlayerProfile
+				? t('balance.subtitleAdmin')
+				: t('balance.subtitle')}
+		</p>
+	</div>
+	{#if canViewAllBalances && data.balance}
+		<a class="btn-secondary btn-sm" href="/admin/soldes">{t('balance.manageAll')}</a>
+	{/if}
 </div>
 
 {#if !data.balance}
 	<div class="card">
-		<p class="text-sm text-muted">{t('balance.noPlan')}</p>
-		<p class="hint">{t('balance.noPlanHelp')}</p>
+		{#if isManager && !data.hasPlayerProfile}
+			<p class="text-sm text-muted">{t('balance.adminNoProfile')}</p>
+			{#if canViewAllBalances}
+				<a class="btn-secondary btn-sm mt-3" href="/admin/soldes">
+					{t('balance.manageAll')}
+				</a>
+			{/if}
+		{:else}
+			<p class="text-sm text-muted">{t('balance.noPlan')}</p>
+			<p class="hint">{t('balance.noPlanHelp')}</p>
+		{/if}
 	</div>
 {:else}
 	<div class="mb-4 grid gap-3 sm:grid-cols-3">

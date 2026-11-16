@@ -6,6 +6,7 @@ declare global {
 		interface Locals {
 			actor: Actor;
 			requestId: string;
+			sessionId: string | null;
 		}
 
 		interface Error {

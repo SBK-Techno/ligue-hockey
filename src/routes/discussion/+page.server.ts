@@ -8,6 +8,7 @@ import {
 	listChat,
 	sendMessage
 } from '#lib/domain/chat/service.ts';
+import { canCreatePoll } from '#lib/domain/auth/policy.ts';
 import { CHAT_LIMITS } from '#lib/domain/chat/validators.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
@@ -32,8 +33,12 @@ export const load: ServerLoad = ({ locals }) => {
 		pollMinOptions: settings['chat.pollMinOptions'],
 		pollMaxOptions: settings['chat.maxPollOptions']
 	};
-	if (locals.actor.kind !== 'user') return { messages: [], limits };
-	return { messages: listChat(locals.actor), limits };
+	if (locals.actor.kind !== 'user') return { messages: [], limits, canCreatePoll: false };
+	return {
+		messages: listChat(locals.actor),
+		limits,
+		canCreatePoll: canCreatePoll(locals.actor, settings['chat.allowPlayerPolls'])
+	};
 };
 
 export const actions: Actions = {

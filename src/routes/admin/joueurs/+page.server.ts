@@ -1,6 +1,11 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
-import { listAdminPlayers, invitePlayer, resendInvite, adminUpdatePlayer } from '#lib/domain/players/service.ts';
+import {
+	listAdminPlayers,
+	invitePlayer,
+	resendInvite,
+	adminUpdatePlayer
+} from '#lib/domain/players/service.ts';
 import { setSubstituteFavorite, listSubstitutes } from '#lib/domain/subs/service.ts';
 import { invitePlayerSchema } from '#lib/domain/players/validators.ts';
 import { actionError } from '#lib/server/action.ts';
@@ -37,7 +42,7 @@ export const actions: Actions = {
 			const result = await invitePlayer(locals.actor, parsed);
 			return {
 				ok: true,
-				message: result.inviteSent
+				message: result.inviteQueued
 					? t('admin.inviteSent', { email: parsed.email })
 					: t('admin.inviteEmailFailed')
 			};
@@ -57,7 +62,9 @@ export const actions: Actions = {
 	active: async ({ request, locals }) => {
 		try {
 			const parsed = parseForm(toggleSchema, await request.formData());
-			adminUpdatePlayer(locals.actor, parsed.playerId, { active: parsed.value });
+			await adminUpdatePlayer(locals.actor, parsed.playerId, {
+				active: parsed.value
+			});
 			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);
@@ -66,7 +73,9 @@ export const actions: Actions = {
 	substitute: async ({ request, locals }) => {
 		try {
 			const parsed = parseForm(toggleSchema, await request.formData());
-			adminUpdatePlayer(locals.actor, parsed.playerId, { isSubstitute: parsed.value });
+			await adminUpdatePlayer(locals.actor, parsed.playerId, {
+				isSubstitute: parsed.value
+			});
 			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);

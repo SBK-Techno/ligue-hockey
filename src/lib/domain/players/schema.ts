@@ -16,9 +16,8 @@ export const players = sqliteTable(
 		lastName: text('last_name').notNull(),
 		position: text('position').$type<Position>().notNull(),
 		age: integer('age').notNull(),
-		isSubstitute: integer('is_substitute', { mode: 'boolean' })
-			.notNull()
-			.default(false),
+		jerseyNumber: integer('jersey_number'),
+		isSubstitute: integer('is_substitute', { mode: 'boolean' }).notNull().default(false),
 		active: integer('active', { mode: 'boolean' }).notNull().default(true),
 		createdAt: integer('created_at').notNull(),
 		updatedAt: integer('updated_at').notNull()

@@ -12,27 +12,36 @@
 </div>
 
 <div class="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-	<a class="stat card-link" href="/admin/joueurs">
-		<p class="stat-value">{data.counts.active}</p>
-		<p class="stat-label">{t('admin.totalPlayers')}</p>
-	</a>
-	<a class="stat card-link" href="/admin/joueurs">
-		<p class="stat-value">{data.counts.subs}</p>
-		<p class="stat-label">{t('admin.totalSubs')}</p>
-	</a>
-	<a class="stat card-link" href="/admin/matchs">
-		<p class="stat-value {data.counts.openRequests > 0 ? 'text-alert' : ''}">
-			{data.counts.openRequests}
-		</p>
-		<p class="stat-label">{t('admin.openRequests')}</p>
-	</a>
-	<a class="stat card-link" href="/admin/soldes">
-		<p class="stat-value {data.counts.overdue > 0 ? 'text-alert' : ''}">{data.counts.overdue}</p>
-		<p class="stat-label">{t('admin.overdueBalances')}</p>
-	</a>
+	{#if data.permissions.players}
+		<a class="stat card-link" href="/admin/joueurs">
+			<p class="stat-value">{data.counts.active}</p>
+			<p class="stat-label">{t('admin.totalPlayers')}</p>
+		</a>
+		<a class="stat card-link" href="/admin/joueurs">
+			<p class="stat-value">{data.counts.subs}</p>
+			<p class="stat-label">{t('admin.totalSubs')}</p>
+		</a>
+	{/if}
+	{#if data.permissions.subs}
+		<a class="stat card-link" href="/admin/matchs">
+			<p class="stat-value {data.counts.openRequests > 0 ? 'text-alert' : ''}">
+				{data.counts.openRequests}
+			</p>
+			<p class="stat-label">{t('admin.openRequests')}</p>
+		</a>
+	{/if}
+	{#if data.permissions.balances}
+		<a class="stat card-link" href="/admin/soldes">
+			<p class="stat-value {data.counts.overdue > 0 ? 'text-alert' : ''}">
+				{data.counts.overdue}
+			</p>
+			<p class="stat-label">{t('admin.overdueBalances')}</p>
+		</a>
+	{/if}
 </div>
 
 <div class="grid gap-4 sm:grid-cols-2">
+	{#if data.permissions.games}
 	<section class="card">
 		<div class="section-title">
 			<h2>{t('admin.nextGame')}</h2>
@@ -50,7 +59,9 @@
 			<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
 		{/if}
 	</section>
+	{/if}
 
+	{#if data.permissions.subs}
 	<section class="card">
 		<div class="section-title">
 			<h2>{t('admin.openRequests')}</h2>
@@ -81,4 +92,5 @@
 			</ul>
 		{/if}
 	</section>
+	{/if}
 </div>

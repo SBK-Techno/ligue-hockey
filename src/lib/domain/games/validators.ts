@@ -22,6 +22,16 @@ export const generationSnapshotSchema = z.object({
 	ageDiff: z.number(),
 	sizeDiff: z.number(),
 	warnings: z.array(z.string()),
+	ruleViolations: z
+		.array(
+			z.object({
+				ruleId: z.string().min(1),
+				kind: z.enum(['must', 'must_not']),
+				strict: z.boolean(),
+				playerIds: z.tuple([z.string().min(1), z.string().min(1)])
+			})
+		)
+		.default([]),
 	bench: z.array(
 		z.object({
 			playerId: z.string().min(1),

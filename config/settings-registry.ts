@@ -270,6 +270,39 @@ export const SETTINGS = {
     labelKey: 'settings.maxPlayers.label',
     descriptionKey: 'settings.maxPlayers.description'
   }),
+  'teams.maxSkillSpread': defineSetting({
+    group: 'teams',
+    kind: 'number',
+    schema: z.number().min(0).max(10),
+    defaultValue: 0,
+    min: 0,
+    max: 10,
+    step: 0.25,
+    labelKey: 'settings.maxSkillSpread.label',
+    descriptionKey: 'settings.maxSkillSpread.description'
+  }),
+  'teams.maxAgeSpread': defineSetting({
+    group: 'teams',
+    kind: 'number',
+    schema: z.number().min(0).max(60),
+    defaultValue: 0,
+    min: 0,
+    max: 60,
+    step: 0.5,
+    labelKey: 'settings.maxAgeSpread.label',
+    descriptionKey: 'settings.maxAgeSpread.description'
+  }),
+  'teams.maxSizeSpread': defineSetting({
+    group: 'teams',
+    kind: 'number',
+    schema: z.number().int().min(0).max(10),
+    defaultValue: 0,
+    min: 0,
+    max: 10,
+    step: 1,
+    labelKey: 'settings.maxSizeSpread.label',
+    descriptionKey: 'settings.maxSizeSpread.description'
+  }),
   'teams.autoRegenerate': defineSetting({
     group: 'teams',
     kind: 'boolean',

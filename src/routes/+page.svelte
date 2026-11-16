@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { positionDefinition } from '#config/positions.ts';
 	import { teamDefinition } from '#config/teams.ts';
+	import { can } from '#lib/domain/auth/policy.ts';
 	import type { I18nKey } from '#config/i18n/fr.ts';
 	import {
 		formatDate,
@@ -20,6 +21,22 @@
 	let { data, form }: PageProps = $props();
 
 	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
+	const isManager = $derived(actor !== null && can(actor, 'manageGames'));
+	const managementLinks = $derived([
+		...(actor && can(actor, 'managePlayers')
+			? [{ href: '/admin/joueurs', key: 'admin.players' as const }]
+			: []),
+		...(actor && can(actor, 'manageGames')
+			? [{ href: '/admin/matchs', key: 'admin.games' as const }]
+			: []),
+		...(actor && can(actor, 'viewAllBalances')
+			? [{ href: '/admin/soldes', key: 'home.manageBalances' as const }]
+			: []),
+		...(actor && can(actor, 'manageSettings')
+			? [{ href: '/admin/parametres', key: 'admin.settings' as const }]
+			: [])
+	]);
+	const hasProfile = $derived(data.hasPlayerProfile);
 	const ownSlot = $derived(
 		actor
 			? data.game?.slots.find(
@@ -57,8 +74,10 @@
 	{/if}
 </div>
 
-{#if data.game}
-	<section class="relative overflow-hidden rounded-card bg-ink text-paper">
+<div class="lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start lg:gap-6">
+	<div class="min-w-0">
+		{#if data.game}
+			<section class="relative overflow-hidden rounded-card bg-ink text-paper">
 		<svg
 			aria-hidden="true"
 			viewBox="0 0 600 600"
@@ -181,10 +200,19 @@
 				{#if !data.game.generated}
 					<p class="mt-3 text-xs text-paper/55">{t('home.lineupSoon')}</p>
 				{/if}
+			{:else if isManager && !hasProfile}
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<p class="max-w-md text-sm text-paper/70">{t('home.adminHero')}</p>
+					<a class="btn min-h-10 bg-paper text-ink hover:bg-white" href="/admin/matchs">
+						{t('home.manageSchedule')}
+					</a>
+				</div>
 			{:else}
 				<div class="flex flex-wrap items-center justify-between gap-3">
-					{#if availability}
+					{#if availability && !hasProfile}
 						<p class="text-sm text-paper/70">{t('home.noPlayerProfile')}</p>
+					{:else if isManager}
+						<p class="text-sm text-paper/70">{t('home.lineupSoon')}</p>
 					{/if}
 					<a class="btn min-h-10 border border-paper/25 text-paper hover:bg-paper/10" href="/matchs/{data.game.id}">
 						{t('home.viewGame')}
@@ -208,7 +236,12 @@
 {:else}
 	<section class="card text-center">
 		<h2>{t('home.noGame')}</h2>
-		<p class="mx-auto mt-2 max-w-sm text-sm text-muted">{t('home.noGameHelp')}</p>
+		<p class="mx-auto mt-2 max-w-sm text-sm text-muted">
+			{isManager ? t('home.noGameHelpAdmin') : t('home.noGameHelp')}
+		</p>
+		{#if isManager}
+			<a class="btn-primary mt-4" href="/admin/matchs">{t('home.createGame')}</a>
+		{/if}
 	</section>
 {/if}
 
@@ -224,7 +257,7 @@
 			{#each data.games.slice(1) as game (game.id)}
 				<li>
 					<a
-						class="flex items-center gap-4 px-4 py-3.5 no-underline transition-colors hover:bg-ink/[0.03] sm:px-5"
+						class="flex items-center gap-4 px-4 py-3.5 no-underline transition-colors hover:bg-ink/[0.03] focus-visible:outline-offset-[-2px] sm:px-5"
 						href="/matchs/{game.id}"
 					>
 						<div class="w-16 shrink-0">
@@ -260,92 +293,119 @@
 	</section>
 {/if}
 
-<div class="mt-4 grid gap-4 sm:grid-cols-2">
-	<a href="/solde" class="card card-link">
-		<div class="flex items-start justify-between gap-3">
-			<div>
-				<h2>{t('home.balance')}</h2>
-				{#if data.balance}
-					<p class="mt-3 font-display text-3xl font-bold leading-none text-ink">
-						{formatMoney(data.balance.outstandingCents, data.balance.currency)}
-					</p>
-				{:else}
-					<p class="mt-3 text-sm text-muted">{t('home.balanceNone')}</p>
-				{/if}
-			</div>
-			{#if data.balance}
-				{#if data.balance.outstandingCents === 0}
-					<span class="badge-ok">{t('home.balanceClear')}</span>
-				{:else if data.balance.isOverdue}
-					<span class="badge-alert">{t('home.balanceOverdue')}</span>
-				{:else}
-					<span class="badge-ice">{t('home.balanceDue')}</span>
-				{/if}
-			{/if}
-		</div>
-		<p class="hint">{t('balance.onlyYou')}</p>
-	</a>
-
-	<section class="card">
-		<div class="section-title">
-			<h2>{t('home.openSlots')}</h2>
-			<a class="link text-sm" href="/remplacants">{t('common.seeAll')}</a>
-		</div>
-		{#if data.openRequests.length === 0}
-			<p class="mt-3 text-sm text-muted">{t('subs.noneOpen')}</p>
-			<p class="hint">{t('subs.emptyHelp')}</p>
-		{:else}
-			<ul role="list" class="mt-3 space-y-1.5">
-				{#each data.openRequests.slice(0, 3) as request (request.id)}
-					<li>
-						<a
-							class="flex items-center justify-between gap-3 rounded-control bg-paper px-3 py-2.5 no-underline transition-colors hover:bg-ice-soft"
-							href="/matchs/{request.gameId}"
-						>
-							<span class="min-w-0">
-								<span class="block text-sm font-semibold text-ink">
-									{t(positionDefinition(request.position).labelKey)}
-								</span>
-								<span class="mt-0.5 block text-xs text-muted">
-									{formatDate(request.game.gameDate, 'short')} · {formatTime(request.game.startTime)}
-								</span>
-							</span>
-							<span class="badge-ice shrink-0">{t('subs.openRequest')}</span>
-						</a>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</section>
-</div>
-
-<section class="card mt-4">
-	<div class="section-title">
-		<h2>{t('home.chat')}</h2>
-		<a class="link text-sm" href="/discussion">{t('common.seeAll')}</a>
 	</div>
-	{#if data.chat.length === 0}
-		<p class="mt-3 text-sm text-muted">{t('chat.empty')}</p>
-		<p class="hint">{t('chat.emptyHelp')}</p>
-	{:else}
-		<ul role="list" class="mt-3 divide-y divide-line/70">
-			{#each data.chat as message (message.id)}
-				<li class="py-2.5 first:pt-0 last:pb-0">
-					<div class="flex items-baseline justify-between gap-3">
-						<p class="text-xs font-semibold text-muted">{message.authorName}</p>
-						<p class="text-[11px] text-muted">{formatTimestamp(message.createdAt)}</p>
+
+	<aside class="mt-4 space-y-4 lg:mt-0">
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+			{#if isManager && !hasProfile}
+				<section class="card">
+					<div class="section-title">
+						<h2>{t('home.management')}</h2>
+						<a class="link text-sm" href="/admin">{t('common.seeAll')}</a>
 					</div>
-					<p class="mt-1 line-clamp-2 text-sm">
-						{#if message.deleted}
-							{t('chat.deleted')}
-						{:else if message.kind === 'poll'}
-							<span class="font-semibold">{t('chat.pollTag')} · </span>{message.poll?.question}
+					<p class="hint">{t('home.managementHelp')}</p>
+					<div class="mt-3 grid gap-2">
+						{#each managementLinks as link (link.href)}
+							<a class="btn-secondary btn-sm justify-start" href={link.href}>{t(link.key)}</a>
+						{/each}
+					</div>
+				</section>
+			{:else}
+			<a href="/solde" class="card card-link">
+				<div class="flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<h2>{t('home.balance')}</h2>
+						{#if data.balance}
+							<p class="mt-3 font-display text-3xl font-bold leading-none text-ink">
+								{formatMoney(data.balance.outstandingCents, data.balance.currency)}
+							</p>
 						{:else}
-							{message.body}
+							<p class="mt-3 text-sm text-muted">{t('home.balanceNone')}</p>
 						{/if}
-					</p>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-</section>
+					</div>
+					{#if data.balance}
+						{#if data.balance.outstandingCents === 0}
+							<span class="badge-ok shrink-0">{t('home.balanceClear')}</span>
+						{:else if data.balance.isOverdue}
+							<span class="badge-alert shrink-0">{t('home.balanceOverdue')}</span>
+						{:else}
+							<span class="badge-ice shrink-0">{t('home.balanceDue')}</span>
+						{/if}
+					{/if}
+				</div>
+				<p class="hint">{t('balance.onlyYou')}</p>
+			</a>
+			{/if}
+
+			<section class="card">
+				<div class="section-title">
+					<h2>{t('home.openSlots')}</h2>
+					<a class="link text-sm" href="/remplacants">{t('common.seeAll')}</a>
+				</div>
+				{#if data.openRequests.length === 0}
+					<p class="mt-3 text-sm text-muted">{t('subs.noneOpen')}</p>
+					<p class="hint">{isManager ? t('home.adminOpenSlots') : t('subs.emptyHelp')}</p>
+					{#if isManager}
+						<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('home.openRequest')}</a>
+					{/if}
+				{:else}
+					<ul role="list" class="mt-3 space-y-1.5">
+						{#each data.openRequests.slice(0, 3) as request (request.id)}
+							<li>
+								<a
+									class="flex items-center justify-between gap-3 rounded-control bg-paper px-3 py-2.5 no-underline transition-colors hover:bg-ice-soft"
+									href="/matchs/{request.gameId}"
+								>
+									<span class="min-w-0">
+										<span class="block text-sm font-semibold text-ink">
+											{t(positionDefinition(request.position).labelKey)}
+										</span>
+										<span class="mt-0.5 block text-xs text-muted">
+											{formatDate(request.game.gameDate, 'short')} · {formatTime(
+												request.game.startTime
+											)}
+										</span>
+									</span>
+									<span class="badge-ice shrink-0">{t('subs.openRequest')}</span>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</section>
+		</div>
+
+		<section class="card">
+			<div class="section-title">
+				<h2>{t('home.chat')}</h2>
+				<a class="link text-sm" href="/discussion">{t('common.seeAll')}</a>
+			</div>
+			{#if data.chat.length === 0}
+				<p class="mt-3 text-sm text-muted">{t('chat.empty')}</p>
+				<p class="hint">{t('chat.emptyHelp')}</p>
+			{:else}
+				<ul role="list" class="mt-3 divide-y divide-line/70">
+					{#each data.chat as message (message.id)}
+						<li class="py-2.5 first:pt-0 last:pb-0">
+							<div class="flex items-baseline justify-between gap-3">
+								<p class="truncate text-xs font-semibold text-muted">{message.authorName}</p>
+								<p class="shrink-0 text-[11px] text-muted">
+									{formatTimestamp(message.createdAt)}
+								</p>
+							</div>
+							<p class="mt-1 line-clamp-2 break-words text-sm">
+								{#if message.deleted}
+									{t('chat.deleted')}
+								{:else if message.kind === 'poll'}
+									<span class="font-semibold">{t('chat.pollTag')} · </span>{message.poll?.question}
+								{:else}
+									{message.body}
+								{/if}
+							</p>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	</aside>
+</div>

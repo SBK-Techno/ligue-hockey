@@ -13,6 +13,7 @@ export type GamePlayer = {
 	playerId: string;
 	fullName: string;
 	position: Position;
+	jerseyNumber: number | null;
 	kind: 'regular' | 'sub';
 };
 
@@ -27,7 +28,16 @@ export type GameBenchView = {
 	playerId: string;
 	fullName: string;
 	position: Position;
+	jerseyNumber: number | null;
 	kind: 'regular' | 'sub';
+};
+
+export type GameRuleViolationView = {
+	ruleId: string;
+	kind: 'must' | 'must_not';
+	strict: boolean;
+	playerIds: [string, string];
+	names: [string, string];
 };
 
 export type GameGenerationView = {
@@ -37,6 +47,7 @@ export type GameGenerationView = {
 	skillDiffLabel: string | null;
 	ageDiffLabel: string | null;
 	warnings: string[];
+	ruleViolations: GameRuleViolationView[];
 	bench: GameBenchView[];
 	generatedAt: number;
 };

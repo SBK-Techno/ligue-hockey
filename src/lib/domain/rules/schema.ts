@@ -8,8 +8,9 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { players } from '#lib/domain/players/schema.ts';
+import type { PairRuleKind } from '#config/rule-modes.ts';
 
-export type PairRuleKind = 'must' | 'must_not';
+export type { PairRuleKind };
 
 export const pairRules = sqliteTable(
 	'pair_rules',
@@ -22,6 +23,7 @@ export const pairRules = sqliteTable(
 			.notNull()
 			.references(() => players.userId, { onDelete: 'cascade' }),
 		kind: text('kind').$type<PairRuleKind>().notNull(),
+		strict: integer('strict', { mode: 'boolean' }).notNull().default(true),
 		createdAt: integer('created_at').notNull(),
 		createdBy: text('created_by').references(() => user.id, {
 			onDelete: 'set null'

@@ -1,7 +1,7 @@
 import { POSITIONS, type Position } from '#config/positions.ts';
 import type { RosterTemplate, SlotDefinition } from '#config/roster.ts';
 import { TEAMS, type Team } from '#config/teams.ts';
-import type { PairRuleKind } from '#lib/domain/rules/schema.ts';
+import type { PairRuleKind } from '#config/rule-modes.ts';
 
 export type GeneratorPlayer = {
 	id: string;
@@ -16,6 +16,13 @@ export type GeneratorRule = {
 	playerAId: string;
 	playerBId: string;
 	kind: PairRuleKind;
+	strict?: boolean;
+};
+
+export type TeamLimits = {
+	skill: number;
+	age: number;
+	size: number;
 };
 
 export type GeneratorInput = {
@@ -24,11 +31,13 @@ export type GeneratorInput = {
 	rules: readonly GeneratorRule[];
 	skillTolerance: number;
 	maxPlayers: number;
+	limits?: TeamLimits;
 };
 
 export type GeneratorViolation = {
 	ruleId: string;
 	kind: PairRuleKind;
+	strict: boolean;
 	playerIds: [string, string];
 };
 
@@ -186,6 +195,7 @@ function pairViolations(
 			violations.push({
 				ruleId: rule.id,
 				kind: rule.kind,
+				strict: rule.strict !== false,
 				playerIds: [rule.playerAId, rule.playerBId]
 			});
 		}
@@ -194,6 +204,7 @@ function pairViolations(
 			violations.push({
 				ruleId: rule.id,
 				kind: rule.kind,
+				strict: rule.strict !== false,
 				playerIds: [rule.playerAId, rule.playerBId]
 			});
 		}
@@ -343,35 +354,49 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 			)
 			.join('|');
 
+		const hard = candidate.violations.filter((violation) => violation.strict).length;
 		return {
 			candidate,
 			sizeDiff,
 			skillDiff,
 			ageDiff,
 			key,
-			violations: candidate.violations.length
+			hard,
+			soft: candidate.violations.length - hard
 		};
 	});
 
 	scored.sort(
 		(a, b) =>
-			a.violations - b.violations ||
+			a.hard - b.hard ||
 			a.sizeDiff - b.sizeDiff ||
 			a.skillDiff - b.skillDiff ||
 			a.ageDiff - b.ageDiff ||
+			a.soft - b.soft ||
 			a.key.localeCompare(b.key)
 	);
 
-	const best = scored[0];
-	const tolerant = scored.filter(
+	const limits = input.limits ?? { skill: 0, age: 0, size: 0 };
+	const withinLimits = (entry: (typeof scored)[number]) =>
+		(limits.skill === 0 || entry.skillDiff <= limits.skill) &&
+		(limits.age === 0 || entry.ageDiff <= limits.age) &&
+		(limits.size === 0 || entry.sizeDiff <= limits.size);
+	const minHard = Math.min(...scored.map((entry) => entry.hard));
+	const hardPool = scored.filter((entry) => entry.hard === minHard);
+	const eligible = hardPool.filter(withinLimits);
+	const considered = eligible.length > 0 ? eligible : hardPool;
+
+	const best = considered[0];
+	const tolerant = considered.filter(
 		(entry) =>
-			entry.violations === best.violations &&
+			entry.hard === best.hard &&
 			entry.sizeDiff === best.sizeDiff &&
 			entry.skillDiff <= best.skillDiff + input.skillTolerance
 	);
 	tolerant.sort(
 		(a, b) =>
 			a.ageDiff - b.ageDiff ||
+			a.soft - b.soft ||
 			a.skillDiff - b.skillDiff ||
 			a.key.localeCompare(b.key)
 	);
@@ -381,8 +406,14 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	if (chosen.candidate.unfilled.length > 0) {
 		warnings.push('unfilled-slots');
 	}
-	if (chosen.violations > 0) {
+	if (chosen.hard > 0) {
 		warnings.push('rule-conflict');
+	}
+	if (chosen.soft > 0) {
+		warnings.push('rule-preference');
+	}
+	if (eligible.length === 0 && (limits.skill > 0 || limits.age > 0 || limits.size > 0)) {
+		warnings.push('rule-limit');
 	}
 
 	return {

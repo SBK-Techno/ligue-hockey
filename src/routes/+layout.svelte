@@ -103,10 +103,10 @@
 {:else}
 	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
 	<AppNav actor={data.actor} unread={data.unread} />
-	<main id="contenu" class="mx-auto w-full max-w-6xl px-4 pb-32 pt-5 sm:pb-12 sm:pt-8">
+	<main id="contenu" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-5 sm:pt-8 lg:pb-12">
 		{@render children()}
 	</main>
-	<footer class="mx-auto w-full max-w-6xl px-4 pb-28 pt-2 sm:pb-8">
+	<footer class="mx-auto w-full max-w-6xl px-4 pb-[calc(var(--bottom-bar-offset)+0.5rem)] pt-2 lg:pb-8">
 		<div
 			class="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 pt-5 text-[11px] font-medium text-muted"
 		>
