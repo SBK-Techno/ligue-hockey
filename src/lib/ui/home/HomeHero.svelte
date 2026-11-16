@@ -72,7 +72,7 @@
 	<section class="sheet p-5 sm:p-6">
 		<h2>{isManager ? t('home.noProfileAdmin') : t('home.noProfileTitle')}</h2>
 		{#if !isManager}
-			<p class="measure mt-2 text-sm leading-relaxed text-muted">
+			<p class="measure mt-2 text-body leading-relaxed text-muted">
 				{t('home.noProfileHelp')}
 			</p>
 			<a class="btn-primary mt-4" href="/profil">{t('home.profileAction')}</a>
@@ -88,7 +88,7 @@
 {:else if variant === 'no-game'}
 	<section class="sheet p-5 sm:p-6">
 		<h2>{t('home.noGame')}</h2>
-		<p class="measure mt-2 text-sm leading-relaxed text-muted">
+		<p class="measure mt-2 text-body leading-relaxed text-muted">
 			{isManager ? t('home.noGameHelpAdmin') : t('home.noGameHelp')}
 		</p>
 		<div class="mt-4 flex flex-wrap gap-2">
@@ -133,10 +133,10 @@
 					{formatWeekday(game.gameDate)}
 					{formatDayMonth(game.gameDate)}
 				</p>
-				<p class="mt-1 break-words text-sm leading-snug text-paper/70">{game.location}</p>
+				<p class="mt-1 break-words text-body leading-snug text-paper/70">{game.location}</p>
 				{#if mapUrl}
 					<a
-						class="mt-1 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-paper/75 underline decoration-paper/40 underline-offset-4"
+						class="mt-1 inline-flex min-h-11 items-center gap-1 text-body font-semibold text-paper/75 underline decoration-paper/40 underline-offset-4"
 						href={mapUrl}
 						target="_blank"
 						rel="noreferrer"
@@ -150,7 +150,7 @@
 				<p class="sr-only">{formatTime(game.startTime)}</p>
 				<p aria-hidden="true" class="clock text-paper">
 					{time.hour}<span
-						class="mx-3 inline-block font-sans text-[0.45em] font-semibold text-paper/60"
+						class="mx-3 inline-block font-sans text-[length:var(--text-clock-unit)] font-semibold text-paper/60"
 						>{t('common.hourShort')}</span
 					>{time.minute}
 				</p>
@@ -163,29 +163,29 @@
 			{#if variant === 'absent'}
 				<span class="stamp border-alert bg-alert-soft text-alert">{t('availability.absent')}</span>
 				{#if ownRequest?.status === 'open'}
-					<p class="mt-2 text-sm leading-snug text-paper/80">{t('subs.ownRequestOpen')}</p>
+					<p class="mt-2 text-body leading-snug text-paper/80">{t('subs.ownRequestOpen')}</p>
 					<a
-						class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-paper underline decoration-paper/40 underline-offset-4"
+						class="mt-2 inline-flex min-h-11 items-center text-body font-semibold text-paper underline decoration-paper/40 underline-offset-4"
 						href="/remplacants"
 					>
 						{t('home.actionOwnRequestLink')}
 					</a>
 				{:else if ownRequest?.status === 'filled'}
-					<p class="mt-2 text-sm leading-snug text-paper/80">
+					<p class="mt-2 text-body leading-snug text-paper/80">
 						{filledRequestLabel(ownRequest)}
 					</p>
 				{:else}
-					<p class="mt-2 text-sm leading-snug text-paper/70">{t('home.absentNoRequest')}</p>
+					<p class="mt-2 text-body leading-snug text-paper/70">{t('home.absentNoRequest')}</p>
 				{/if}
 				{@render withdrawForm()}
 			{:else if variant === 'cancelled'}
-				<p class="text-sm leading-relaxed text-paper/80">{t('games.cancelledNotice')}</p>
+				<p class="text-body leading-relaxed text-paper/80">{t('games.cancelledNotice')}</p>
 			{:else if ownSlot}
-				<p class="text-sm leading-relaxed text-paper/85">{t('home.playing')}</p>
+				<p class="text-body leading-relaxed text-paper/85">{t('home.playing')}</p>
 			{:else if isSubstitute || availability?.substitute}
-				<p class="text-sm leading-relaxed text-paper/75">{t('availability.substituteHint')}</p>
+				<p class="text-body leading-relaxed text-paper/75">{t('availability.substituteHint')}</p>
 			{:else if unanswered && availability}
-				<p class="text-sm font-semibold text-paper">{t('home.availability')}</p>
+				<p class="text-body font-semibold text-paper">{t('home.availability')}</p>
 				<form
 					method="POST"
 					action="?/availability"
@@ -194,7 +194,7 @@
 				>
 					<input type="hidden" name="gameId" value={gameId} />
 					<button
-						class="min-h-11 rounded-control border px-3 py-2 text-sm font-semibold transition-colors {present
+						class="min-h-11 rounded-control border px-3 py-2 text-body font-semibold transition-colors {present
 							? 'border-paper bg-paper text-ink'
 							: 'border-paper/40 text-paper hover:bg-paper/15'}"
 						name="status"
@@ -205,7 +205,7 @@
 						{t('availability.markPresent')}
 					</button>
 					<button
-						class="min-h-11 rounded-control border px-3 py-2 text-sm font-semibold transition-colors {absent
+						class="min-h-11 rounded-control border px-3 py-2 text-body font-semibold transition-colors {absent
 							? 'border-paper bg-paper text-ink'
 							: 'border-paper/40 text-paper hover:bg-paper/15'}"
 						name="status"
@@ -216,30 +216,30 @@
 						{t('availability.markAbsent')}
 					</button>
 				</form>
-				<p class="mt-2 text-xs text-paper/60">
+				<p class="mt-2 text-meta text-paper/60">
 					{t('home.deadline', { date: availability.closesAtLabel })}
 				</p>
 			{:else if present}
-				<p class="font-mono text-xs text-paper/85">{t('home.replyPresent')}</p>
+				<p class="font-mono text-meta text-paper/85">{t('home.replyPresent')}</p>
 				{#if ownRequest?.status === 'open'}
-					<p class="mt-1 text-sm text-paper/75">{t('subs.ownRequestOpen')}</p>
+					<p class="mt-1 text-body text-paper/75">{t('subs.ownRequestOpen')}</p>
 				{/if}
 				{#if availability?.canWithdraw}
-					<p class="mt-1 text-xs text-paper/60">{t('availability.lockedHelp')}</p>
+					<p class="mt-1 text-meta text-paper/60">{t('availability.lockedHelp')}</p>
 				{/if}
 				{@render withdrawForm()}
 			{:else if absent}
-				<p class="font-mono text-xs text-paper/85">{t('home.replyAbsent')}</p>
+				<p class="font-mono text-meta text-paper/85">{t('home.replyAbsent')}</p>
 				{#if ownRequest?.status === 'open'}
-					<p class="mt-1 text-sm text-paper/75">{t('subs.ownRequestOpen')}</p>
+					<p class="mt-1 text-body text-paper/75">{t('subs.ownRequestOpen')}</p>
 				{:else if ownRequest?.status === 'filled'}
-					<p class="mt-1 text-sm text-paper/75">{filledRequestLabel(ownRequest)}</p>
+					<p class="mt-1 text-body text-paper/75">{filledRequestLabel(ownRequest)}</p>
 				{/if}
 				{@render withdrawForm()}
 			{:else if availability?.locked}
-				<p class="text-sm text-paper/75">{t('availability.locked')}</p>
+				<p class="text-body text-paper/75">{t('availability.locked')}</p>
 			{:else if ownBench}
-				<p class="text-sm leading-relaxed text-paper/75">{t('home.teamBench')}</p>
+				<p class="text-body leading-relaxed text-paper/75">{t('home.teamBench')}</p>
 			{/if}
 
 			<div class="mt-3">

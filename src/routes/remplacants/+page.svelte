@@ -29,14 +29,14 @@
 {#if data.isSubstitute}
 	<section class="card mb-5" id="positions">
 		<h2>{t('subs.positions')}</h2>
-		<p class="mt-1 text-sm text-muted">{t('subs.positionsHelp')}</p>
+		<p class="mt-1 text-body text-muted">{t('subs.positionsHelp')}</p>
 		<form method="POST" action="?/saveProfile" use:progressiveForm class="mt-4">
 			<fieldset>
 				<legend class="sr-only">{t('subs.positions')}</legend>
 				<div class="flex flex-wrap gap-2">
 					{#each POSITIONS as position (position.key)}
 						<label
-							class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
+							class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-body font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
 						>
 							<input
 								type="checkbox"
@@ -111,7 +111,7 @@
 
 	{#if data.requests.length === 0}
 		<div class="card">
-			<p class="text-sm text-muted">{t('subs.noneOpen')}</p>
+			<p class="text-body text-muted">{t('subs.noneOpen')}</p>
 			<p class="hint">
 				{data.canManageRequests
 					? hasRequestableGames
@@ -142,7 +142,7 @@
 							<p class="font-semibold text-ink">
 								{t(positionDefinition(request.position).labelKey)}
 							</p>
-							<p class="mt-1 text-sm text-muted">
+							<p class="mt-1 text-body text-muted">
 								{formatDate(request.game.gameDate)} · {formatTime(request.game.startTime)} ·
 								{request.game.location}
 							</p>
@@ -171,7 +171,7 @@
 									/>
 								</form>
 							{/if}
-							<a class="link text-sm" href="/matchs/{request.gameId}">{t('subs.viewGame')}</a>
+							<a class="link text-body" href="/matchs/{request.gameId}">{t('subs.viewGame')}</a>
 						</div>
 					</div>
 				</li>
@@ -217,7 +217,7 @@
 
 		{#if data.pool.length === 0}
 			<div class="card">
-				<p class="text-sm text-muted">{t('subs.poolEmpty')}</p>
+				<p class="text-body text-muted">{t('subs.poolEmpty')}</p>
 				{#if data.canManagePool}
 					<p class="hint">{t('subs.poolEmptyHelp')}</p>
 					<button
@@ -237,7 +237,7 @@
 					{#each data.pool as substitute (substitute.playerId)}
 						<li class="px-4 py-3">
 							<div class="flex flex-wrap items-start justify-between gap-2">
-								<span class="min-w-0 text-sm font-medium">{substitute.fullName}</span>
+								<span class="min-w-0 text-body font-medium">{substitute.fullName}</span>
 								<span class="flex flex-wrap gap-1">
 									{#each substitute.positions as position (position)}
 										<span class="badge">{t(positionDefinition(position).shortLabelKey)}</span>

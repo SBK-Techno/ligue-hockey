@@ -27,7 +27,7 @@
 <SectionCard title={t('home.managerTitle')}>
 	<div class="p-4">
 		<div class="flex flex-wrap items-center justify-between gap-2">
-			<p class="text-xs text-muted">
+			<p class="text-meta text-muted">
 				{formatDate(gameDate, 'short')} · {formatTime(startTime)} · {location}
 			</p>
 			<span class={summary.generated ? 'badge-ok' : 'badge'}>

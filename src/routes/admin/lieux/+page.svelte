@@ -115,7 +115,7 @@
 	<SectionCard title="{t('admin.locations')} ({data.locations.length})">
 		{#if data.locations.length === 0}
 			<div class="px-4 py-3">
-				<p class="text-sm text-muted">{t('admin.locationsEmpty')}</p>
+				<p class="text-body text-muted">{t('admin.locationsEmpty')}</p>
 			</div>
 		{:else}
 			<ul role="list" class="divide-y divide-line/70">
@@ -127,7 +127,7 @@
 						<div class="px-4 pb-3">
 							<div class="flex flex-wrap items-center gap-3">
 								{#if href}
-									<a class="link text-sm" href={href} target="_blank" rel="noreferrer">
+									<a class="link text-body" href={href} target="_blank" rel="noreferrer">
 										{t('games.openMap')}
 									</a>
 								{/if}
@@ -137,12 +137,12 @@
 							</div>
 
 							{#if location.notes}
-								<p class="mt-2 whitespace-pre-wrap text-sm text-muted">{location.notes}</p>
+								<p class="mt-2 whitespace-pre-wrap text-body text-muted">{location.notes}</p>
 							{/if}
 
 							<details class="group mt-2 border-t border-line/70 pt-1">
 								<summary
-									class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm marker:content-none"
+									class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body marker:content-none"
 								>
 									<svg
 										viewBox="0 0 24 24"

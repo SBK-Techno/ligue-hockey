@@ -17,15 +17,15 @@
 
 <SectionCard title={t('subs.title')}>
 	{#if requests.length > 0}
-		<p class="px-4 pt-3 text-xs text-muted">{t('home.substitutesHelp')}</p>
+		<p class="px-4 pt-3 text-meta text-muted">{t('home.substitutesHelp')}</p>
 		<ul role="list" class="mt-2 divide-y divide-line">
 			{#each requests as request (request.id)}
 				<li class="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
 					<div class="min-w-0">
-						<p class="text-sm font-semibold">
+						<p class="text-body font-semibold">
 							{t(positionDefinition(request.position).labelKey)}
 						</p>
-						<p class="mt-0.5 break-words text-xs text-muted">
+						<p class="mt-0.5 break-words text-meta text-muted">
 							{formatDate(request.game.gameDate, 'short')} ·
 							{formatTime(request.game.startTime)} · {request.game.location}
 						</p>
@@ -45,18 +45,18 @@
 
 	{#if ownRequest}
 		<div class="px-4 py-3 {requests.length === 0 ? '' : 'border-t border-line'}">
-			<p class="text-sm font-semibold">
+			<p class="text-body font-semibold">
 				{ownRequest.status === 'open'
 					? t('home.substitutesOwnRequest')
 					: t('home.substitutesOwnRequestFilled')}
 			</p>
-			<p class="mt-0.5 break-words text-xs text-muted">
+			<p class="mt-0.5 break-words text-meta text-muted">
 				{formatDate(ownRequest.game.gameDate, 'short')} · {formatTime(ownRequest.game.startTime)}
 			</p>
 			{#if ownRequest.status === 'filled'}
 				<p class="hint">{filledRequestLabel(ownRequest)}</p>
 			{/if}
-			<a class="action-link text-sm" href="/remplacants">{t('home.actionOwnRequestLink')}</a>
+			<a class="action-link text-body" href="/remplacants">{t('home.actionOwnRequestLink')}</a>
 		</div>
 	{/if}
 </SectionCard>

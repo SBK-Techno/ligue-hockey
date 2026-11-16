@@ -62,18 +62,18 @@
 	aria-current={next ? 'true' : undefined}
 >
 	<span class="w-[4.5rem] shrink-0 border-r border-line pr-2">
-		<span class="block truncate text-[11px] font-medium uppercase tracking-wide text-muted">
+		<span class="block truncate text-caption font-medium uppercase tracking-wide text-muted">
 			{formatWeekday(game.gameDate)}
 		</span>
-		<time datetime={game.gameDate} class="numeric mt-0.5 block whitespace-nowrap text-[13px]">
+		<time datetime={game.gameDate} class="numeric mt-0.5 block whitespace-nowrap text-meta">
 			{formatDate(game.gameDate, 'short')}
 		</time>
 		{#if past}
-			<span class="numeric block text-[10px] text-muted">{game.gameDate.slice(0, 4)}</span>
+			<span class="numeric block text-stamp text-muted">{game.gameDate.slice(0, 4)}</span>
 		{/if}
 	</span>
 	<span class="min-w-0 flex-1">
-		<span class="block truncate text-sm font-semibold">
+		<span class="block truncate text-body font-semibold">
 			{formatTime(game.startTime)} · {game.location}
 		</span>
 		{#if badges.length > 0}

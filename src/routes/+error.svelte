@@ -20,7 +20,7 @@
 	<BrandLockup href="/" size="md" caption={false} />
 	<p class="numeric mt-8 text-6xl text-accent">{page.status}</p>
 	<h1 class="mt-4 text-3xl">{title}</h1>
-	<p class="mt-3 max-w-sm text-sm leading-relaxed text-muted">{t('error.help')}</p>
+	<p class="mt-3 max-w-sm text-body leading-relaxed text-muted">{t('error.help')}</p>
 	<div class="mt-7 flex flex-wrap items-center justify-center gap-3">
 		<a class="btn-primary" href="/">{t('error.home')}</a>
 		<a class="btn-secondary" href="/matchs">{t('games.title')}</a>

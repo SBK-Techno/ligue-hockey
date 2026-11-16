@@ -106,7 +106,7 @@
 	{#if substitute}
 		<input type="hidden" name="isSubstitute" value="true" />
 	{:else}
-		<label class="flex min-h-11 items-center gap-3 text-sm font-medium sm:col-span-2">
+		<label class="flex min-h-11 items-center gap-3 text-body font-medium sm:col-span-2">
 			<input type="checkbox" name="isSubstitute" class="h-4 w-4" />
 			{t('profile.substitute')}
 		</label>

@@ -30,7 +30,7 @@
 {#if hasNames}
 	<details class="group mt-2">
 		<summary
-			class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold marker:content-none"
+			class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-body font-semibold marker:content-none"
 		>
 			<span>{t('home.attendanceNames')}</span>
 			<svg
@@ -44,7 +44,7 @@
 				<path d="m6 9 6 6 6-6" />
 			</svg>
 		</summary>
-		<dl class="mt-1 space-y-2 border-t border-line pt-2 text-xs leading-relaxed">
+		<dl class="mt-1 space-y-2 border-t border-line pt-2 text-meta leading-relaxed">
 			{#if present.length > 0}
 				<div>
 					<dt class="serial">{t('availability.present')}</dt>

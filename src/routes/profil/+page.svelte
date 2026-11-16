@@ -186,7 +186,7 @@
 
 {#if !account}
 	<div class="card">
-		<p class="text-sm text-muted">{t('error.accountNotFound')}</p>
+		<p class="text-body text-muted">{t('error.accountNotFound')}</p>
 	</div>
 {:else}
 	<div class="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
@@ -202,16 +202,16 @@
 						<p class="break-words font-display text-2xl font-semibold leading-tight">
 							{account.name}
 						</p>
-						<p class="mt-1 break-all text-sm text-paper/65">{account.email}</p>
+						<p class="mt-1 break-all text-body text-paper/65">{account.email}</p>
 					</div>
 				</div>
 
 				<div class="mt-4 flex flex-wrap gap-2">
-					<span class="rounded-[0.2rem] border border-paper/25 px-2 py-0.5 text-[11px] font-medium">
+					<span class="rounded-[0.2rem] border border-paper/25 px-2 py-0.5 text-caption font-medium">
 						{roleLabel}
 					</span>
 					{#if profile}
-						<span class="rounded-[0.2rem] border border-paper/25 px-2 py-0.5 text-[11px] font-medium">
+						<span class="rounded-[0.2rem] border border-paper/25 px-2 py-0.5 text-caption font-medium">
 							{t(positionDefinition(profile.position).labelKey)}
 							{#if profile.jerseyNumber}
 								· #{profile.jerseyNumber}
@@ -220,7 +220,7 @@
 					{/if}
 				</div>
 
-				<p class="mt-5 border-t border-paper/10 pt-3 text-xs text-paper/55">
+				<p class="mt-5 border-t border-paper/10 pt-3 text-meta text-paper/55">
 					{t('profile.memberSince', { date: formatMonthYear(account.createdAt) })}
 				</p>
 			</section>
@@ -228,7 +228,7 @@
 			{#if data.balance}
 				<a href="/solde" class="card card-link flex items-center justify-between gap-3">
 					<div class="min-w-0">
-						<p class="text-xs font-semibold text-muted">{t('profile.balance')}</p>
+						<p class="text-meta font-semibold text-muted">{t('profile.balance')}</p>
 						<p class="numeric mt-1 text-2xl text-ink">
 							{formatMoney(data.balance.outstandingCents, data.balance.currency)}
 						</p>
@@ -250,7 +250,7 @@
 				{#each sections as section (section.id)}
 					<a
 						href="#{section.id}"
-						class="flex min-h-11 items-center border-l-[3px] border-transparent px-2.5 text-sm font-medium text-muted no-underline transition-colors hover:bg-ink/5 hover:text-ink"
+						class="flex min-h-11 items-center border-l-[3px] border-transparent px-2.5 text-body font-medium text-muted no-underline transition-colors hover:bg-ink/5 hover:text-ink"
 					>
 						{section.label}
 					</a>
@@ -386,13 +386,13 @@
 				{#if data.isSubstitute}
 					<section id="positions" class="card scroll-mt-[var(--anchor-offset)]">
 						<h2>{t('subs.positions')}</h2>
-						<p class="mt-1 text-sm text-muted">{t('subs.positionsHelp')}</p>
+						<p class="mt-1 text-body text-muted">{t('subs.positionsHelp')}</p>
 						<FormFeedback {form} section="positions" class="mt-3" />
 						<form method="POST" action="?/positions" use:progressiveForm class="mt-4">
 							<div class="flex flex-wrap gap-2">
 								{#each POSITIONS as position (position.key)}
 									<label
-										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
+										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-body font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
 									>
 										<input
 											type="checkbox"
@@ -416,7 +416,7 @@
 				<p class="hint mt-1">{t('profile.notificationsHelp')}</p>
 				<FormFeedback {form} section="notifications" class="mt-3" />
 				<form method="POST" action="?/notifications" use:progressiveForm class="mt-4 space-y-3">
-					<label class="flex min-h-11 items-center gap-3 text-sm font-medium">
+					<label class="flex min-h-11 items-center gap-3 text-body font-medium">
 						<input
 							type="checkbox"
 							name="emailEnabled"
@@ -425,7 +425,7 @@
 						/>
 						{t('profile.emailNotifications')}
 					</label>
-					<label class="flex min-h-11 items-center gap-3 text-sm font-medium">
+					<label class="flex min-h-11 items-center gap-3 text-body font-medium">
 						<input
 							type="checkbox"
 							name="pushEnabled"
@@ -479,7 +479,7 @@
 				<FormFeedback {form} section="securite" class="mt-3" />
 
 				<details class="mt-4">
-					<summary class="link flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold marker:content-none">
+					<summary class="link flex min-h-11 cursor-pointer list-none items-center text-body font-semibold marker:content-none">
 						{t('profile.changePassword')}
 					</summary>
 				<form method="POST" action="?/password" use:progressiveForm class="mt-1 space-y-4">
@@ -511,14 +511,14 @@
 				</details>
 
 				<div class="mt-6 border-t border-line/80 pt-5">
-					<h3 class="text-sm font-semibold">{t('profile.sessions')}</h3>
+					<h3 class="text-body font-semibold">{t('profile.sessions')}</h3>
 					<p class="hint">{t('profile.sessionsHelp')}</p>
 					<ul role="list" class="mt-3 divide-y divide-line/70">
 						{#if currentSession}
 							<li class="py-3">
 								<div class="flex flex-wrap items-center justify-between gap-2">
 									<div class="min-w-0">
-										<p class="break-words text-sm font-semibold">
+										<p class="break-words text-body font-semibold">
 											{deviceLabel(currentSession.userAgent)}
 										</p>
 										<p class="hint">
@@ -532,7 +532,7 @@
 						{#each otherSessions.slice(0, 2) as session (session.id)}
 							<li class="py-3">
 								<div class="min-w-0">
-									<p class="break-words text-sm font-semibold">
+									<p class="break-words text-body font-semibold">
 										{deviceLabel(session.userAgent)}
 									</p>
 									<p class="hint">
@@ -545,7 +545,7 @@
 
 					{#if otherSessions.length > 2}
 						<details class="mt-1">
-							<summary class="link flex min-h-11 cursor-pointer list-none items-center text-sm marker:content-none">
+							<summary class="link flex min-h-11 cursor-pointer list-none items-center text-body marker:content-none">
 								{formatCount(
 								otherSessions.length - 2,
 								'profile.moreSessions.one',
@@ -555,7 +555,7 @@
 							<ul role="list" class="divide-y divide-line/70">
 								{#each otherSessions.slice(2) as session (session.id)}
 									<li class="py-3">
-										<p class="break-words text-sm font-semibold">
+										<p class="break-words text-body font-semibold">
 											{deviceLabel(session.userAgent)}
 										</p>
 										<p class="hint">{formatTimestamp(session.updatedAt)}</p>
@@ -589,7 +589,7 @@
 			{#if !profile && isManager}
 				<section class="card">
 					<h2>{t('profile.playerSection')}</h2>
-					<p class="mt-1 text-sm text-muted">{t('profile.noPlayerSheetAdmin')}</p>
+					<p class="mt-1 text-body text-muted">{t('profile.noPlayerSheetAdmin')}</p>
 					{#if actor && can(actor, 'managePlayers')}
 						<a class="btn-secondary btn-sm mt-3" href="/admin/joueurs">
 							{t('profile.createPlayerSheet')}

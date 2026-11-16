@@ -102,7 +102,7 @@
 	>
 		{#if data.upcoming.length === 0}
 			<div class="px-4 py-3">
-				<p class="text-sm text-muted">{t('games.empty')}</p>
+				<p class="text-body text-muted">{t('games.empty')}</p>
 				<p class="hint">{t('games.emptyHelp')}</p>
 			</div>
 		{:else}

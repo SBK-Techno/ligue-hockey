@@ -14,7 +14,7 @@
 		<p class="success mt-5" role="status">{form.message}</p>
 		<a class="btn-secondary mt-5 w-full" href="/connexion">{t('auth.reset.back')}</a>
 	{:else}
-		<p class="mt-1 text-sm leading-relaxed text-muted">{t('auth.reset.lead')}</p>
+		<p class="mt-1 text-body leading-relaxed text-muted">{t('auth.reset.lead')}</p>
 		<FormFeedback {form} class="mt-5" />
 		<form method="POST" use:progressiveForm class="mt-6 space-y-4">
 			<div>
@@ -34,7 +34,7 @@
 			<button class="btn-primary w-full" type="submit">{t('auth.reset.submit')}</button>
 		</form>
 		<div class="mt-5 text-center">
-			<a class="action-link text-sm" href="/connexion">{t('auth.reset.back')}</a>
+			<a class="action-link text-body" href="/connexion">{t('auth.reset.back')}</a>
 		</div>
 	{/if}
 </div>

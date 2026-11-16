@@ -69,7 +69,7 @@
 />
 
 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-	<p class="font-mono text-xs text-muted">
+	<p class="font-mono text-meta text-muted">
 		{formatCount(
 			assessment.ratedPlayers,
 			'rating.ratedPlayers.one',
@@ -77,7 +77,7 @@
 			{ total: assessment.totalPlayers }
 		)}
 	</p>
-	<p class="text-[11px] text-muted">{t('rating.gameHelp')}</p>
+	<p class="text-caption text-muted">{t('rating.gameHelp')}</p>
 </div>
 
 <FormFeedback {form} class="mb-4" />
@@ -100,8 +100,8 @@
 			>
 				<span class="jersey">{player.jerseyNumber ?? '-'}</span>
 				<span class="min-w-0 flex-1">
-					<span class="block truncate text-sm font-semibold">{player.fullName}</span>
-					<span class="mt-0.5 block text-xs text-muted">
+					<span class="block truncate text-body font-semibold">{player.fullName}</span>
+					<span class="mt-0.5 block text-meta text-muted">
 						{t(positionDefinition(player.position).labelKey)}
 					</span>
 				</span>

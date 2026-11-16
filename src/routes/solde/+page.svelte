@@ -37,14 +37,14 @@
 {#if !data.balance}
 	<div class="card">
 		{#if !data.hasPlayerProfile}
-			<p class="text-sm text-muted">{t('balance.adminNoProfile')}</p>
+			<p class="text-body text-muted">{t('balance.adminNoProfile')}</p>
 			{#if canViewAllBalances}
 				<a class="btn-secondary btn-sm mt-3" href="/admin/soldes">
 					{t('balance.manageAll')}
 				</a>
 			{/if}
 		{:else}
-			<p class="text-sm text-muted">{t('balance.noPlan')}</p>
+			<p class="text-body text-muted">{t('balance.noPlan')}</p>
 			<p class="hint">{t('balance.noPlanHelp')}</p>
 		{/if}
 	</div>
@@ -52,17 +52,17 @@
 	<div class="mb-4 grid grid-cols-1 gap-px rounded-sheet border border-line bg-line sm:grid-cols-3">
 		<div class="bg-surface px-3 py-3 text-right sm:px-4">
 			<p class="numeric text-xl">{formatMoney(data.balance.totalCents, data.balance.currency)}</p>
-			<p class="mt-0.5 text-xs text-muted">{t('balance.total')}</p>
+			<p class="mt-0.5 text-meta text-muted">{t('balance.total')}</p>
 		</div>
 		<div class="bg-surface px-3 py-3 text-right sm:px-4">
 			<p class="numeric text-xl">{formatMoney(data.balance.paidCents, data.balance.currency)}</p>
-			<p class="mt-0.5 text-xs text-muted">{t('balance.paid')}</p>
+			<p class="mt-0.5 text-meta text-muted">{t('balance.paid')}</p>
 		</div>
 		<div class="bg-surface px-3 py-3 text-right sm:px-4">
 			<p class="numeric text-xl {data.balance.isOverdue ? 'text-alert' : ''}">
 				{formatMoney(data.balance.outstandingCents, data.balance.currency)}
 			</p>
-			<p class="mt-0.5 text-xs text-muted">{t('balance.outstanding')}</p>
+			<p class="mt-0.5 text-meta text-muted">{t('balance.outstanding')}</p>
 		</div>
 	</div>
 
@@ -87,7 +87,7 @@
 					<div class="flex flex-wrap items-center justify-between gap-2">
 						<div>
 							<p class="font-semibold">{t('balance.installment', { number: installment.number })}</p>
-							<p class="text-sm text-muted">
+							<p class="text-body text-muted">
 								<span class="numeric">{formatMoney(installment.amountCents, data.balance.currency)}</span>
 								·
 								{#if installment.status === 'paid'}
@@ -119,7 +119,7 @@
 			{/each}
 		</ul>
 		<div class="border-t border-line/70 px-4 py-3">
-			<p class="text-sm text-muted">{t('balance.payHelp')}</p>
+			<p class="text-body text-muted">{t('balance.payHelp')}</p>
 			<p class="hint">{t('balance.paymentMethods', { methods })}</p>
 			<p class="hint">{t('balance.onlyYou')}</p>
 		</div>
@@ -128,16 +128,16 @@
 	<section class="card-flush overflow-hidden">
 		<h2 class="border-b border-line/70 px-4 py-3 text-lg">{t('balance.history')}</h2>
 		{#if data.payments.length === 0}
-			<p class="px-4 py-3 text-sm text-muted">{t('balance.noPayments')}</p>
+			<p class="px-4 py-3 text-body text-muted">{t('balance.noPayments')}</p>
 		{:else}
 			<ul role="list" class="divide-y divide-line/70">
 				{#each data.payments as payment (payment.id)}
-					<li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+					<li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-body">
 						<div>
 							<p class="numeric text-right font-semibold">
 								{formatMoney(payment.amountCents, data.balance.currency)}
 							</p>
-							<p class="text-xs text-muted">
+							<p class="text-meta text-muted">
 								{formatDate(payment.paidAt, 'year')} · {t(paymentDefinition(payment.method).labelKey)}
 							</p>
 						</div>

@@ -63,7 +63,7 @@
 >
 	<div class="p-5">
 		<h2 id={titleId} class="text-lg">{title}</h2>
-		<p id={bodyId} class="mt-2 text-sm leading-relaxed text-muted">{question}</p>
+		<p id={bodyId} class="mt-2 text-body leading-relaxed text-muted">{question}</p>
 		<div class="mt-5 flex flex-wrap justify-end gap-2">
 			<button class="btn-secondary" type="button" onclick={() => dialog?.close()}>
 				{cancelLabel}

@@ -34,7 +34,7 @@
 					{@const current = active(tab.href)}
 					<a
 						href={tab.href}
-						class="relative flex min-h-11 items-center border-l-[3px] px-2.5 text-[13px] font-medium no-underline transition-colors {current
+						class="relative flex min-h-11 items-center border-l-[3px] px-2.5 text-meta font-medium no-underline transition-colors {current
 							? 'border-ice bg-ice-soft text-ice-deep'
 							: 'border-transparent text-muted hover:bg-ink/5 hover:text-ink'}"
 						aria-current={current ? 'page' : undefined}
@@ -46,7 +46,7 @@
 			<div class="mt-3 border-t border-line pt-2">
 				<a
 					href="/"
-					class="flex min-h-11 items-center gap-2 px-2.5 text-sm font-medium text-muted no-underline hover:bg-ink/5 hover:text-ink"
+					class="flex min-h-11 items-center gap-2 px-2.5 text-body font-medium text-muted no-underline hover:bg-ink/5 hover:text-ink"
 				>
 					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 						<path d="m15 6-6 6 6 6" />

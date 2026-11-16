@@ -66,7 +66,7 @@
 		class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line px-4 py-2.5"
 	>
 		<h2 id={titleId}>{monthLabel}</h2>
-		<a class="link -my-2 inline-flex min-h-11 items-center text-sm" href="/matchs">
+		<a class="link -my-2 inline-flex min-h-11 items-center text-body" href="/matchs">
 			{t('home.openSchedule')}
 		</a>
 	</header>

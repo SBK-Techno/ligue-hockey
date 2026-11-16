@@ -41,7 +41,7 @@
 
 {#if data.items.length === 0}
 	<div class="card">
-		<p class="text-sm text-muted">{t('notifications.empty')}</p>
+		<p class="text-body text-muted">{t('notifications.empty')}</p>
 		<p class="hint">
 			{isManager ? t('notifications.emptyHelpAdmin') : t('notifications.emptyHelp')}
 		</p>
@@ -68,10 +68,10 @@
 							></span>
 							<span class="block min-w-0 flex-1">
 								<span class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-									<span class="break-words text-sm font-semibold text-ink">{item.title}</span>
-									<span class="text-[11px] text-muted">{formatTimestamp(item.createdAt)}</span>
+									<span class="break-words text-body font-semibold text-ink">{item.title}</span>
+									<span class="text-caption text-muted">{formatTimestamp(item.createdAt)}</span>
 								</span>
-								<span class="mt-0.5 line-clamp-2 break-words text-sm leading-snug text-ink/75">
+								<span class="mt-0.5 line-clamp-2 break-words text-body leading-snug text-ink/75">
 									{item.body}
 								</span>
 							</span>

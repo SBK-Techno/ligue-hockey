@@ -58,17 +58,17 @@
 					>
 						{t(team.labelKey)}
 					</span>
-					<p class="mt-1.5 text-sm font-semibold">{t(position.labelKey)}</p>
+					<p class="mt-1.5 text-body font-semibold">{t(position.labelKey)}</p>
 				</div>
 			</div>
 			{#if pairNote}
-				<p class="notice mt-3 text-xs leading-relaxed">{pairNote}</p>
+				<p class="notice mt-3 text-meta leading-relaxed">{pairNote}</p>
 			{/if}
 		{:else if ownBench}
-			<p class="text-sm font-semibold">{t('home.teamBench')}</p>
+			<p class="text-body font-semibold">{t('home.teamBench')}</p>
 			<p class="hint">{t('home.teamBenchHelp')}</p>
 		{:else}
-			<p class="text-sm font-semibold">{t('home.teamNoSlot')}</p>
+			<p class="text-body font-semibold">{t('home.teamNoSlot')}</p>
 			<p class="hint">{t('home.teamNoSlotHelp')}</p>
 		{/if}
 	</div>

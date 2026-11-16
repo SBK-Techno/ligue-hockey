@@ -88,7 +88,7 @@
 					{/each}
 				</ul>
 			{:else}
-				<p class="px-4 py-3 text-sm text-muted">
+				<p class="px-4 py-3 text-body text-muted">
 					{data.withoutPlan.length > 0 ? t('admin.noUnpaid') : t('admin.nothingTodo')}
 				</p>
 			{/if}
@@ -134,9 +134,9 @@
 							{/if}
 						</div>
 						{#if data.nextAvailability}
-							<p class="mt-3 font-mono text-xs text-muted">{data.nextAvailability.summary}</p>
+							<p class="mt-3 font-mono text-meta text-muted">{data.nextAvailability.summary}</p>
 							{#if pendingNames.length > 0}
-								<p class="mt-1 text-xs leading-snug text-muted">
+								<p class="mt-1 text-meta leading-snug text-muted">
 									{t('admin.unansweredNames', { names: pendingNames.slice(0, 5).join(', ') })}
 								</p>
 							{/if}
@@ -147,7 +147,7 @@
 					</div>
 				{:else}
 					<div class="p-4">
-						<p class="text-sm text-muted">{t('home.noGame')}</p>
+						<p class="text-body text-muted">{t('home.noGame')}</p>
 						<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
 					</div>
 				{/if}

@@ -76,7 +76,7 @@
 	{#if mapUrl}
 		<p class="-mt-3 mb-4">
 			<a
-				class="link inline-flex items-center gap-1 text-sm"
+				class="link inline-flex items-center gap-1 text-body"
 				href={mapUrl}
 				target="_blank"
 				rel="noreferrer"
@@ -110,14 +110,14 @@
 		<h2>{hasProfile ? t('home.availability') : t('availability.title')}</h2>
 
 		{#if game.status === 'cancelled'}
-			<p class="mt-2 text-sm text-muted">{t('games.cancelledNotice')}</p>
+			<p class="mt-2 text-body text-muted">{t('games.cancelledNotice')}</p>
 		{:else if isManager && !hasProfile}
-			<p class="mt-3 text-sm text-muted">{t('home.adminHero')}</p>
+			<p class="mt-3 text-body text-muted">{t('home.adminHero')}</p>
 		{:else if availability?.substitute}
-			<p class="mt-3 text-sm text-muted">{t('availability.substituteHint')}</p>
+			<p class="mt-3 text-body text-muted">{t('availability.substituteHint')}</p>
 			<a class="btn-secondary btn-sm mt-3" href="/remplacants">{t('home.substituteCta')}</a>
 		{:else if availability?.locked}
-			<p class="mt-3 text-sm font-medium text-muted">{t('availability.locked')}</p>
+			<p class="mt-3 text-body font-medium text-muted">{t('availability.locked')}</p>
 			{#if availability.canWithdraw}
 				<p class="hint mt-1">{t('availability.lockedHelp')}</p>
 				<form method="POST" action="?/availability" use:progressiveForm class="mt-3">
@@ -134,7 +134,7 @@
 		{:else if availability?.canRespond}
 			<div class="mt-4 flex flex-wrap items-center justify-between gap-4">
 				<div>
-					<p class="text-sm font-semibold">
+					<p class="text-body font-semibold">
 						{#if availability.own === 'present'}
 							{t('home.replyPresent')}
 						{:else if availability.own === 'absent'}
@@ -143,7 +143,7 @@
 							{t('home.awaitingReply')}
 						{/if}
 					</p>
-					<p class="mt-1 text-xs text-muted">
+					<p class="mt-1 text-meta text-muted">
 						{t('home.deadline', { date: availability.closesAtLabel })}
 					</p>
 				</div>
@@ -154,7 +154,7 @@
 					class="grid w-full grid-cols-2 gap-2 sm:inline-flex sm:w-auto sm:rounded-control sm:border sm:border-line-strong sm:bg-paper sm:p-1"
 				>
 					<button
-						class="min-h-11 rounded-control border px-4 text-sm font-semibold transition-colors sm:border-0 {availability.own ===
+						class="min-h-11 rounded-control border px-4 text-body font-semibold transition-colors sm:border-0 {availability.own ===
 						'present'
 							? 'border-ink bg-ink text-paper'
 							: 'border-line-strong bg-surface text-ink hover:bg-paper sm:bg-transparent sm:text-muted sm:hover:bg-ink/5 sm:hover:text-ink'}"
@@ -166,7 +166,7 @@
 						{t('availability.markPresent')}
 					</button>
 					<button
-						class="min-h-11 rounded-control border px-4 text-sm font-semibold transition-colors sm:border-0 {availability.own ===
+						class="min-h-11 rounded-control border px-4 text-body font-semibold transition-colors sm:border-0 {availability.own ===
 						'absent'
 							? 'border-ink bg-ink text-paper'
 							: 'border-line-strong bg-surface text-ink hover:bg-paper sm:bg-transparent sm:text-muted sm:hover:bg-ink/5 sm:hover:text-ink'}"
@@ -206,7 +206,7 @@
 			<p class="hint mt-1">{t('subs.rules')}</p>
 
 			{#if data.requests.length === 0}
-				<p class="mt-3 text-sm text-muted">{t('subs.noneOpen')}</p>
+				<p class="mt-3 text-body text-muted">{t('subs.noneOpen')}</p>
 			{:else}
 				<ul role="list" class="mt-3 space-y-2">
 					{#each openRequests as request (request.id)}
@@ -222,10 +222,10 @@
 							></span>
 							<div class="flex flex-wrap items-center justify-between gap-3">
 								<div class="min-w-0">
-									<p class="text-sm font-semibold">
+									<p class="text-body font-semibold">
 										{t(positionDefinition(request.position).labelKey)}
 									</p>
-									<p class="mt-0.5 text-xs text-muted">
+									<p class="mt-0.5 text-meta text-muted">
 										{#if request.requestedByName}
 											{t('subs.requestedBy', { name: request.requestedByName })}
 										{/if}
@@ -265,7 +265,7 @@
 				{#if filledRequests.length > 0}
 					<details class="group mt-3 border-t border-line/70 pt-1">
 						<summary
-							class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm marker:content-none"
+							class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body marker:content-none"
 						>
 							<svg
 								viewBox="0 0 24 24"
@@ -284,10 +284,10 @@
 								<li class="rounded-control border border-line bg-paper px-3 py-2.5">
 									<div class="flex flex-wrap items-center justify-between gap-2">
 										<div class="min-w-0">
-											<p class="text-sm font-semibold">
+											<p class="text-body font-semibold">
 												{t(positionDefinition(request.position).labelKey)}
 											</p>
-											<p class="mt-0.5 text-xs text-muted">
+											<p class="mt-0.5 text-meta text-muted">
 												{#if request.filledByName}
 													{t('subs.filledBy', { name: request.filledByName })}
 												{:else if request.requestedByName}
@@ -341,7 +341,7 @@
 				<div>
 					<h2>{t('games.roster')}</h2>
 					{#if game.generation}
-						<p class="mt-1 text-xs text-muted">
+						<p class="mt-1 text-meta text-muted">
 							{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
 						</p>
 					{/if}
@@ -357,7 +357,7 @@
 				<div class="section-title">
 					<h2>{t('team.balance')}</h2>
 				</div>
-				<p class="mt-2 text-sm text-muted">
+				<p class="mt-2 text-body text-muted">
 					{t('games.teamBalance', {
 						skill: game.generation.skillDiffLabel ?? '',
 						age: game.generation.ageDiffLabel ?? ''
@@ -378,7 +378,7 @@
 								</p>
 							{/if}
 							{#if definition.detail === 'open-slots'}
-								<p class="mt-1 text-sm">{game.openSlotsLabel}</p>
+								<p class="mt-1 text-body">{game.openSlotsLabel}</p>
 							{/if}
 						</div>
 					{/if}
@@ -386,7 +386,7 @@
 				{#if data.canManage && game.generation.ruleViolations.length > 0}
 					<div class="notice mt-3">
 						<p class="font-semibold">{t('admin.ruleViolations')}</p>
-						<ul role="list" class="mt-2 space-y-1 text-sm">
+						<ul role="list" class="mt-2 space-y-1 text-body">
 							{#each game.generation.ruleViolations as violation (violation.ruleId)}
 								{@const mode = ruleModeDefinition(
 									ruleModeFor(violation.kind, violation.strict)
@@ -422,7 +422,7 @@
 	{:else}
 		<section class="card mt-6">
 			<h2>{t('games.notGenerated')}</h2>
-			<p class="measure mt-2 text-sm text-muted">
+			<p class="measure mt-2 text-body text-muted">
 				{data.canManage ? t('games.lineupSoonAdmin') : t('games.lineupSoon')}
 			</p>
 			{#if data.canManage && data.editable}

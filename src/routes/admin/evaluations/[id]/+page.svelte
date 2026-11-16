@@ -30,7 +30,7 @@
 		<div class="space-y-4">
 			<SectionCard title={t('rating.seasonTitle')}>
 				<div class="border-b border-line px-4 py-2">
-					<p class="text-xs leading-snug text-muted">{t('rating.scaleHelp')}</p>
+					<p class="text-meta leading-snug text-muted">{t('rating.scaleHelp')}</p>
 				</div>
 				<div class="divide-y divide-line px-4 py-1">
 					{#each RATING_ATTRIBUTES as attribute (attribute.key)}
@@ -67,7 +67,7 @@
 						? t('rating.notRated')
 						: formatDecimal(data.ratings.overall, 2)}
 				</p>
-				<p class="mt-2 text-xs text-muted">{t('rating.overallHelp')}</p>
+				<p class="mt-2 text-meta text-muted">{t('rating.overallHelp')}</p>
 			</section>
 
 			<section class="sheet p-4">
@@ -82,8 +82,8 @@
 						? t('rating.notAvailable')
 						: formatDecimal(data.ratings.positionOverall, 2)}
 				</p>
-				<p class="mt-2 text-xs text-muted">{t('rating.positionDescriptive')}</p>
-				<p class="mt-1 text-xs text-muted">
+				<p class="mt-2 text-meta text-muted">{t('rating.positionDescriptive')}</p>
+				<p class="mt-1 text-meta text-muted">
 					{t('rating.positionCriteria', {
 						done: Object.keys(data.ratings.positionValues).length,
 						total: data.ratings.positionTotal
@@ -113,7 +113,7 @@
 					{/if}
 				</dl>
 				{#if data.ratings.form.games > 0}
-					<p class="mt-2 text-xs text-muted">
+					<p class="mt-2 text-meta text-muted">
 						{formatCount(
 							data.ratings.form.games,
 							'rating.formHelp.one',

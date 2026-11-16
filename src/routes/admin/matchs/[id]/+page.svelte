@@ -88,7 +88,7 @@
 		<div class="alert mb-4">
 			<p class="font-semibold">{t('games.ratingsMissing')}</p>
 			{#if missingRatingLinks.length > 0}
-				<ul role="list" class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+				<ul role="list" class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-body">
 					{#each missingRatingLinks as player (player.playerId)}
 						<li>
 							<a class="link font-medium" href={playerAssessmentHref(player.playerId)}>
@@ -99,11 +99,11 @@
 				</ul>
 			{/if}
 			{#if otherUnratedNames.length > 0}
-				<p class="mt-1 text-sm">
+				<p class="mt-1 text-body">
 					{t('games.ratingsMissingNames', { names: otherUnratedNames.join(', ') })}
 				</p>
 			{/if}
-			<p class="mt-1 text-sm">{t('games.ratingsMissingHelp')}</p>
+			<p class="mt-1 text-body">{t('games.ratingsMissingHelp')}</p>
 		</div>
 	{/if}
 
@@ -184,22 +184,22 @@
 
 			<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line/70 pt-3">
 				{#each TEAMS as team (team.key)}
-					<p class="text-sm text-muted">
+					<p class="text-body text-muted">
 						{t('games.teamSize', {
 							team: t(teamDefinition(team.key).labelKey),
 							count: intelligence.sizes[team.key]
 						})}
 					</p>
 				{/each}
-				<p class="text-sm text-muted">
+				<p class="text-body text-muted">
 					{formatCount(
 						intelligence.placed,
 						'games.filledPlaces.one',
 						'games.filledPlaces.many'
 					)}
 				</p>
-				<p class="text-sm text-muted">{game.openSlotsLabel}</p>
-				<p class="text-sm text-muted">
+				<p class="text-body text-muted">{game.openSlotsLabel}</p>
+				<p class="text-body text-muted">
 					{t('games.sizeGap', { count: intelligence.sizeDiff })}
 				</p>
 				<div class="ml-auto flex flex-wrap gap-2">
@@ -229,7 +229,7 @@
 			/>
 
 			{#if generation}
-				<p class="mt-2 text-xs text-muted">
+				<p class="mt-2 text-meta text-muted">
 					{t('games.publishedAt', { date: formatTimestamp(generation.generatedAt) })}
 				</p>
 			{/if}
@@ -237,15 +237,15 @@
 			{#if !intelligence.complete}
 				<div class="notice mt-4">
 					<p class="font-semibold">{t('games.rosterIncomplete')}</p>
-					<p class="mt-1 text-sm leading-snug">{t('games.incomplete')}</p>
-					<p class="mt-1 text-sm">
+					<p class="mt-1 text-body leading-snug">{t('games.incomplete')}</p>
+					<p class="mt-1 text-body">
 						{t('games.sizeGap', { count: intelligence.sizeDiff })}
 					</p>
 				</div>
 			{:else if data.editable && intelligence.swap}
 				<div class="notice mt-4">
 					<p class="font-semibold">{t('games.bestSwap')}</p>
-					<p class="mt-1 text-sm leading-snug">
+					<p class="mt-1 text-body leading-snug">
 						{t('games.bestSwapHelp', {
 							a: intelligence.swap.nameA,
 							b: intelligence.swap.nameB,
@@ -253,7 +253,7 @@
 							after: formatDecimal(intelligence.swap.skillDiffAfter, 2)
 						})}
 					</p>
-					<p class="mt-1 text-sm">
+					<p class="mt-1 text-body">
 						{t('games.bestSwapAge', {
 							before: formatDecimal(intelligence.swap.ageDiffBefore, 1),
 							after: formatDecimal(intelligence.swap.ageDiffAfter, 1)
@@ -286,7 +286,7 @@
 
 			{#if data.editable && intelligence.fills.count > 0}
 				<div class="mt-3 border border-line p-3">
-					<p class="text-sm font-semibold">{t('games.fillSlots')}</p>
+					<p class="text-body font-semibold">{t('games.fillSlots')}</p>
 					<p class="hint mt-1">
 						{formatCount(
 							intelligence.fills.count,
@@ -310,7 +310,7 @@
 						<p class="mt-1">{t(definition.helpKey)}</p>
 					{/if}
 					{#if definition.detail === 'open-slots'}
-						<p class="mt-1 text-sm">{game.openSlotsLabel}</p>
+						<p class="mt-1 text-body">{game.openSlotsLabel}</p>
 					{/if}
 				</div>
 			{/each}
@@ -328,11 +328,11 @@
 			{/if}
 			{#if availableBench.length > 0}
 				<p class="micro-label mt-4">{t('games.benchAvailable')}</p>
-				<p class="mt-1 text-sm text-muted">{availableBench.join(', ')}</p>
+				<p class="mt-1 text-body text-muted">{availableBench.join(', ')}</p>
 			{/if}
 			{/if}
 		{:else}
-			<p class="mt-2 text-sm text-muted">{t('games.lineupSoon')}</p>
+			<p class="mt-2 text-body text-muted">{t('games.lineupSoon')}</p>
 			{#if data.editable}
 				<form method="POST" action="?/generate" use:progressiveForm class="mt-3">
 					<button class="btn-primary" type="submit">{t('games.generate')}</button>
@@ -344,7 +344,7 @@
 	{#if game.status === 'scheduled'}
 		<section class="card border-alert/30">
 			<h2 class="text-alert">{t('admin.dangerZone')}</h2>
-			<p class="mt-1 text-sm text-muted">{t('admin.cancelHelp')}</p>
+			<p class="mt-1 text-body text-muted">{t('admin.cancelHelp')}</p>
 			<form method="POST" action="?/cancel" use:progressiveForm class="mt-4">
 				<ConfirmSubmit
 					label={t('games.adminCancel')}

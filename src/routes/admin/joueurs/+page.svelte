@@ -79,7 +79,7 @@
 			{#each filters as option (option.key)}
 				<button
 					type="button"
-					class="min-h-11 rounded-control border px-2.5 text-[13px] font-medium transition-colors {filter ===
+					class="min-h-11 rounded-control border px-2.5 text-meta font-medium transition-colors {filter ===
 					option.key
 						? 'border-ice bg-ice text-on-brand'
 						: 'border-line-strong bg-surface text-muted hover:bg-paper'}"
@@ -91,7 +91,7 @@
 			{/each}
 		</div>
 		{#if filter !== 'all' || query.trim()}
-			<p class="ml-auto text-xs text-muted" aria-live="polite">
+			<p class="ml-auto text-meta text-muted" aria-live="polite">
 				{formatCount(filtered.length, 'common.playerCount.one', 'common.playerCount.many')}
 			</p>
 		{/if}
@@ -100,11 +100,11 @@
 
 {#if data.players.length === 0}
 	<div class="card">
-		<p class="text-sm text-muted">{t('admin.noPlayers')}</p>
+		<p class="text-body text-muted">{t('admin.noPlayers')}</p>
 	</div>
 {:else if filtered.length === 0}
 	<div class="card">
-		<p class="text-sm text-muted">{t('admin.noResults')}</p>
+		<p class="text-body text-muted">{t('admin.noResults')}</p>
 	</div>
 {:else}
 	<div class="card-flush">
@@ -112,7 +112,7 @@
 			{#each filtered as player, index (player.userId)}
 				{@const menuUp = index >= filtered.length - 2}
 				<li class="relative flex min-h-14 items-center gap-3 px-4 py-2.5">
-					<span class="relative z-10 w-7 shrink-0 text-right font-mono text-[11px] text-muted">
+					<span class="relative z-10 w-7 shrink-0 text-right font-mono text-caption text-muted">
 						{player.jerseyNumber ?? '-'}
 					</span>
 					<div class="min-w-0 flex-1">
@@ -136,7 +136,7 @@
 								<span class="badge-alert">{t('admin.status.inactive')}</span>
 							{/if}
 						</div>
-						<p class="pointer-events-none relative z-10 mt-0.5 truncate text-xs text-muted">
+						<p class="pointer-events-none relative z-10 mt-0.5 truncate text-meta text-muted">
 							{t(positionDefinition(player.position).labelKey)} · {formatAge(player.age)}
 						</p>
 					</div>
@@ -158,14 +158,14 @@
 						>
 							<form method="POST" action="?/resend" use:progressiveForm>
 								<input type="hidden" name="playerId" value={player.userId} />
-								<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-sm font-medium hover:bg-ink/5" type="submit">
+								<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-body font-medium hover:bg-ink/5" type="submit">
 									{t('admin.resetPassword')}
 								</button>
 							</form>
 							<form method="POST" action="?/substitute" use:progressiveForm>
 								<input type="hidden" name="playerId" value={player.userId} />
 								<input type="hidden" name="value" value={player.isSubstitute ? 'false' : 'true'} />
-								<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-sm font-medium hover:bg-ink/5" type="submit">
+								<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-body font-medium hover:bg-ink/5" type="submit">
 									{player.isSubstitute ? t('admin.removeSub') : t('admin.addSub')}
 								</button>
 							</form>
@@ -177,7 +177,7 @@
 										name="value"
 										value={data.favorites.get(player.userId) ? 'false' : 'true'}
 									/>
-									<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-sm font-medium hover:bg-ink/5" type="submit">
+									<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-body font-medium hover:bg-ink/5" type="submit">
 										{data.favorites.get(player.userId)
 											? t('subs.removeFavorite')
 											: t('subs.addFavorite')}
@@ -191,14 +191,14 @@
 									<ConfirmSubmit
 										label={t('admin.deactivate')}
 										question={t('admin.deactivateConfirm', { name: player.fullName })}
-										class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-sm font-medium text-muted hover:bg-ink/5 hover:text-ink"
+										class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-body font-medium text-muted hover:bg-ink/5 hover:text-ink"
 									/>
 								</form>
 							{:else}
 								<form method="POST" action="?/active" use:progressiveForm>
 									<input type="hidden" name="playerId" value={player.userId} />
 									<input type="hidden" name="value" value="true" />
-									<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-sm font-medium hover:bg-ink/5" type="submit">
+									<button class="flex min-h-11 w-full items-center rounded-control px-2.5 text-left text-body font-medium hover:bg-ink/5" type="submit">
 										{t('admin.reactivate')}
 									</button>
 								</form>

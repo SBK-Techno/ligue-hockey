@@ -29,9 +29,9 @@
 		<span class="record-date">{date}</span>
 	{/if}
 	<span class="min-w-0 flex-1">
-		<span class="block truncate text-sm font-semibold">{title}</span>
+		<span class="block truncate text-body font-semibold">{title}</span>
 		{#if meta}
-			<span class="mt-0.5 block truncate text-xs text-muted">{meta}</span>
+			<span class="mt-0.5 block truncate text-meta text-muted">{meta}</span>
 		{/if}
 	</span>
 	{#if badge}
@@ -40,7 +40,7 @@
 		</span>
 	{/if}
 	{#if trailing}
-		<span class="numeric shrink-0 text-sm">{trailing}</span>
+		<span class="numeric shrink-0 text-body">{trailing}</span>
 	{/if}
 	{#if href}
 		<svg

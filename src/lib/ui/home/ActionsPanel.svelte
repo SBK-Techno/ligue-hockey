@@ -36,10 +36,10 @@
 				{#if action.kind === 'balance' && balance}
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div class="min-w-0">
-							<p class="text-sm font-semibold {balance.isOverdue ? 'text-alert' : ''}">
+							<p class="text-body font-semibold {balance.isOverdue ? 'text-alert' : ''}">
 								{t(balance.isOverdue ? 'home.actionBalanceOverdue' : 'home.actionBalanceDue')}
 							</p>
-							<p class="mt-0.5 break-words text-xs text-muted">
+							<p class="mt-0.5 break-words text-meta text-muted">
 								{t('home.actionBalanceAmount', {
 									amount: formatMoney(balance.outstandingCents, balance.currency)
 								})}
@@ -50,8 +50,8 @@
 				{:else if action.kind === 'evaluations' && evaluationGame}
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div class="min-w-0">
-							<p class="text-sm font-semibold">{t('home.actionEvaluations')}</p>
-							<p class="mt-0.5 break-words text-xs text-muted">
+							<p class="text-body font-semibold">{t('home.actionEvaluations')}</p>
+							<p class="mt-0.5 break-words text-meta text-muted">
 								{t('home.actionEvaluationsDetail', {
 									date: formatDate(evaluationGame.gameDate, 'short'),
 									location: evaluationGame.location
@@ -68,8 +68,8 @@
 				{:else if action.kind === 'own-request' && ownRequest}
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div class="min-w-0">
-							<p class="text-sm font-semibold">{t('home.actionOwnRequest')}</p>
-							<p class="mt-0.5 break-words text-xs text-muted">
+							<p class="text-body font-semibold">{t('home.actionOwnRequest')}</p>
+							<p class="mt-0.5 break-words text-meta text-muted">
 								{t('home.actionOwnRequestDetail', {
 									date: formatDate(ownRequest.game.gameDate, 'short')
 								})}
@@ -82,8 +82,8 @@
 				{:else if action.kind === 'claim' && claim}
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div class="min-w-0">
-							<p class="text-sm font-semibold">{t('home.actionClaim')}</p>
-							<p class="mt-0.5 break-words text-xs text-muted">
+							<p class="text-body font-semibold">{t('home.actionClaim')}</p>
+							<p class="mt-0.5 break-words text-meta text-muted">
 								{t('home.actionClaimDetail', {
 									position: t(positionDefinition(claim.position).labelKey),
 									date: formatDate(claim.game.gameDate, 'short'),

@@ -20,7 +20,7 @@
 <div class="space-y-4">
 <SectionCard title={t('admin.evaluationsSeason')}>
 	{#if data.overviews.length === 0}
-		<p class="px-4 py-3 text-sm text-muted">{t('admin.evaluationsEmpty')}</p>
+		<p class="px-4 py-3 text-body text-muted">{t('admin.evaluationsEmpty')}</p>
 	{:else}
 		<ul role="list" class="divide-y divide-line">
 			{#each data.overviews as player (player.playerId)}
@@ -51,7 +51,7 @@
 
 <SectionCard title={t('admin.evaluationsGames')}>
 	{#if data.games.length === 0}
-		<p class="px-4 py-3 text-sm text-muted">{t('rating.noPlayedGames')}</p>
+		<p class="px-4 py-3 text-body text-muted">{t('rating.noPlayedGames')}</p>
 	{:else}
 		<ul role="list" class="divide-y divide-line">
 			{#each data.games as game (game.gameId)}

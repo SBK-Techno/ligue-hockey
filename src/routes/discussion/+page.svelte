@@ -167,7 +167,7 @@
 
 {#if messages.length === 0}
 	<div class="card mx-auto w-full max-w-3xl">
-		<p class="text-sm text-muted">{t('chat.empty')}</p>
+		<p class="text-body text-muted">{t('chat.empty')}</p>
 		<p class="hint">{t('chat.emptyHelp')}</p>
 	</div>
 {:else}
@@ -177,8 +177,8 @@
 			<li class="px-4 py-3.5">
 				<div class="flex items-start justify-between gap-3">
 					<div class="min-w-0">
-						<p class="text-sm font-semibold">{message.authorName}</p>
-						<p class="text-xs text-muted">{formatTimestamp(message.createdAt)}</p>
+						<p class="text-body font-semibold">{message.authorName}</p>
+						<p class="text-meta text-muted">{formatTimestamp(message.createdAt)}</p>
 					</div>
 					{#if message.canDelete}
 						<form method="POST" action="?/delete" use:progressiveForm>
@@ -193,7 +193,7 @@
 				</div>
 
 				{#if message.deleted}
-					<p class="mt-1.5 text-sm italic text-muted">{t('chat.deleted')}</p>
+					<p class="mt-1.5 text-body italic text-muted">{t('chat.deleted')}</p>
 				{:else if message.poll}
 					<div class="mt-2">
 						<PollOptions messageId={message.id} poll={message.poll} />
@@ -210,7 +210,7 @@
 						{/if}
 					</div>
 				{:else}
-					<p class="mt-1.5 whitespace-pre-wrap break-words text-sm">{message.body}</p>
+					<p class="mt-1.5 whitespace-pre-wrap break-words text-body">{message.body}</p>
 				{/if}
 			</li>
 		{/each}

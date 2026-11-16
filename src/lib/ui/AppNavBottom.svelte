@@ -30,7 +30,7 @@
 					>
 						<NavIcon icon={item.icon} class="h-5 w-5" />
 						<span
-							class="max-w-full truncate text-[10px] font-semibold leading-tight tracking-tight"
+							class="max-w-full truncate text-stamp font-semibold leading-tight tracking-tight"
 							style="font-stretch: 92%"
 						>
 							{t(item.shortLabelKey ?? item.labelKey)}

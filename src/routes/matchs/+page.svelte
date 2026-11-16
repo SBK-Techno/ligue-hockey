@@ -27,7 +27,7 @@
 	<SectionCard title="{t('games.upcoming')} ({data.upcoming.length})">
 		{#if data.upcoming.length === 0}
 			<div class="px-4 py-3">
-				<p class="text-sm text-muted">{t('games.empty')}</p>
+				<p class="text-body text-muted">{t('games.empty')}</p>
 				<p class="hint">{isManager ? t('home.noGameHelpAdmin') : t('games.emptyHelp')}</p>
 				{#if isManager}
 					<a class="btn-primary btn-sm mt-3" href="/admin/matchs">{t('home.createGame')}</a>
@@ -60,7 +60,7 @@
 			{#if archivedPast.length > 0}
 				<details class="group border-t border-line" bind:open={archiveOpen}>
 					<summary
-						class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium text-muted transition-colors hover:bg-ink/[0.03] hover:text-ink"
+						class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-body font-medium text-muted transition-colors hover:bg-ink/[0.03] hover:text-ink"
 					>
 						{archiveOpen
 							? t('games.hideArchive')

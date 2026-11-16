@@ -41,9 +41,9 @@
 {:else}
 	<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
 		<div class="min-w-0">
-			<a class="mb-1 inline-flex min-h-11 items-center text-sm font-semibold text-muted no-underline hover:text-ink" href="/admin/joueurs">{t('admin.backToPlayers')}</a>
+			<a class="mb-1 inline-flex min-h-11 items-center text-body font-semibold text-muted no-underline hover:text-ink" href="/admin/joueurs">{t('admin.backToPlayers')}</a>
 			<h1 class="mt-2">{player.fullName}</h1>
-			<p class="mt-1.5 break-words text-sm text-muted">
+			<p class="mt-1.5 break-words text-body text-muted">
 				<span class="break-all">{player.email}</span> ·
 				{t(positionDefinition(player.position).labelKey)} · {formatAge(player.age)}
 				{#if player.jerseyNumber}· #{player.jerseyNumber}{/if}
@@ -92,7 +92,7 @@
 				</select>
 				<p class="hint">{t('admin.roleHelp')}</p>
 				{#if selectedRoleDefinition}
-					<p class="mt-3 text-sm text-muted">
+					<p class="mt-3 text-body text-muted">
 						{t(selectedRoleDefinition.descriptionKey)}
 					</p>
 					<ul role="list" class="mt-2 flex flex-wrap gap-1.5">
@@ -124,7 +124,7 @@
 
 		{#if !isSelf && player.role !== 'admin'}
 			<div class="mt-5 rounded-control border border-alert/20 bg-alert-soft/40 p-4">
-				<h3 class="text-sm font-semibold text-alert">{t('admin.deletePlayer')}</h3>
+				<h3 class="text-body font-semibold text-alert">{t('admin.deletePlayer')}</h3>
 				<p class="hint mt-1">{t('admin.deletePlayerHelp')}</p>
 				<form method="POST" action="?/delete" use:progressiveForm class="mt-3">
 					<ConfirmSubmit
@@ -197,7 +197,7 @@
 		<section class="card">
 			<div class="section-title">
 				<h2>{t('rating.title')}</h2>
-				<a class="link text-sm" href="/admin/evaluations/{player.userId}">{t('rating.edit')}</a>
+				<a class="link text-body" href="/admin/evaluations/{player.userId}">{t('rating.edit')}</a>
 			</div>
 			<p class="hint mt-1">{t('rating.scaleHelp')}</p>
 			<dl class="mt-3 divide-y divide-line">
@@ -215,7 +215,7 @@
 						{data.ratings?.form.average == null
 							? t('rating.notAvailable')
 							: formatDecimal(data.ratings.form.average, 2)}
-						<span class="ml-1 text-xs font-normal text-muted">
+						<span class="ml-1 text-meta font-normal text-muted">
 							({formatCount(
 								data.ratings?.form.games ?? 0,
 								'rating.gamesRated.one',
@@ -275,16 +275,16 @@
 				</div>
 			</div>
 		{:else}
-			<p class="mt-3 text-sm text-muted">{t('balance.noPlan')}</p>
+			<p class="mt-3 text-body text-muted">{t('balance.noPlan')}</p>
 		{/if}
 
 		<div class="mt-5 grid gap-5 lg:grid-cols-2">
 			<form id="plan" method="POST" action="?/plan" use:progressiveForm class="space-y-3">
-				<h3 class="text-sm font-semibold">{t('balance.editPlan')}</h3>
+				<h3 class="text-body font-semibold">{t('balance.editPlan')}</h3>
 				<div>
 					<label class="label" for="total">{t('balance.totalCents')}</label>
 					<div class="relative">
-						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">{symbol}</span>
+						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-muted">{symbol}</span>
 						<input class="input pl-7" id="total" name="total" type="number" inputmode="decimal" min={MONEY_INPUT.min} step={MONEY_INPUT.step} value={data.plan?.total} required />
 					</div>
 				</div>
@@ -302,7 +302,7 @@
 							value={data.plan?.firstPercent}
 							required
 						/>
-						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">%</span>
+						<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-body text-muted">%</span>
 					</div>
 				</div>
 				<div class="grid gap-3 sm:grid-cols-2">
@@ -320,12 +320,12 @@
 
 			{#if data.balance?.planActive}
 			<form method="POST" action="?/payment" use:progressiveForm class="space-y-3">
-				<h3 class="text-sm font-semibold">{t('balance.recordPayment')}</h3>
+				<h3 class="text-body font-semibold">{t('balance.recordPayment')}</h3>
 				<div class="grid gap-3 sm:grid-cols-2">
 					<div>
 						<label class="label" for="amount">{t('balance.amount')}</label>
 						<div class="relative">
-							<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">{symbol}</span>
+							<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-muted">{symbol}</span>
 							<input class="input pl-7" id="amount" name="amount" type="number" inputmode="decimal" min={MONEY_INPUT.positiveMin} step={MONEY_INPUT.step} value={data.plan?.amount} required />
 						</div>
 					</div>
@@ -350,8 +350,8 @@
 			</form>
 			{:else}
 				<div class="space-y-2">
-					<h3 class="text-sm font-semibold">{t('balance.recordPayment')}</h3>
-					<p class="text-sm text-muted">{t('balance.noPlan')}</p>
+					<h3 class="text-body font-semibold">{t('balance.recordPayment')}</h3>
+					<p class="text-body text-muted">{t('balance.noPlan')}</p>
 					<p class="hint">{t('balance.noPlanHelp')}</p>
 					<a class="btn-secondary btn-sm" href="#plan">{t('balance.editPlan')}</a>
 				</div>
@@ -362,16 +362,16 @@
 	<section class="card mt-4">
 		<h2 class="mb-3">{t('balance.history')}</h2>
 		{#if data.payments.length === 0}
-			<p class="text-sm text-muted">{t('balance.noPayments')}</p>
+			<p class="text-body text-muted">{t('balance.noPayments')}</p>
 		{:else}
 			<ul class="divide-y divide-line/70">
 				{#each data.payments as payment (payment.id)}
-					<li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+					<li class="flex flex-wrap items-center justify-between gap-2 py-3 text-body">
 						<div>
 							<p class="font-semibold">
 								{formatMoney(payment.amountCents, data.currency)}
 							</p>
-							<p class="break-words text-xs text-muted">
+							<p class="break-words text-meta text-muted">
 								{formatDate(payment.paidAt, 'year')} · {t(paymentDefinition(payment.method).labelKey)}
 								{#if payment.note}· {payment.note}{/if}
 							</p>
@@ -392,7 +392,7 @@
 			</ul>
 		{/if}
 		{#if data.balance}
-			<ul role="list" class="mt-3 space-y-1 text-xs text-muted">
+			<ul role="list" class="mt-3 space-y-1 text-meta text-muted">
 				{#each data.balance.installments as installment (installment.number)}
 					{@const installmentStatus = balanceStatusDefinition(installment.status)}
 					<li class="flex flex-wrap items-center gap-2">

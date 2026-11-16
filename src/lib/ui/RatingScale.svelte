@@ -29,7 +29,7 @@
 	/** Une seule classe de curseur : l'état désactivé ne doit jamais sembler cliquable. */
 	function chipClass(rating: number): string {
 		const base =
-			'relative grid h-11 w-11 place-items-center border text-sm font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice';
+			'relative grid h-11 w-11 place-items-center border text-body font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice';
 		if (disabled) {
 			return `${base} cursor-not-allowed ${value === rating ? 'border-line-strong bg-paper-deep text-ink' : 'border-line bg-surface text-muted'}`;
 		}
@@ -44,9 +44,9 @@
 >
 	<legend class="sr-only">{label}</legend>
 	<div class="min-w-0">
-		<p class="text-sm font-semibold leading-snug" aria-hidden="true">{label}</p>
+		<p class="text-body font-semibold leading-snug" aria-hidden="true">{label}</p>
 		{#if help}
-			<p id={helpId} class="mt-0.5 text-[11px] leading-snug text-muted">{help}</p>
+			<p id={helpId} class="mt-0.5 text-caption leading-snug text-muted">{help}</p>
 		{/if}
 	</div>
 	<div class={disabled ? 'opacity-60' : ''}>
@@ -74,7 +74,7 @@
 		</div>
 		{#if clearable}
 			<button
-				class="mt-1 grid h-11 w-full place-items-center border border-line-strong bg-surface px-2 text-[11px] font-medium text-muted hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:hover:border-line-strong disabled:hover:text-muted"
+				class="mt-1 grid h-11 w-full place-items-center border border-line-strong bg-surface px-2 text-caption font-medium text-muted hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:hover:border-line-strong disabled:hover:text-muted"
 				type="button"
 				{disabled}
 				aria-label="{label} : {t('rating.notObserved')}"

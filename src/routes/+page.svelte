@@ -27,7 +27,7 @@
 	<header class="mb-4">
 		<p class="micro-label">{data.seasonLabel}</p>
 		<h1 class="mt-1">{t('home.title')}</h1>
-		<p class="mt-1 text-sm text-muted">
+		<p class="mt-1 text-body text-muted">
 			{t('home.greeting', { name: actor?.name.split(' ')[0] ?? '' })}
 		</p>
 	</header>

@@ -58,7 +58,7 @@
 							<li class="ledger-row border-b border-line/70 last:border-b-0" data-you={isMe}>
 								<span class="jersey">{slot.player?.jerseyNumber ?? '-'}</span>
 								{#if slot.player}
-									<span class="min-w-0 truncate text-sm {isMe ? 'font-semibold' : ''}">
+									<span class="min-w-0 truncate text-body {isMe ? 'font-semibold' : ''}">
 										{slot.player.fullName}
 									</span>
 									{#if isMe}
@@ -69,7 +69,7 @@
 										<span></span>
 									{/if}
 								{:else}
-									<span class="min-w-0 truncate text-sm text-muted">{t('games.unassigned')}</span>
+									<span class="min-w-0 truncate text-body text-muted">{t('games.unassigned')}</span>
 									<span></span>
 								{/if}
 							</li>

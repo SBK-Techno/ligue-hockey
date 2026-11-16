@@ -19,7 +19,7 @@
 
 <div class="mb-5">
 	<h1>{t('admin.rulesTitle')}</h1>
-	<p class="mt-1.5 text-sm text-muted">{t('admin.rulesHelp')}</p>
+	<p class="mt-1.5 text-body text-muted">{t('admin.rulesHelp')}</p>
 </div>
 
 <section class="card mb-5">
@@ -68,7 +68,7 @@
 
 {#if data.rules.length === 0}
 	<div class="card">
-		<p class="text-sm text-muted">{t('admin.rulesEmpty')}</p>
+		<p class="text-body text-muted">{t('admin.rulesEmpty')}</p>
 	</div>
 {:else}
 	<div class="card-flush overflow-hidden">
@@ -77,7 +77,7 @@
 				{@const mode = ruleModeDefinition(rule.mode)}
 				<li class="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2.5">
 					<div class="min-w-0">
-						<p class="text-sm font-semibold">
+						<p class="text-body font-semibold">
 							{names.get(rule.playerAId) ?? t('admin.rulePlayerRemoved')}
 							<span class="font-normal text-muted"> · </span>
 							{names.get(rule.playerBId) ?? t('admin.rulePlayerRemoved')}

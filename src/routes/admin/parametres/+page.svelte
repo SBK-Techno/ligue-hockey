@@ -69,7 +69,7 @@
 			<div class="grid gap-x-8 pb-3 xl:grid-cols-2">
 				{#each group.settings as setting (setting.key)}
 					{#if setting.kind === 'boolean'}
-						<label class="flex min-h-11 cursor-pointer items-center gap-3 py-1.5 text-sm font-medium">
+						<label class="flex min-h-11 cursor-pointer items-center gap-3 py-1.5 text-body font-medium">
 							<input
 								type="checkbox"
 								name={setting.key}
@@ -79,7 +79,7 @@
 							<span>
 								{t(setting.labelKey)}
 								{#if data.descriptions[setting.key]}
-									<span class="mt-0.5 block text-[11px] font-normal leading-snug text-muted">
+									<span class="mt-0.5 block text-caption font-normal leading-snug text-muted">
 										{data.descriptions[setting.key]}
 									</span>
 								{/if}
@@ -110,7 +110,7 @@
 											value={data.values[setting.key]}
 										/>
 										<span
-											class="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-sm text-muted"
+											class="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-body text-muted"
 											>{symbol}</span
 										>
 									</div>
@@ -152,7 +152,7 @@
 									/>
 								{/if}
 								{#if data.descriptions[setting.key]}
-									<p class="mt-1 text-[11px] leading-snug text-muted">
+									<p class="mt-1 text-caption leading-snug text-muted">
 										{data.descriptions[setting.key]}
 									</p>
 								{/if}
@@ -169,7 +169,7 @@
 	>
 		<FormFeedback {form} />
 		<div class="mt-1 flex flex-wrap items-center justify-between gap-2">
-			<p class="text-[11px] text-muted">{t('admin.settingsSaveHint')}</p>
+			<p class="text-caption text-muted">{t('admin.settingsSaveHint')}</p>
 			<button class="btn-primary w-full sm:w-auto" type="submit">{t('common.save')}</button>
 		</div>
 	</div>

@@ -38,21 +38,21 @@
 <div class="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-sheet border border-line bg-line lg:grid-cols-4">
 	<div class="bg-surface px-4 py-3">
 		<p class="numeric text-xl">{formatMoney(data.totals.total ?? 0, data.currency)}</p>
-		<p class="mt-0.5 text-xs text-muted">{t('balance.total')}</p>
+		<p class="mt-0.5 text-meta text-muted">{t('balance.total')}</p>
 	</div>
 	<div class="bg-surface px-4 py-3">
 		<p class="numeric text-xl">{formatMoney(data.totals.paid ?? 0, data.currency)}</p>
-		<p class="mt-0.5 text-xs text-muted">{t('balance.paid')}</p>
+		<p class="mt-0.5 text-meta text-muted">{t('balance.paid')}</p>
 	</div>
 	<div class="bg-surface px-4 py-3">
 		<p class="numeric text-xl">{formatMoney(data.totals.outstanding ?? 0, data.currency)}</p>
-		<p class="mt-0.5 text-xs text-muted">{t('balance.outstanding')}</p>
+		<p class="mt-0.5 text-meta text-muted">{t('balance.outstanding')}</p>
 	</div>
 	<div class="bg-surface px-4 py-3">
 		<p class="numeric text-xl {(data.totals.overdue ?? 0) > 0 ? 'text-alert' : ''}">
 			{data.totals.overdue ?? 0}
 		</p>
-		<p class="mt-0.5 text-xs text-muted">{t('admin.overdueBalances')}</p>
+		<p class="mt-0.5 text-meta text-muted">{t('admin.overdueBalances')}</p>
 	</div>
 </div>
 
@@ -61,7 +61,7 @@
 		{#each filters as option (option.key)}
 			<button
 				type="button"
-				class="min-h-11 rounded-control border px-2.5 text-[13px] font-medium transition-colors {filter ===
+				class="min-h-11 rounded-control border px-2.5 text-meta font-medium transition-colors {filter ===
 				option.key
 					? 'border-ice bg-ice text-on-brand'
 					: 'border-line-strong bg-surface text-muted hover:bg-paper'}"
@@ -76,11 +76,11 @@
 
 {#if data.balances.length === 0}
 	<div class="card">
-		<p class="text-sm text-muted">{t('admin.noPlayers')}</p>
+		<p class="text-body text-muted">{t('admin.noPlayers')}</p>
 	</div>
 {:else if rows.length === 0}
 	<div class="card">
-		<p class="text-sm text-muted">{t('admin.noResults')}</p>
+		<p class="text-body text-muted">{t('admin.noResults')}</p>
 	</div>
 {:else}
 	<div class="card-flush overflow-hidden">
@@ -98,7 +98,7 @@
 									<span class="badge shrink-0">{t('admin.status.inactive')}</span>
 								{/if}
 							</span>
-							<span class="mt-0.5 block truncate text-xs text-muted">
+							<span class="mt-0.5 block truncate text-meta text-muted">
 								{#if row.hasPlan}
 									{t('balance.paidOf', {
 										paid: formatMoney(row.paidCents, row.currency),
