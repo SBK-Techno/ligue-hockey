@@ -2,9 +2,12 @@
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import InvitePlayerForm from '#lib/ui/InvitePlayerForm.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import PositionChips from '#lib/ui/PositionChips.svelte';
+	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -16,72 +19,49 @@
 	const hasRequestableGames = $derived(data.games.length > 0);
 </script>
 
-<FormFeedback {form} class="mb-4" />
-
 <PageHeader title={t('subs.title')} meta={t('subs.subtitle')} />
 
-{#if !data.isSubstitute && !data.canManageRequests}
-	<div class="notice mb-5">
-		<p>{t('subs.notInPool')}</p>
-	</div>
-{/if}
+<div class="page-stack">
+	<FormFeedback {form} />
 
-{#if data.isSubstitute}
-	<section class="card mb-5" id="positions">
-		<h2>{t('subs.positions')}</h2>
-		<p class="mt-1 text-body text-muted">{t('subs.positionsHelp')}</p>
-		<form method="POST" action="?/saveProfile" use:progressiveForm class="mt-4">
-			<fieldset>
-				<legend class="sr-only">{t('subs.positions')}</legend>
-				<div class="flex flex-wrap gap-2">
-					{#each POSITIONS as position (position.key)}
-						<label
-							class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-body font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
-						>
-							<input
-								type="checkbox"
-								name="positions"
-								value={position.key}
-								checked={data.positions.includes(position.key)}
-								class="h-4 w-4"
-							/>
-							{t(position.labelKey)}
-						</label>
-					{/each}
-				</div>
-			</fieldset>
-			<button class="btn-secondary btn-sm mt-4" type="submit">{t('common.save')}</button>
-		</form>
-	</section>
-{/if}
-
-<section class="mb-6">
-	<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-		<div class="flex items-baseline gap-2">
-			<h2>{t('subs.openPositions')}</h2>
-			<span class="badge">{data.requests.length}</span>
+	{#if !data.isSubstitute && !data.canManageRequests}
+		<div class="notice">
+			<p>{t('subs.notInPool')}</p>
 		</div>
-		{#if data.canManageRequests && data.requests.length > 0 && hasRequestableGames}
-			<button
-				class="btn-secondary btn-sm"
-				type="button"
-				onclick={() => (showRequest = !showRequest)}
-				aria-expanded={showRequest}
-				aria-controls="request-form"
-			>
-				{showRequest ? t('common.close') : t('subs.openRequest')}
-			</button>
-		{/if}
-	</div>
+	{/if}
 
-	{#if data.canManageRequests && showRequest && hasRequestableGames}
-		<section class="card mb-3" id="request-form">
-			<h3 class="mb-3">{t('subs.openRequest')}</h3>
+	{#if data.isSubstitute}
+		<SectionCard title={t('subs.positions')}>
+			<p class="hint">{t('subs.positionsHelp')}</p>
+			<form method="POST" action="?/saveProfile" use:progressiveForm class="mt-4 space-y-4">
+				<PositionChips name="positions" selected={data.positions} legend={t('subs.positions')} />
+				<button class="btn-primary" type="submit">{t('common.save')}</button>
+			</form>
+		</SectionCard>
+	{/if}
+
+	<SectionCard title="{t('subs.openPositions')} ({data.requests.length})" flush>
+		{#if data.canManageRequests && data.requests.length > 0 && hasRequestableGames}
+			<div class="section-row flex justify-end border-b border-line">
+				<button
+					class="btn-secondary btn-sm"
+					type="button"
+					onclick={() => (showRequest = !showRequest)}
+					aria-expanded={showRequest}
+					aria-controls="request-form"
+				>
+					{showRequest ? t('common.close') : t('subs.openRequest')}
+				</button>
+			</div>
+		{/if}
+
+		{#if data.canManageRequests && showRequest && hasRequestableGames}
 			<form
+				id="request-form"
 				method="POST"
 				action="?/request"
 				use:progressiveForm={{ onSuccess: () => (showRequest = false) }}
-				class="grid gap-4 sm:grid-cols-2"
+				class="section-body grid gap-4 border-b border-line sm:grid-cols-2"
 			>
 				<div class="sm:col-span-2">
 					<label class="label" for="request-game">{t('subs.requestGame')}</label>
@@ -106,88 +86,86 @@
 					<button class="btn-primary" type="submit">{t('subs.openRequest')}</button>
 				</div>
 			</form>
-		</section>
-	{/if}
+		{/if}
 
-	{#if data.requests.length === 0}
-		<div class="card">
-			<p class="text-body text-muted">{t('subs.noneOpen')}</p>
-			<p class="hint">
-				{data.canManageRequests
-					? hasRequestableGames
-						? t('subs.requestEmptyManager')
-						: t('subs.requestNeedsGame')
-					: t('subs.requestEmptyPlayer')}
-			</p>
-			{#if data.canManageRequests && hasRequestableGames}
-				<button
-					class="btn-secondary btn-sm mt-3"
-					type="button"
-					onclick={() => (showRequest = !showRequest)}
-					aria-expanded={showRequest}
-					aria-controls="request-form"
+		{#if data.requests.length === 0}
+			<div class="section-body">
+				<EmptyState
+					title={t('subs.noneOpen')}
+					help={data.canManageRequests
+						? hasRequestableGames
+							? t('subs.requestEmptyManager')
+							: t('subs.requestNeedsGame')
+						: t('subs.requestEmptyPlayer')}
 				>
-					{showRequest ? t('common.close') : t('subs.openRequest')}
-				</button>
-			{:else if data.canManageRequests && data.canManageGames}
-				<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('home.createGame')}</a>
-			{/if}
-		</div>
-	{:else}
-		<ul role="list" class="space-y-2.5">
-			{#each data.requests as request (request.id)}
-				<li class="card">
-					<div class="flex flex-wrap items-start justify-between gap-3">
-						<div class="min-w-0">
-							<p class="font-semibold text-ink">
-								{t(positionDefinition(request.position).labelKey)}
-							</p>
-							<p class="mt-1 text-body text-muted">
-								{formatDate(request.game.gameDate)} · {formatTime(request.game.startTime)} ·
-								{request.game.location}
-							</p>
-							{#if request.requestedByName}
-								<p class="hint">{t('subs.requestedBy', { name: request.requestedByName })}</p>
-							{/if}
+					{#snippet action()}
+						{#if data.canManageRequests && hasRequestableGames}
+							<button
+								class="btn-secondary btn-sm"
+								type="button"
+								onclick={() => (showRequest = !showRequest)}
+								aria-expanded={showRequest}
+								aria-controls="request-form"
+							>
+								{showRequest ? t('common.close') : t('subs.openRequest')}
+							</button>
+						{:else if data.canManageRequests && data.canManageGames}
+							<a class="btn-secondary btn-sm" href="/admin/matchs">{t('home.createGame')}</a>
+						{/if}
+					{/snippet}
+				</EmptyState>
+			</div>
+		{:else}
+			<ul role="list" class="divide-y divide-line">
+				{#each data.requests as request (request.id)}
+					<li class="section-row">
+						<div class="flex flex-wrap items-start justify-between gap-3">
+							<div class="min-w-0">
+								<p class="text-body font-semibold text-ink">
+									{t(positionDefinition(request.position).labelKey)}
+								</p>
+								<p class="mt-0.5 text-meta text-muted">
+									{formatDate(request.game.gameDate)} · {formatTime(request.game.startTime)} ·
+									{request.game.location}
+								</p>
+								{#if request.requestedByName}
+									<p class="hint">{t('subs.requestedBy', { name: request.requestedByName })}</p>
+								{/if}
+							</div>
+							<div class="flex flex-wrap items-center gap-2">
+								{#if data.isSubstitute && data.positions.includes(request.position)}
+									<form method="POST" action="?/claim" use:progressiveForm>
+										<input type="hidden" name="gameId" value={request.gameId} />
+										<input type="hidden" name="requestId" value={request.id} />
+										<button class="btn-primary btn-sm" type="submit">{t('subs.claim')}</button>
+									</form>
+								{:else if data.isSubstitute}
+									<span class="badge">{t('subs.positionNotSelected')}</span>
+								{/if}
+								{#if data.canManageRequests}
+									<form method="POST" action="?/cancel" use:progressiveForm>
+										<input type="hidden" name="gameId" value={request.gameId} />
+										<input type="hidden" name="requestId" value={request.id} />
+										<ConfirmSubmit
+											label={t('subs.cancelRequest')}
+											question={t('subs.cancelRequestConfirm')}
+											class="btn-ghost btn-sm"
+										/>
+									</form>
+								{/if}
+								<a class="link text-body" href="/matchs/{request.gameId}">{t('subs.viewGame')}</a>
+							</div>
 						</div>
-						<div class="flex flex-wrap items-center gap-2">
-							{#if data.isSubstitute && data.positions.includes(request.position)}
-								<form method="POST" action="?/claim" use:progressiveForm>
-									<input type="hidden" name="gameId" value={request.gameId} />
-									<input type="hidden" name="requestId" value={request.id} />
-									<button class="btn-primary btn-sm" type="submit">{t('subs.claim')}</button>
-								</form>
-							{:else if data.isSubstitute}
-								<span class="badge">{t('subs.positionNotSelected')}</span>
-							{/if}
-							{#if data.canManageRequests}
-								<form method="POST" action="?/cancel" use:progressiveForm>
-									<input type="hidden" name="gameId" value={request.gameId} />
-									<input type="hidden" name="requestId" value={request.id} />
-									<ConfirmSubmit
-										label={t('subs.cancelRequest')}
-										question={t('subs.cancelRequestConfirm')}
-										class="btn-ghost btn-sm"
-									/>
-								</form>
-							{/if}
-							<a class="link text-body" href="/matchs/{request.gameId}">{t('subs.viewGame')}</a>
-						</div>
-					</div>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-</section>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</SectionCard>
 
-{#if data.canManageRequests}
-	<section>
-		<div class="mb-3">
-			<div class="flex flex-wrap items-center justify-between gap-2">
-				<div class="flex items-baseline gap-2">
-					<h2>{t('subs.substituteList')}</h2>
-					<span class="badge">{data.pool.length}</span>
-				</div>
+	{#if data.canManageRequests}
+		<SectionCard title="{t('subs.substituteList')} ({data.pool.length})" flush>
+			<div class="section-row flex flex-wrap items-center justify-between gap-2 border-b border-line">
+				<p class="hint">{t('subs.favoriteHelp')}</p>
 				{#if data.canManagePool && data.pool.length > 0}
 					<button
 						class="btn-secondary btn-sm"
@@ -200,42 +178,44 @@
 					</button>
 				{/if}
 			</div>
-			<p class="hint">{t('subs.favoriteHelp')}</p>
-		</div>
 
-		{#if data.canManagePool && showInvite}
-			<section class="card mb-3" id="invite-form">
-				<h3 class="mb-3">{t('subs.addSubstitute')}</h3>
-				<InvitePlayerForm
-					action="?/inviteSubstitute"
-					substitute
-					submitLabel={t('subs.inviteSubstitute')}
-					onSuccess={() => (showInvite = false)}
-				/>
-			</section>
-		{/if}
+			{#if data.canManagePool && showInvite}
+				<div id="invite-form" class="section-body border-b border-line">
+					<h3 class="mb-3 text-subhead">{t('subs.addSubstitute')}</h3>
+					<InvitePlayerForm
+						action="?/inviteSubstitute"
+						substitute
+						submitLabel={t('subs.inviteSubstitute')}
+						onSuccess={() => (showInvite = false)}
+					/>
+				</div>
+			{/if}
 
-		{#if data.pool.length === 0}
-			<div class="card">
-				<p class="text-body text-muted">{t('subs.poolEmpty')}</p>
-				{#if data.canManagePool}
-					<p class="hint">{t('subs.poolEmptyHelp')}</p>
-					<button
-						class="btn-secondary btn-sm mt-3"
-						type="button"
-						onclick={() => (showInvite = !showInvite)}
-						aria-expanded={showInvite}
-						aria-controls="invite-form"
+			{#if data.pool.length === 0}
+				<div class="section-body">
+					<EmptyState
+						title={t('subs.poolEmpty')}
+						help={data.canManagePool ? t('subs.poolEmptyHelp') : undefined}
 					>
-						{showInvite ? t('common.close') : t('subs.addSubstitute')}
-					</button>
-				{/if}
-			</div>
-		{:else}
-			<div class="card-flush overflow-hidden">
-				<ul role="list" class="divide-y divide-line/70">
+						{#snippet action()}
+							{#if data.canManagePool}
+								<button
+									class="btn-secondary btn-sm"
+									type="button"
+									onclick={() => (showInvite = !showInvite)}
+									aria-expanded={showInvite}
+									aria-controls="invite-form"
+								>
+									{showInvite ? t('common.close') : t('subs.addSubstitute')}
+								</button>
+							{/if}
+						{/snippet}
+					</EmptyState>
+				</div>
+			{:else}
+				<ul role="list" class="divide-y divide-line">
 					{#each data.pool as substitute (substitute.playerId)}
-						<li class="px-4 py-3">
+						<li class="section-row">
 							<div class="flex flex-wrap items-start justify-between gap-2">
 								<span class="min-w-0 text-body font-medium">{substitute.fullName}</span>
 								<span class="flex flex-wrap gap-1">
@@ -267,7 +247,6 @@
 											question={t('subs.removeSubstituteConfirm', {
 												name: substitute.fullName
 											})}
-											class="btn btn-sm text-alert hover:bg-alert-soft"
 										/>
 									</form>
 								</div>
@@ -275,7 +254,7 @@
 						</li>
 					{/each}
 				</ul>
-			</div>
-		{/if}
-	</section>
-{/if}
+			{/if}
+		</SectionCard>
+	{/if}
+</div>

@@ -3,9 +3,11 @@
 	import { refreshAll } from '$app/navigation';
 	import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import PollOptions from '#lib/ui/PollOptions.svelte';
+	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { prefersReducedMotion, scrollBehavior } from '#lib/ui/scroll.ts';
 	import type { PageProps } from './$types';
@@ -80,162 +82,165 @@
 
 <FormFeedback
 	{form}
-	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+5.5rem)] z-40 mx-auto max-w-md shadow-lift lg:bottom-[5.5rem]"
+	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+var(--bottom-bar-height))] z-40 mx-auto max-w-md shadow-lift lg:bottom-[var(--bottom-bar-offset)]"
 />
 
 {#if newMessages > 0}
-	<div class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+5.5rem)] z-30 mx-auto flex max-w-md justify-center lg:bottom-[5.5rem]">
+	<div
+		class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+var(--bottom-bar-height))] z-30 mx-auto flex max-w-md justify-center lg:bottom-[var(--bottom-bar-offset)]"
+	>
 		<button class="btn-primary btn-sm shadow-lift" type="button" onclick={showNewMessages}>
 			{formatCount(newMessages, 'chat.newMessages.one', 'chat.newMessages.many')}
 		</button>
 	</div>
 {/if}
 
-<PageHeader title={t('chat.title')} meta={t('chat.subtitle')}>
-	{#snippet actions()}
-		{#if data.canCreatePoll}
-			<button
-				class="btn-secondary btn-sm"
-				type="button"
-				onclick={() => (showPoll = !showPoll)}
-				aria-expanded={showPoll}
-				aria-controls="poll-form"
-			>
-				{showPoll ? t('common.close') : t('chat.newPoll')}
-			</button>
-		{/if}
-	{/snippet}
-</PageHeader>
-
-{#if showPoll}
-	<section class="card mb-5" id="poll-form">
-		<h2 class="mb-3">{t('chat.newPoll')}</h2>
-		<form method="POST" action="?/poll" use:progressiveForm class="space-y-3">
-			<div>
-				<label class="label" for="question">{t('chat.pollQuestion')}</label>
-				<input
-					class="input"
-					id="question"
-					name="question"
-					required
-					maxlength={data.limits.questionMax}
-				/>
-			</div>
-			<fieldset class="space-y-2">
-				<legend class="sr-only">{t('chat.pollOptions')}</legend>
-				{#each pollOptions as option, index (index)}
-					<div class="flex gap-2">
-						<label class="sr-only" for="poll-option-{index}">
-							{t('chat.optionNumber', { number: index + 1 })}
-						</label>
-						<input
-							class="input"
-							id="poll-option-{index}"
-							name="options"
-							placeholder={option || t('chat.pollOptions')}
-							required={index < data.limits.pollMinOptions}
-							maxlength={data.limits.optionMax}
-							bind:value={pollOptions[index]}
-						/>
-						{#if pollOptions.length > data.limits.pollMinOptions}
-							<button
-								class="btn-ghost btn-sm w-11 p-0"
-								type="button"
-								onclick={() => removeOption(index)}
-								aria-label={t('common.delete')}
-							>
-								×
-							</button>
-						{/if}
-					</div>
-				{/each}
-			</fieldset>
-			<div class="flex flex-wrap gap-2">
+<div class="reading-shell">
+	<PageHeader title={t('chat.title')} meta={t('chat.subtitle')}>
+		{#snippet actions()}
+			{#if data.canCreatePoll}
 				<button
 					class="btn-secondary btn-sm"
 					type="button"
-					onclick={addOption}
-					disabled={!canAddOption}
+					onclick={() => (showPoll = !showPoll)}
+					aria-expanded={showPoll}
+					aria-controls="poll-form"
 				>
-					{t('chat.addOption')}
+					{showPoll ? t('common.close') : t('chat.newPoll')}
 				</button>
-				<button class="btn-primary btn-sm" type="submit">{t('chat.publishPoll')}</button>
-			</div>
-		</form>
-	</section>
-{/if}
+			{/if}
+		{/snippet}
+	</PageHeader>
 
-{#if messages.length === 0}
-	<div class="card mx-auto w-full max-w-3xl">
-		<p class="text-body text-muted">{t('chat.empty')}</p>
-		<p class="hint">{t('chat.emptyHelp')}</p>
-	</div>
-{:else}
-	<div class="card-flush mx-auto w-full max-w-3xl overflow-hidden">
-	<ul role="list" class="divide-y divide-line/70">
-		{#each messages as message (message.id)}
-			<li class="px-4 py-3.5">
-				<div class="flex items-start justify-between gap-3">
-					<div class="min-w-0">
-						<p class="text-body font-semibold">{message.authorName}</p>
-						<p class="text-meta text-muted">{formatTimestamp(message.createdAt)}</p>
-					</div>
-					{#if message.canDelete}
-						<form method="POST" action="?/delete" use:progressiveForm>
-							<input type="hidden" name="messageId" value={message.id} />
-							<ConfirmSubmit
-								label={t('chat.delete')}
-								question={t('chat.deleteConfirm')}
-								class="btn-ghost btn-sm"
+	<div class="page-stack">
+		{#if showPoll}
+			<div id="poll-form">
+				<SectionCard title={t('chat.newPoll')}>
+					<form method="POST" action="?/poll" use:progressiveForm class="space-y-3">
+						<div>
+							<label class="label" for="question">{t('chat.pollQuestion')}</label>
+							<input
+								class="input"
+								id="question"
+								name="question"
+								required
+								maxlength={data.limits.questionMax}
 							/>
-						</form>
-					{/if}
-				</div>
+						</div>
+						<fieldset class="space-y-2">
+							<legend class="sr-only">{t('chat.pollOptions')}</legend>
+							{#each pollOptions as option, index (index)}
+								<div class="flex gap-2">
+									<label class="sr-only" for="poll-option-{index}">
+										{t('chat.optionNumber', { number: index + 1 })}
+									</label>
+									<input
+										class="input"
+										id="poll-option-{index}"
+										name="options"
+										placeholder={option || t('chat.pollOptions')}
+										required={index < data.limits.pollMinOptions}
+										maxlength={data.limits.optionMax}
+										bind:value={pollOptions[index]}
+									/>
+									{#if pollOptions.length > data.limits.pollMinOptions}
+										<button
+											class="btn-ghost btn-sm w-11 p-0"
+											type="button"
+											onclick={() => removeOption(index)}
+											aria-label={t('common.delete')}
+										>
+											×
+										</button>
+									{/if}
+								</div>
+							{/each}
+						</fieldset>
+						<div class="flex flex-wrap gap-2">
+							<button
+								class="btn-secondary btn-sm"
+								type="button"
+								onclick={addOption}
+								disabled={!canAddOption}
+							>
+								{t('chat.addOption')}
+							</button>
+							<button class="btn-primary btn-sm" type="submit">{t('chat.publishPoll')}</button>
+						</div>
+					</form>
+				</SectionCard>
+			</div>
+		{/if}
 
-				{#if message.deleted}
-					<p class="mt-1.5 text-body italic text-muted">{t('chat.deleted')}</p>
-				{:else if message.poll}
-					<div class="mt-2">
-						<PollOptions messageId={message.id} poll={message.poll} />
-						{#if message.canDelete && !message.poll.closed}
-							<form method="POST" action="?/closePoll" use:progressiveForm class="mt-3">
-								<input type="hidden" name="messageId" value={message.id} />
-								<ConfirmSubmit
-									label={t('chat.closePoll')}
-									question={t('chat.closePollConfirm')}
-									tone="neutral"
-									class="btn-ghost btn-sm"
-								/>
-							</form>
-						{/if}
-					</div>
-				{:else}
-					<p class="mt-1.5 whitespace-pre-wrap break-words text-body">{message.body}</p>
-				{/if}
-			</li>
-		{/each}
-	</ul>
+		{#if messages.length === 0}
+			<EmptyState title={t('chat.empty')} help={t('chat.emptyHelp')} />
+		{:else}
+			<div class="card-flush overflow-hidden">
+				<ul role="list" class="divide-y divide-line">
+					{#each messages as message (message.id)}
+						<li class="section-row">
+							<div class="flex items-start justify-between gap-3">
+								<div class="min-w-0">
+									<p class="text-body font-semibold">{message.authorName}</p>
+									<p class="text-meta text-muted">{formatTimestamp(message.createdAt)}</p>
+								</div>
+								{#if message.canDelete}
+									<form method="POST" action="?/delete" use:progressiveForm>
+										<input type="hidden" name="messageId" value={message.id} />
+										<ConfirmSubmit
+											label={t('chat.delete')}
+											question={t('chat.deleteConfirm')}
+											class="btn-ghost btn-sm"
+										/>
+									</form>
+								{/if}
+							</div>
+
+							{#if message.deleted}
+								<p class="mt-1.5 text-body italic text-muted">{t('chat.deleted')}</p>
+							{:else if message.poll}
+								<div class="mt-2">
+									<PollOptions messageId={message.id} poll={message.poll} />
+									{#if message.canDelete && !message.poll.closed}
+										<form method="POST" action="?/closePoll" use:progressiveForm class="mt-3">
+											<input type="hidden" name="messageId" value={message.id} />
+											<ConfirmSubmit
+												label={t('chat.closePoll')}
+												question={t('chat.closePollConfirm')}
+												tone="neutral"
+												class="btn-ghost btn-sm"
+											/>
+										</form>
+									{/if}
+								</div>
+							{:else}
+								<p class="mt-1.5 whitespace-pre-wrap break-words text-body">{message.body}</p>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
 	</div>
-{/if}
 
-
-<form
-	method="POST"
-	action="?/send"
-	use:progressiveForm
-	class="sticky bottom-[var(--bottom-bar-offset)] mx-auto mt-4 w-full max-w-3xl lg:bottom-4"
->
-	<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
-	<div class="flex items-end gap-2 rounded-sheet border border-line-strong bg-surface p-1.5 shadow-lift">
-		<textarea
-			id="chat-body"
-			class="min-h-11 flex-1 resize-none rounded-control border-0 bg-transparent px-2 py-2 text-base text-ink outline-none placeholder:text-muted focus-visible:ring-2 focus-visible:ring-ice"
-			name="body"
-			rows="1"
-			placeholder={t('chat.placeholder')}
-			required
-			maxlength={data.limits.messageMax}
-		></textarea>
-		<button class="btn-primary" type="submit">{t('chat.send')}</button>
-	</div>
-</form>
+	<form
+		method="POST"
+		action="?/send"
+		use:progressiveForm
+		class="sticky bottom-[var(--bottom-bar-offset)] mt-4 w-full lg:bottom-4"
+	>
+		<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
+		<div class="flex items-end gap-2">
+			<textarea
+				id="chat-body"
+				class="input min-h-11 min-w-0 flex-1 resize-none"
+				name="body"
+				rows="1"
+				placeholder={t('chat.placeholder')}
+				required
+				maxlength={data.limits.messageMax}
+			></textarea>
+			<button class="btn-primary" type="submit">{t('chat.send')}</button>
+		</div>
+	</form>
+</div>
