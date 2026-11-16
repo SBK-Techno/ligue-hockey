@@ -217,7 +217,7 @@
 								aria-hidden="true"
 								class="absolute inset-y-2 left-0 w-0.5 rounded-full {request.status ===
 								'open'
-									? 'bg-ochre'
+									? 'bg-ice'
 									: 'bg-ok'}"
 							></span>
 							<div class="flex flex-wrap items-center justify-between gap-3">

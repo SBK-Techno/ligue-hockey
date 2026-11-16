@@ -191,7 +191,7 @@
 {:else}
 	<div class="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
 		<aside class="space-y-4 lg:sticky lg:top-[calc(3.75rem+1px+env(safe-area-inset-top)+1rem)]">
-			<section class="border-t-[6px] border-ochre bg-ink p-5 text-paper">
+			<section class="border-t-[6px] border-accent bg-ink p-5 text-paper">
 				<div class="flex items-start gap-4">
 					<span
 						class="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-paper/25 bg-paper/10 text-2xl font-semibold tracking-tight"
@@ -392,7 +392,7 @@
 							<div class="flex flex-wrap gap-2">
 								{#each POSITIONS as position (position.key)}
 									<label
-										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ochre has-[:checked]:bg-ochre/10"
+										class="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-paper px-3 py-2 text-sm font-medium transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft"
 									>
 										<input
 											type="checkbox"

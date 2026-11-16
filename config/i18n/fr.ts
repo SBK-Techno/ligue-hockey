@@ -75,6 +75,7 @@ export const fr = {
   'docs.notFound.back': 'Revenir à la présentation',
 
   'auth.title': 'Connexion',
+  'auth.afterGame': 'Après le match',
   'auth.subtitle': 'Entre avec ton courriel et ton mot de passe.',
   'auth.inviteOnly':
     'L’accès se fait par invitation. Demande-la à un administrateur.',

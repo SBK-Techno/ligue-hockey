@@ -34,13 +34,13 @@
 			<span class="mt-0.5 block truncate text-xs text-muted">{meta}</span>
 		{/if}
 	</span>
-	{#if trailing}
-		<span class="numeric shrink-0 text-sm">{trailing}</span>
-	{/if}
 	{#if badge}
 		<span class="{badgeClass(badgeTone)} shrink-0" aria-label={badgeLabel} title={badgeLabel}>
 			{badge}
 		</span>
+	{/if}
+	{#if trailing}
+		<span class="numeric shrink-0 text-sm">{trailing}</span>
 	{/if}
 	{#if href}
 		<svg

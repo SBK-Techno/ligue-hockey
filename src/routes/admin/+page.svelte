@@ -49,7 +49,7 @@
 	]}
 />
 
-<div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
 	<div class="space-y-4">
 		<SectionCard title={t('admin.todo')}>
 			{#if hasTodo}

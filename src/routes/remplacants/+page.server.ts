@@ -46,7 +46,8 @@ export const load: ServerLoad = ({ locals }) => {
 			games: [],
 			isSubstitute: false,
 			canManageRequests: false,
-			canManagePool: false
+			canManagePool: false,
+			canManageGames: false
 		};
 	}
 	const canManageRequests = can(actor, 'manageSubs');
@@ -57,7 +58,8 @@ export const load: ServerLoad = ({ locals }) => {
 		games: canManageRequests ? listRequestableGames(actor) : [],
 		isSubstitute: isSubstitutePlayer(actor),
 		canManageRequests,
-		canManagePool: can(actor, 'managePlayers')
+		canManagePool: can(actor, 'managePlayers'),
+		canManageGames: can(actor, 'manageGames')
 	};
 };
 

@@ -59,25 +59,25 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 ## Visual system
 
-The interface takes its materials from a Québec rink: snow paper, deep spruce shadow, ice blue, board wood and rust red. The structure is still a printed arena match sheet, not a dashboard: square sheets, ruled lists, one restrained accent. It carries its identity through two type families and three voices.
+The interface takes its materials from a Québec rink, warmed: cream paper, deep navy, denim blue, brick red and soft rounded sheets. The structure is a modern scoreboard, not a printed match sheet: rounded cards, ruled lists, blue for every action and red for the league mark and urgency. It carries its identity through two type families and three voices.
 
 - **Display and text: Anybody Variable.** Display uses the wider optical range for page titles, the wordmark, the match-sheet date and section headings; text uses the same family at reading sizes for body, labels and buttons. Its digits are tabular, so money, clock times, jersey numbers and counts align without extra rules. `.numeric` and `.stat-value` are the only numeral classes.
 - **Data: Spline Sans Mono Variable** for measured stamps only: micro-labels, dates in ruled lists, jersey plates. Never for body copy.
 
-Surfaces are sheets: `--radius-card` 0, `--radius-sheet` 0, `--radius-control` 2px, a 1px border and no card shadow. A lifted panel uses one hard short shadow (`--shadow-lift`), never a halo. Lists are ruled with `divide-y`; card stacks are reserved for genuinely separate objects. The background is a faint 32px paper rule.
+Surfaces are warm white sheets: `--radius-card` 1rem, `--radius-sheet` 1rem, `--radius-control` 0.75rem, a 1px border and a soft card shadow. A lifted panel adds `--shadow-lift`, a diffuse shadow rather than a halo or a hard offset. Lists are ruled with `divide-y`; card stacks are reserved for genuinely separate objects. The page carries two faint radial washes, blue at the top left and red at the top right.
 
 Colour is semantic:
 
-- `ink` is deep spruce and `paper` is snow: structure, body text and surfaces, never a black-and-white print.
-- `ice` is the rink blue: links, focus, selected state, the centre line between the two teams.
-- `ochre` is board wood: the league mark, once per viewport, on the active navigation rail and the mobile tab underline. It is a line and fill colour, not a text colour.
-- `alert` is rust red, reserved for overdue, cancellation and destructive confirmation. No decorative red.
+- `ink` is deep navy and `paper` is warm cream: structure, body text and surfaces, never a cold white dashboard.
+- `ice` is denim blue: every primary action, link, focus ring and selected state.
+- `accent` is brick red: the league mark, today, unread and the photo caption. It is a line and fill colour, not ordinary body text.
+- `alert` is a deeper red, reserved for overdue, cancellation, validation and destructive confirmation. `ok` is a restrained green for success only.
 
 `src/routes/layout.css` owns the primitives so a page cannot invent a parallel button or card: `.card`, `.card-flush`, `.btn-*`, `.badge-*`, `.label`, `.input`, `.hint`, `.micro-label`, `.numeric`, `.tear-line`. Focus rings switch to paper on ink surfaces, dialogs lock body scroll, and `prefers-reduced-motion` disables transitions and the card lift.
 
 Dark surfaces use an opacity ladder on `paper` (55% to 90%) rather than ad-hoc greys; every step was checked against `ink` for 4.5:1 body contrast.
 
-The anonymous auth shell uses one generated outdoor-rink photograph at golden hour as its only visual: the source is `config/branding/auth-source.jpg`, the served form is the content-hashed WebP under `static/auth/`, and `config/branding.json` owns its path. The brand lockup is the only identity text; the shell never repeats the league name or promises features already stated by the form.
+The anonymous auth shell uses one generated photograph as its only visual: a dressing room at dawn with two beers, gloves, a white jersey and the rink window. The source is `config/branding/auth-source.jpg`, the served form is the content-hashed WebP under `static/auth/`, and `config/branding.json` owns the source. The brand lockup and the short `auth.afterGame` caption are the only identity text; the shell never repeats the league name or promises features already stated by the form.
 
 ## Configuration
 

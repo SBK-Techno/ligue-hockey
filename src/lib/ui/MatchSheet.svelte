@@ -24,7 +24,7 @@
 	const cancelled = $derived(game.status === 'cancelled');
 </script>
 
-<section class="relative border border-ink bg-ink text-paper">
+<section class="scoreboard relative">
 	<div class="grid gap-4 px-5 pb-4 pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:px-6">
 		<div class="min-w-0">
 			<div class="flex flex-wrap items-center gap-2">
@@ -55,7 +55,7 @@
 		</div>
 	</div>
 
-	<div class="tear-line"></div>
+	<div class="mx-5 h-px bg-paper/15 sm:mx-6"></div>
 
 	<div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
 		<div class="min-w-0">

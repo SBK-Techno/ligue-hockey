@@ -69,12 +69,12 @@
 		<ul role="list" class="mt-1 grid gap-x-4 pb-1 text-sm sm:grid-cols-2">
 			{#each present as row (row.playerId)}
 				<li class="flex min-h-9 items-center gap-2 border-b border-line/70 py-1">
-					<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ochre"></span>
+					<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ice"></span>
 					<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
 						{row.fullName}
 					</span>
 					{#if row.playerId === viewerId}
-						<span class="stamp shrink-0 border-ochre bg-ochre/10 text-ink">{t('common.you')}</span>
+						<span class="stamp shrink-0 border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>
 					{/if}
 				</li>
 			{/each}

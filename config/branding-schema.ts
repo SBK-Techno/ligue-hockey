@@ -14,7 +14,7 @@ export const brandingSchema = z.object({
 	direction: z.enum(['ltr', 'rtl']),
 	categories: z.array(z.string().min(1)).max(3),
 	iconSource: z.string().min(1),
-	authImage: z.string().startsWith('/'),
+	authSource: z.string().min(1),
 	socialImage: z.string().startsWith('/'),
 	socialSource: z.string().min(1),
 	icons: z.object({

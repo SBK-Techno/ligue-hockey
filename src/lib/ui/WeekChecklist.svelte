@@ -149,7 +149,7 @@
 		return state === 'done'
 			? 'border-ok/40 bg-ok-soft text-ok'
 			: state === 'todo'
-				? 'border-ochre bg-ochre/10 text-ink'
+				? 'border-ice bg-ice text-on-brand'
 				: 'border-line text-muted';
 	}
 

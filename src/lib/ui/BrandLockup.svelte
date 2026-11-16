@@ -27,7 +27,7 @@
 	{href}
 	class="group flex min-h-11 min-w-0 items-center gap-3 no-underline"
 >
-	<span aria-hidden="true" class="{barHeight} w-[3px] shrink-0 bg-ochre"></span>
+	<span aria-hidden="true" class="{barHeight} w-[3px] shrink-0 bg-accent"></span>
 	<span class="min-w-0">
 		<span
 			class="wordmark block truncate font-display leading-[1.05] {tone === 'dark'
