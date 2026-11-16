@@ -14,14 +14,20 @@ Read `ARCHITECTURE.md` before changing code. The ownership table there is bindin
 
 ```bash
 npm run dev              # local development
-npm run check            # svelte-check + eslint
+npm run check            # svelte-check
+npm run lint             # eslint
 npm run test             # vitest
-npm run verify           # check + tests + architecture + generated
+npm run verify           # check + lint + tests + architecture + generated
+npm run gate             # verify + build, the exact CI gate
 npm run build            # production build
 npm run db:generate      # generate a migration from schema changes
 ```
 
 Demo data is created through the admin screens; there is no seed command.
+
+## Integration continue
+
+Gitea exécute `.gitea/workflows/verification.yml` sur chaque demande de fusion et sur `main`. La tâche appelle `npm run gate` dans le conteneur Node déclaré par `scripts/ci/act-runner.yaml`; les deux commandes et le major Node sont vérifiés par `npm run verify:architecture`. Le coureur se gère avec `scripts/ci/runner.sh` (voir `OPERATIONS.md`). Ne dupliquez jamais la suite de vérification dans le workflow.
 
 ## Boundaries
 

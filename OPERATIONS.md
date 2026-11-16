@@ -54,6 +54,25 @@ Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, pu
 - Le planificateur tourne toutes les `NOTIFICATION_TICK_MS` millisecondes. Un `lastTickAt` qui vieillit indique un processus bloqué.
 - Les actions administratives et les notifications sont tracées dans `audit_log` et consultables en base.
 
+## Intégration continue
+
+Le dépôt vit sur Gitea à `https://git.localserver.ca/SBK_Techno/ligue-hockey`. Chaque demande de fusion et chaque poussée sur `main` déclenche `.gitea/workflows/verification.yml`, qui exécute `npm run gate` sur le coureur autohébergé étiqueté `linux`. La porte est identique à celle exécutée localement; le workflow n'en copie aucune étape.
+
+Le coureur tourne dans un conteneur `gitea/act_runner`, lance chaque tâche dans l'image Node déclarée par `scripts/ci/act-runner.yaml` et ne monte que le socket Docker requis pour démarrer ces conteneurs de tâche. Son cycle de vie passe par `scripts/ci/runner.sh` :
+
+```bash
+scripts/ci/runner.sh install
+install -m 600 /dev/stdin "$HOME/ci/ligue-hockey-runner/secrets/registration-token" <<<"$JETON_GITEA"
+scripts/ci/runner.sh start
+scripts/ci/runner.sh status
+scripts/ci/runner.sh logs
+scripts/ci/runner.sh stop
+```
+
+Le jeton d'enregistrement se crée dans **Paramètres du dépôt → Actions → Coureurs**. Il n'est jamais commité ni écrit dans un journal; `start` le supprime dès l'enregistrement terminé. Le conteneur redémarre avec Docker grâce à `--restart unless-stopped`.
+
+Le major Node de l'image du coureur et celui de `package.json` (`engines.node`) doivent rester identiques. `npm run verify:architecture` refuse la dérive, une étiquette de coureur mal alignée avec `runs-on`, une action non épinglée à un SHA complet ou un workflow qui n'appelle pas `npm run gate`.
+
 ## Mise à jour et retour arrière
 
 ```bash
