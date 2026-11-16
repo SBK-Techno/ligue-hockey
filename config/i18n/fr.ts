@@ -343,9 +343,6 @@ export const fr = {
   'home.createGame': 'Créer un match',
   'home.adminHero':
     'Tu vois le prochain match comme les joueurs. L’horaire et les alignements se gèrent dans la gestion.',
-  'home.adminOpenSlots':
-    'Aucune place ouverte. Ouvre une demande depuis un match de l’horaire.',
-  'home.openRequest': 'Choisir un match',
   'home.management': 'Gérer la ligue',
   'home.awaitingReply': 'Tu n’as pas encore répondu.',
   'home.replyPresent': 'Présence confirmée.',
@@ -400,8 +397,6 @@ export const fr = {
   'home.adminWeekHelp': 'Ce qui demande ton attention.',
   'home.openPlaces': 'Places à combler',
   'home.allRequests': 'Demandes ouvertes',
-  'subs.emptyHelp':
-    'Une place s’affiche quand un joueur régulier se désiste.',
   'subs.ownRequestOpen': 'Ta place est offerte à un remplaçant.',
   'subs.filledHistory': 'Voir les remplacements passés ({count})',
   'chat.pollTag': 'Sondage',
@@ -540,14 +535,22 @@ export const fr = {
   'subs.openPositions': 'Places à combler',
   'subs.positionNotSelected':
     'Ce poste ne fait pas partie des postes que tu acceptes.',
-  'subs.poolEmpty':
-    'Aucun remplaçant pour l’instant. Un administrateur peut en ajouter un.',
+  'subs.poolEmpty': 'Aucun remplaçant pour l’instant.',
+  'subs.poolEmptyHelp':
+    'Invite une personne : elle recevra un courriel pour se joindre à la banque.',
   'subs.viewGame': 'Voir le match',
-  'subs.notInPoolHelp':
-    'Demande à un administrateur de t’ajouter à la liste des remplaçants.',
-  'subs.adminNotice':
-    'Tu vois les places ouvertes et la liste des remplaçants. Un administrateur règle les favoris et les postes.',
-  'subs.managePool': 'Gérer les remplaçants',
+  'subs.addSubstitute': 'Ajouter un remplaçant',
+  'subs.inviteSubstitute': 'Inviter le remplaçant',
+  'subs.removeSubstituteConfirm':
+    'Retirer {name} de la banque de remplaçants ?',
+  'subs.openRequest': 'Ouvrir une demande',
+  'subs.requestGame': 'Match',
+  'subs.chooseGame': 'Choisir un match',
+  'subs.requestEmptyManager': 'Ouvre une demande pour un match à venir.',
+  'subs.requestEmptyPlayer':
+    'Une place s’affiche quand un joueur régulier se désiste.',
+  'subs.requestNeedsGame':
+    'Aucun match à venir. Une demande s’ouvrira quand un match sera à l’horaire.',
   'subs.favorite': 'Favori',
   'subs.addFavorite': 'Marquer comme favori',
   'subs.removeFavorite': 'Retirer des favoris',
@@ -564,6 +567,7 @@ export const fr = {
   'subs.requestCreated': 'Demande de remplaçant créée.',
   'subs.requestCancelled': 'Demande annulée.',
   'subs.cancelRequest': 'Annuler la demande',
+  'subs.cancelRequestConfirm': 'Annuler cette demande ?',
   'subs.status.filled': 'Comblée',
   'subs.choosePosition': 'Poste recherché',
   'subs.noneOpen': 'Aucun poste ouvert.',

@@ -1,12 +1,13 @@
 import type { I18nKey } from '#config/i18n/fr.ts';
 import type { Position } from '#config/positions.ts';
-import { requireUser } from '#lib/domain/auth/policy.ts';
+import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import {
 	getGame,
 	listSchedule,
 	regenerateIfGenerated
 } from '#lib/domain/games/service.ts';
+import { splitSchedule } from '#lib/domain/games/schedule.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import {
 	cancelRequestByAdmin as cancelSubRequest,
@@ -26,6 +27,11 @@ import {
 export type SubRequestWithGame = SubRequestView & {
 	game: GameSummary;
 };
+
+export type RequestableGame = Pick<
+	GameSummary,
+	'id' | 'gameDate' | 'startTime' | 'location'
+>;
 
 export type RosterActionResult = {
 	regenerated: boolean;
@@ -126,4 +132,20 @@ export function createManualRequest(
 
 export function listSubstitutePool(actor: Actor): SubProfileView[] {
 	return listSubstitutes(actor);
+}
+
+/**
+ * Les matchs qu'une demande manuelle peut viser : à venir et encore
+ * programmés. La liste reste réservée aux gestionnaires des remplaçants.
+ */
+export function listRequestableGames(actor: Actor): RequestableGame[] {
+	requirePermission(actor, 'manageSubs');
+	return splitSchedule(listSchedule(actor))
+		.upcoming.filter((game) => game.status === 'scheduled')
+		.map(({ id, gameDate, startTime, location }) => ({
+			id,
+			gameDate,
+			startTime,
+			location
+		}));
 }

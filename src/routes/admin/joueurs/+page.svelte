@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { roleDefinition } from '#config/roles.ts';
-	import { POSITIONS, positionDefinition } from '#config/positions.ts';
+	import { positionDefinition } from '#config/positions.ts';
 	import { formatAge, formatCount, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import InvitePlayerForm from '#lib/ui/InvitePlayerForm.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
@@ -61,90 +61,7 @@
 {#if showInvite}
 	<section class="card mb-5" id="invite-form">
 		<h2 class="mb-3">{t('admin.addPlayer')}</h2>
-		<form method="POST" action="?/invite" use:progressiveForm class="grid gap-4 sm:grid-cols-2">
-			<div>
-				<label class="label" for="firstName">{t('profile.firstName')}</label>
-				<input
-					class="input"
-					id="firstName"
-					name="firstName"
-					required
-					maxlength={PLAYER_LIMITS.nameMax}
-					autocomplete="given-name"
-				/>
-			</div>
-			<div>
-				<label class="label" for="lastName">{t('profile.lastName')}</label>
-				<input
-					class="input"
-					id="lastName"
-					name="lastName"
-					required
-					maxlength={PLAYER_LIMITS.nameMax}
-					autocomplete="family-name"
-				/>
-			</div>
-			<div class="sm:col-span-2">
-				<label class="label" for="email">{t('profile.email')}</label>
-				<input
-					class="input"
-					id="email"
-					name="email"
-					type="email"
-					inputmode="email"
-					autocomplete="email"
-					autocapitalize="none"
-					spellcheck="false"
-					required
-					maxlength={PLAYER_LIMITS.emailMax}
-				/>
-				<p class="hint">{t('admin.emailHint')}</p>
-			</div>
-			<div>
-				<label class="label" for="position">{t('profile.position')}</label>
-				<select class="input" id="position" name="position" required>
-					<option value="">{t('admin.choosePosition')}</option>
-					{#each POSITIONS as position (position.key)}
-						<option value={position.key}>{t(position.labelKey)}</option>
-					{/each}
-				</select>
-			</div>
-			<div>
-				<label class="label" for="age">{t('profile.age')}</label>
-				<input
-					class="input"
-					id="age"
-					name="age"
-					type="number"
-					inputmode="numeric"
-					min={PLAYER_LIMITS.ageMin}
-					max={PLAYER_LIMITS.ageMax}
-					placeholder={String(PLAYER_LIMITS.defaultAge)}
-					required
-				/>
-				<p class="hint">{t('admin.ageHint')}</p>
-			</div>
-			<div>
-				<label class="label" for="jerseyNumber">{t('admin.jerseyNumber')}</label>
-				<input
-					class="input"
-					id="jerseyNumber"
-					name="jerseyNumber"
-					type="number"
-					inputmode="numeric"
-					min={PLAYER_LIMITS.jerseyMin}
-					max={PLAYER_LIMITS.jerseyMax}
-					placeholder={String(PLAYER_LIMITS.jerseyExample)}
-				/>
-			</div>
-			<label class="flex min-h-11 items-center gap-3 text-sm font-medium sm:col-span-2">
-				<input type="checkbox" name="isSubstitute" class="h-4 w-4" />
-				{t('profile.substitute')}
-			</label>
-			<div class="sm:col-span-2">
-				<button class="btn-primary" type="submit">{t('admin.invite')}</button>
-			</div>
-		</form>
+		<InvitePlayerForm action="?/invite" />
 	</section>
 {/if}
 

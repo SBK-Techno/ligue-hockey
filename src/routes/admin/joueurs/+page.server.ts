@@ -7,17 +7,12 @@ import {
 	adminUpdatePlayer
 } from '#lib/domain/players/service.ts';
 import { setSubstituteFavorite, listSubstitutes } from '#lib/domain/subs/service.ts';
-import { invitePlayerSchema } from '#lib/domain/players/validators.ts';
+import { invitePlayerSchema, playerIdInputSchema } from '#lib/domain/players/validators.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
-const playerActionSchema = z.object({
-	playerId: z.string().min(1)
-});
-
-const toggleSchema = z.object({
-	playerId: z.string().min(1),
+const toggleSchema = playerIdInputSchema.extend({
 	value: z.enum(['true', 'false']).transform((value) => value === 'true')
 });
 
@@ -52,7 +47,7 @@ export const actions: Actions = {
 	},
 	resend: async ({ request, locals }) => {
 		try {
-			const parsed = parseForm(playerActionSchema, await request.formData());
+			const parsed = parseForm(playerIdInputSchema, await request.formData());
 			await resendInvite(locals.actor, parsed.playerId);
 			return { ok: true, message: t('admin.inviteResent') };
 		} catch (cause) {
