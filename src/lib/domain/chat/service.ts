@@ -67,7 +67,7 @@ function toViews(actor: Actor, userId: string): ChatMessageView[] {
 		const pollOptions = options.get(message.id) ?? [];
 		const voteRows = votes.filter((vote) => vote.messageId === message.id);
 		const myVote = voteRows.find((vote) => vote.userId === userId)?.optionId ?? null;
-		const isAdmin = actor.kind === 'user' && actor.role === 'admin';
+		const canModerate = can(actor, 'moderateChat');
 
 		return {
 			id: message.id,
@@ -77,7 +77,7 @@ function toViews(actor: Actor, userId: string): ChatMessageView[] {
 			body: deleted ? null : message.body,
 			createdAt: message.createdAt,
 			deleted,
-			canDelete: !deleted && (isAdmin || message.authorUserId === userId),
+			canDelete: !deleted && (canModerate || message.authorUserId === userId),
 			poll:
 				poll && !deleted
 					? {

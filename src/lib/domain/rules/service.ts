@@ -1,3 +1,4 @@
+import { ruleModeDefinition, ruleModeFor, type RuleMode } from '#config/rule-modes.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
@@ -14,7 +15,7 @@ export type PairRuleView = {
 	id: string;
 	playerAId: string;
 	playerBId: string;
-	kind: PairRuleInput['kind'];
+	mode: RuleMode;
 };
 
 function normalize(a: string, b: string): [string, string] {
@@ -27,7 +28,7 @@ export function listRules(actor: Actor): PairRuleView[] {
 		id: row.id,
 		playerAId: row.playerAId,
 		playerBId: row.playerBId,
-		kind: row.kind
+		mode: ruleModeFor(row.kind, row.strict)
 	}));
 }
 
@@ -36,7 +37,8 @@ export function rulesForGeneration(): GeneratorRule[] {
 		id: row.id,
 		playerAId: row.playerAId,
 		playerBId: row.playerBId,
-		kind: row.kind
+		kind: row.kind,
+		strict: row.strict
 	}));
 }
 
@@ -51,7 +53,12 @@ export function createRule(actor: Actor, input: PairRuleInput): PairRuleView {
 	if (playerAId === playerBId) {
 		throw new AppError('VALIDATION', { key: 'admin.ruleSelf' });
 	}
-	if (findPairRule(playerAId, playerBId)) {
+	const mode = ruleModeDefinition(parsed.mode);
+	if (!mode) {
+		throw new AppError('VALIDATION', { key: 'admin.ruleSelf' });
+	}
+	const existing = findPairRule(playerAId, playerBId);
+	if (existing) {
 		throw new AppError('CONFLICT', { key: 'admin.ruleExists' });
 	}
 
@@ -60,7 +67,8 @@ export function createRule(actor: Actor, input: PairRuleInput): PairRuleView {
 		id,
 		playerAId,
 		playerBId,
-		kind: parsed.kind,
+		kind: mode.kind,
+		strict: mode.strict,
 		createdAt: clock.nowMs(),
 		createdBy: actor.kind === 'user' ? actor.userId : null
 	});
@@ -68,10 +76,10 @@ export function createRule(actor: Actor, input: PairRuleInput): PairRuleView {
 		action: 'rule.create',
 		entityType: 'pair_rule',
 		entityId: id,
-		metadata: { playerAId, playerBId, kind: parsed.kind }
+		metadata: { playerAId, playerBId, mode: parsed.mode }
 	});
 
-	return { id, playerAId, playerBId, kind: parsed.kind };
+	return { id, playerAId, playerBId, mode: parsed.mode };
 }
 
 export function deleteRule(actor: Actor, id: string): void {

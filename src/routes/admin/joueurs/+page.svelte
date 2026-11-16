@@ -108,10 +108,23 @@
 					inputmode="numeric"
 					min={PLAYER_LIMITS.ageMin}
 					max={PLAYER_LIMITS.ageMax}
-					placeholder="30"
+					placeholder={String(PLAYER_LIMITS.defaultAge)}
 					required
 				/>
 				<p class="hint">{t('admin.ageHint')}</p>
+			</div>
+			<div>
+				<label class="label" for="jerseyNumber">{t('admin.jerseyNumber')}</label>
+				<input
+					class="input"
+					id="jerseyNumber"
+					name="jerseyNumber"
+					type="number"
+					inputmode="numeric"
+					min={PLAYER_LIMITS.jerseyMin}
+					max={PLAYER_LIMITS.jerseyMax}
+					placeholder={String(PLAYER_LIMITS.jerseyExample)}
+				/>
 			</div>
 			<label class="flex min-h-11 items-center gap-3 text-sm font-medium sm:col-span-2">
 				<input type="checkbox" name="isSubstitute" class="h-4 w-4" />
@@ -155,8 +168,10 @@
 							<a href="/admin/joueurs/{player.userId}" class="font-semibold text-ink no-underline hover:underline">
 								{player.fullName}
 							</a>
-							{#if player.role === 'admin'}
-								<span class="badge-ice">{t('admin.role.admin')}</span>
+							{#if player.role !== 'player'}
+								<span class="badge-ice">
+									{t(player.role === 'admin' ? 'admin.role.admin' : 'admin.role.manager')}
+								</span>
 							{/if}
 							{#if player.isSubstitute}
 								<span class="badge">{t('profile.substitute')}</span>
@@ -168,9 +183,9 @@
 								<span class="badge-alert">{t('admin.status.inactive')}</span>
 							{/if}
 						</div>
-						<p class="mt-1 text-sm text-muted">
-							{player.email} · {t(positionDefinition(player.position).labelKey)} ·
-							{formatAge(player.age)}
+						<p class="mt-1 break-words text-sm text-muted">
+							<span class="break-all">{player.email}</span> ·
+							{t(positionDefinition(player.position).labelKey)} · {formatAge(player.age)}
 						</p>
 					</div>
 					<div class="flex flex-wrap gap-1">

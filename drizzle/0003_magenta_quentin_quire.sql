@@ -1,0 +1,1 @@
+ALTER TABLE `pair_rules` ADD `strict` integer DEFAULT true NOT NULL;

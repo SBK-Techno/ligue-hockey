@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { MONEY_INPUT } from '#config/money.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { PAYMENT_METHODS, paymentDefinition } from '#config/payment-methods.ts';
 	import { PLAYER_LIMITS } from '#config/players.ts';
+	import { capabilityDefinition } from '#config/capabilities.ts';
+	import { ROLES, roleDefinition, type Role } from '#config/roles.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { RATING_ATTRIBUTES, RATING_SCALE } from '#config/rating-attributes.ts';
 	import { SETTINGS } from '#config/settings-registry.ts';
@@ -18,6 +21,12 @@
 
 	let { data, form }: PageProps = $props();
 	const player = $derived(data.player);
+	let selectedRole = $state<Role | null>(null);
+	const activeRole = $derived(selectedRole ?? player?.role ?? 'player');
+	const selectedRoleDefinition = $derived(roleDefinition(activeRole));
+	const isSelf = $derived(
+		data.actor.kind === 'user' && player?.userId === data.actor.userId
+	);
 
 	const statusKey = {
 		paid: 'balance.status.paid',
@@ -33,15 +42,24 @@
 	<div class="card">{t('error.playerNotFound')}</div>
 {:else}
 	<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
-		<div>
+		<div class="min-w-0">
 			<a class="link text-sm" href="/admin/joueurs">{t('admin.backToPlayers')}</a>
 			<h1 class="mt-2">{player.fullName}</h1>
-			<p class="mt-1.5 text-sm text-muted">
-				{player.email} · {t(positionDefinition(player.position).labelKey)} ·
-				{formatAge(player.age)}
+			<p class="mt-1.5 break-words text-sm text-muted">
+				<span class="break-all">{player.email}</span> ·
+				{t(positionDefinition(player.position).labelKey)} · {formatAge(player.age)}
+				{#if player.jerseyNumber}· #{player.jerseyNumber}{/if}
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
+			{#if player.role !== 'player'}
+				<span class="badge-ice">
+					{t(player.role === 'admin' ? 'admin.role.admin' : 'admin.role.manager')}
+				</span>
+			{/if}
+			{#if !player.active}
+				<span class="badge-alert">{t('admin.inactive')}</span>
+			{/if}
 			{#if player.isSubstitute}
 				<span class="badge-ice">{t('profile.substitute')}</span>
 				<form method="POST" action="?/favorite" use:progressiveForm>
@@ -56,6 +74,74 @@
 			</form>
 		</div>
 	</div>
+
+
+	<section class="card mt-4">
+		<h2>{t('admin.account')}</h2>
+		<p class="hint mt-1">{t('admin.accountHelp')}</p>
+		<div class="mt-4 grid gap-5 sm:grid-cols-2">
+			<form method="POST" action="?/role" use:progressiveForm>
+				<label class="label" for="role">{t('admin.role')}</label>
+				<select
+					class="input"
+					id="role"
+					name="role"
+					disabled={isSelf}
+					value={activeRole}
+					onchange={(event) => (selectedRole = event.currentTarget.value as Role)}
+				>
+					{#each ROLES as role (role.key)}
+						<option value={role.key}>{t(role.labelKey)}</option>
+					{/each}
+				</select>
+				<p class="hint">{t('admin.roleHelp')}</p>
+				{#if selectedRoleDefinition}
+					<p class="mt-3 text-sm text-muted">
+						{t(selectedRoleDefinition.descriptionKey)}
+					</p>
+					<ul role="list" class="mt-2 flex flex-wrap gap-1.5">
+						{#each selectedRoleDefinition.capabilities as capability (capability)}
+							<li class="badge">{t(capabilityDefinition(capability)?.labelKey ?? 'admin.roleHelp')}</li>
+						{/each}
+					</ul>
+				{/if}
+				{#if !isSelf}
+					<button class="btn-secondary btn-sm mt-3" type="submit">{t('common.save')}</button>
+				{/if}
+			</form>
+			<div>
+				<p class="label">{t('admin.status')}</p>
+				<p class="text-sm font-semibold">
+					{player.active ? t('admin.active') : t('admin.inactive')}
+				</p>
+				<p class="hint">{t('admin.statusHelp')}</p>
+				{#if !isSelf}
+					<form method="POST" action="?/status" use:progressiveForm class="mt-3">
+						<input type="hidden" name="active" value={player.active ? 'false' : 'true'} />
+						<button class="btn-secondary btn-sm" type="submit">
+							{player.active ? t('admin.inactive') : t('admin.active')}
+						</button>
+					</form>
+				{/if}
+			</div>
+		</div>
+
+		{#if !isSelf && player.role !== 'admin'}
+			<div class="mt-5 rounded-control border border-alert/20 bg-alert-soft/40 p-4">
+				<h3 class="text-sm font-semibold text-alert">{t('admin.deletePlayer')}</h3>
+				<p class="hint mt-1">{t('admin.deletePlayerHelp')}</p>
+				<form method="POST" action="?/delete" use:progressiveForm class="mt-3">
+					<ConfirmSubmit
+						label={t('admin.deletePlayer')}
+						question="{t('admin.deletePlayerTitle', { name: player.fullName })} {t(
+							'admin.deletePlayerConfirm'
+						)}"
+						class="btn-danger btn-sm"
+					/>
+				</form>
+			</div>
+		{/if}
+	</section>
 
 	<div class="grid gap-4 lg:grid-cols-2">
 		<section class="card">
@@ -92,6 +178,20 @@
 						{/each}
 					</select>
 				</div>
+				<div>
+					<label class="label" for="jerseyNumber">{t('admin.jerseyNumber')}</label>
+					<input
+						class="input"
+						id="jerseyNumber"
+						name="jerseyNumber"
+						type="number"
+						inputmode="numeric"
+						min={PLAYER_LIMITS.jerseyMin}
+						max={PLAYER_LIMITS.jerseyMax}
+						value={player.jerseyNumber ?? ''}
+						placeholder={String(PLAYER_LIMITS.jerseyExample)}
+					/>
+				</div>
 				<div class="sm:col-span-2">
 					<button class="btn-primary btn-sm" type="submit">{t('common.save')}</button>
 				</div>
@@ -106,7 +206,12 @@
 					max: RATING_SCALE.max
 				})}
 			</p>
-			<form method="POST" action="?/ratings" use:progressiveForm class="grid grid-cols-2 gap-3">
+			<form
+				method="POST"
+				action="?/ratings"
+				use:progressiveForm
+				class="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 lg:grid-cols-3"
+			>
 				{#each RATING_ATTRIBUTES as attribute (attribute.key)}
 					<div>
 						<label class="label" for={attribute.key}>{t(attribute.labelKey)}</label>
@@ -174,7 +279,7 @@
 					<label class="label" for="total">{t('balance.totalCents')}</label>
 					<div class="relative">
 						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
-						<input class="input pl-7" id="total" name="total" type="number" inputmode="decimal" min="0" step="0.01" value={data.plan?.total} required />
+						<input class="input pl-7" id="total" name="total" type="number" inputmode="decimal" min={MONEY_INPUT.min} step={MONEY_INPUT.step} value={data.plan?.total} required />
 					</div>
 				</div>
 				<div>
@@ -214,7 +319,7 @@
 						<label class="label" for="amount">{t('balance.amount')}</label>
 						<div class="relative">
 							<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
-							<input class="input pl-7" id="amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" value={data.plan?.amount} required />
+							<input class="input pl-7" id="amount" name="amount" type="number" inputmode="decimal" min={MONEY_INPUT.positiveMin} step={MONEY_INPUT.step} value={data.plan?.amount} required />
 						</div>
 					</div>
 					<div>
@@ -251,7 +356,7 @@
 							<p class="font-semibold">
 								{formatMoney(payment.amountCents, data.currency)}
 							</p>
-							<p class="text-xs text-muted">
+							<p class="break-words text-xs text-muted">
 								{formatDate(payment.paidAt, 'year')} · {t(paymentDefinition(payment.method).labelKey)}
 								{#if payment.note}· {payment.note}{/if}
 							</p>

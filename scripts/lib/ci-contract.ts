@@ -266,7 +266,12 @@ function checkPages(file: ContractFile, workflow: Json, findings: ContractFindin
 	}
 }
 
-function checkRelease(file: ContractFile, workflow: Json, findings: ContractFinding[]): void {
+function checkRelease(
+	file: ContractFile,
+	workflow: Json,
+	findings: ContractFinding[],
+	expectedImage: string | null
+): void {
 	checkTriggers(file, workflow, { tags: ['v*'] }, findings);
 	const permissions = asObject(workflow.permissions);
 	if (permissions?.contents !== 'write' || permissions?.packages !== 'write') {
@@ -290,12 +295,12 @@ function checkRelease(file: ContractFile, workflow: Json, findings: ContractFind
 		findings.push(finding(file.path, lineOf(file.content, 'run:'), "La publication doit construire l'image avec sa version."));
 	}
 	const environment = asObject(release.env);
-	if (environment?.IMAGE !== 'ghcr.io/sbk-techno/ligue-hockey') {
+	if (!expectedImage || environment?.IMAGE !== expectedImage) {
 		findings.push(
 			finding(
 				file.path,
 				lineOf(file.content, 'IMAGE:'),
-				"La publication doit cibler l'image ghcr.io/sbk-techno/ligue-hockey."
+				`La publication doit cibler l'image ${expectedImage ?? 'ghcr.io/<dépôt>'}.`
 			)
 		);
 	}
@@ -351,6 +356,18 @@ export function checkCiContract(inputs: ContractInputs): ContractFinding[] {
 		findings.push(finding(inputs.packageFile.path, 1, 'package.json doit contenir du JSON valide.'));
 		return findings;
 	}
+	const repository = asObject(packageJson.repository);
+	const repositoryUrl = typeof repository?.url === 'string' ? repository.url : '';
+	let expectedImage: string | null;
+	try {
+		expectedImage = `ghcr.io/${new URL(repositoryUrl).pathname
+			.replace(/^\//, '')
+			.replace(/\.git$/, '')
+			.toLowerCase()}`;
+	} catch {
+		expectedImage = null;
+	}
+
 	const scripts = asObject(packageJson.scripts);
 	if (scripts?.gate !== GATE_SCRIPT) {
 		findings.push(
@@ -424,7 +441,9 @@ export function checkCiContract(inputs: ContractInputs): ContractFinding[] {
 
 	const releaseFile = byName('release.yml');
 	const release = parseFile(releaseFile, findings);
-	if (release && releaseFile) checkRelease(releaseFile, release, findings);
+	if (release && releaseFile) {
+		checkRelease(releaseFile, release, findings, expectedImage);
+	}
 
 	const docsFile = byName('docs.yml');
 	const docs = parseFile(docsFile, findings);

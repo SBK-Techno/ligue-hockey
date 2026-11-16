@@ -1,4 +1,4 @@
-import { DATE_PATTERN } from '#config/time.ts';
+import { DATE_PATTERN, OFFSET_LOCALE, PART_LOCALE } from '#config/time.ts';
 
 export interface Clock {
 	nowMs(): number;
@@ -17,7 +17,7 @@ export function nowDate(): Date {
 }
 
 export function todayInZone(timeZone: string, at: number = clock.nowMs()): string {
-	const parts = new Intl.DateTimeFormat('en-CA', {
+	const parts = new Intl.DateTimeFormat(PART_LOCALE, {
 		timeZone,
 		year: 'numeric',
 		month: '2-digit',
@@ -44,7 +44,7 @@ export function isRealDate(date: string): boolean {
 }
 
 function zoneOffsetMs(utcMs: number, timeZone: string): number {
-	const parts = new Intl.DateTimeFormat('en-US', {
+	const parts = new Intl.DateTimeFormat(OFFSET_LOCALE, {
 		timeZone,
 		year: 'numeric',
 		month: '2-digit',

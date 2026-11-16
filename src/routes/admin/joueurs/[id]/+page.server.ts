@@ -1,9 +1,8 @@
-import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
+import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
 import { branding } from '#lib/generated/branding.ts';
 import { PAYMENT_METHOD_KEYS } from '#config/payment-methods.ts';
-import { PLAYER_LIMITS } from '#config/players.ts';
-import { POSITION_KEYS } from '#config/positions.ts';
+import { ROLE_KEYS } from '#config/roles.ts';
 import {
 	applyDefaultPlan,
 	getPlayerBalance,
@@ -14,27 +13,26 @@ import {
 } from '#lib/domain/finance/service.ts';
 import {
 	adminUpdatePlayer,
-	getPlayer,
-	resendInvite
+	deletePlayer,
+	getAdminPlayer,
+	resendInvite,
+	setPlayerRole
 } from '#lib/domain/players/service.ts';
+import { adminUpdatePlayerSchema } from '#lib/domain/players/validators.ts';
 import { getRatings, setRatings } from '#lib/domain/ratings/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { applyDiscount, splitPlan } from '#lib/domain/finance/plan.ts';
 import { listSubstitutes, setSubstituteFavorite } from '#lib/domain/subs/service.ts';
 import { actionError } from '#lib/server/action.ts';
+import { isAppError } from '#lib/shared/errors.ts';
 import { centsToInput, t, parseMoneyToCents } from '#lib/shared/i18n/index.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
-const profileSchema = z.object({
-	firstName: z.string().trim().min(1).max(PLAYER_LIMITS.nameMax),
-	lastName: z.string().trim().min(1).max(PLAYER_LIMITS.nameMax),
-	age: z.coerce
-		.number()
-		.int()
-		.min(PLAYER_LIMITS.ageMin)
-		.max(PLAYER_LIMITS.ageMax),
-	position: z.enum(POSITION_KEYS)
+
+const roleSchema = z.object({ role: z.enum(ROLE_KEYS) });
+const statusSchema = z.object({
+	active: z.enum(['true', 'false']).transform((value) => value === 'true')
 });
 
 const planSchema = z.object({
@@ -80,17 +78,22 @@ export const load: ServerLoad = ({ locals, params }) => {
 		};
 	}
 
-	const player = getPlayer(actor, params.id);
-	if (!('age' in player)) {
-		return {
-			player: null,
-			ratings: null,
-			balance: null,
-			payments: [],
-			plan: null,
-			isFavorite: false,
-			currency
-		};
+	let player;
+	try {
+		player = getAdminPlayer(actor, params.id);
+	} catch (cause) {
+		if (isAppError(cause) && cause.code === 'NOT_FOUND') {
+			return {
+				player: null,
+				ratings: null,
+				balance: null,
+				payments: [],
+				plan: null,
+				isFavorite: false,
+				currency
+			};
+		}
+		throw cause;
 	}
 	const balance = getPlayerBalance(actor, params.id);
 	const favorite = listSubstitutes(actor).find(
@@ -104,9 +107,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 	const suggested = splitPlan(suggestedTotal, settings['finance.firstInstallmentPercent']);
 	const firstPercent =
 		balance && balance.totalCents > 0
-			? Math.round(
-					(balance.installments[0].amountCents / balance.totalCents) * 100
-				)
+			? Math.round((balance.installments[0].amountCents / balance.totalCents) * 100)
 			: settings['finance.firstInstallmentPercent'];
 
 	return {
@@ -119,10 +120,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 		plan: {
 			total: centsToInput(balance?.totalCents ?? suggested.totalCents),
 			firstPercent,
-			firstDueDate:
-				balance?.installments[0].dueDate ?? settings['finance.installment1Due'] ?? '',
-			secondDueDate:
-				balance?.installments[1].dueDate ?? settings['finance.installment2Due'] ?? '',
+			firstDueDate: balance?.installments[0].dueDate ?? settings['finance.installment1Due'] ?? '',
+			secondDueDate: balance?.installments[1].dueDate ?? settings['finance.installment2Due'] ?? '',
 			amount: centsToInput(balance?.outstandingCents ?? suggested.totalCents),
 			today: todayInZone(branding.timezone, clock.nowMs())
 		}
@@ -132,8 +131,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 export const actions: Actions = {
 	profile: async ({ request, locals, params }) => {
 		try {
-			const parsed = parseForm(profileSchema, await request.formData());
-			adminUpdatePlayer(locals.actor, params.id!, parsed);
+			const parsed = parseForm(adminUpdatePlayerSchema, await request.formData());
+			await adminUpdatePlayer(locals.actor, params.id!, parsed);
 			return { ok: true, message: t('admin.playerSaved') };
 		} catch (cause) {
 			return actionError(cause);
@@ -203,6 +202,34 @@ export const actions: Actions = {
 		} catch (cause) {
 			return actionError(cause);
 		}
+	},
+	role: async ({ request, locals, params }) => {
+		try {
+			const parsed = parseForm(roleSchema, await request.formData());
+			await setPlayerRole(locals.actor, params.id!, parsed.role);
+			return { ok: true, message: t('admin.roleSaved') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	status: async ({ request, locals, params }) => {
+		try {
+			const parsed = parseForm(statusSchema, await request.formData());
+			await adminUpdatePlayer(locals.actor, params.id!, {
+				active: parsed.active
+			});
+			return { ok: true, message: t('admin.statusSaved') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	delete: async ({ locals, params }) => {
+		try {
+			await deletePlayer(locals.actor, params.id!);
+		} catch (cause) {
+			return actionError(cause);
+		}
+		redirect(303, '/admin/joueurs');
 	},
 	resend: async ({ locals, params }) => {
 		try {

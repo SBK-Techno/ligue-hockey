@@ -2,7 +2,7 @@ name: ligue-hockey
 
 services:
   ligue:
-    image: ${LIGUE_IMAGE:-ghcr.io/sbk-techno/ligue-hockey:1.0.0}
+    image: ${LIGUE_IMAGE:?Définis LIGUE_IMAGE avec la version publiée}
     container_name: ligue-hockey
     restart: unless-stopped
     stop_grace_period: 30s

@@ -24,13 +24,18 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 
 | Fact | Owner | Consumers | Gate |
 |---|---|---|---|
-| App name, colours, icons, locale, timezone, social image | `config/branding.json` | manifest, icons, layout, emails, OG metadata | `verify:generated` |
+| App name, manifest colours, icons, locale, timezone, social image, crawl policy | `config/branding.json` | manifest, icons, app shell, robots, layout, emails, OG metadata, offline page, service-worker cache | `verify:generated` |
+| Application palette | `src/lib/ui/tokens.css` | every component, emails, docs, social image, offline page | `verify:architecture` + `verify:generated` |
 | League-editable settings (roster, fees, lead times, limits) | `config/settings-registry.ts` | settings service, admin form, services | registry test + `verify` |
 | Positions | `config/positions.ts` | schema checks, forms, roster templates, notifications | architecture check |
+| Roles and capabilities | `config/capabilities.ts`, `config/roles.ts` | policy, navigation, admin role editor | policy tests |
+| Navigation surfaces | `config/surfaces.ts` | header, bottom bar, account menu | surface tests |
+| Alignment rule modes | `config/rule-modes.ts` | rule form, rule list, generator, badges | mode round-trip test |
 | Rating attributes and weights | `config/rating-attributes.ts` | ratings service, admin form, overall calculation | registry test |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
-| French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check |
+| French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
+| Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
 | Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | drizzle-kit diff |
@@ -50,7 +55,7 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 
 Three explicit layers, each with one owner:
 
-1. **Branding** (build time, checked in): `config/branding.json`. Generates `static/manifest.webmanifest`, `static/icons/*`, `static/social/apercu.jpg`, and `src/lib/generated/branding.ts`.
+1. **Branding** (build time, checked in): `config/branding.json` with the palette owned by `src/lib/ui/tokens.css`. Generates `src/app.html`, `static/manifest.webmanifest`, `static/robots.txt`, `static/offline.html`, `static/icons/*`, `static/social/apercu.jpg`, and `src/lib/generated/branding.ts`.
 2. **League settings** (database): typed registry with a Zod schema, default, French label, and optional min/max. `settings.get()` validates on read and fails loudly on drift. The admin form is generated from the registry. Services ask the settings service; they never read the table.
 3. **Deployment** (environment): `src/lib/shared/config/env.ts` parses once at boot, reports every invalid key, and exports a frozen object. Secrets never enter logs or the client bundle.
 
@@ -58,9 +63,13 @@ No module may define its own default for a value owned by one of these layers.
 
 ## Authorization
 
-One policy surface: `src/lib/domain/auth/policy.ts`. It answers questions (`canViewBalance`, `canEditRatings`, `canManageGame`, `canModerateChat`, …) from an `Actor` value. Services call policy before every read/write; routes call the same functions only to hide controls. The `/admin` layout calls `requireAdmin` once, but services still enforce it, so an API call cannot bypass the UI.
+One policy surface: `src/lib/domain/auth/policy.ts`. It answers capability questions (`canManageGames`, `canManagePlayers`, `canModerateChat`, …) from an `Actor` value. A role is only a named set of capabilities in `config/roles.ts`; services ask for a capability, never for a role. Adding a role therefore touches one declaration, not the domain. Current roles: joueur, responsable, admin.
 
-Ratings and other players' balances are removed from view models in the service, not hidden in the template. Player-facing DTOs carry no rating fields and no other player's money fields.
+Navigation is derived the same way. `config/surfaces.ts` declares each destination with the capabilities that open it, and `src/lib/domain/auth/surfaces.ts` filters that registry for the current actor. `AppNav` and the account menu render the result, so a surface cannot appear for a role that cannot use it.
+
+Services call policy before every read/write; routes call the same functions only to hide controls. The `/admin` layout calls `requireAdmin` once, but services still enforce it, so an API call cannot bypass the UI. `requireUser` is not enough when the action changes league data.
+
+Ratings and other players' balances are removed from view models in the service, not hidden in the template. Player-facing DTOs carry no rating fields and no other player's money fields. Profile presence (`hasPlayerProfile`, `isSubstitute`) is resolved once in the root layout load and consumed by pages; a page must never infer "player" from a role.
 
 ## Notifications
 
@@ -83,10 +92,13 @@ domain event ──► notify(eventKey, recipients, payload)
 Pure function in `src/lib/domain/teams/generator.ts`:
 
 - Input validated by schema: players (id, position, age, overall), slot template, pair rules, objective settings.
-- Hard constraints: slot counts, one player per slot, pair rules.
-- Objective: minimise combined-overall difference; within `skillTolerance`, minimise combined-age difference; deterministic tie-break by stable player id.
+- Hard constraints: slot counts, one player per slot, strict pair rules.
+- Preferences: non-strict pair rules do not block a better distribution; they break ties once size and skill are equal.
+- League limits (settings, 0 = no limit): maximum average skill spread, age spread, and player-count spread. Candidates outside a limit are excluded; when none qualify, the best effort is returned with a `rule-limit` warning.
+- Objective: minimise combined-overall difference; within `skillTolerance`, minimise combined-age difference; then unmet preferences; deterministic tie-break by stable player id.
 - Exhaustive over position-scoped combinations. The search space is bounded by the roster cap in settings; the cap is enforced before generation.
-- If the pair rules make the roster infeasible, return `violations` naming the rules. The UI shows the conflict; the generator never silently violates a rule.
+- If the strict pair rules make the roster infeasible, return `violations` naming the rules. Hard violations produce `rule-conflict`; unmet preferences produce `rule-preference`, a warning rather than a conflict.
+- The game snapshot stores the violations (rule, kind, strength, player ids) so the admin view can name both players after a reload, without re-running the generator.
 - Property tests assert: exact slot counts, no duplicate assignment, every hard rule honoured, determinism, and that a better skill split cannot be found by a single swap.
 
 ## Mechanical gates
@@ -96,10 +108,11 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 1. `svelte-check`: types and Svelte diagnostics.
 2. `eslint`: import boundaries and restricted syntax.
 3. `vitest run`: unit, property, and contract tests.
-4. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
-5. `verify:generated`: regenerates every branding asset, manifest, social image, and generated module in memory and fails if the checked-in bytes differ. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
-6. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
-7. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
+4. `verify:language`: rejects vouvoiement, second-person plural imperatives, em dashes and malformed placeholders in the French dictionary.
+5. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
+6. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link to an existing route.
+7. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
+8. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
 
 CI runs `npm run gate`, which is the same verify plus `npm run build`. The `required` job aggregates `verify` and `container`, and branch protection on `main` requires that check and refuses direct pushes. A red gate blocks the merge. The check runs on the pull request head, not on a merge commit.
 

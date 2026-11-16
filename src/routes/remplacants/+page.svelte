@@ -1,11 +1,19 @@
 <script lang="ts">
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
+	import { can } from '#lib/domain/auth/policy.ts';
 	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'manageSubs'));
+	const poolHref = $derived(
+		data.actor.kind === 'user' && can(data.actor, 'managePlayers')
+			? '/admin/joueurs'
+			: '/admin/matchs'
+	);
 </script>
 
 <FormFeedback {form} class="mb-4" />
@@ -15,7 +23,13 @@
 	<p class="mt-1.5 text-sm text-muted">{t('subs.subtitle')}</p>
 </div>
 
-{#if !data.isSubstitute}
+{#if isManager}
+	<div class="notice mb-5">
+		<p>{t('subs.adminNotice')}</p>
+		<a class="btn-secondary btn-sm mt-3" href={poolHref}>{t('subs.managePool')}</a>
+	</div>
+{/if}
+{#if !data.isSubstitute && !isManager}
 	<div class="notice mb-5">
 		<p>{t('subs.notInPool')}</p>
 		<p class="mt-1 text-ice-deep/80">{t('subs.notInPoolHelp')}</p>
@@ -59,7 +73,10 @@
 	{#if data.requests.length === 0}
 		<div class="card">
 			<p class="text-sm text-muted">{t('subs.noneOpen')}</p>
-			<p class="hint">{t('subs.emptyHelp')}</p>
+			<p class="hint">{isManager ? t('home.adminOpenSlots') : t('subs.emptyHelp')}</p>
+			{#if isManager}
+				<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('home.openRequest')}</a>
+			{/if}
 		</div>
 	{:else}
 		<ul role="list" class="space-y-2.5">
@@ -103,7 +120,9 @@
 			<h2>{t('subs.substituteList')}</h2>
 			<span class="badge">{data.pool.length}</span>
 		</div>
-		<p class="hint">{t('subs.favoriteHelp')}</p>
+		{#if isManager}
+			<p class="hint">{t('subs.favoriteHelp')}</p>
+		{/if}
 	</div>
 	{#if data.pool.length === 0}
 		<div class="card text-sm text-muted">{t('subs.poolEmpty')}</div>

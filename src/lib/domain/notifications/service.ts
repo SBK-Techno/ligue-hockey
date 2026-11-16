@@ -6,6 +6,7 @@ import {
 	type NotificationPayload
 } from '#config/notification-events.ts';
 import type { NotificationChannel } from '#config/notification-channels.ts';
+import { INBOX } from '#config/notifications.ts';
 import { requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
@@ -209,7 +210,7 @@ export function listInbox(
 	options: { limit: number; before?: number | null }
 ): InboxItem[] {
 	const user = requireUser(actor);
-	const limit = Math.min(Math.max(options.limit, 1), 100);
+	const limit = Math.min(Math.max(options.limit, 1), INBOX.maxPageSize);
 
 	return listInAppJobs(user.userId, limit, options.before ?? null).map((job) => {
 		const rendered = renderJob(job.eventKey, job.payloadJson);

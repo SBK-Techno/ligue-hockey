@@ -12,9 +12,8 @@ import { env } from '#lib/shared/config/env.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { sendEmail } from './email.ts';
+import { HOUR_MS } from '#config/time.ts';
 import { sendPush } from './push.ts';
-
-const HOUR_MS = 60 * 60 * 1000;
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let running: Promise<void> | null = null;

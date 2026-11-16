@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { POSITIONS, type Position } from './positions.ts';
-import type { SettingsValues } from './settings-registry.ts';
+import { settingBound, type SettingsValues } from './settings-registry.ts';
 import { TEAMS, type Team } from './teams.ts';
 
 export const rosterTemplateSchema = z.object({
-	goaliesPerTeam: z.number().int().min(0).max(3),
-	forwardsPerTeam: z.number().int().min(0).max(8),
-	defensePerTeam: z.number().int().min(0).max(8)
+	goaliesPerTeam: z.number().int().min(0).max(settingBound('roster.goaliesPerTeam', 'max')),
+	forwardsPerTeam: z.number().int().min(0).max(settingBound('roster.forwardsPerTeam', 'max')),
+	defensePerTeam: z.number().int().min(0).max(settingBound('roster.defensePerTeam', 'max'))
 });
 
 export type RosterTemplate = z.infer<typeof rosterTemplateSchema>;

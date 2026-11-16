@@ -4,12 +4,12 @@ import { assets, immutable } from '$app/manifest';
 import { resolve } from '$app/paths';
 import { branding } from '#lib/generated/branding.ts';
 
-const CACHE = `lhdm-${version}`;
+const CACHE = `${branding.cachePrefix}-${version}`;
 const ASSETS = [
 	...new Set([
 		...immutable.map((asset) => resolve(asset.path)),
 		...assets.map((asset) => resolve(asset.path)),
-		'/offline.html'
+		branding.offlinePath
 	])
 ];
 
@@ -56,7 +56,7 @@ self.addEventListener('fetch', (event) => {
 				return await fetch(request);
 			} catch (error) {
 				if (request.mode === 'navigate') {
-					const offline = await cache.match('/offline.html');
+					const offline = await cache.match(branding.offlinePath);
 					if (offline) return offline;
 				}
 				throw error;
@@ -70,7 +70,7 @@ self.addEventListener('push', (event) => {
 	let payload = {
 		title: branding.name,
 		body: '',
-		url: '/',
+		url: branding.startUrl,
 		tag: branding.shortName
 	};
 	try {
@@ -95,7 +95,7 @@ self.addEventListener('notificationclick', (event) => {
 	const target = new URL(
 		typeof event.notification.data?.url === 'string'
 			? event.notification.data.url
-			: '/',
+			: branding.startUrl,
 		self.location.origin
 	).href;
 

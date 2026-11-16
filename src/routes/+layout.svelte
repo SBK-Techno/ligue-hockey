@@ -37,12 +37,15 @@
 	});
 
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
+	const openGraphLocale = $derived(branding.locale.replace('-', '_'));
+	const crawlDirective = $derived(branding.indexable ? 'index,follow' : 'noindex,nofollow');
 </script>
 
 <svelte:head>
 	<title>{pageTitle}</title>
 	<meta name="description" content={branding.description} />
 	<meta name="theme-color" content={branding.themeColor} />
+	<meta name="robots" content={crawlDirective} />
 	<meta name="apple-mobile-web-app-title" content={branding.shortName} />
 	<link rel="icon" href={branding.icons.favicon} />
 	<link rel="apple-touch-icon" href={branding.icons.appleTouch} />
@@ -52,7 +55,7 @@
 	<meta property="og:title" content={pageTitle} />
 	<meta property="og:description" content={branding.description} />
 	<meta property="og:image" content={socialImage} />
-	<meta property="og:locale" content="fr_CA" />
+	<meta property="og:locale" content={openGraphLocale} />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={pageTitle} />
 	<meta name="twitter:description" content={branding.description} />
@@ -103,10 +106,10 @@
 {:else}
 	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
 	<AppNav actor={data.actor} unread={data.unread} />
-	<main id="contenu" class="mx-auto w-full max-w-6xl px-4 pb-32 pt-5 sm:pb-12 sm:pt-8">
+	<main id="contenu" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-5 sm:pt-8 lg:pb-12">
 		{@render children()}
 	</main>
-	<footer class="mx-auto w-full max-w-6xl px-4 pb-28 pt-2 sm:pb-8">
+	<footer class="mx-auto w-full max-w-6xl px-4 pb-[calc(var(--bottom-bar-offset)+0.5rem)] pt-2 lg:pb-8">
 		<div
 			class="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 pt-5 text-[11px] font-medium text-muted"
 		>

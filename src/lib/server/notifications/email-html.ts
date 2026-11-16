@@ -4,6 +4,7 @@ import type { EmailView } from '#lib/domain/notifications/templates.ts';
 
 const { ink: INK, paper: PAPER, surface: SURFACE, line: LINE, muted: MUTED, brand: BRAND } =
 	branding.emailPalette;
+const FONT_STACK = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 function escapeHtml(value: string): string {
 	return value
@@ -36,8 +37,8 @@ export function renderEmailText(email: EmailView, origin: string): string {
 	lines.push(
 		email.ignore ?? t('email.unsubscribe'),
 		'',
-		t('email.footer.league'),
-		t('email.footer.organisation'),
+		branding.name,
+		t('brand.presentedBy', { name: branding.organisation }),
 		origin,
 		''
 	);
@@ -102,22 +103,22 @@ export function renderEmailHtml(
 <img src="${escapeHtml(iconUrl)}" width="44" height="44" alt="" style="display:block;border-radius:11px;">
 </td>
 <td>
-<p style="margin:0;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;line-height:1.3;color:${PAPER};">${leagueName}</p>
-<p style="margin:2px 0 0;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:600;line-height:1.3;color:${PAPER};opacity:0.62;">${organisation}</p>
+<p style="margin:0;font-family:${FONT_STACK};font-size:14px;font-weight:700;line-height:1.3;color:${PAPER};">${leagueName}</p>
+<p style="margin:2px 0 0;font-family:${FONT_STACK};font-size:11px;font-weight:600;line-height:1.3;color:${PAPER};opacity:0.62;">${organisation}</p>
 </td>
 </tr>
 </table>
 </td>
 </tr>
 <tr>
-<td style="padding:32px 32px 8px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<td style="padding:32px 32px 8px;font-family:${FONT_STACK};">
 <h1 style="margin:0 0 20px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:26px;font-weight:700;line-height:1.2;letter-spacing:-0.02em;color:${INK};">${heading}</h1>
 ${greeting}
 ${paragraphs}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
 <tr>
 <td style="border-radius:10px;background:${BRAND};">
-<a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:14px 24px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;line-height:1.2;color:${SURFACE};text-decoration:none;">${escapeHtml(
+<a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:14px 24px;font-family:${FONT_STACK};font-size:15px;font-weight:700;line-height:1.2;color:${SURFACE};text-decoration:none;">${escapeHtml(
 		email.actionLabel
 	)}</a>
 </td>
@@ -133,11 +134,11 @@ ${note}
 </td>
 </tr>
 <tr>
-<td style="padding:24px 32px 28px;border-top:1px solid ${LINE};font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<td style="padding:24px 32px 28px;border-top:1px solid ${LINE};font-family:${FONT_STACK};">
 ${footerNote}
 <p style="margin:0;font-size:12px;line-height:1.5;color:${MUTED};">${escapeHtml(
-		t('email.footer.league')
-	)} · ${escapeHtml(t('email.footer.organisation'))}</p>
+		branding.name
+	)} · ${escapeHtml(t('brand.presentedBy', { name: branding.organisation }))}</p>
 </td>
 </tr>
 </table>

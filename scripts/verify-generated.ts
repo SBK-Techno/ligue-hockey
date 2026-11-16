@@ -1,6 +1,31 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { generateBranding, checksumOf } from './lib/branding.ts';
+
+const GENERATED_TEXT_EXTENSIONS = new Set([
+	'.html',
+	'.txt',
+	'.xml',
+	'.json',
+	'.webmanifest',
+	'.svg',
+	'.css',
+	'.js'
+]);
+
+async function listFiles(root: string, relative = ''): Promise<string[]> {
+	const entries = await readdir(path.join(root, relative), { withFileTypes: true });
+	const files: string[] = [];
+	for (const entry of entries) {
+		const next = path.join(relative, entry.name);
+		if (entry.isDirectory()) {
+			files.push(...(await listFiles(root, next)));
+		} else {
+			files.push(next.split(path.sep).join('/'));
+		}
+	}
+	return files;
+}
 
 const root = process.cwd();
 const expected = await generateBranding(root);
@@ -49,6 +74,19 @@ try {
 	}
 } catch {
 	failures.push('missing or invalid static/generated-assets.json');
+}
+
+const generatedStatic = new Set(
+	expected.map((file) => file.path).filter((file) => file.startsWith('static/'))
+);
+generatedStatic.add('static/generated-assets.json');
+
+for (const file of await listFiles(path.join(root, 'static'))) {
+	const relative = `static/${file}`;
+	if (!GENERATED_TEXT_EXTENSIONS.has(path.extname(file))) continue;
+	if (!generatedStatic.has(relative)) {
+		failures.push(`hand-maintained static text asset: ${relative}`);
+	}
 }
 
 if (failures.length > 0) {

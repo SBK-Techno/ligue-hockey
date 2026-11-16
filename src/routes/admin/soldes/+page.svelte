@@ -10,7 +10,7 @@
 	<p class="mt-1.5 text-sm text-muted">{t('admin.balancesHelp')}</p>
 </div>
 
-<div class="mb-5 grid gap-3 sm:grid-cols-4">
+<div class="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 	<div class="stat">
 		<p class="stat-value">{formatMoney(data.totals.total ?? 0, data.currency)}</p>
 		<p class="stat-label">{t('balance.total')}</p>

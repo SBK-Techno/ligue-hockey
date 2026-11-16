@@ -5,6 +5,12 @@ on:
     paths:
       - '**/*.md'
       - config/branding.json
+      - config/branding-schema.ts
+      - config/i18n/**
+      - src/lib/generated/branding.ts
+      - src/lib/shared/i18n/**
+      - src/lib/ui/tokens.css
+      - scripts/lib/palette.ts
       - config/branding/**
       - static/social/**
       - scripts/docs/**
@@ -17,6 +23,12 @@ on:
     paths:
       - '**/*.md'
       - config/branding.json
+      - config/branding-schema.ts
+      - config/i18n/**
+      - src/lib/generated/branding.ts
+      - src/lib/shared/i18n/**
+      - src/lib/ui/tokens.css
+      - scripts/lib/palette.ts
       - config/branding/**
       - static/social/**
       - scripts/docs/**

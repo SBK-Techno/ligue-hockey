@@ -12,6 +12,8 @@ import {
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
+import type { Position } from '#config/positions.ts';
+import { getMySubProfile } from '#lib/domain/subs/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
@@ -30,12 +32,15 @@ const manualRequestSchema = z.object({
 
 export const load: ServerLoad = ({ locals, params }) => {
 	const actor = locals.actor;
+	const positions: Position[] =
+		actor.kind === 'user' ? getMySubProfile(actor).positions : [];
 	if (actor.kind !== 'user') {
 		return {
 			game: null,
 			availability: null,
 			requests: [],
 			isSubstitute: false,
+			positions,
 			canManage: false
 		};
 	}
@@ -46,6 +51,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 			availability: null,
 			requests: [],
 			isSubstitute: false,
+			positions,
 			canManage: false
 		};
 	}
@@ -55,6 +61,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		availability: getAvailability(actor, gameId),
 		requests: listRequestsForGame(actor, gameId),
 		isSubstitute: isSubstitutePlayer(actor),
+		positions,
 		canManage: can(actor, 'manageGames')
 	};
 };

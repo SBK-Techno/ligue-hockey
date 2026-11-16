@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildDocs } from './build.ts';
-import { pages } from './pages.ts';
+import { BRANDING, pages } from './pages.ts';
 
 const result = buildDocs();
 const failures: string[] = [];
@@ -27,8 +27,8 @@ function stripTags(value: string): string {
 
 for (const file of htmlFiles) {
 	const html = readFileSync(join(result.output, file), 'utf8');
-	if (!html.includes('<html lang="fr-CA">')) {
-		failures.push(`${file}: langue fr-CA absente`);
+	if (!html.includes(`<html lang="${BRANDING.locale}">`)) {
+		failures.push(`${file}: langue ${BRANDING.locale} absente`);
 	}
 	if (!/<title>[^<]+<\/title>/.test(html)) {
 		failures.push(`${file}: titre absent`);

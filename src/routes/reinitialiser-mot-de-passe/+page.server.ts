@@ -1,5 +1,6 @@
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
+import { ACCOUNT_LIMITS } from '#config/account.ts';
 import { auth } from '#lib/server/auth.ts';
 import { actionError } from '#lib/server/action.ts';
 import { publicEnv } from '#lib/shared/config/public-env.ts';
@@ -8,8 +9,8 @@ import { parseForm } from '#lib/shared/validation.ts';
 
 const resetSchema = z.object({
 	token: z.string().trim().min(1).max(512),
-	password: z.string().min(publicEnv.passwordMinLength).max(128),
-	confirm: z.string().min(1).max(128)
+	password: z.string().min(publicEnv.passwordMinLength).max(ACCOUNT_LIMITS.passwordMax),
+	confirm: z.string().min(1).max(ACCOUNT_LIMITS.passwordMax)
 });
 
 export const load: ServerLoad = ({ url }) => {

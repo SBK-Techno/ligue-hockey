@@ -1,7 +1,11 @@
 {
 	"name": "ligue-hockey",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/SBK-Techno/ligue-hockey"
+	},
 	"type": "module",
 	"engines": {
 		"node": ">=24"
@@ -26,9 +30,10 @@
 		"docs:build": "tsx scripts/docs/build.ts",
 		"docs:check": "tsx scripts/docs/check.ts",
 		"verify:shell": "bash -n scripts/ci/container-smoke.sh",
+		"verify:language": "tsx scripts/verify-language.ts",
 		"verify:architecture": "tsx scripts/verify-architecture.ts",
 		"verify:generated": "tsx scripts/verify-generated.ts",
-		"verify": "npm run check && npm run lint && npm run test && npm run verify:architecture && npm run verify:generated && npm run verify:shell && npm run docs:check",
+		"verify": "npm run check && npm run lint && npm run test && npm run verify:language && npm run verify:architecture && npm run verify:generated && npm run verify:shell && npm run docs:check",
 		"gate": "npm run verify && npm run build",
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",

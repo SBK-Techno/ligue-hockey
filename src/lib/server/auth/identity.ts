@@ -22,6 +22,16 @@ export const betterAuthIdentity: IdentityProvider = {
 		await context.internalAdapter.deleteUser(userId);
 	},
 
+	async updateName(userId, name) {
+		const context = await auth.$context;
+		await context.internalAdapter.updateUser(userId, { name });
+	},
+
+	async setRole(userId, role) {
+		const context = await auth.$context;
+		await context.internalAdapter.updateUser(userId, { role });
+	},
+
 	async requestPasswordReset(email, purpose) {
 		const target = new URL(RESET_PATH, env.origin);
 		target.searchParams.set('mode', purpose);

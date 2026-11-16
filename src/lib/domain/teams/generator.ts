@@ -1,7 +1,7 @@
 import { POSITIONS, type Position } from '#config/positions.ts';
 import type { RosterTemplate, SlotDefinition } from '#config/roster.ts';
-import { TEAMS, type Team } from '#config/teams.ts';
-import type { PairRuleKind } from '#lib/domain/rules/schema.ts';
+import { TEAM_GENERATION, TEAMS, type Team } from '#config/teams.ts';
+import type { PairRuleKind } from '#config/rule-modes.ts';
 
 export type GeneratorPlayer = {
 	id: string;
@@ -16,6 +16,13 @@ export type GeneratorRule = {
 	playerAId: string;
 	playerBId: string;
 	kind: PairRuleKind;
+	strict?: boolean;
+};
+
+export type TeamLimits = {
+	skill: number;
+	age: number;
+	size: number;
 };
 
 export type GeneratorInput = {
@@ -24,11 +31,13 @@ export type GeneratorInput = {
 	rules: readonly GeneratorRule[];
 	skillTolerance: number;
 	maxPlayers: number;
+	limits?: TeamLimits;
 };
 
 export type GeneratorViolation = {
 	ruleId: string;
 	kind: PairRuleKind;
+	strict: boolean;
 	playerIds: [string, string];
 };
 
@@ -58,7 +67,11 @@ type PositionOption = {
 	age: Record<Team, number>;
 };
 
-const MAX_CANDIDATES = 200_000;
+const [TEAM_A, TEAM_B] = [TEAMS[0].key, TEAMS[1].key] as const;
+
+function zeroTotals(): Record<Team, number> {
+	return Object.fromEntries(TEAMS.map((team) => [team.key, 0])) as Record<Team, number>;
+}
 
 function combinations<T>(items: readonly T[], size: number): T[][] {
 	if (size === 0) return [[]];
@@ -125,13 +138,13 @@ function buildPositionOptions(
 			const assignments: GeneratorAssignment[] = [
 				...teamAPlayers.map((player, index) => ({
 					playerId: player.id,
-					team: 'white' as const,
+					team: TEAM_A,
 					position,
 					slotIndex: index
 				})),
 				...teamBPlayers.map((player, index) => ({
 					playerId: player.id,
-					team: 'black' as const,
+					team: TEAM_B,
 					position,
 					slotIndex: index
 				}))
@@ -140,28 +153,28 @@ function buildPositionOptions(
 			const unfilled: SlotDefinition[] = [];
 			for (const team of TEAMS) {
 				const filled =
-					team.key === 'white' ? teamAPlayers.length : teamBPlayers.length;
-				const slots = team.key === 'white' ? slotsA : slotsB;
+					team.key === TEAM_A ? teamAPlayers.length : teamBPlayers.length;
+				const slots = team.key === TEAM_A ? slotsA : slotsB;
 				for (let index = filled; index < slots; index += 1) {
 					unfilled.push({ team: team.key, position, index });
 				}
 			}
 
-			const skill = { white: 0, black: 0 };
-			const age = { white: 0, black: 0 };
+			const skill = zeroTotals();
+			const age = zeroTotals();
 			for (const player of teamAPlayers) {
-				skill.white += player.overall;
-				age.white += player.age;
+				skill[TEAM_A] += player.overall;
+				age[TEAM_A] += player.age;
 			}
 			for (const player of teamBPlayers) {
-				skill.black += player.overall;
-				age.black += player.age;
+				skill[TEAM_B] += player.overall;
+				age[TEAM_B] += player.age;
 			}
 
 			options.push({
 				assignments,
 				unfilled,
-				counts: { white: teamAPlayers.length, black: teamBPlayers.length },
+				counts: { [TEAM_A]: teamAPlayers.length, [TEAM_B]: teamBPlayers.length },
 				skill,
 				age
 			});
@@ -186,6 +199,7 @@ function pairViolations(
 			violations.push({
 				ruleId: rule.id,
 				kind: rule.kind,
+				strict: rule.strict !== false,
 				playerIds: [rule.playerAId, rule.playerBId]
 			});
 		}
@@ -194,6 +208,7 @@ function pairViolations(
 			violations.push({
 				ruleId: rule.id,
 				kind: rule.kind,
+				strict: rule.strict !== false,
 				playerIds: [rule.playerAId, rule.playerBId]
 			});
 		}
@@ -234,7 +249,7 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 		(product, entry) => product * Math.max(1, entry.options.length),
 		1
 	);
-	if (candidateCount > MAX_CANDIDATES) {
+	if (candidateCount > TEAM_GENERATION.maxCandidates) {
 		throw new Error(`Team generation is too complex: ${candidateCount} candidates`);
 	}
 
@@ -273,16 +288,16 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 				assignments: [...current.assignments, ...option.assignments],
 				unfilled: [...current.unfilled, ...option.unfilled],
 				counts: {
-					white: current.counts.white + option.counts.white,
-					black: current.counts.black + option.counts.black
+					[TEAM_A]: current.counts[TEAM_A] + option.counts[TEAM_A],
+					[TEAM_B]: current.counts[TEAM_B] + option.counts[TEAM_B]
 				},
 				skill: {
-					white: current.skill.white + option.skill.white,
-					black: current.skill.black + option.skill.black
+					[TEAM_A]: current.skill[TEAM_A] + option.skill[TEAM_A],
+					[TEAM_B]: current.skill[TEAM_B] + option.skill[TEAM_B]
 				},
 				age: {
-					white: current.age.white + option.age.white,
-					black: current.age.black + option.age.black
+					[TEAM_A]: current.age[TEAM_A] + option.age[TEAM_A],
+					[TEAM_B]: current.age[TEAM_B] + option.age[TEAM_B]
 				},
 				violations: []
 			});
@@ -292,9 +307,9 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	walk(0, {
 		assignments: [],
 		unfilled: [],
-		counts: { white: 0, black: 0 },
-		skill: { white: 0, black: 0 },
-		age: { white: 0, black: 0 },
+		counts: zeroTotals(),
+		skill: zeroTotals(),
+		age: zeroTotals(),
 		violations: []
 	});
 
@@ -321,14 +336,14 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	}
 
 	const scored = candidates.map((candidate) => {
-		const sizeDiff = Math.abs(candidate.counts.white - candidate.counts.black);
+		const sizeDiff = Math.abs(candidate.counts[TEAM_A] - candidate.counts[TEAM_B]);
 		const skillDiff = Math.abs(
-			average(candidate.skill.white, candidate.counts.white) -
-				average(candidate.skill.black, candidate.counts.black)
+			average(candidate.skill[TEAM_A], candidate.counts[TEAM_A]) -
+				average(candidate.skill[TEAM_B], candidate.counts[TEAM_B])
 		);
 		const ageDiff = Math.abs(
-			average(candidate.age.white, candidate.counts.white) -
-				average(candidate.age.black, candidate.counts.black)
+			average(candidate.age[TEAM_A], candidate.counts[TEAM_A]) -
+				average(candidate.age[TEAM_B], candidate.counts[TEAM_B])
 		);
 		const key = [...candidate.assignments]
 			.sort(
@@ -343,35 +358,49 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 			)
 			.join('|');
 
+		const hard = candidate.violations.filter((violation) => violation.strict).length;
 		return {
 			candidate,
 			sizeDiff,
 			skillDiff,
 			ageDiff,
 			key,
-			violations: candidate.violations.length
+			hard,
+			soft: candidate.violations.length - hard
 		};
 	});
 
 	scored.sort(
 		(a, b) =>
-			a.violations - b.violations ||
+			a.hard - b.hard ||
 			a.sizeDiff - b.sizeDiff ||
 			a.skillDiff - b.skillDiff ||
 			a.ageDiff - b.ageDiff ||
+			a.soft - b.soft ||
 			a.key.localeCompare(b.key)
 	);
 
-	const best = scored[0];
-	const tolerant = scored.filter(
+	const limits = input.limits ?? { skill: 0, age: 0, size: 0 };
+	const withinLimits = (entry: (typeof scored)[number]) =>
+		(limits.skill === 0 || entry.skillDiff <= limits.skill) &&
+		(limits.age === 0 || entry.ageDiff <= limits.age) &&
+		(limits.size === 0 || entry.sizeDiff <= limits.size);
+	const minHard = Math.min(...scored.map((entry) => entry.hard));
+	const hardPool = scored.filter((entry) => entry.hard === minHard);
+	const eligible = hardPool.filter(withinLimits);
+	const considered = eligible.length > 0 ? eligible : hardPool;
+
+	const best = considered[0];
+	const tolerant = considered.filter(
 		(entry) =>
-			entry.violations === best.violations &&
+			entry.hard === best.hard &&
 			entry.sizeDiff === best.sizeDiff &&
 			entry.skillDiff <= best.skillDiff + input.skillTolerance
 	);
 	tolerant.sort(
 		(a, b) =>
 			a.ageDiff - b.ageDiff ||
+			a.soft - b.soft ||
 			a.skillDiff - b.skillDiff ||
 			a.key.localeCompare(b.key)
 	);
@@ -381,8 +410,14 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 	if (chosen.candidate.unfilled.length > 0) {
 		warnings.push('unfilled-slots');
 	}
-	if (chosen.violations > 0) {
+	if (chosen.hard > 0) {
 		warnings.push('rule-conflict');
+	}
+	if (chosen.soft > 0) {
+		warnings.push('rule-preference');
+	}
+	if (eligible.length === 0 && (limits.skill > 0 || limits.age > 0 || limits.size > 0)) {
+		warnings.push('rule-limit');
 	}
 
 	return {

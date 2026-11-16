@@ -183,3 +183,149 @@ describe('generateTeams', () => {
 		expect(() => generateTeams(input({ maxPlayers: 5 }))).toThrow();
 	});
 });
+
+describe('generateTeams with rule preferences', () => {
+	const fourForwards = [
+		player('a', 'forward', 3, 30),
+		player('b', 'forward', 3, 30),
+		player('c', 'forward', 3, 30),
+		player('d', 'forward', 3, 30)
+	];
+	const twoPerTeam: RosterTemplate = {
+		forwardsPerTeam: 2,
+		defensePerTeam: 0,
+		goaliesPerTeam: 0
+	};
+
+	it('applies a soft preference when the balance is otherwise equal', () => {
+		const result = generateTeams(
+			input({
+				players: fourForwards,
+				template: twoPerTeam,
+				rules: [
+					{
+						id: 'prefer',
+						playerAId: 'a',
+						playerBId: 'b',
+						kind: 'must_not',
+						strict: false
+					}
+				]
+			})
+		);
+
+		const teamOf = new Map(result.assignments.map((entry) => [entry.playerId, entry.team]));
+		expect(teamOf.get('a')).not.toBe(teamOf.get('b'));
+		expect(result.violations).toHaveLength(0);
+		expect(result.warnings).not.toContain('rule-preference');
+	});
+
+	it('reports an unmet preference without calling it a conflict', () => {
+		const result = generateTeams(
+			input({
+				players: [player('a', 'forward'), player('b', 'forward')],
+				template: { forwardsPerTeam: 1, defensePerTeam: 0, goaliesPerTeam: 0 },
+				rules: [
+					{
+						id: 'prefer',
+						playerAId: 'a',
+						playerBId: 'b',
+						kind: 'must',
+						strict: false
+					}
+				]
+			})
+		);
+
+		expect(result.violations).toHaveLength(1);
+		expect(result.violations[0].strict).toBe(false);
+		expect(result.warnings).toContain('rule-preference');
+		expect(result.warnings).not.toContain('rule-conflict');
+	});
+
+	it('defaults a rule to strict when strength is omitted', () => {
+		const result = generateTeams(
+			input({
+				players: [player('a', 'forward'), player('b', 'forward')],
+				template: { forwardsPerTeam: 1, defensePerTeam: 0, goaliesPerTeam: 0 },
+				rules: [{ id: 'hard', playerAId: 'a', playerBId: 'b', kind: 'must' }]
+			})
+		);
+
+		expect(result.violations[0].strict).toBe(true);
+		expect(result.warnings).toContain('rule-conflict');
+	});
+});
+
+describe('generateTeams with league limits', () => {
+	const unevenAges = [
+		player('a', 'forward', 3, 20),
+		player('b', 'forward', 3, 20),
+		player('c', 'forward', 3, 20),
+		player('d', 'forward', 3, 40)
+	];
+	const twoPerTeam: RosterTemplate = {
+		forwardsPerTeam: 2,
+		defensePerTeam: 0,
+		goaliesPerTeam: 0
+	};
+
+	it('treats zero as no limit', () => {
+		const result = generateTeams(
+			input({
+				players: unevenAges,
+				template: twoPerTeam,
+				limits: { skill: 0, age: 0, size: 0 }
+			})
+		);
+
+		expect(result.warnings).not.toContain('rule-limit');
+	});
+
+	it('accepts a candidate inside the configured limits', () => {
+		const result = generateTeams(
+			input({
+				players: unevenAges,
+				template: twoPerTeam,
+				limits: { skill: 0, age: 10, size: 0 }
+			})
+		);
+
+		expect(result.warnings).not.toContain('rule-limit');
+	});
+
+	it('returns the best effort and a warning when no limit can be met', () => {
+		const result = generateTeams(
+			input({
+				players: unevenAges,
+				template: twoPerTeam,
+				limits: { skill: 0, age: 1, size: 0 }
+			})
+		);
+
+		expect(result.assignments).toHaveLength(4);
+		expect(result.warnings).toContain('rule-limit');
+	});
+});
+
+describe('generateTeams limit priority', () => {
+	it('never trades a strict rule for an easier limit', () => {
+		const result = generateTeams(
+			input({
+				players: [
+					player('a', 'forward', 3, 40),
+					player('b', 'forward', 3, 40),
+					player('c', 'forward', 3, 20)
+				],
+				template: { forwardsPerTeam: 2, defensePerTeam: 0, goaliesPerTeam: 0 },
+				rules: [{ id: 'hard', playerAId: 'a', playerBId: 'b', kind: 'must' }],
+				limits: { skill: 0, age: 15, size: 0 }
+			})
+		);
+
+		const teamOf = new Map(result.assignments.map((entry) => [entry.playerId, entry.team]));
+		expect(teamOf.get('a')).toBe(teamOf.get('b'));
+		expect(result.violations).toHaveLength(0);
+		expect(result.warnings).toContain('rule-limit');
+	});
+});

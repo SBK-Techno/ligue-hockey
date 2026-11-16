@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeSubRequestWaves, isTooLateForSubRequest } from './policy.ts';
+import {
+	claimablePositions,
+	computeSubRequestWaves,
+	isTooLateForSubRequest
+} from './policy.ts';
 
 const gameStartMs = Date.UTC(2026, 10, 22, 13, 0);
 const hour = 60 * 60 * 1000;
@@ -67,5 +71,19 @@ describe('computeSubRequestWaves', () => {
 		expect(isTooLateForSubRequest(gameStartMs, gameStartMs - 30 * minute, 30)).toBe(
 			true
 		);
+	});
+});
+
+describe('claimable positions', () => {
+	it('uses the saved preferences when they exist', () => {
+		expect(claimablePositions(['defense', 'goalie'], 'forward')).toEqual(['defense', 'goalie']);
+	});
+
+	it('falls back to the primary position for a substitute without preferences', () => {
+		expect(claimablePositions([], 'forward')).toEqual(['forward']);
+	});
+
+	it('returns nothing when the account has no player sheet', () => {
+		expect(claimablePositions([], null)).toEqual([]);
 	});
 });

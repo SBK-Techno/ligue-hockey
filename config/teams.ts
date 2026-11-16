@@ -24,3 +24,7 @@ export function teamDefinition(team: Team) {
   }
   return definition;
 }
+
+export const TEAM_GENERATION = {
+	maxCandidates: 200_000
+} as const;

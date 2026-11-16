@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { I18nKey } from './i18n/fr';
 import { TEAMS } from './teams.ts';
+import { DATE_PATTERN, TIME_PATTERN } from './time.ts';
 
 export const SETTING_GROUPS = [
   { key: 'league', labelKey: 'settings.group.league' },
@@ -47,10 +48,10 @@ function defineSetting<T>(definition: SettingDefinition<T>) {
 
 const dateString = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'invalid-date')
+  .regex(DATE_PATTERN, 'invalid-date')
   .nullable();
 
-const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'invalid-time');
+const timeString = z.string().regex(TIME_PATTERN, 'invalid-time');
 
 export const SETTINGS = {
   'league.seasonLabel': defineSetting({
@@ -66,6 +67,7 @@ export const SETTINGS = {
     kind: 'text',
     schema: z.string().max(120),
     defaultValue: '',
+    max: 120,
     labelKey: 'settings.defaultLocation.label',
     descriptionKey: 'settings.defaultLocation.description'
   }),
@@ -270,6 +272,39 @@ export const SETTINGS = {
     labelKey: 'settings.maxPlayers.label',
     descriptionKey: 'settings.maxPlayers.description'
   }),
+  'teams.maxSkillSpread': defineSetting({
+    group: 'teams',
+    kind: 'number',
+    schema: z.number().min(0).max(10),
+    defaultValue: 0,
+    min: 0,
+    max: 10,
+    step: 0.25,
+    labelKey: 'settings.maxSkillSpread.label',
+    descriptionKey: 'settings.maxSkillSpread.description'
+  }),
+  'teams.maxAgeSpread': defineSetting({
+    group: 'teams',
+    kind: 'number',
+    schema: z.number().min(0).max(60),
+    defaultValue: 0,
+    min: 0,
+    max: 60,
+    step: 0.5,
+    labelKey: 'settings.maxAgeSpread.label',
+    descriptionKey: 'settings.maxAgeSpread.description'
+  }),
+  'teams.maxSizeSpread': defineSetting({
+    group: 'teams',
+    kind: 'number',
+    schema: z.number().int().min(0).max(10),
+    defaultValue: 0,
+    min: 0,
+    max: 10,
+    step: 1,
+    labelKey: 'settings.maxSizeSpread.label',
+    descriptionKey: 'settings.maxSizeSpread.description'
+  }),
   'teams.autoRegenerate': defineSetting({
     group: 'teams',
     kind: 'boolean',
@@ -417,6 +452,18 @@ export function defaultSettings(): SettingsValues {
   return Object.fromEntries(
     SETTINGS_KEYS.map((key) => [key, SETTINGS[key].defaultValue])
   ) as SettingsValues;
+}
+
+/**
+ * Les validateurs de formulaire réutilisent la borne déclarée par le réglage
+ * au lieu de recopier le même nombre.
+ */
+export function settingBound(key: SettingsKey, bound: 'min' | 'max'): number {
+  const value = SETTINGS[key][bound];
+  if (typeof value !== 'number') {
+    throw new Error(`Le réglage ${key} doit déclarer une borne ${bound}.`);
+  }
+  return value;
 }
 
 export function parseSettings(

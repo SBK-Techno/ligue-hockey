@@ -1,7 +1,9 @@
+import type { Role } from '#config/roles.ts';
+
 export type IdentityUserInput = {
 	email: string;
 	name: string;
-	role: 'admin' | 'player';
+	role: Role;
 	password: string;
 };
 
@@ -11,9 +13,7 @@ export function passwordLinkPurpose(url: string): PasswordLinkPurpose {
 	try {
 		const callback = new URL(url).searchParams.get('callbackURL');
 		if (!callback) return 'reset';
-		return new URL(callback).searchParams.get('mode') === 'invitation'
-			? 'invitation'
-			: 'reset';
+		return new URL(callback).searchParams.get('mode') === 'invitation' ? 'invitation' : 'reset';
 	} catch {
 		return 'reset';
 	}
@@ -21,11 +21,10 @@ export function passwordLinkPurpose(url: string): PasswordLinkPurpose {
 
 export type IdentityProvider = {
 	createUser(input: IdentityUserInput): Promise<{ id: string }>;
+	updateName(userId: string, name: string): Promise<void>;
 	deleteUser(userId: string): Promise<void>;
-	requestPasswordReset(
-		email: string,
-		purpose: PasswordLinkPurpose
-	): Promise<void>;
+	setRole(userId: string, role: IdentityUserInput['role']): Promise<void>;
+	requestPasswordReset(email: string, purpose: PasswordLinkPurpose): Promise<void>;
 };
 
 let provider: IdentityProvider | null = null;

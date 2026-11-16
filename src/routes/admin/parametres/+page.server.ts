@@ -8,12 +8,17 @@ import {
 import { getSettings, updateSettings } from '#lib/domain/settings/service.ts';
 import { settingDescription } from '#lib/domain/settings/descriptions.ts';
 import { settingsFormValues, settingsInputFromFormData } from '#lib/domain/settings/form.ts';
-import { actionError } from '#lib/server/action.ts';
+import { requirePermission } from '#lib/domain/auth/policy.ts';
+import { actionError, loadError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	const actor = locals.actor;
-	if (actor.kind !== 'user') return { groups: [], values: {}, descriptions: {} };
+	try {
+		requirePermission(actor, 'manageSettings');
+	} catch (cause) {
+		return loadError(cause);
+	}
 
 	const values = getSettings();
 	const descriptions: Record<string, string> = {};

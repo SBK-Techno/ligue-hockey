@@ -21,10 +21,7 @@ export function actionError(cause: unknown) {
 
 export function loadError(cause: unknown): never {
 	if (isAppError(cause)) {
-		throw httpError(cause.status, {
-			message: t(cause.key, cause.params),
-			key: cause.key
-		});
+		throw httpError(cause.status, t(cause.key, cause.params), { key: cause.key });
 	}
 	throw cause;
 }

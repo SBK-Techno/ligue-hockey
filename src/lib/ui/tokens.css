@@ -3,6 +3,8 @@
 	--color-ink: #101a22;
 	--color-paper: #f5f2ea;
 	--color-surface: #fffcf6;
+	/* Texte et icônes posés sur une surface de marque (bleu, rouge). */
+	--color-on-brand: var(--color-surface);
 	--color-line: #ded6c7;
 	--color-muted: #58656e;
 	--color-ice: #2453bb;
@@ -21,4 +23,10 @@
 	--shadow-card: 0 1px 2px rgb(16 26 34 / 0.05), 0 18px 40px -32px rgb(16 26 34 / 0.35);
 	--shadow-lift: 0 2px 4px rgb(16 26 34 / 0.06), 0 24px 48px -28px rgb(16 26 34 / 0.4);
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+	/* Une seule source pour la barre mobile: hauteur utile + zone sûre iOS. */
+	--bottom-bar-height: 4rem;
+	--bottom-bar-offset: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
 }

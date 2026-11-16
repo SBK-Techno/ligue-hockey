@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { unreadCount } from '#lib/domain/notifications/service.ts';
+import { findOwnProfile } from '#lib/domain/players/service.ts';
 
 const PUBLIC_PREFIXES = ['/connexion', '/mot-de-passe-oublie', '/reinitialiser-mot-de-passe'];
 
@@ -17,12 +18,18 @@ export const load = ({ locals, url }: { locals: App.Locals; url: URL }) => {
 			const next = `${url.pathname}${url.search}`;
 			redirect(303, `/connexion?prochaine=${encodeURIComponent(next)}`);
 		}
-		return { actor, unread: 0 };
+		return { actor, unread: 0, hasPlayerProfile: false, isSubstitute: false };
 	}
 
 	if (url.pathname === '/connexion') {
 		redirect(303, '/');
 	}
 
-	return { actor, unread: unreadCount(actor) };
+	const profile = findOwnProfile(actor);
+	return {
+		actor,
+		unread: unreadCount(actor),
+		hasPlayerProfile: profile !== null,
+		isSubstitute: profile?.isSubstitute ?? false
+	};
 };

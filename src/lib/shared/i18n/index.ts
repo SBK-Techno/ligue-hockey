@@ -77,13 +77,24 @@ export function formatTimestamp(ms: number): string {
 	return timestampFormat.format(toDate(ms));
 }
 
+const monthYearFormat = new Intl.DateTimeFormat(branding.locale, {
+	month: 'long',
+	year: 'numeric',
+	timeZone: branding.timezone
+});
+
+export function formatMonthYear(ms: number): string {
+	return monthYearFormat.format(toDate(ms));
+}
+
 export function formatTime(time: string): string {
 	const [hour, minute] = time.split(':');
 	const value = Number(hour);
+	const unit = t('common.hourShort');
 	if (minute === '00') {
-		return `${value} h`;
+		return `${value} ${unit}`;
 	}
-	return `${value} h ${minute}`;
+	return `${value} ${unit} ${minute}`;
 }
 
 export function formatDateTime(date: string, time: string): string {
@@ -104,11 +115,7 @@ export function centsToInput(cents: number): string {
 }
 
 export function parseMoneyToCents(input: string): number | null {
-	const normalized = input
-		.trim()
-		.replace(/\s/g, '')
-		.replace(/\$/g, '')
-		.replace(',', '.');
+	const normalized = input.trim().replace(/\s/g, '').replace(/\$/g, '').replace(',', '.');
 
 	if (normalized === '' || !/^\d+(\.\d{0,2})?$/.test(normalized)) {
 		return null;
@@ -125,7 +132,9 @@ const pluralRules = new Intl.PluralRules(branding.locale);
 const decimalFormats = new Map<number, Intl.NumberFormat>();
 
 export function formatCount(count: number, singularKey: I18nKey, pluralKey: I18nKey): string {
-	return t(pluralRules.select(count) === 'one' ? singularKey : pluralKey, { count });
+	return t(pluralRules.select(count) === 'one' ? singularKey : pluralKey, {
+		count
+	});
 }
 
 export function formatDecimal(value: number, digits: number): string {

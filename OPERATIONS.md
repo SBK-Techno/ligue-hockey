@@ -26,6 +26,12 @@ Le schéma fait foi : `config/env-schema.ts`. Le fichier `.env.example` contient
 | `NOTIFICATION_TICK_MS`, `NOTIFICATION_MAX_ATTEMPTS`, `NOTIFICATION_BATCH_SIZE`, `NOTIFICATION_CLAIM_TIMEOUT_MS` | File de notifications. |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error`. |
 
+### SMTP et TLS
+
+Le port 587 utilise STARTTLS : garde `SMTP_SECURE=false`, nodemailer négocie le chiffrement sur la connexion existante. `SMTP_SECURE=true` réserve le TLS implicite au port 465. Un `true` sur 587 fait échouer chaque envoi avec `wrong version number`, et la tâche reste en échec dans `notification_jobs.last_error`.
+
+Après un changement dans `.env`, recrée le conteneur pour que l'application relise la valeur. Vérifie ensuite l'envoi réel depuis l'écran d'invitation ou de réinitialisation, puis `notification_jobs.last_error`.
+
 Génération des secrets :
 
 ```bash
@@ -94,15 +100,18 @@ git push origin "v$version"
 Vérifiez ensuite la version GitHub et l'image:
 
 ```bash
-gh release view "v$(node -p "require('./package.json').version")"
-docker pull ghcr.io/sbk-techno/ligue-hockey:1.0.0
+version="$(node -p "require('./package.json').version")"
+gh release view "v$version"
+docker pull "ghcr.io/sbk-techno/ligue-hockey:$version"
 ```
 
 ## Mise à jour et retour arrière
 
-L'image de production vient de GHCR. `LIGUE_IMAGE` choisit la version déployée; la valeur par défaut est `ghcr.io/sbk-techno/ligue-hockey:1.0.0`.
+L'image de production vient de GHCR. `LIGUE_IMAGE` est obligatoire et porte la version publiée. `package.json` est la source de la version; `.env.example` doit la refléter, sinon `verify:architecture` échoue.
 
 ```bash
+version="$(node -p "require('./package.json').version")"
+export LIGUE_IMAGE="ghcr.io/sbk-techno/ligue-hockey:$version"
 docker compose pull
 docker compose up -d
 curl -fsS https://votre-domaine/api/health

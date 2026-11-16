@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PUSH_DELIVERY } from '#config/push.ts';
 import {
 	PUSH_ENDPOINT_HOSTS,
 	PUSH_ENDPOINT_SUFFIXES
@@ -33,13 +34,13 @@ export const pushSubscriptionSchema = z.object({
 	endpoint: z
 		.string()
 		.url()
-		.max(2048)
+		.max(PUSH_DELIVERY.endpointMax)
 		.refine(isAllowedPushEndpoint, 'invalid-push-endpoint'),
 	keys: z.object({
-		p256dh: z.string().min(1).max(512),
-		auth: z.string().min(1).max(512)
+		p256dh: z.string().min(1).max(PUSH_DELIVERY.keyMax),
+		auth: z.string().min(1).max(PUSH_DELIVERY.keyMax)
 	}),
-	userAgent: z.string().max(512).optional()
+	userAgent: z.string().max(PUSH_DELIVERY.keyMax).optional()
 });
 
 export type NotificationPreferencesInput = z.infer<
