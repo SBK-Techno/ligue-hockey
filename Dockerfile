@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-bookworm-slim AS native-deps
+FROM node:26-bookworm-slim AS native-deps
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /app
 # Route analysis imports the auth module; runtime configuration comes from the
 # container environment. The app supplies build-only fallbacks in that phase.
@@ -23,7 +23,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ARG VERSION=dev
 ARG REVISION=unknown
 ARG SOURCE=https://github.com/SBK-Techno/ligue-hockey
