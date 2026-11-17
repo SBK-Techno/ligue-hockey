@@ -62,7 +62,7 @@ const cases: Case[] = [
 		manager: true,
 		actions: [],
 		panels: ['manager', 'agenda', 'install'],
-		spans: [12, 12, 12]
+		spans: [5, 7, 12]
 	},
 	{
 		name: 'aucun match mène le calendrier du mois',

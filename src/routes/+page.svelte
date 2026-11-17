@@ -151,7 +151,7 @@
 	/>
 
 	<div class="page-stack">
-		<div class="home-dashboard" data-rail={hasRail}>
+		<div class="home-dashboard" data-rail={hasRail} data-mode={data.board.mode}>
 			<div class="home-main">
 				<div class="home-panel reveal" data-panel="hero" style="--span: 12; --i: 0">
 					<HomeHero
