@@ -173,9 +173,12 @@ budget size "$TMP/discussion.body" discussionHtmlBytes
 budget inline-css "$TMP/discussion.body" authInlineCssBytes
 expect_body "$TMP/discussion.body" 'Afficher les messages plus anciens' 'curseur de discussion'
 
-dialogs="$(grep -o '<dialog' "$TMP/discussion.body" | wc -l | tr -d ' ')"
-if [ "$dialogs" != '1' ]; then
-	printf 'erreur: %s boîtes de dialogue sur /discussion (une seule attendue)\n' "$dialogs" >&2
+# Le dialogue de confirmation partagé est monté à la demande, donc zéro est
+# normal sur le premier rendu. Ce qui reste interdit, c'est un dialogue par
+# message: deux ou plus font échouer la porte.
+dialogs="$({ grep -o '<dialog' "$TMP/discussion.body" || true; } | wc -l | tr -d ' ')"
+if [ "$dialogs" -gt 1 ]; then
+	printf 'erreur: %s boîtes de dialogue sur /discussion (un dialogue par message interdit)\n' "$dialogs" >&2
 	exit 1
 fi
 
