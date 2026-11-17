@@ -69,9 +69,9 @@
 		]}
 	/>
 
-	<div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+	<div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
 		{#if data.permissions.games}
-			<SectionCard class="lg:col-start-1 lg:row-start-1" title={t('home.nextGame')}>
+			<SectionCard class="xl:col-start-1 xl:row-start-1" title={t('home.nextGame')}>
 				{#if data.nextGame}
 					<p class="serial">{formatDate(data.nextGame.gameDate)}</p>
 					<p class="mt-1 font-display text-subhead font-semibold leading-tight">
@@ -106,9 +106,9 @@
 		{/if}
 
 		<div
-			class="space-y-4 lg:col-start-1 {data.permissions.games
-				? 'lg:row-start-2'
-				: 'lg:row-start-1'}"
+			class="space-y-4 xl:col-start-1 {data.permissions.games
+				? 'xl:row-start-2'
+				: 'xl:row-start-1'}"
 		>
 			<SectionCard title={t('admin.todo')} flush>
 				{#if hasTodo}
@@ -186,7 +186,7 @@
 			{/if}
 		</div>
 
-		<div class="space-y-4 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+		<div class="space-y-4 xl:col-start-2 xl:row-start-1 xl:row-span-2">
 			{#if data.upcoming.length > 0}
 				<SectionCard
 					title={t('home.upcoming')}

@@ -134,7 +134,7 @@
 					>
 						<input type="hidden" name="playerId" value={player.playerId} />
 						<fieldset
-							class="grid gap-x-8 sm:grid-cols-2"
+							class="grid gap-x-8 xl:grid-cols-2"
 							disabled={!assessment.canRate}
 						>
 							{#each attributes as attribute (attribute.key)}

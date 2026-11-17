@@ -15,11 +15,11 @@ describe('ordre visuel et de focus du tableau de bord', () => {
 
 	it('aligne la grille de bureau sur cet ordre, sans order ni doublon', () => {
 		expect(source).toContain(
-			`class="lg:col-start-1 lg:row-start-1" title={t('home.nextGame')}`
+			`class="xl:col-start-1 xl:row-start-1" title={t('home.nextGame')}`
 		);
-		expect(source).toContain('lg:col-start-1 {data.permissions.games');
-		expect(source).toContain("? 'lg:row-start-2'");
-		expect(source).toContain('lg:col-start-2 lg:row-start-1 lg:row-span-2');
+		expect(source).toContain('xl:col-start-1 {data.permissions.games');
+		expect(source).toContain("? 'xl:row-start-2'");
+		expect(source).toContain('xl:col-start-2 xl:row-start-1 xl:row-span-2');
 		expect(source).not.toMatch(/class="[^"]*\border-/);
 	});
 });

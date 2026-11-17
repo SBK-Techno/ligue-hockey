@@ -80,6 +80,10 @@
 
 	/* Largeur de lecture confortable pour les messages et les textes longs. */
 	--measure: 68ch;
+
+	/* Seuil desktop : navigation, grilles et compositions. Les @media de
+	   layout.css et critical.css portent le même seuil en pixels. */
+	--breakpoint-lg: 900px;
 }
 /*
  * La tranche critique est injectée dans la coquille par scripts/generate.ts.
@@ -182,7 +186,7 @@ body {
 			padding: 1.75rem;
 		}
 	}
-	@media (min-width: 1024px) {
+	@media (min-width: 900px) {
 		.auth-shell {
 			display: grid;
 			grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 0.85fr);
