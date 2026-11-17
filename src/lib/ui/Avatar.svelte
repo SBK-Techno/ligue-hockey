@@ -48,7 +48,7 @@
 			: t('profile.avatarOf', { name: player.fullName })}
 	data-player-id={peek ? player.userId : undefined}
 	tabindex={peek && !decorative ? 0 : undefined}
-	aria-haspopup={peek ? 'dialog' : undefined}
+	aria-haspopup={peek && !decorative ? 'dialog' : undefined}
 	aria-expanded={peek && !decorative ? 'false' : undefined}
 >
 	{#if variant}

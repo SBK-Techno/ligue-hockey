@@ -393,6 +393,7 @@
 						{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
 					</p>
 				{/if}
+				<FormFeedback {form} section="lineup" focusOnChange class="mb-3" />
 				{#key game.generation?.generatedAt}
 				<LineupBoard
 					slots={game.slots}

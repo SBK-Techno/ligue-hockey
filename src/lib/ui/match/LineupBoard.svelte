@@ -140,6 +140,7 @@
 								data-player-peek={!canEdit && player ? 'click' : undefined}
 								onclick={() => selectSlot(placement.key)}
 								aria-label={slotAriaLabel(team.key, placement, player)}
+								aria-haspopup={!canEdit && player ? 'dialog' : undefined}
 								aria-expanded={!canEdit && player ? 'false' : undefined}
 								aria-pressed={canEdit ? selected === placement.key : undefined}
 							>
@@ -169,6 +170,7 @@
 									data-player-peek={!canEdit && player ? 'click' : undefined}
 									onclick={() => selectSlot(placement.key)}
 									aria-label={slotAriaLabel(team.key, placement, player)}
+									aria-haspopup={!canEdit && player ? 'dialog' : undefined}
 									aria-expanded={!canEdit && player ? 'false' : undefined}
 									aria-pressed={canEdit ? selected === placement.key : undefined}
 								>
@@ -202,7 +204,9 @@
 							data-player-peek={!canEdit ? 'click' : undefined}
 							data-selected={selected === benchKey(player.playerId)}
 							onclick={() => selectBench(player.playerId)}
-							aria-pressed={selected === benchKey(player.playerId)}
+							aria-haspopup={!canEdit ? 'dialog' : undefined}
+							aria-expanded={!canEdit ? 'false' : undefined}
+							aria-pressed={canEdit ? selected === benchKey(player.playerId) : undefined}
 						>
 							<span class="font-mono text-caption text-muted">{player.jerseyNumber ?? '?'}</span>
 							{player.fullName}
@@ -240,7 +244,12 @@
 	{/if}
 
 	{#if canEdit}
-		<form method="POST" action="?/lineup" use:progressiveForm class="flex flex-wrap items-center gap-2">
+		<form
+			method="POST"
+			action="?/lineup"
+			use:progressiveForm={{ restoreFocus: false }}
+			class="flex flex-wrap items-center gap-2"
+		>
 			<input type="hidden" name="lineup" value={assignmentsJson} />
 			<input
 				type="hidden"

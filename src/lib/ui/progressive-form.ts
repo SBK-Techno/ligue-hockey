@@ -3,6 +3,8 @@ import { enhance } from '$app/forms';
 export type ProgressiveFormOptions = {
 	/** Un formulaire de notes garde ses valeurs; le serveur reste la source. */
 	reset?: boolean;
+	/** Rend le focus au contrôle actif; la rétroaction peut le prendre à sa place. */
+	restoreFocus?: boolean;
 	onSuccess?: (result: { type: string }) => void;
 };
 
@@ -59,7 +61,12 @@ export function progressiveForm(
 					});
 				}
 				const closed = active?.closest('details:not([open])');
-				if (active && !closed && document.contains(active)) {
+				if (
+					(options.restoreFocus ?? true) &&
+					active &&
+					!closed &&
+					document.contains(active)
+				) {
 					active.focus({ preventScroll: true });
 				}
 			}

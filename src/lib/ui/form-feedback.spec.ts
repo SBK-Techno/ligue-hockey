@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { render } from 'svelte/server';
+import FormFeedback from './FormFeedback.svelte';
 import { feedbackFor, fieldErrorFor, type FormResult } from './form-feedback.ts';
 
 const sections = ['compte', 'joueur', 'positions', 'notifications', 'securite'] as const;
@@ -13,13 +15,38 @@ describe('feedbackFor', () => {
 		}
 	});
 
-	it('keeps the legacy page-level behaviour without a section', () => {
-		const form: FormResult = { ok: false, message: 'Erreur' };
-		expect(feedbackFor(form)).toBe(form);
+	it('shows an unsectioned result at page level and keeps a sectioned result at home', () => {
+		const global: FormResult = { ok: false, message: 'Erreur' };
+		expect(feedbackFor(global)).toBe(global);
+		expect(feedbackFor({ ok: true, message: 'Enregistré', section: 'compte' })).toBeNull();
 	});
 
 	it('ignores an empty result', () => {
 		expect(feedbackFor(null, 'compte')).toBeNull();
+	});
+});
+
+describe('rendu de la rétroaction', () => {
+	it('peut recevoir le focus quand un nouveau résultat arrive', () => {
+		const { body } = render(FormFeedback, {
+			props: {
+				form: { ok: false, message: 'Erreur', section: 'lineup' },
+				section: 'lineup',
+				focusOnChange: true
+			}
+		});
+
+		expect(body).toContain('tabindex="-1"');
+		expect(body).toContain('role="alert"');
+	});
+
+	it('reste une simple ligne sans déplacement de focus', () => {
+		const { body } = render(FormFeedback, {
+			props: { form: { ok: true, message: 'Enregistré' } }
+		});
+
+		expect(body).not.toContain('tabindex');
+		expect(body).toContain('role="status"');
 	});
 });
 

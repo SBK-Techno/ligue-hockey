@@ -23,3 +23,12 @@ describe('transition de page', () => {
 		expect(block).not.toMatch(/\bboth\b/);
 	});
 });
+
+describe('chrome fixe', () => {
+	it('réserve le décalage du contenu ciblé sous l’en-tête et la barre', () => {
+		const root = css.slice(css.indexOf('html {'), css.indexOf('body {'));
+
+		expect(root).toContain('scroll-padding-top: var(--anchor-offset);');
+		expect(root).toContain('scroll-padding-bottom: var(--bottom-bar-offset);');
+	});
+});

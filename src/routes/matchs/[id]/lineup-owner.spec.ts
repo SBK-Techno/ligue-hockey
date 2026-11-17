@@ -180,4 +180,35 @@ describe('propriétaire de la régénération d’alignement', () => {
 		expect(page.body.split(t('rink.bench'))).toHaveLength(2);
 		expect(page.body.split(benchPlayer.fullName)).toHaveLength(2);
 	});
+
+	it('rend la rétroaction d’alignement dans sa carte, avec une cible de focus', () => {
+		const message = t('rink.invalid');
+		const page = render(MatchPage, {
+			props: {
+				data: {
+					...layout,
+					game,
+					availability,
+					requests: [],
+					positions: [],
+					canManage: true,
+					editable: true,
+					playable: false,
+					sheet: null
+				},
+				form: { ok: false, section: 'lineup', message },
+				params: { id: game.id }
+			}
+		});
+		const feedback = page.body.indexOf(message);
+		const title = page.body.indexOf(t('games.roster'));
+		const card = page.body.lastIndexOf('<section class="sheet', feedback);
+
+		expect(title).toBeGreaterThan(-1);
+		expect(feedback).toBeGreaterThan(title);
+		expect(card).toBeGreaterThan(-1);
+		expect(page.body.slice(card, feedback)).not.toContain('</section>');
+		expect(page.body.slice(feedback - 300, feedback)).toContain('tabindex="-1"');
+		expect(page.body.split(message)).toHaveLength(2);
+	});
 });

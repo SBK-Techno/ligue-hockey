@@ -104,6 +104,23 @@ describe('rendu de la carte d’alignement', () => {
 
 		expect(body).toContain('data-player-id="bench-1"');
 		expect(body).toContain('aria-pressed="false"');
+		expect(body).not.toContain('aria-haspopup="dialog"');
+	});
+
+	it('annonce une fiche de joueur sur le banc en lecture seule, pas une sélection', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench,
+				canEdit: false,
+				expectedGeneratedAt: 123
+			}
+		});
+		const chip = body.match(/<button[^>]*data-player-id="bench-1"[^>]*>/)?.[0] ?? '';
+
+		expect(chip).toContain('aria-haspopup="dialog"');
+		expect(chip).toContain('aria-expanded="false"');
+		expect(chip).not.toContain('aria-pressed');
 	});
 });
 

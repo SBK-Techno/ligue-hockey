@@ -211,9 +211,9 @@ export const actions: Actions = {
 				assignments
 			});
 			saveManualLineup(locals.actor, params.id!, parsed);
-			return { ok: true, message: t('rink.saved') };
+			return { ok: true, section: 'lineup', message: t('rink.saved') };
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { section: 'lineup' });
 		}
 	},
 	requestSub: async ({ request, locals, params }) => {

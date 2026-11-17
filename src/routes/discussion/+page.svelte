@@ -213,145 +213,149 @@
 		</div>
 	{/if}
 
-	{#if messages.length === 0}
-		{#if EmptyState}
-			<EmptyState title={t('chat.empty')} help={t('chat.emptyHelp')} />
-		{/if}
-	{:else}
-		{#if data.nextCursor}
-			<div class="flex justify-center">
-				<a class="btn-secondary btn-sm" href="?before={data.nextCursor}">
-					{t('chat.loadOlder')}
-				</a>
-			</div>
-		{/if}
-		<section class="sheet" aria-label={t('chat.title')}>
-			{#each groups as group (group.key)}
-				<p
-					class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted"
-				>
-					{group.label}
-				</p>
-				<ul role="list">
-					{#each group.messages as message (message.id)}
-						<li class="chat-row" data-own={message.isOwn}>
-							<div class="chat-avatar">
-								<Avatar
-									player={{
-										fullName: message.authorName,
-										userId: message.authorUserId,
-										avatarId: message.authorAvatarId
-									}}
-									size={40}
-								/>
-							</div>
-
-							<div class="chat-meta">
-								<span class="flex min-w-0 items-center gap-1.5">
-									<span class="truncate text-body font-semibold">{message.authorName}</span>
-									{#if message.isOwn}
-										<span class="badge shrink-0">{t('chat.you')}</span>
+	<div class="mx-auto w-full max-w-3xl space-y-4">
+		{#if messages.length === 0}
+			{#if EmptyState}
+				<EmptyState title={t('chat.empty')} help={t('chat.emptyHelp')} />
+			{/if}
+		{:else}
+			{#if data.nextCursor}
+				<div class="flex justify-center">
+					<a class="btn-secondary btn-sm" href="?before={data.nextCursor}">
+						{t('chat.loadOlder')}
+					</a>
+				</div>
+			{/if}
+			<section class="sheet" aria-label={t('chat.title')}>
+				{#each groups as group (group.key)}
+					<p
+						class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted"
+					>
+						{group.label}
+					</p>
+					<ul role="list">
+						{#each group.messages as message (message.id)}
+							<li class="chat-row" data-own={message.isOwn}>
+								<div class="chat-avatar">
+									<Avatar
+										player={{
+											fullName: message.authorName,
+											userId: message.authorUserId,
+											avatarId: message.authorAvatarId
+										}}
+										size={40}
+										decorative={false}
+									/>
+								</div>
+	
+								<div class="chat-meta">
+									<span class="flex min-w-0 items-center gap-1.5">
+										<span class="truncate text-body font-semibold">{message.authorName}</span>
+										{#if message.isOwn}
+											<span class="badge shrink-0">{t('chat.you')}</span>
+										{/if}
+									</span>
+									<span class="flex flex-wrap items-center gap-1.5">
+										{#if message.authorJerseyNumber !== null}
+											<span
+												class="grid h-5 min-w-6 place-items-center rounded-[0.25rem] bg-ice-soft px-1 font-mono text-caption font-semibold text-ice-deep"
+												role="img"
+												aria-label={t('chat.jersey', { number: message.authorJerseyNumber })}
+											>
+												{message.authorJerseyNumber}
+											</span>
+										{/if}
+										{#if message.authorPosition}
+											<span class="text-caption text-muted">
+												{t(positionDefinition(message.authorPosition).shortLabelKey)}
+											</span>
+										{/if}
+									</span>
+									<time class="chat-time" datetime={toDate(message.createdAt).toISOString()}>
+										{formatTimeOfDay(message.createdAt)}
+									</time>
+								</div>
+	
+								<div class="chat-body">
+									{#if message.deleted}
+										<p class="text-body italic text-muted">{t('chat.deleted')}</p>
+									{:else if message.poll}
+										{#if PollOptions}
+											<PollOptions messageId={message.id} poll={message.poll} />
+										{/if}
+									{:else}
+										<p class="whitespace-pre-wrap break-words text-body">{message.body}</p>
 									{/if}
-								</span>
-								<span class="flex flex-wrap items-center gap-1.5">
-									{#if message.authorJerseyNumber !== null}
-										<span
-											class="grid h-5 min-w-6 place-items-center rounded-[0.25rem] bg-ice-soft px-1 font-mono text-caption font-semibold text-ice-deep"
-											role="img"
-											aria-label={t('chat.jersey', { number: message.authorJerseyNumber })}
-										>
-											{message.authorJerseyNumber}
-										</span>
-									{/if}
-									{#if message.authorPosition}
-										<span class="text-caption text-muted">
-											{t(positionDefinition(message.authorPosition).shortLabelKey)}
-										</span>
-									{/if}
-								</span>
-								<time class="chat-time" datetime={toDate(message.createdAt).toISOString()}>
-									{formatTimeOfDay(message.createdAt)}
-								</time>
-							</div>
-
-							<div class="chat-body">
-								{#if message.deleted}
-									<p class="text-body italic text-muted">{t('chat.deleted')}</p>
-								{:else if message.poll}
-									{#if PollOptions}
-										<PollOptions messageId={message.id} poll={message.poll} />
-									{/if}
-								{:else}
-									<p class="whitespace-pre-wrap break-words text-body">{message.body}</p>
-								{/if}
-							</div>
-
-							{#if message.canDelete}
-								<div class="absolute right-1 top-2">
-									<details class="action-menu">
-										<summary aria-label={t('chat.actions')}>
-											<svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
-												<circle cx="4" cy="10" r="1.5" fill="currentColor" />
-												<circle cx="10" cy="10" r="1.5" fill="currentColor" />
-												<circle cx="16" cy="10" r="1.5" fill="currentColor" />
-											</svg>
-										</summary>
-										<div class="action-menu-panel">
-											{#if message.poll && !message.poll.closed}
-												<form method="POST" action="?/closePoll" use:progressiveForm>
+								</div>
+	
+								{#if message.canDelete}
+									<div class="absolute right-1 top-2">
+										<details class="action-menu">
+											<summary aria-label={t('chat.actions')}>
+												<svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
+													<circle cx="4" cy="10" r="1.5" fill="currentColor" />
+													<circle cx="10" cy="10" r="1.5" fill="currentColor" />
+													<circle cx="16" cy="10" r="1.5" fill="currentColor" />
+												</svg>
+											</summary>
+											<div class="action-menu-panel">
+												{#if message.poll && !message.poll.closed}
+													<form method="POST" action="?/closePoll" use:progressiveForm>
+														<input type="hidden" name="messageId" value={message.id} />
+														<button
+															class="btn-ghost btn-sm"
+															type="button"
+															onclick={(event) =>
+																confirmSubmit(event, t('chat.closePollConfirm'), 'neutral')}
+														>
+															{t('chat.closePoll')}
+														</button>
+													</form>
+												{/if}
+												<form method="POST" action="?/delete" use:progressiveForm>
 													<input type="hidden" name="messageId" value={message.id} />
 													<button
 														class="btn-ghost btn-sm"
 														type="button"
 														onclick={(event) =>
-															confirmSubmit(event, t('chat.closePollConfirm'), 'neutral')}
+															confirmSubmit(event, t('chat.deleteConfirm'), 'danger')}
 													>
-														{t('chat.closePoll')}
+														{t('chat.delete')}
 													</button>
 												</form>
-											{/if}
-											<form method="POST" action="?/delete" use:progressiveForm>
-												<input type="hidden" name="messageId" value={message.id} />
-												<button
-													class="btn-ghost btn-sm"
-													type="button"
-													onclick={(event) =>
-														confirmSubmit(event, t('chat.deleteConfirm'), 'danger')}
-												>
-													{t('chat.delete')}
-												</button>
-											</form>
-										</div>
-									</details>
-								</div>
-							{/if}
-						</li>
-					{/each}
-				</ul>
-			{/each}
-		</section>
-	{/if}
-
-	<ChatNewMessages count={pillState.newMessages} onshow={showNewMessages} />
-
-	<form
-		method="POST"
-		action="?/send"
-		use:progressiveForm
-		class="sticky bottom-[var(--bottom-bar-offset)] z-20 w-full max-w-3xl lg:bottom-4"
-	>
-		<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
-		<div class="sheet flex items-end gap-2 p-2">
-			<textarea
-				id="chat-body"
-				class="input min-h-11 min-w-0 flex-1 resize-none border-transparent bg-transparent"
-				name="body"
-				rows="1"
-				placeholder={t('chat.placeholder')}
-				required
-				maxlength={data.limits.messageMax}
-			></textarea>
-			<button class="btn-primary" type="submit">{t('chat.send')}</button>
-		</div>
-	</form>
+											</div>
+										</details>
+									</div>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/each}
+			</section>
+		{/if}
+	
+		<ChatNewMessages count={pillState.newMessages} onshow={showNewMessages} />
+	
+		<form
+			method="POST"
+			action="?/send"
+			use:progressiveForm
+			aria-label={t('chat.writeTitle')}
+			class="sticky bottom-[var(--bottom-bar-offset)] z-20 w-full lg:bottom-4"
+		>
+			<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
+			<div class="sheet flex items-end gap-2 p-2">
+				<textarea
+					id="chat-body"
+					class="input min-h-11 min-w-0 flex-1 resize-none border-transparent bg-transparent"
+					name="body"
+					rows="1"
+					placeholder={t('chat.placeholder')}
+					required
+					maxlength={data.limits.messageMax}
+				></textarea>
+				<button class="btn-primary" type="submit">{t('chat.send')}</button>
+			</div>
+		</form>
+	</div>
 </div>

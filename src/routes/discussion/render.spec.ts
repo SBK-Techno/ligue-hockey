@@ -72,4 +72,39 @@ describe('page de discussion', () => {
 
 		expect(body).toContain('Lundi 5 janvier');
 	});
+
+	it('borne la liste et le composeur dans une seule colonne', async () => {
+		const { body } = await render(Page, { props: { data, form: null, params: {} } });
+		const start = body.indexOf('mx-auto w-full max-w-3xl');
+		const openEnd = body.indexOf('>', start) + 1;
+		const sheet = body.indexOf('<section class="sheet"');
+		const composer = body.indexOf('action="?/send"');
+
+		expect(start).toBeGreaterThan(-1);
+		expect(sheet).toBeGreaterThanOrEqual(openEnd);
+		expect(composer).toBeGreaterThan(sheet);
+
+		// La colonne reste ouverte jusqu'au composeur : aucun </div> ne la ferme.
+		let depth = 0;
+		for (const tag of body.slice(openEnd, composer).matchAll(/<div\b|<\/div>/g)) {
+			depth += tag[0] === '<div' ? 1 : -1;
+			expect(depth, tag[0]).toBeGreaterThanOrEqual(0);
+		}
+
+		expect(body.match(/\bmax-w-3xl\b/g)).toHaveLength(1);
+		expect(body.split(t('chat.writeTitle'))).toHaveLength(2);
+		const sendForm = body.match(/<form[^>]*action="\?\/send"[^>]*>/)?.[0] ?? '';
+		expect(sendForm).toContain(`aria-label="${t('chat.writeTitle')}"`);
+	});
+
+	it('ouvre la fiche de l’auteur au clavier depuis son avatar', async () => {
+		const { body } = await render(Page, { props: { data, form: null, params: {} } });
+		const trigger = body.match(/<span[^>]*data-player-id="player-1"[^>]*>/)?.[0] ?? '';
+
+		expect(trigger).toContain('role="button"');
+		expect(trigger).toContain('tabindex="0"');
+		expect(trigger).toContain('aria-haspopup="dialog"');
+		expect(trigger).toContain('aria-expanded="false"');
+		expect(trigger).not.toContain('aria-hidden="true"');
+	});
 });
