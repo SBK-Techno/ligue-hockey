@@ -6,7 +6,9 @@
 		href,
 		linkLabel,
 		flush = false,
+		clip = true,
 		actions,
+		class: className = '',
 		children
 	}: {
 		title: string;
@@ -14,12 +16,15 @@
 		linkLabel?: string;
 		/** Une liste ou un tableau porte ses propres rangées pleine largeur. */
 		flush?: boolean;
+		/** Un menu absolu doit sortir de la feuille : la carte ne le coupe pas. */
+		clip?: boolean;
 		actions?: Snippet;
+		class?: string;
 		children: Snippet;
 	} = $props();
 </script>
 
-<section class="sheet overflow-hidden">
+<section class="sheet {clip ? 'overflow-hidden' : ''} {className}">
 	<header class="flex items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
 		<h2>{title}</h2>
 		{#if actions}

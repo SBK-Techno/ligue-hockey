@@ -25,6 +25,7 @@ import {
 	gameRatingAttributes,
 	overallRating
 } from '#config/rating-attributes.ts';
+import { AVATAR_IDS } from '#config/avatars.ts';
 import { buildSlotDefinitions, slotId, type RosterTemplate } from '#config/roster.ts';
 import {
 	NOTIFICATION_EVENTS,
@@ -304,6 +305,7 @@ for (const [index, entry] of PLAYERS.entries()) {
 			position: entry.position,
 			age: entry.age,
 			jerseyNumber: entry.jersey,
+			avatarId: AVATAR_IDS[index % AVATAR_IDS.length],
 			isSubstitute: entry.substitute,
 			active: true,
 			createdAt: now,
@@ -440,6 +442,8 @@ for (const game of planned) {
 			location: game.location,
 			notes: null,
 			status: game.status,
+			completedAt:
+				game.status === 'completed' ? gameStart(game.gameDate) + 2 * 3_600_000 : null,
 			rosterTemplateJson: JSON.stringify(TEMPLATE),
 			generatedAt: null,
 			generationJson: null,
@@ -664,6 +668,8 @@ for (const game of planned) {
 	db.update(games)
 		.set({
 			status: game.status,
+			completedAt:
+				game.status === 'completed' ? gameStart(game.gameDate) + 2 * 3_600_000 : null,
 			rosterTemplateJson: JSON.stringify(TEMPLATE),
 			generatedAt,
 			generationJson: JSON.stringify(snapshot),

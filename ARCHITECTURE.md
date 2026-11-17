@@ -39,12 +39,18 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Alignment rule modes | `config/rule-modes.ts` | rule form, rule list, generator, badges | mode round-trip test |
 | Rating attributes, position criteria and game criteria | `config/rating-attributes.ts` | ratings service, evaluation sheets, overall calculation | registry test |
 | Recent-form window | `config/ratings.ts` | ratings service | rating tests |
+| Penalty infractions and default minutes | `config/infractions.ts` | schema checks, game sheet form, totals | migration test |
+| Periods and overtime label | `config/periods.ts` | game sheet, game detail | typecheck |
+| Rink geometry and the six presentation roles | `config/rink.ts` | rink lineup, future admin board | rink test |
+| Game sheet goals, penalties and totals | `src/lib/domain/gamesheet/` | match sheet, game detail | service tests + migration test |
+| Manual lineup marker and CAS token | `games.lineup_manual_at`, `games.generated_at` | regeneration policy, lineup editor | lineup tests |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
+| Player avatar catalogue (identity, colours, appearance) | `config/avatars.ts` | profile picker, lineups, admin lists | catalogue test + no-raw-colour scan |
 | Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | `migrations.spec.ts` drift guard |
 
 Static literals for these facts are prohibited. A repeated value gets an owner and a derived consumer; it is never copied.
@@ -78,6 +84,12 @@ Colour is semantic:
 Dark surfaces use an opacity ladder on `paper` (55% to 90%) rather than ad-hoc greys; every step was checked against `ink` for 4.5:1 body contrast.
 
 The anonymous auth shell uses one generated photograph as its only visual: a dressing room at dawn with two beers, gloves, a white jersey and the rink window. The source is `config/branding/auth-source.jpg`, the served form is the content-hashed WebP under `static/auth/`, and `config/branding.json` owns the source. The brand lockup and the short `auth.afterGame` caption are the only identity text; the shell never repeats the league name or promises features already stated by the form.
+
+## Player identity
+
+Every player shows one of 28 curated vector avatars from `config/avatars.ts`: skin tone, hair, background, hairstyle, facial hair and glasses. The catalogue owns the appearance; `src/lib/ui/avatar-art.ts` renders it as an SVG built only from that fixed data and from CSS custom properties, never from a player string, an image model or a raw colour. `src/lib/ui/Avatar.svelte` owns sizing and accessibility, and the lineup, profile and admin surfaces consume it without their own colour map.
+
+`players.avatar_id` stores the chosen id and may be null. A null or retired id resolves through FNV-1a from the account id in `src/lib/domain/players/identity.ts`, so an existing profile keeps a stable appearance without a migration write. The service reserves an avatar against the resolved identity of every active player, so two active players cannot share one; a new profile takes the first free catalogue entry. The service validates every choice against `AVATAR_IDS`.
 
 ## Configuration
 
@@ -115,6 +127,14 @@ A location is a reusable league entity in `locations`: name, optional address, o
 `games.location` remains on the row as a historical snapshot label. It is written from the location name when a game is created or its location changes, and it is never edited independently. Renaming a location changes future pickers and map links, but it does not rewrite past game labels or notification payloads.
 
 Map links come from `config/maps.ts`: an explicit location map URL wins, otherwise the address fills the provider-agnostic search template, otherwise there is no link. Location metrics (game count, completed count, next and last game dates) are one grouped query in `locations/queries.ts`; the admin screen reads that result and never queries per row.
+
+## Game sheet
+
+A game is completed only when `games.completed_at` is set; the `completed` status alone is not the record. Goals and penalties live in `game_goals` and `game_penalties`, written with a manager capability once the game has started. Each row keeps the player name and jersey as a snapshot, so renaming or deleting an account never rewrites a played sheet. An own goal is recorded with the team credited with the goal and the last attacking player as scorer; it counts for that team in the score. Player totals are derived on read from the dressed slots: one row per dressed player, zeros included.
+
+## Manual lineup
+
+The lineup editor sends `expectedGeneratedAt`, the `games.generated_at` value it read. `saveAssignments` performs the conditional update first and aborts before touching a slot when the token no longer matches, so two managers cannot overwrite each other. A manual save sets `games.lineup_manual_at` and the same snapshot builder as automatic generation. `regenerateIfGenerated` and `regenerateUpcomingGeneratedGames` skip a manual lineup; an explicit `regenerateGame` clears the flag. Swaps and slot filling are user actions, so they also set it.
 
 ## Notifications
 

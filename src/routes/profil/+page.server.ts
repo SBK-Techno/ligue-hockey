@@ -16,6 +16,7 @@ import {
 import { notificationPreferencesSchema } from '#lib/domain/notifications/validators.ts';
 import {
 	findOwnProfile,
+	getOwnAvatarPicker,
 	isSubstitutePlayer,
 	updateOwnProfile
 } from '#lib/domain/players/service.ts';
@@ -48,6 +49,7 @@ export const load: ServerLoad = ({ locals }) => {
 		return {
 			account: null,
 			profile: null,
+			avatarPicker: null,
 			positions,
 			notifications: { emailEnabled: true, pushEnabled: true },
 			isSubstitute: false,
@@ -59,9 +61,11 @@ export const load: ServerLoad = ({ locals }) => {
 		};
 	}
 
+	const profile = findOwnProfile(actor);
 	return {
 		account: getOwnAccount(actor),
-		profile: findOwnProfile(actor),
+		profile,
+		avatarPicker: profile ? getOwnAvatarPicker(actor) : null,
 		positions,
 		notifications: getNotificationPreferences(actor),
 		isSubstitute: isSubstitutePlayer(actor),

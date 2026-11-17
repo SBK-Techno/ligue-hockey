@@ -1,7 +1,11 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
 import { branding } from '#lib/generated/branding.ts';
-import { availabilityForGame, markAvailability } from '#lib/domain/availability/service.ts';
+import {
+	availabilityForGame,
+	markAvailability,
+	myAvailabilityByGame
+} from '#lib/domain/availability/service.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import {
 	castPollVote,
@@ -13,7 +17,6 @@ import { voteInputSchema } from '#lib/domain/chat/validators.ts';
 import { getMyBalance } from '#lib/domain/finance/service.ts';
 import { getGame, listSchedule } from '#lib/domain/games/service.ts';
 import { nextGameId, splitSchedule } from '#lib/domain/games/schedule.ts';
-import { buildMonthCalendar } from '#lib/domain/home/calendar.ts';
 import {
 	composeHome,
 	type HomeComposition,
@@ -29,6 +32,7 @@ import {
 	listOpenRequests,
 	type SubRequestWithGame
 } from '#lib/domain/roster/service.ts';
+import { listGameScores } from '#lib/domain/gamesheet/service.ts';
 import { cancelOwnRequest } from '#lib/domain/subs/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { getMySubProfile } from '#lib/domain/subs/service.ts';
@@ -95,7 +99,7 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 		return {
 			board: null,
 			game: null,
-			calendar: null,
+			agenda: { upcoming: [], past: [] },
 			nextGames: [],
 			availability: null,
 			balance: null,
@@ -120,7 +124,7 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 	const canClaimSubs = can(actor, 'claimSubs');
 
 	const schedule = listSchedule(actor);
-	const { upcoming } = splitSchedule(schedule);
+	const { upcoming, past } = splitSchedule(schedule);
 	// Un match annulé ne cache jamais le suivant, mais s'il ne reste que lui,
 	// l'accueil doit le montrer comme annulé plutôt que comme une absence de match.
 	const nextId =
@@ -129,11 +133,6 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 		null;
 	const game = nextId ? getGame(actor, nextId) : null;
 	const today = todayInZone(branding.timezone);
-	const calendar = buildMonthCalendar({
-		games: schedule,
-		today,
-		nextGameDate: game?.gameDate ?? null
-	});
 
 	// La feuille de présence est partagée par les membres du match; le
 	// gestionnaire en a aussi besoin pour son bandeau. Aucune évaluation ni
@@ -151,14 +150,18 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 			? (game.generation?.bench.find((entry) => entry.playerId === actor.userId) ?? null)
 			: null;
 
-	const myRequests =
-		hasPlayerProfile && game
-			? listMyRequests(actor, schedule).filter(
-					(request) => request.requestedByPlayerId === actor.userId
-				)
-			: [];
+	const myRequests = hasPlayerProfile
+		? listMyRequests(actor, schedule).filter(
+				(request) => request.requestedByPlayerId === actor.userId
+			)
+		: [];
 	const ownRequest = game ? ownRequestIn(myRequests, game.id) : null;
 	const ownRequestOpen = ownRequest?.status === 'open';
+	const requestGameIds = new Set(
+		myRequests
+			.filter((request) => request.status === 'open')
+			.map((request) => request.gameId)
+	);
 
 	const positions =
 		isSubstitute && canClaimSubs ? getMySubProfile(actor).positions : [];
@@ -184,6 +187,30 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 		evaluations.find((entry) => !entry.complete) ?? null;
 
 	const nextGames = upcoming.filter((entry) => entry.id !== game?.id).slice(0, 3);
+
+	// L'agenda de saison : les matchs qui suivent la tête, puis les derniers
+	// résultats. Le match de la tête n'est jamais répété dans la liste.
+	const agendaUpcoming = upcoming.filter((entry) => entry.id !== game?.id).slice(0, 4);
+	const agendaPast = past.slice(-3).reverse();
+	const agendaIds = [...agendaUpcoming, ...agendaPast].map((entry) => entry.id);
+	const myAvailability = hasPlayerProfile
+		? myAvailabilityByGame(actor, agendaIds)
+		: new Map();
+	const pastScores = hasPlayerProfile
+		? listGameScores(actor, agendaPast.map((entry) => entry.id))
+		: new Map();
+	const agenda = {
+		upcoming: agendaUpcoming.map((entry) => ({
+			...entry,
+			availability: myAvailability.get(entry.id) ?? null,
+			requestOpen: requestGameIds.has(entry.id)
+		})),
+		past: agendaPast.map((entry) => ({
+			...entry,
+			availability: myAvailability.get(entry.id) ?? null,
+			score: pastScores.get(entry.id) ?? null
+		}))
+	};
 	const managerSummary: ManagerSummary | null =
 		canManageGames && game && availability
 			? {
@@ -228,7 +255,7 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 	return {
 		board,
 		game,
-		calendar,
+		agenda,
 		nextGames,
 		availability,
 		balance,

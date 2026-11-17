@@ -83,83 +83,89 @@
 			</div>
 		{/if}
 
-		<SectionCard title={t('balance.installmentsTitle')} flush>
-			<ul role="list" class="divide-y divide-line">
-				{#each data.balance.installments as installment (installment.number)}
-					{@const installmentStatus = balanceStatusDefinition(installment.status)}
-					<li class="section-row">
-						<div class="flex flex-wrap items-start justify-between gap-3">
-							<div class="min-w-0">
-								<p class="text-body font-semibold">
-									{t('balance.installment', { number: installment.number })}
-								</p>
-								<p class="mt-0.5 text-meta text-muted">
-									<span class="numeric">
-										{formatMoney(installment.amountCents, data.balance.currency)}
-									</span>
-									·
-									{#if installment.status === 'paid'}
-										{#if installment.paidAt}
-											{t('balance.paidOn', { date: formatDate(installment.paidAt, 'year') })}
+		<div class="grid gap-4 lg:grid-cols-12 lg:items-start">
+			<div class="min-w-0 lg:col-span-7">
+				<SectionCard title={t('balance.installmentsTitle')} flush>
+					<ul role="list" class="divide-y divide-line">
+						{#each data.balance.installments as installment (installment.number)}
+							{@const installmentStatus = balanceStatusDefinition(installment.status)}
+							<li class="section-row">
+								<div class="flex flex-wrap items-start justify-between gap-3">
+									<div class="min-w-0">
+										<p class="text-body font-semibold">
+											{t('balance.installment', { number: installment.number })}
+										</p>
+										<p class="mt-0.5 text-meta text-muted">
+											<span class="numeric">
+												{formatMoney(installment.amountCents, data.balance.currency)}
+											</span>
+											·
+											{#if installment.status === 'paid'}
+												{#if installment.paidAt}
+													{t('balance.paidOn', { date: formatDate(installment.paidAt, 'year') })}
+												{/if}
+											{:else if installment.dueDate}
+												{t('balance.dueOn', { date: formatDate(installment.dueDate, 'year') })}
+											{:else}
+												{t('balance.dueDatePending')}
+											{/if}
+										</p>
+										{#if installment.paidCents > 0 && installment.remainingCents > 0}
+											<p class="hint">
+												{t('balance.paidAmount', {
+													amount: formatMoney(installment.paidCents, data.balance.currency)
+												})}
+												{t('balance.remaining', {
+													amount: formatMoney(installment.remainingCents, data.balance.currency)
+												})}
+											</p>
 										{/if}
-									{:else if installment.dueDate}
-										{t('balance.dueOn', { date: formatDate(installment.dueDate, 'year') })}
-									{:else}
-										{t('balance.dueDatePending')}
-									{/if}
-								</p>
-								{#if installment.paidCents > 0 && installment.remainingCents > 0}
-									<p class="hint">
-										{t('balance.paidAmount', {
-											amount: formatMoney(installment.paidCents, data.balance.currency)
-										})}
-										{t('balance.remaining', {
-											amount: formatMoney(installment.remainingCents, data.balance.currency)
-										})}
-									</p>
-								{/if}
-							</div>
-							<span class={badgeClass(installmentStatus.tone)}>
-								{t(installmentStatus.labelKey)}
-							</span>
-						</div>
-					</li>
-				{/each}
-			</ul>
-			<div class="section-body border-t border-line">
-				<p class="text-body text-muted">{t('balance.payHelp')}</p>
-				<p class="hint">{t('balance.paymentMethods', { methods })}</p>
-				<p class="hint">{t('balance.onlyYou')}</p>
-			</div>
-		</SectionCard>
-
-		<SectionCard title={t('balance.history')} flush>
-			{#if data.payments.length === 0}
-				<div class="section-body">
-					<EmptyState title={t('balance.noPayments')} />
-				</div>
-			{:else}
-				<ul role="list" class="divide-y divide-line">
-					{#each data.payments as payment (payment.id)}
-						<li class="section-row">
-							<div class="flex flex-wrap items-center justify-between gap-2">
-								<div>
-									<p class="numeric text-body font-semibold">
-										{formatMoney(payment.amountCents, data.balance.currency)}
-									</p>
-									<p class="text-meta text-muted">
-										{formatDate(payment.paidAt, 'year')} ·
-										{t(paymentDefinition(payment.method).labelKey)}
-									</p>
+									</div>
+									<span class={badgeClass(installmentStatus.tone)}>
+										{t(installmentStatus.labelKey)}
+									</span>
 								</div>
-								{#if payment.note}
-									<span class="hint">{payment.note}</span>
-								{/if}
-							</div>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</SectionCard>
+							</li>
+						{/each}
+					</ul>
+					<div class="section-body border-t border-line">
+						<p class="text-body text-muted">{t('balance.payHelp')}</p>
+						<p class="hint">{t('balance.paymentMethods', { methods })}</p>
+						<p class="hint">{t('balance.onlyYou')}</p>
+					</div>
+				</SectionCard>
+			</div>
+
+			<div class="min-w-0 lg:col-span-5">
+				<SectionCard title={t('balance.history')} flush>
+					{#if data.payments.length === 0}
+						<div class="section-body">
+							<EmptyState title={t('balance.noPayments')} />
+						</div>
+					{:else}
+						<ul role="list" class="divide-y divide-line">
+							{#each data.payments as payment (payment.id)}
+								<li class="section-row">
+									<div class="flex flex-wrap items-center justify-between gap-2">
+										<div>
+											<p class="numeric text-body font-semibold">
+												{formatMoney(payment.amountCents, data.balance.currency)}
+											</p>
+											<p class="text-meta text-muted">
+												{formatDate(payment.paidAt, 'year')} ·
+												{t(paymentDefinition(payment.method).labelKey)}
+											</p>
+										</div>
+										{#if payment.note}
+											<span class="hint min-w-0 break-words">{payment.note}</span>
+										{/if}
+									</div>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</SectionCard>
+			</div>
+		</div>
 	{/if}
 </div>

@@ -18,7 +18,8 @@ import {
 	type BalanceView,
 	type Placement
 } from '#lib/domain/teams/balance.ts';
-import type { GeneratorPlayer } from '#lib/domain/teams/generator.ts';
+import type { GeneratorPlayer, GeneratorViolation } from '#lib/domain/teams/generator.ts';
+import type { BenchPlayer } from './selection.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { findGame, listSlotAssignments, saveAssignments, type SlotAssignment } from './queries.ts';
@@ -262,6 +263,78 @@ function limitExceeded(view: BalanceView, settings: SettingsValues): boolean {
 }
 
 /**
+ * Construit l'état mesuré d'un alignement : écarts, règles, plafonds, banc et
+ * clé de candidat. La génération automatique, les actions d'alignement et
+ * l'enregistrement manuel passent tous par ce même calcul.
+ */
+export type AlignmentSnapshotBuild = {
+	snapshot: GenerationSnapshot;
+	generatedAt: number;
+	violations: GeneratorViolation[];
+	names: Map<string, string>;
+};
+
+export function buildGenerationSnapshot(input: {
+	assignments: readonly SlotAssignment[];
+	bench: readonly BenchPlayer[];
+	openSlots: number;
+}): AlignmentSnapshotBuild {
+	const ids = input.assignments.map((assignment) => assignment.playerId);
+	const details = playerCandidatesByIds(ids);
+	const names = new Map(details.map((player) => [player.userId, player.fullName]));
+	const overalls = overallsForPlayers(ids);
+	const kindById = new Map(
+		input.assignments.map((assignment) => [assignment.playerId, assignment.kind])
+	);
+	const players: GeneratorPlayer[] = details
+		.filter((player) => overalls.has(player.userId))
+		.map((player) => ({
+			id: player.userId,
+			position: player.position,
+			age: player.age,
+			overall: overalls.get(player.userId)!,
+			kind: kindById.get(player.userId) ?? 'regular'
+		}));
+	const placements = placementsOf(input.assignments);
+	const view = balanceView(placements, players);
+	const violations = violationsFor(placements, rulesForGeneration());
+	const strict = violations.filter((violation) => violation.strict).length;
+	const soft = violations.length - strict;
+	const settings = getSettings();
+
+	const warnings: GameWarning[] = [];
+	if (input.openSlots > 0) warnings.push('unfilled-slots');
+	if (strict > 0) warnings.push('rule-conflict');
+	if (soft > 0) warnings.push('rule-preference');
+	if (limitExceeded(view, settings)) warnings.push('rule-limit');
+
+	const seen = new Set<string>();
+	const benchEntries = input.bench.filter((entry) => {
+		if (seen.has(entry.playerId)) return false;
+		seen.add(entry.playerId);
+		return true;
+	});
+
+	const generatedAt = clock.nowMs();
+	const snapshot: GenerationSnapshot = {
+		skillDiff: view.skillDiff,
+		ageDiff: view.ageDiff,
+		sizeDiff: view.sizeDiff,
+		warnings: gameWarningsInOrder(warnings),
+		ruleViolations: violations,
+		bench: benchEntries.map((entry) => ({
+			playerId: entry.playerId,
+			position: entry.position,
+			kind: entry.kind
+		})),
+		candidateKey: candidateKey(input.assignments),
+		generatedAt
+	};
+
+	return { snapshot, generatedAt, violations, names };
+}
+
+/**
  * Écrit un alignement modifié et recalcule son état réel : écarts, règles,
  * plafonds et places ouvertes. Les places ouvertes viennent du jeu de places
  * du match et des affectations écrites, jamais d'un compte fourni. L'audit
@@ -281,63 +354,18 @@ function saveAlignment(
 	const removedRatedPlayerIds = listGameRatingPlayerIds(gameId).filter(
 		(playerId) => !dressed.has(playerId)
 	);
-	const details = playerCandidatesByIds(ids);
-	const overalls = overallsForPlayers(ids);
-	const kindById = new Map(
-		assignments.map((assignment) => [assignment.playerId, assignment.kind])
-	);
-	const players: GeneratorPlayer[] = details
-		.filter((player) => overalls.has(player.userId))
-		.map((player) => ({
-			id: player.userId,
-			position: player.position,
-			age: player.age,
-			overall: overalls.get(player.userId)!,
-			kind: kindById.get(player.userId) ?? 'regular'
-		}));
-	const placements = placementsOf(assignments);
-	const view = balanceView(placements, players);
-	const violations = violationsFor(placements, rulesForGeneration());
-	const strict = violations.filter((violation) => violation.strict).length;
-	const soft = violations.length - strict;
-	const settings = getSettings();
-
-	const warnings: GameWarning[] = [];
-	if (openSlots > 0) warnings.push('unfilled-slots');
-	if (strict > 0) warnings.push('rule-conflict');
-	if (soft > 0) warnings.push('rule-preference');
-	if (limitExceeded(view, settings)) warnings.push('rule-limit');
-
-	const seen = new Set<string>();
-	const benchEntries = bench.filter((entry) => {
-		if (seen.has(entry.playerId)) return false;
-		seen.add(entry.playerId);
-		return true;
-	});
-
-	const generatedAt = clock.nowMs();
-	const snapshot: GenerationSnapshot = {
-		skillDiff: view.skillDiff,
-		ageDiff: view.ageDiff,
-		sizeDiff: view.sizeDiff,
-		warnings: gameWarningsInOrder(warnings),
-		ruleViolations: violations,
-		bench: benchEntries.map((entry) => ({
-			playerId: entry.playerId,
-			position: entry.position,
-			kind: entry.kind
-		})),
-		candidateKey: candidateKey(assignments),
-		generatedAt
-	};
+	const built = buildGenerationSnapshot({ assignments, bench, openSlots });
 
 	saveAssignments(
 		gameId,
 		assignments,
-		generatedAt,
-		JSON.stringify(snapshot),
-		generatedAt,
+		built.generatedAt,
+		JSON.stringify(built.snapshot),
+		built.generatedAt,
 		{
+			// Un échange ou un comblement est un geste de gestion : il fige
+			// l'alignement contre le recalcul automatique.
+			manualAt: built.generatedAt,
 			removedRatedPlayerIds,
 			audits: [
 				auditEntry(actor, {

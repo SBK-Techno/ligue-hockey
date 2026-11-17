@@ -1,5 +1,6 @@
 import { branding } from '#lib/generated/branding.ts';
-import { clock, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
+import { clock } from '#lib/shared/time/clock.ts';
+import { gameStartsAt } from './schedule.ts';
 
 /**
  * Un match se note une fois qu'il a été joué. La date et l'heure de départ
@@ -13,11 +14,12 @@ export type PlayableGame = {
 	generated: boolean;
 };
 
-function startsAt(
+export function isGameStarted(
 	game: Pick<PlayableGame, 'gameDate' | 'startTime'>,
-	timeZone: string
-): number {
-	return zonedDateTimeToMs(game.gameDate, game.startTime, timeZone);
+	at: number = clock.nowMs(),
+	timeZone: string = branding.timezone
+): boolean {
+	return gameStartsAt(game, timeZone) <= at;
 }
 
 export function isGamePlayable(
@@ -28,7 +30,7 @@ export function isGamePlayable(
 	if (!game.generated) return false;
 	if (game.status === 'cancelled') return false;
 	if (game.status === 'completed') return true;
-	return startsAt(game, timeZone) <= at;
+	return gameStartsAt(game, timeZone) <= at;
 }
 
 /**
@@ -42,5 +44,5 @@ export function isLineupEditable(
 	at: number = clock.nowMs(),
 	timeZone: string = branding.timezone
 ): boolean {
-	return game.status === 'scheduled' && startsAt(game, timeZone) > at;
+	return game.status === 'scheduled' && gameStartsAt(game, timeZone) > at;
 }

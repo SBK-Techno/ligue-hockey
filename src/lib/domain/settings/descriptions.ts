@@ -1,3 +1,4 @@
+import { CURRENCY } from '#config/currency.ts';
 import { RATING_SCALE } from '#config/rating-attributes.ts';
 import {
 	SETTINGS,
@@ -88,21 +89,21 @@ const PARAMS: Partial<Record<SettingsKey, ParamBuilder>> = {
 		...splitParams(values),
 		total: formatMoney(
 			values['finance.totalCents'],
-			values['finance.currency']
+			CURRENCY
 		)
 	}),
 	'finance.firstInstallmentPercent': splitParams,
 	'finance.goalieDiscountPercent': (values) => ({
 		total: formatMoney(
 			values['finance.totalCents'],
-			values['finance.currency']
+			CURRENCY
 		),
 		discounted: formatMoney(
 			applyDiscount(
 				values['finance.totalCents'],
 				values['finance.goalieDiscountPercent']
 			),
-			values['finance.currency']
+			CURRENCY
 		)
 	}),
 	'teams.skillTolerance': () => ({
@@ -120,8 +121,8 @@ function splitParams(values: SettingsValues): Params {
 		values['finance.firstInstallmentPercent']
 	);
 	return {
-		first: formatMoney(plan.firstCents, values['finance.currency']),
-		second: formatMoney(plan.secondCents, values['finance.currency'])
+		first: formatMoney(plan.firstCents, CURRENCY),
+		second: formatMoney(plan.secondCents, CURRENCY)
 	};
 }
 

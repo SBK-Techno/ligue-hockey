@@ -13,6 +13,7 @@
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import GameSheet from '#lib/ui/match/GameSheet.svelte';
 	import TeamLineup from '#lib/ui/TeamLineup.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
@@ -42,6 +43,11 @@
 			: undefined
 	);
 	const openRequests = $derived(data.requests.filter((request) => request.status === 'open'));
+	const hasAttendance = $derived(
+		Boolean(availability && availability.rows.length + availability.pending.length > 0)
+	);
+	const hasSubsPanel = $derived(data.requests.length > 0 || isManager);
+	const hasBalancePanel = $derived(Boolean(game?.generation && data.canManage));
 	const filledRequests = $derived(
 		data.requests.filter((request) => request.status === 'filled')
 	);
@@ -67,7 +73,7 @@
 					{t('home.team')} · {t(teamDefinition(ownTeam).labelKey)}
 				</span>
 			{/if}
-			{#if data.canManage}
+			{#if data.canManage && data.editable}
 				<a class="btn-secondary btn-sm" href="/admin/matchs/{game.id}">{t('games.adminEdit')}</a>
 			{/if}
 		{/snippet}
@@ -107,13 +113,17 @@
 		</div>
 	{/if}
 
-	<SectionCard title={hasProfile ? t('home.availability') : t('availability.title')}>
+	<div class="board-grid">
+	<SectionCard
+		class="lg:col-span-12"
+		title={hasProfile ? t('home.availability') : t('availability.title')}
+	>
 
 		{#if game.status === 'cancelled'}
 			<p class="mt-2 text-body text-muted">{t('games.cancelledNotice')}</p>
 		{:else if isManager && !hasProfile}
 			<p class="mt-3 text-body text-muted">{t('home.adminHero')}</p>
-		{:else if availability?.substitute}
+		{:else if availability?.substitute && data.editable}
 			<p class="mt-3 text-body text-muted">{t('availability.substituteHint')}</p>
 			<a class="btn-secondary btn-sm mt-3" href="/remplacants">{t('home.substituteCta')}</a>
 		{:else if availability?.locked}
@@ -180,14 +190,21 @@
 
 	</SectionCard>
 
-	{#if availability && availability.rows.length + availability.pending.length > 0}
-		<SectionCard title={t('home.attendance')}>
+	{#if hasAttendance && availability}
+		<SectionCard
+			class={hasSubsPanel ? 'lg:col-span-5' : 'lg:col-span-12'}
+			title={t('home.attendance')}
+		>
 			<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
 		</SectionCard>
 	{/if}
 
-	{#if data.requests.length > 0 || isManager}
-		<SectionCard title={t('subs.title')} flush>
+	{#if hasSubsPanel}
+		<SectionCard
+			class={hasAttendance ? 'lg:col-span-7' : 'lg:col-span-12'}
+			title={t('subs.title')}
+			flush
+		>
 			<div class="section-row flex flex-wrap items-center justify-between gap-2 pb-0">
 				<p class="hint">{t('subs.rules')}</p>
 				{#if openRequests.length > 0}
@@ -216,7 +233,7 @@
 									<span class={request.status === 'filled' ? 'badge-ok' : 'badge-ice'}>
 										{request.status === 'filled' ? t('subs.status.filled') : t('subs.placeOpen')}
 									</span>
-									{#if request.status === 'open' && data.isSubstitute}
+									{#if request.status === 'open' && data.isSubstitute && data.editable}
 										{#if data.positions.includes(request.position)}
 											<form method="POST" action="?/claim" use:progressiveForm>
 												<input type="hidden" name="requestId" value={request.id} />
@@ -226,13 +243,13 @@
 											<span class="badge">{t('subs.positionNotSelected')}</span>
 										{/if}
 									{/if}
-									{#if request.status === 'filled' && actor && request.filledByPlayerId === actor.userId}
+									{#if request.status === 'filled' && data.editable && actor && request.filledByPlayerId === actor.userId}
 										<form method="POST" action="?/release" use:progressiveForm>
 											<input type="hidden" name="requestId" value={request.id} />
 											<button class="btn-secondary btn-sm" type="submit">{t('subs.release')}</button>
 										</form>
 									{/if}
-									{#if data.canManage && request.status === 'open'}
+									{#if data.canManage && data.editable && request.status === 'open'}
 										<form method="POST" action="?/cancelRequest" use:progressiveForm>
 											<input type="hidden" name="requestId" value={request.id} />
 											<button class="btn-ghost btn-sm" type="submit">{t('subs.cancelRequest')}</button>
@@ -280,7 +297,7 @@
 										</div>
 										<div class="flex flex-wrap items-center gap-2">
 											<span class="badge-ok">{t('subs.status.filled')}</span>
-											{#if actor && request.filledByPlayerId === actor.userId}
+											{#if data.editable && actor && request.filledByPlayerId === actor.userId}
 												<form method="POST" action="?/release" use:progressiveForm>
 													<input type="hidden" name="requestId" value={request.id} />
 													<button class="btn-secondary btn-sm" type="submit">{t('subs.release')}</button>
@@ -295,7 +312,7 @@
 				{/if}
 			{/if}
 
-			{#if data.canManage}
+			{#if data.canManage && data.editable}
 				<form
 					method="POST"
 					action="?/requestSub"
@@ -316,8 +333,28 @@
 		</SectionCard>
 	{/if}
 
+	{#if data.started && data.sheet}
+		<SectionCard class="lg:col-span-12" title={t('gamesheet.title')} clip={false}>
+			{#snippet actions()}
+				{#if data.sheet?.finalized}
+					<span class="badge-ok">{t('gamesheet.finalized')}</span>
+				{/if}
+			{/snippet}
+			<GameSheet
+				sheet={data.sheet}
+				slots={game.slots}
+				canManage={isManager}
+				completed={data.sheet.finalized}
+			/>
+		</SectionCard>
+	{/if}
+
 	{#if game.generated}
-		<SectionCard title={t('games.roster')} flush>
+		<SectionCard
+			class={hasBalancePanel ? 'lg:col-span-8' : 'lg:col-span-12'}
+			title={t('games.roster')}
+			flush
+		>
 			{#snippet actions()}
 				<span class="badge-ok">{t('games.generated')}</span>
 			{/snippet}
@@ -332,7 +369,7 @@
 		</SectionCard>
 
 		{#if game.generation && data.canManage}
-			<SectionCard title={t('team.balance')}>
+			<SectionCard class="lg:col-span-4" title={t('team.balance')}>
 				<p class="text-body text-muted">
 					{t('games.teamBalance', {
 						skill: game.generation.skillDiffLabel ?? '',
@@ -396,7 +433,7 @@
 			</SectionCard>
 		{/if}
 	{:else}
-		<SectionCard title={t('games.notGenerated')}>
+		<SectionCard class="lg:col-span-12" title={t('games.notGenerated')}>
 			<p class="measure text-body text-muted">
 				{data.canManage ? t('games.lineupSoonAdmin') : t('games.lineupSoon')}
 			</p>
@@ -407,5 +444,6 @@
 			{/if}
 		</SectionCard>
 	{/if}
+	</div>
 	</div>
 {/if}

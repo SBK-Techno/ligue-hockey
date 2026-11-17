@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { POSITION_KEYS } from '#config/positions.ts';
 import { GAME_WARNING_KEYS } from '#config/game-warnings.ts';
+import { TEAM_KEYS } from '#config/teams.ts';
 import { DATE_PATTERN, TIME_PATTERN } from '#config/time.ts';
 import { isRealDate } from '#lib/shared/time/clock.ts';
 
@@ -50,3 +51,19 @@ export const generationSnapshotSchema = z.object({
 
 export type GameInput = z.infer<typeof gameInputSchema>;
 export type GenerationSnapshot = z.infer<typeof generationSnapshotSchema>;
+
+export const manualLineupInputSchema = z.object({
+	/** Jeton de concurrence : génération lue par le gestionnaire, null si aucune. */
+	expectedGeneratedAt: z.number().int().nullable(),
+	assignments: z.array(
+		z.object({
+			team: z.enum(TEAM_KEYS),
+			position: z.enum(POSITION_KEYS),
+			slotIndex: z.number().int().min(0),
+			playerId: z.string().trim().min(1)
+		})
+	)
+});
+
+export type ManualLineupInput = z.infer<typeof manualLineupInputSchema>;
+export type ManualLineupAssignment = ManualLineupInput['assignments'][number];

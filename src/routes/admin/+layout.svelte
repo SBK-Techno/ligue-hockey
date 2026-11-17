@@ -21,7 +21,7 @@
 </script>
 
 <div
-	class="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-8"
+	class="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:items-start lg:gap-8"
 	style="--anchor-offset: calc(3.75rem + 3.5rem + env(safe-area-inset-top) + 0.75rem)"
 >
 	<aside

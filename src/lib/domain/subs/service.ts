@@ -17,7 +17,9 @@ import type { GameSummary } from '#lib/domain/games/types.ts';
 import { isLineupEditable } from '#lib/domain/games/playability.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
-import { clock, todayInZone, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
+import { clock, todayInZone } from '#lib/shared/time/clock.ts';
+import { gameStartsAt } from '#lib/domain/games/schedule.ts';
+import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
 	claimablePositions,
@@ -83,7 +85,7 @@ function parsePositions(json: string): Position[] {
 }
 
 function gameStartMs(game: GameSummary): number {
-	return zonedDateTimeToMs(game.gameDate, game.startTime, branding.timezone);
+	return gameStartsAt(game);
 }
 
 function requestView(
@@ -321,6 +323,9 @@ export function createAbsenceRequest(
 	player: SelfProfile
 ): SubRequestView | null {
 	if (player.isSubstitute) return null;
+	if (isGameStarted(game)) {
+		throw new AppError('CONFLICT', { key: 'availability.gameClosed' });
+	}
 
 	const existing = findRequesterRequest(game.id, player.userId);
 	if (existing) {
@@ -359,7 +364,7 @@ export function createManualRequest(
 	position: Position
 ): SubRequestView {
 	requirePermission(actor, 'manageSubs');
-	if (game.status !== 'scheduled') {
+	if (!isLineupEditable(game)) {
 		throw new AppError('CONFLICT', { key: 'subs.gameNotScheduled' });
 	}
 
@@ -475,6 +480,10 @@ export function releaseSubstitute(
 	const request = findRequest(requestId);
 	if (!request || request.gameId !== game.id) {
 		throw new AppError('NOT_FOUND', { key: 'subs.requestNotFound' });
+	}
+	// Une place ne se libère pas une fois le match commencé.
+	if (!isLineupEditable(game)) {
+		throw new AppError('CONFLICT', { key: 'subs.gameStarted' });
 	}
 
 	if (!releaseRequest(requestId, user.userId)) {

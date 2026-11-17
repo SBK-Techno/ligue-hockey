@@ -17,6 +17,7 @@ export type GamePlayer = {
 	fullName: string;
 	position: Position;
 	jerseyNumber: number | null;
+	avatarId: string | null;
 	kind: 'regular' | 'sub';
 };
 

@@ -183,8 +183,8 @@ function addGame(options: {
 		.prepare(
 			`insert into games
 			 (id, game_date, start_time, location_id, location, notes, status,
-			  roster_template_json, generated_at, generation_json, created_by, created_at, updated_at)
-			 values (?, ?, '09:00', ?, ?, null, ?, ?, ?, ?, null, 0, 0)`
+			  completed_at, roster_template_json, generated_at, generation_json, created_by, created_at, updated_at)
+			 values (?, ?, '09:00', ?, ?, null, ?, ?, ?, ?, ?, null, 0, 0)`
 		)
 		.run(
 			id,
@@ -192,6 +192,7 @@ function addGame(options: {
 			location,
 			'Aréna arena',
 			options.status ?? 'scheduled',
+			options.status === 'completed' ? 1 : null,
 			options.templateJson ?? JSON.stringify(roster),
 			generated ? 1 : null,
 			generated ? JSON.stringify(EMPTY_SNAPSHOT) : null
@@ -671,7 +672,7 @@ describe('lineup rating purge', () => {
 			.get() as { metadata_json: string };
 		expect(JSON.parse(cleanup.metadata_json)).toEqual({ playerIds: ['b'] });
 
-		sqlite.prepare("update games set status = 'completed' where id = ?").run(gameId);
+		sqlite.prepare("update games set status = 'completed', completed_at = 1 where id = ?").run(gameId);
 		saveGameAssessment(admin, gameId, 'a', {
 			impact: 5,
 			effort: 5,

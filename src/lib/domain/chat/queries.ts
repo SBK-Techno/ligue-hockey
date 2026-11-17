@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, lt } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
+import { players } from '#lib/domain/players/schema.ts';
 import {
 	chatMessages,
 	pollOptions,
@@ -9,7 +10,17 @@ import {
 	type ChatMessageRow
 } from './schema.ts';
 
-export type MessageRow = ChatMessageRow & { authorName: string };
+/**
+ * Un message porte l'identité visuelle de son auteur, même quand ce dernier
+ * n'a pas de fiche de joueur : le compte suffit, la fiche ajoute le chandail
+ * et la position. La jointure est donc à gauche.
+ */
+export type MessageRow = ChatMessageRow & {
+	authorName: string;
+	authorAvatarId: string | null;
+	authorJerseyNumber: number | null;
+	authorPosition: (typeof players.$inferSelect)['position'] | null;
+};
 
 export function listMessages(limit: number, before: number | null): MessageRow[] {
 	return db
@@ -21,10 +32,14 @@ export function listMessages(limit: number, before: number | null): MessageRow[]
 			createdAt: chatMessages.createdAt,
 			deletedAt: chatMessages.deletedAt,
 			deletedBy: chatMessages.deletedBy,
-			authorName: user.name
+			authorName: user.name,
+			authorAvatarId: players.avatarId,
+			authorJerseyNumber: players.jerseyNumber,
+			authorPosition: players.position
 		})
 		.from(chatMessages)
 		.innerJoin(user, eq(user.id, chatMessages.authorUserId))
+		.leftJoin(players, eq(players.userId, chatMessages.authorUserId))
 		.where(before === null ? undefined : lt(chatMessages.createdAt, before))
 		.orderBy(desc(chatMessages.createdAt))
 		.limit(limit)

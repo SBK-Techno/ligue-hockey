@@ -289,7 +289,7 @@ describe('location metrics', () => {
 		const empty = addLocation('Vieille patinoire');
 
 		const completed = addGame(used.id, '2023-10-01');
-		sqlite.prepare("update games set status = 'completed' where id = ?").run(completed.id);
+		sqlite.prepare("update games set status = 'completed', completed_at = 1 where id = ?").run(completed.id);
 		addGame(used.id, '2026-02-01');
 		addGame(upcoming.id, '2026-03-01');
 

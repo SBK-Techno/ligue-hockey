@@ -13,6 +13,7 @@ export function toPublic(row: PlayerRow): PublicPlayer {
 		fullName: fullName(row),
 		position: row.position,
 		jerseyNumber: row.jerseyNumber,
+		avatarId: row.avatarId,
 		isSubstitute: row.isSubstitute,
 		active: row.active
 	};

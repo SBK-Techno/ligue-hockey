@@ -1,4 +1,5 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
+import { CURRENCY } from '#config/currency.ts';
 import {
 	SETTINGS,
 	SETTING_GROUPS,
@@ -44,7 +45,7 @@ export const load: ServerLoad = ({ locals }) => {
 		})),
 		values: settingsFormValues(values),
 		descriptions,
-		currency: values['finance.currency']
+		currency: CURRENCY
 	};
 };
 

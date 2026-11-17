@@ -31,6 +31,10 @@ export const branding = {
     "icon192": "/icons/icon-192-192.073945cb4e02.png",
     "icon512": "/icons/icon-512-512.904ac52376ea.png",
     "maskable": "/icons/maskable-512-512.5c023d038900.png"
+  },
+  "textures": {
+    "paper": "/textures/paper-b0f353d27755.webp",
+    "ice": "/textures/ice-91bfe133b755.webp"
   }
 } as const;
 

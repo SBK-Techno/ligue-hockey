@@ -4,7 +4,7 @@ import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts'
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
 import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
-import { isLineupEditable } from './playability.ts';
+import { isGameStarted, isLineupEditable } from './playability.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
@@ -24,9 +24,11 @@ import { parseSchema } from '#lib/shared/validation.ts';
 
 import {
 	cancelGame as cancelGameRow,
+	completeGame as completeGameRow,
 	findGame,
 	insertGameWithSlots,
 	listAvailability,
+	listAvailabilityForPlayer,
 	listGames,
 	listSlotAssignments,
 	saveAssignments,
@@ -50,6 +52,8 @@ export type GameView = GameSummary & {
 	locationMapUrl: string | null;
 	slots: GameSlotView[];
 	generation: GameGenerationView | null;
+	completedAt: number | null;
+	lineupManualAt: number | null;
 	openSlots: number;
 	openSlotsLabel: string;
 	generated: boolean;
@@ -85,7 +89,15 @@ function snapshotFrom(row: GameRow): GenerationSnapshot | null {
 
 function generationView(
 	row: GameRow,
-	names: Map<string, { fullName: string; position: Position; jerseyNumber: number | null }>,
+	names: Map<
+		string,
+		{
+			fullName: string;
+			position: Position;
+			jerseyNumber: number | null;
+			avatarId: string | null;
+		}
+	>,
 	includeMetrics: boolean
 ): GameGenerationView | null {
 	const snapshot = snapshotFrom(row);
@@ -151,7 +163,8 @@ export function getGame(actor: Actor, gameId: string): GameView {
 			{
 				fullName: player.fullName,
 				position: player.position,
-				jerseyNumber: player.jerseyNumber
+				jerseyNumber: player.jerseyNumber,
+				avatarId: player.avatarId
 			}
 		])
 	);
@@ -167,6 +180,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 						fullName: names.get(assignment.playerId)?.fullName ?? assignment.playerId,
 						position: assignment.position,
 						jerseyNumber: names.get(assignment.playerId)?.jerseyNumber ?? null,
+						avatarId: names.get(assignment.playerId)?.avatarId ?? null,
 						kind: assignment.assignmentKind
 					}
 				: null
@@ -182,6 +196,8 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		locationMapUrl: location.mapUrl,
 		slots,
 		generation: generationView(row, names, can(actor, 'manageGames')),
+		completedAt: row.completedAt,
+		lineupManualAt: row.lineupManualAt,
 		openSlots,
 		openSlotsLabel: formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many'),
 		generated: snapshot !== null
@@ -254,7 +270,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
 	}
-	if (row.status !== 'scheduled') {
+	if (!isLineupEditable(row)) {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
 	const parsed = parseSchema(gameInputSchema, input);
@@ -262,7 +278,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 	const locationChanged = parsed.locationId !== row.locationId;
 
 	try {
-		updateGameRow(
+		const saved = updateGameRow(
 			gameId,
 			{
 				gameDate: parsed.gameDate,
@@ -273,8 +289,12 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 				...(locationChanged ? { location: location.name } : {}),
 				notes: parsed.notes
 			},
-			clock.nowMs()
+			clock.nowMs(),
+			row.updatedAt
 		);
+		if (!saved) {
+			throw new AppError('CONFLICT', { key: 'games.lineupChanged' });
+		}
 	} catch (cause) {
 		if ((cause as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
 			throw new AppError('CONFLICT', { key: 'admin.gameExists', cause });
@@ -304,9 +324,17 @@ export function cancelGame(actor: Actor, gameId: string): void {
 		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
 	}
 	if (row.status === 'cancelled') return;
+	if (row.status === 'completed' || row.completedAt !== null) {
+		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
+	}
+	if (!isLineupEditable(row)) {
+		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
+	}
 
 	const updatedAt = clock.nowMs();
-	cancelGameRow(gameId, updatedAt);
+	if (!cancelGameRow(gameId, updatedAt)) {
+		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
+	}
 	cancelAllForGame(actor, summary(row));
 
 	const recipients = generationCandidates().map((player) => ({
@@ -405,31 +433,43 @@ export function regenerateGame(
 
 	// L'audit du calcul entre dans la même transaction que les places : une
 	// écriture échouée ne laisse ni alignement publié ni trace partielle.
-	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt, {
-		removedRatedPlayerIds,
-		audits: [
-			...(removedRatedPlayerIds.length > 0
-				? [
-						auditEntry(actor, {
-							action: 'ratings.game_removed',
-							entityType: 'game',
-							entityId: gameId,
-							metadata: { playerIds: removedRatedPlayerIds }
-						})
-					]
-				: []),
-			auditEntry(actor, {
-				action: 'game.generate',
-				entityType: 'game',
-				entityId: gameId,
-				metadata: {
-					skillDiff: result.skillDiff,
-					ageDiff: result.ageDiff,
-					assignments: assignments.length
-				}
-			})
-		]
-	});
+	const saved = saveAssignments(
+		gameId,
+		assignments,
+		generatedAt,
+		JSON.stringify(snapshot),
+		generatedAt,
+		{
+			expectedGeneratedAt: row.generatedAt ?? null,
+			manualAt: null,
+			removedRatedPlayerIds,
+			audits: [
+				...(removedRatedPlayerIds.length > 0
+					? [
+							auditEntry(actor, {
+								action: 'ratings.game_removed',
+								entityType: 'game',
+								entityId: gameId,
+								metadata: { playerIds: removedRatedPlayerIds }
+							})
+						]
+					: []),
+				auditEntry(actor, {
+					action: 'game.generate',
+					entityType: 'game',
+					entityId: gameId,
+					metadata: {
+						skillDiff: result.skillDiff,
+						ageDiff: result.ageDiff,
+						assignments: assignments.length
+					}
+				})
+			]
+		}
+	);
+	if (!saved) {
+		throw new AppError('CONFLICT', { key: 'games.lineupChanged' });
+	}
 
 	const namedIds = [
 		...plan.bench.map((entry) => entry.playerId),
@@ -441,7 +481,8 @@ export function regenerateGame(
 			{
 				fullName: player.fullName,
 				position: player.position,
-				jerseyNumber: player.jerseyNumber
+				jerseyNumber: player.jerseyNumber,
+				avatarId: player.avatarId
 			}
 		])
 	);
@@ -486,6 +527,46 @@ export function listGamePresence(gameId: string) {
 	return listAvailability(gameId);
 }
 
+/** La réponse d'un joueur pour une série de matchs, sans charger les feuilles. */
+export function listPlayerAvailability(gameIds: readonly string[], playerId: string) {
+	return listAvailabilityForPlayer(gameIds, playerId);
+}
+
+/**
+ * Termine un match commencé. Le statut et l'estampille sont écrits ensemble :
+ * un match terminé se reconnaît à `completed_at`, jamais au statut seul.
+ */
+export function completeGame(actor: Actor, gameId: string): void {
+	requirePermission(actor, 'manageGames');
+	const row = findGame(gameId);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
+	}
+	if (row.status === 'cancelled') {
+		throw new AppError('CONFLICT', { key: 'games.cannotFinalizeCancelled' });
+	}
+	if (row.status === 'completed' || row.completedAt !== null) {
+		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
+	}
+	if (!isGameStarted(row)) {
+		throw new AppError('CONFLICT', { key: 'games.notStarted' });
+	}
+
+	const at = clock.nowMs();
+	const finalized = completeGameRow(
+		gameId,
+		at,
+		auditEntry(actor, {
+			action: 'game.finalized',
+			entityType: 'game',
+			entityId: gameId
+		})
+	);
+	if (!finalized) {
+		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
+	}
+}
+
 export function setGamePresence(
 	gameId: string,
 	playerId: string,
@@ -501,6 +582,9 @@ export function regenerateIfGenerated(gameId: string): {
 } {
 	const row = findGame(gameId);
 	if (!row?.generatedAt) return { regenerated: false };
+	// Un alignement enregistré à la main reste intact tant qu'un gestionnaire
+	// ne demande pas explicitement de le refaire.
+	if (row.lineupManualAt !== null) return { regenerated: false };
 
 	try {
 		regenerateGame(gameId);

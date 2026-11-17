@@ -216,18 +216,6 @@ export const SETTINGS = {
     defaultValue: null,
     labelKey: 'settings.installment2Due.label'
   }),
-  'finance.currency': defineSetting({
-    group: 'finance',
-    kind: 'select',
-    schema: z.enum(['CAD', 'USD', 'EUR']),
-    defaultValue: 'CAD',
-    options: [
-      { value: 'CAD', labelKey: 'settings.currency.CAD' },
-      { value: 'USD', labelKey: 'settings.currency.USD' },
-      { value: 'EUR', labelKey: 'settings.currency.EUR' }
-    ],
-    labelKey: 'settings.currency.label'
-  }),
   'finance.goalieDiscountPercent': defineSetting({
     group: 'finance',
     kind: 'number',

@@ -3,6 +3,7 @@
 	import { TEAMS, type Team } from '#config/teams.ts';
 	import type { GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import Avatar from '#lib/ui/Avatar.svelte';
 
 	let {
 		slots,
@@ -58,8 +59,18 @@
 							<li class="ledger-row border-b border-line last:border-b-0" data-you={isMe}>
 								<span class="jersey">{slot.player?.jerseyNumber ?? '-'}</span>
 								{#if slot.player}
-									<span class="min-w-0 truncate text-body {isMe ? 'font-semibold' : ''}">
-										{slot.player.fullName}
+									<span class="flex min-w-0 items-center gap-2">
+										<Avatar
+											player={{
+												fullName: slot.player.fullName,
+												userId: slot.player.playerId,
+												avatarId: slot.player.avatarId
+											}}
+											size={24}
+										/>
+										<span class="min-w-0 truncate text-body {isMe ? 'font-semibold' : ''}">
+											{slot.player.fullName}
+										</span>
 									</span>
 									{#if isMe}
 										<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>

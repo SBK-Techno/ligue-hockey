@@ -20,6 +20,8 @@
 		t
 	} from '#lib/shared/i18n/index.ts';
 	import { badgeClass } from '#lib/ui/badge-tone.ts';
+	import Avatar from '#lib/ui/Avatar.svelte';
+	import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
@@ -64,6 +66,9 @@
 		meta={headerMeta}
 		back={{ href: '/admin/joueurs', label: t('admin.backToPlayers') }}
 	>
+		{#snippet leading()}
+			<Avatar player={player} size={48} decorative={false} />
+		{/snippet}
 		{#snippet actions()}
 			{#if player.role !== 'player'}
 				<span class="badge-ice"
@@ -204,6 +209,16 @@
 							value={player.jerseyNumber ?? ''}
 							placeholder={String(PLAYER_LIMITS.jerseyExample)}
 						/>
+					</div>
+					<div class="sm:col-span-2">
+						{#if data.avatarPicker}
+							<AvatarPicker
+								name="avatarId"
+								selected={data.avatarPicker.selected}
+								taken={data.avatarPicker.taken}
+								help={t('admin.avatarHelp')}
+							/>
+						{/if}
 					</div>
 					<div class="sm:col-span-2">
 						<button class="btn-primary btn-sm" type="submit">{t('common.save')}</button>

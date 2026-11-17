@@ -33,6 +33,22 @@ export function todayInZone(timeZone: string, at: number = clock.nowMs()): strin
 	return `${value.year}-${value.month}-${value.day}`;
 }
 
+/** L'heure locale du fuseau de la ligue, au format `HH:MM`. */
+export function timeInZone(timeZone: string, at: number = clock.nowMs()): string {
+	const parts = new Intl.DateTimeFormat(PART_LOCALE, {
+		timeZone,
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false
+	}).formatToParts(toDate(at));
+
+	const rawHour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+	// `hour12: false` peut rendre minuit comme 24:00 selon la plateforme.
+	const hour = rawHour === '24' ? '00' : rawHour;
+	const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+	return `${hour}:${minute}`;
+}
+
 export function dateOnlyToDate(date: string): Date {
 	const [year, month, day] = date.split('-').map(Number);
 	return new Date(Date.UTC(year, month - 1, day, 12));

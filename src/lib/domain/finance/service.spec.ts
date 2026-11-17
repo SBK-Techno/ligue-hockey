@@ -3,7 +3,6 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 
 vi.mock('#lib/domain/settings/service.ts', () => ({
 	getSettings: () => ({
-		'finance.currency': 'CAD',
 		'finance.overdueGraceDays': 0,
 		'finance.installment1Due': '2026-11-01',
 		'finance.installment2Due': '2026-12-01'

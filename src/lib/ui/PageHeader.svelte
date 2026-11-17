@@ -6,13 +6,15 @@
 		eyebrow,
 		meta,
 		back,
-		actions
+		actions,
+		leading
 	}: {
 		title: string;
 		eyebrow?: string;
 		meta?: string;
 		back?: { href: string; label: string };
 		actions?: Snippet;
+		leading?: Snippet;
 	} = $props();
 </script>
 
@@ -37,14 +39,19 @@
 	{/if}
 
 	<div class="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-		<div class="min-w-0">
-			{#if eyebrow}
-				<p class="micro-label">{eyebrow}</p>
+		<div class="flex min-w-0 items-center gap-3">
+			{#if leading}
+				<div class="shrink-0">{@render leading()}</div>
 			{/if}
-			<h1 class="first-letter:uppercase {eyebrow ? 'mt-1' : ''}">{title}</h1>
-			{#if meta}
-				<p class="mt-1.5 text-meta text-muted">{meta}</p>
-			{/if}
+			<div class="min-w-0">
+				{#if eyebrow}
+					<p class="micro-label">{eyebrow}</p>
+				{/if}
+				<h1 class="first-letter:uppercase {eyebrow ? 'mt-1' : ''}">{title}</h1>
+				{#if meta}
+					<p class="mt-1.5 break-words text-meta text-muted">{meta}</p>
+				{/if}
+			</div>
 		</div>
 
 		{#if actions}

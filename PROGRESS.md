@@ -4,13 +4,36 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `feat/home-1.4.0`.
-- Target version: `1.4.0`.
-- Shipped: identity, navigation, evaluations, smart sheet, locations, `1.3.0`; initial-paint fix, `1.3.1`; natural rink, auth hero, shared Black/White sheet, `1.3.2`; warm blue-white-red theme, dressing-room login, inline substitute actions, `1.3.3` (live).
-- In flight: the home situation board and month calendar, plus one shared UI system across every route: one page header, one section body, one type scale, one chip, one empty state, one sticky bar, one row rhythm.
-- Next: the phase-aware match sheet and rink lineup board (`1.5.0`); avatars, evaluation redesign and the real-ice material pass (`1.6.0`).
-- Verification: `npm run gate` green at `e202dd6`, 393 tests in 46 files, 242 architecture files, generated assets and the documentation site; the admin surface migration lands on top and runs the gate again.
-- Next release step: final gate, PR, merge, tag `v1.4.0`, release, promote and verify health.
+- Branch: `feat/match-1.5.0`, based on `1.4.0` (merged, tagged, released, live).
+- Target version: `1.5.0`.
+- Shipped in `1.4.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
+- In flight for `1.5.0`: season agenda replacing the month calendar; chat rebuilt around player colour, avatar and jersey with grouped days, menus and readable polls; phase-aware game sheet with goals, penalties, totals and finalization; player avatars with unique colours and jerseys; paper and ice material pass; desktop compositions for home, match, schedule, balance, notifications, substitutes and profile.
+- Verified in this slice: `npm run gate` green (452 tests, 51 files), generated assets and documentation site current, production build served against a copy of the seeded database, home/discussion/match/schedule/admin pages fetched, and a goal written through the real action then read back from the sheet.
+- Next release step: commit, push, open the PR, merge after review, tag `v1.5.0`, release, promote and verify health.
+
+## Triple-check round 1 (in progress)
+
+Eight read-only auditors run in parallel, each on a distinct surface, then one consolidator rechecks every finding before a single writer touches code:
+
+| Auditor | Surface |
+|---|---|
+| Home and personalization | hero, agenda, panels, member modes, Québec garage-league usage |
+| Chat and polls | day groups, menus, voting, scroll, identity, keyboard |
+| Match and sheet | phase guards, scorekeeper friction, rink gap, player view |
+| Responsive and space | 320 to 1536, overflow, touch targets, density |
+| Copy and language | `tu`, sentence case, vocabulary, redundancy, CAD |
+| Domain and privacy | past-game guards, balances, ratings, permissions, atomicity, duplication |
+| Visual identity | materials, buttons, imagery, typography, AI tells, player colour |
+| Accessibility, performance, tests | semantics, contrast, bundles, N+1, missing regression coverage |
+
+Findings are confirmed against source before any edit; the round is only closed when a recheck agent returns no confirmed finding.
+
+## 1.5.0 decisions
+
+- `config/goal-kinds.ts` is the single owner of goal kinds and their labels; the sheet schema re-exports it.
+- `availability.myAvailabilityByGame` and `gamesheet.listGameScores` read many games in one query for the home agenda.
+- `ChatMessageView` carries `authorAvatarId`, `authorJerseyNumber`, `authorPosition` and `isOwn`; deleted polls reject votes at the service.
+- `SectionCard` takes `clip` and `class`: a menu-bearing sheet can let its menu escape, and every route composes spans on the existing 12-column grid.
 
 ## Verified milestones
 
@@ -30,28 +53,14 @@ This file tracks the current milestone, verified evidence, and the work that is 
 | `1a00cf7` | `1.3.1` initial-paint flash fix | gate, PR 13, live |
 | `3b50ec4` | `1.3.2` natural rink, auth hero, shared team sheet, recalibration test | 340 tests, live health `ok` |
 | `3728997` | `1.3.3` `/remplacants` inline pool and request actions | 350 tests, check, lint |
+| `b54d7c8` | `1.4.0` home board, admin surfaces, shared UI system | gate, PR 16, live |
 
-## Next: 1.3.4 correctness
+## Next: 1.6.0
 
-- Freeze game records and availability after the start time; make cancellation atomic; filter recent form by playability.
-- Notification inbox: mark every unread item, cursor pagination, anchor rows with a separate read action.
-- One invitation/reset mode token; keep the email after a wrong password; correct resend purpose.
-- Chat: initial scroll to the latest message, true new-message count, growing composer, focus return.
-- Evaluation: return the actual `canRate` reason, show failures near the form, expose older played games.
-- Remaining navigation checks: header at 768 and the bottom-bar reserve on admin and tablet (the profile destination and the 320 admin grid ship in 1.3.3).
-
-## Next: 1.3.5 input and administration
-
-- Finance input guards only: real dates, ordered dates, non-zero installments, no future payments, cap at outstanding.
-- Admin schedule: reverse archive, exclude completed games from the draft reference, no silent location fallback, configured limits.
-- Admin and accessibility polish: self-role reason, shared filter counts and reset, `#solde` anchors, one inactive label, profile fieldsets, 44 px standalone links, row-menu direction, paid amount.
-- Copy/glossary pass and `PROGRESS.md` upkeep.
-- Test isolation: `.env.test` database, scripts typecheck, language in the CI contract, one DB opener, strict config validators, own-property key lookups.
-
-## Next: 1.4.0 member surfaces
-
-- Home situation board: the hero and the panel spans change with game phase, presence, lineup state, absence, manager slots, balance, substitute requests, polls and profile presence. Month calendar with game days, today and multiple games per day.
-- Team section `/equipe`: season roster with position, games, attendance and Black/White history; ratings only behind the ratings capability. Rink board with placement for managers, pair-rule lines, live balance and a past-game timeline.
+- Rink placement board on the match page: `config/rink.ts` owns the geometry, but no surface renders it yet. A manager should place players, see pair-rule lines and save with the generation token.
+- Team season page `/equipe`: roster, attendance history, Black/White history and a past-game timeline, ratings only behind the ratings capability.
+- Chat history pagination and the connection-lost banner.
+- Admin row menus beyond the player list: move the remaining absolutely positioned menus out of clipped sheets where they still exist.
 
 ## Deferred to a later milestone
 
