@@ -493,11 +493,11 @@ describe('migrations vs registres', () => {
 		expect(block).toBe(identityBackfillSql());
 	});
 
-	it('attribue les cinquante-huit identités quand chaque poste a ses joueurs', () => {
+	it('attribue les soixante-six identités quand chaque poste a ses joueurs', () => {
 		const players: IdentityFixturePlayer[] = [
-			...Array.from({ length: 43 }, () => ({ position: 'forward' as const })),
-			...Array.from({ length: 11 }, () => ({ position: 'defense' as const })),
-			...Array.from({ length: 4 }, () => ({ position: 'goalie' as const }))
+			...Array.from({ length: 30 }, () => ({ position: 'forward' as const })),
+			...Array.from({ length: 22 }, () => ({ position: 'defense' as const })),
+			...Array.from({ length: 14 }, () => ({ position: 'goalie' as const }))
 		];
 		const database = migrateIdentityFixture(players);
 		try {
@@ -519,12 +519,12 @@ describe('migrations vs registres', () => {
 
 	it('refuse une base dont un poste manque d’identités', () => {
 		const players: IdentityFixturePlayer[] = [
-			...Array.from({ length: 44 }, () => ({ position: 'forward' as const })),
+			...Array.from({ length: 45 }, () => ({ position: 'forward' as const })),
 			...Array.from({ length: 11 }, () => ({ position: 'defense' as const })),
 			...Array.from({ length: 4 }, () => ({ position: 'goalie' as const }))
 		];
-		// 59 joueurs : les 15 légendes d'attaque et les 28 visages ne couvrent
-		// que 43 attaquants. La garde refuse plutôt que de laisser un actif nu.
+		// 60 joueurs : les 16 légendes d'attaque et les 28 visages ne couvrent
+		// que 44 attaquants. La garde refuse plutôt que de laisser un actif nu.
 		expect(() => migrateIdentityFixture(players)).toThrow(
 			/INSERT INTO identity_backfill_guard/
 		);

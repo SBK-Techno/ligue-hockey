@@ -501,16 +501,17 @@
 								aria-pressed={canEdit && player ? selected === placement.key : undefined}
 							>
 								{#if player}
-									<span class="rink-portrait">
-										<Avatar player={portrait(player)} fill />
+									<span class="rink-face">
+										<span class="rink-portrait">
+											<Avatar player={portrait(player)} fill />
+										</span>
+										<span class="rink-number">{player.jerseyNumber ?? '?'}</span>
 									</span>
-									<span class="rink-role" aria-hidden="true"
-										>{rinkRoleShortLabel(placement.role)}</span
-									>
-									<span class="rink-number">{player.jerseyNumber ?? '?'}</span>
 									<span class="rink-name">{rinkPlayerLastName(player.fullName)}</span>
 								{:else}
-									<span class="rink-empty">{rinkRoleShortLabel(placement.role)}</span>
+									<span class="rink-face">
+										<span class="rink-portrait rink-empty">{rinkRoleShortLabel(placement.role)}</span>
+									</span>
 								{/if}
 							</button>
 						{/if}

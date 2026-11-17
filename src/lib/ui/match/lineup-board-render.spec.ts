@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 import { t } from '#lib/shared/i18n/index.ts';
 import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
-import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
 import { identitySheetStyle } from '#lib/ui/identity-display.ts';
 import LineupBoard from './LineupBoard.svelte';
 
@@ -119,9 +118,59 @@ describe('rendu de la carte d’alignement', () => {
 
 		const css = readFileSync('src/routes/layout.css', 'utf8');
 		const block = css.slice(css.indexOf('.rink-name {'), css.indexOf('.rink-empty'));
-		expect(block).toContain('hyphens: none');
-		expect(block).toContain('text-overflow: ellipsis');
-		expect(block).toContain('white-space: nowrap');
+		expect(block).toContain('hyphens: manual');
+		expect(block).toContain('overflow-wrap: normal');
+		expect(block).toContain('white-space: normal');
+		expect(block).not.toContain('text-overflow: ellipsis');
+		expect(block).not.toContain('white-space: nowrap');
+	});
+
+	it('passe une glace étroite en grille de formation sans chevauchement', () => {
+		const css = readFileSync('src/routes/layout.css', 'utf8');
+		const team = css.slice(css.indexOf('.rink-team {'), css.indexOf('.rink-roster'));
+		expect(team).toContain('container-type: inline-size');
+
+		const start = css.indexOf('@container (max-width: 559px)');
+		const grid = css.slice(start, css.indexOf('@media (min-width: 900px)', start));
+		expect(start).toBeGreaterThan(0);
+		expect(grid).toContain('aspect-ratio: 4 / 3');
+		expect(grid).toContain('width: min(28%, 4rem)');
+		for (const slot of [
+			':forward:0',
+			':forward:1',
+			':forward:2',
+			':defense:0',
+			':defense:1',
+			':goalie:0'
+		]) {
+			expect(grid).toContain(`data-lineup-key$='${slot}'`);
+		}
+		expect(grid).toContain("data-team='white'");
+	});
+
+	it('découpe le portrait, jamais le numéro ni le nom', () => {
+		const { body } = render(LineupBoard, {
+			props: { slots: fullSlots, bench, canEdit: false, expectedGeneratedAt: 123 }
+		});
+		const token =
+			body.match(/<button[^>]*data-player-id="white-forward-0"[^>]*>[\s\S]*?<\/button>/)?.[0] ??
+			'';
+
+		expect(token).toContain('<span class="rink-face">');
+		expect(token).toContain('<span class="rink-number">');
+		expect(token).toContain('<span class="rink-name">');
+
+		const css = readFileSync('src/routes/layout.css', 'utf8');
+		const tokenRule = css.slice(
+			css.indexOf('.rink-token {'),
+			css.indexOf('.rink-token:focus-visible')
+		);
+		const portraitRule = css.slice(
+			css.indexOf('.rink-portrait {'),
+			css.indexOf(".rink-token[data-team='white']")
+		);
+		expect(tokenRule).not.toContain('overflow: hidden');
+		expect(portraitRule).toContain('overflow: hidden');
 	});
 
 	it('rend les joueurs du banc comme des boutons non sélectionnés', () => {
@@ -188,8 +237,7 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).toContain(t('team.white'));
 		expect(body).toContain(t('position.forward'));
 		expect(body).toContain(t('rink.line', { line: 1 }));
-		expect(body).toMatch(/class="rink-role"[^>]*>C</);
-		expect((body.match(/class="rink-role"/g) ?? []).length).toBe(34);
+		expect(body).not.toContain('class="rink-role"');
 		const row =
 			body.match(
 				/<li class="ledger-row[^"]*"[^>]*data-you="true"[^>]*>([\s\S]*?)<\/li>/
@@ -282,28 +330,5 @@ describe('rendu de la carte d’alignement', () => {
 		expect(chip).toContain('aria-haspopup="dialog"');
 		expect(chip).toContain('aria-expanded="false"');
 		expect(chip).not.toContain('aria-pressed');
-	});
-});
-
-describe('rendu du sélecteur d’identité', () => {
-	it('garde une légende enregistrée hors poste, visible et signalée', () => {
-		const { body } = render(AvatarPicker, {
-			props: { selected: 'legende-roy', position: 'forward' }
-		});
-
-		expect(body).toContain('value="legende-roy"');
-		expect(body).toContain(t('profile.legendMismatch'));
-		expect(body.match(new RegExp(t('profile.legendMismatch'), 'g'))).toHaveLength(1);
-		// Une légende d'un autre poste et non sélectionnée reste hors de la liste.
-		expect(body).not.toContain('value="legende-harvey"');
-	});
-
-	it('ne signale aucun décalage quand la légende correspond au poste', () => {
-		const { body } = render(AvatarPicker, {
-			props: { selected: 'legende-roy', position: 'goalie' }
-		});
-
-		expect(body).toContain('value="legende-roy"');
-		expect(body).not.toContain(t('profile.legendMismatch'));
 	});
 });

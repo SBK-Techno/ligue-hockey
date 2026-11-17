@@ -911,18 +911,13 @@ export const fr = {
   'profile.avatarLeague': 'Visage de la ligue',
   'profile.identityChange': 'Changer mon identité',
   'profile.avatarHelp':
-    'Choisis le visage qui te représente. Une identité déjà portée par un autre joueur reste visible, mais désactivée.',
-  'profile.avatarOption': 'Visage {number}',
-  'profile.avatarOptionTaken': 'Visage {number}, déjà pris',
-  'profile.avatarTaken': 'Indisponible',
+    'Choisis la légende qui te représente. Une identité déjà portée par un autre joueur reste visible, mais désactivée.',
+  'profile.identityCurrent': 'Ton identité actuelle',
   'profile.avatarOf': 'Identité de {name}',
   'profile.avatarOpen': 'Ouvrir la fiche de {name}',
   'profile.legendsTitle': 'Légendes de ton poste',
   'profile.legendsHelp': 'Des identités hommage, choisies pour ton poste.',
-  'profile.avatarsTitle': 'Visages de la ligue',
   'profile.legendsNeedPosition': 'Choisis ton poste pour voir les légendes qui y ont joué.',
-  'profile.legendsDisclaimer':
-    'Hommage non officiel, sans affiliation au club. Portraits peints, sans photo ni logo.',
   'profile.legendOption': '{name}, numéro {number}, {era}',
   'profile.legendOptionTaken': '{name}, déjà prise',
   'profile.legendMismatch': 'A joué à un autre poste',
@@ -957,7 +952,7 @@ export const fr = {
   'admin.legendsTitle': 'Légendes au poste du joueur',
   'admin.legendsHelp': 'Des identités hommage, choisies pour le poste de ce joueur.',
   'admin.avatarHelp':
-    'Choisis l’identité qui représente ce joueur. Une identité déjà portée par un autre joueur reste visible, mais désactivée.',
+    'Choisis la légende qui représente ce joueur. Une identité déjà portée par un autre joueur reste visible, mais désactivée.',
   'profile.memberSince': 'Membre depuis {date}',
   'player.deletedName': 'Joueur retiré',
   'player.deletedFirstName': 'Joueur',
@@ -1153,9 +1148,15 @@ export const fr = {
   'admin.addLocation': 'Ajouter un lieu',
   'admin.locationName': 'Nom du lieu',
   'admin.locationAddress': 'Adresse',
-  'admin.locationMap': 'Lien de la carte',
-  'admin.locationMapHelp':
-    'Optionnel. Sans lien, l’adresse sert de recherche sur la carte.',
+  'admin.locationAddressHelp':
+    'Commence à écrire une adresse, puis choisis-la dans la liste.',
+  'admin.addressSuggestions': 'Adresses proposées',
+  'admin.addressSearching': 'Recherche d’adresses…',
+  'admin.addressNoResult': 'Aucune adresse trouvée.',
+  'admin.addressSearchUnavailable':
+    'La recherche d’adresses est indisponible. Tu peux écrire l’adresse à la main.',
+  'admin.addressQueryInvalid':
+    'Écris au moins trois caractères pour chercher une adresse.',
   'admin.locationNotes': 'Notes',
   'admin.locationSaved': 'Lieu enregistré.',
   'admin.locationDeleted': 'Lieu supprimé.',

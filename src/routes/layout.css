@@ -742,6 +742,11 @@
 			display: none;
 		}
 	}
+	.rink-team {
+		/* La largeur de la glace décide de la disposition des jetons, pas la
+		   largeur de la fenêtre : une carte étroite reçoit la grille. */
+		container-type: inline-size;
+	}
 	.rink-roster {
 		display: none;
 	}
@@ -776,84 +781,95 @@
 		background-position: center;
 		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-paper) 55%, transparent);
 	}
-	.rink::after {
-		content: '';
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		width: var(--rink-circle);
-		aspect-ratio: 1;
-		transform: translate(-50%, -50%);
-		border: 2px solid color-mix(in srgb, var(--color-ice-deep) 55%, transparent);
-		border-radius: 50%;
-	}
 	.rink-token {
 		position: absolute;
-		/* Le gardien et les défenseurs frôlent les bandes : sous 400 px, le
-		   jeton et son anneau de focus sortiraient de la glace. L'inset garde
-		   le centre du jeton à une demi-largeur mesurée de la bande. */
-		top: clamp(2.25rem, var(--y), calc(100% - 2.25rem));
-		left: clamp(2.25rem, var(--x), calc(100% - 2.25rem));
+		/* Le gardien et les défenseurs frôlent les bandes : l'inset garde le
+		   portrait et son étiquette à une demi-hauteur mesurée de la bande. */
+		top: clamp(2.5rem, var(--y), calc(100% - 2.5rem));
+		left: clamp(2.5rem, var(--x), calc(100% - 2.5rem));
 		z-index: 2;
-		display: block;
-		width: clamp(2.75rem, 14%, 3.75rem);
-		aspect-ratio: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.2rem;
+		width: clamp(3rem, 14%, 4rem);
+		min-height: 2.75rem;
 		padding: 0;
-		overflow: hidden;
 		transform: translate(-50%, -50%);
-		border: 2px solid var(--color-paper);
-		border-radius: 50%;
-		background: var(--color-paper-deep);
+		border: 0;
+		background: transparent;
 		color: var(--color-ink);
-		box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 		cursor: pointer;
 		touch-action: manipulation;
 		transition:
 			transform var(--duration-fast) var(--ease-out-expo),
-			box-shadow var(--duration-fast) var(--ease-out-expo),
 			opacity var(--duration-fast) linear;
 	}
-	.rink-token[data-team='white'] {
+	.rink-token:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+		border-radius: var(--radius-control);
+	}
+	.rink-face {
+		position: relative;
+		display: block;
+		width: 100%;
+		aspect-ratio: 1;
+	}
+	.rink-portrait {
+		position: absolute;
+		inset: 0;
+		display: block;
+		overflow: hidden;
+		border: 2px solid var(--color-paper);
+		border-radius: 50%;
+		background: var(--color-paper-deep);
+		box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
+		transition:
+			transform var(--duration-fast) var(--ease-out-expo),
+			box-shadow var(--duration-fast) var(--ease-out-expo);
+	}
+	.rink-token[data-team='white'] .rink-portrait {
 		border-color: var(--color-paper);
 		box-shadow:
 			0 0 0 1px var(--color-ink),
 			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 	}
-	.rink-token[data-team='black'] {
+	.rink-token[data-team='black'] .rink-portrait {
 		border-color: var(--color-ink);
 		box-shadow:
 			0 0 0 1px var(--color-paper),
 			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 	}
-	.rink-token[data-you='true'] {
+	.rink-token[data-you='true'] .rink-portrait {
 		box-shadow:
 			0 0 0 2px var(--color-paper),
 			0 0 0 4px var(--color-accent),
 			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 	}
-	.rink-token[data-awaiting='true'] {
+	.rink-token[data-awaiting='true'] .rink-portrait {
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
 	}
-	.rink-token[data-awaiting='true'][data-filled='false'] {
+	.rink-token[data-awaiting='true'][data-filled='false'] .rink-portrait {
 		border-color: var(--color-accent);
 		background: color-mix(in srgb, var(--color-accent-soft) 60%, transparent);
 		color: var(--color-accent-deep);
 	}
-	.rink-token[data-filled='false'] {
+	.rink-token[data-filled='false'] .rink-portrait {
 		background: color-mix(in srgb, var(--color-paper) 55%, transparent);
 		border: 2px dashed color-mix(in srgb, var(--color-ink) 35%, transparent);
 		color: var(--color-muted);
 		box-shadow: none;
 	}
-	.rink-token[data-selected='true'] {
+	.rink-token[data-selected='true'] .rink-portrait {
 		/* La sélection garde son anneau, mais sur l'ombre : le contour reste
 		   réservé au focus clavier, même quand les deux se superposent. */
 		box-shadow:
 			0 0 0 3px var(--color-accent),
 			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 	}
-	.rink-token[data-drop-active='true'] {
-		transform: translate(-50%, -50%) scale(1.08);
+	.rink-token[data-drop-active='true'] .rink-portrait {
+		transform: scale(1.08);
 		box-shadow:
 			0 0 0 4px var(--color-accent),
 			0 0 0 7px color-mix(in srgb, var(--color-accent) 25%, transparent);
@@ -864,65 +880,46 @@
 	.rink-token:disabled {
 		cursor: default;
 	}
-	.rink-portrait {
-		position: absolute;
-		inset: 0;
-		display: block;
-	}
 	.rink-number {
 		position: absolute;
-		top: 0.1rem;
-		right: 0.1rem;
-		z-index: 1;
+		left: 50%;
+		bottom: -0.35rem;
+		z-index: 2;
+		display: grid;
+		place-items: center;
 		min-width: 1.15rem;
 		height: 1.15rem;
-		padding: 0 0.18rem;
+		padding: 0 0.2rem;
+		transform: translateX(-50%);
+		border: 1px solid var(--color-paper);
 		border-radius: var(--radius-pill);
 		background: var(--color-ink);
 		color: var(--color-paper);
 		font-family: var(--font-mono);
-		font-size: clamp(0.6rem, 2.4vw, 0.72rem);
+		font-size: clamp(0.58rem, 2.2vw, 0.7rem);
 		font-weight: 700;
-		line-height: 1.15rem;
-		text-align: center;
-	}
-	.rink-role {
-		position: absolute;
-		top: 0.1rem;
-		left: 0.1rem;
-		z-index: 1;
-		min-width: 1.15rem;
-		height: 1.15rem;
-		padding: 0 0.18rem;
-		border-radius: var(--radius-pill);
-		background: var(--color-paper);
-		color: var(--color-ink);
-		font-family: var(--font-mono);
-		font-size: clamp(0.58rem, 2.4vw, 0.7rem);
-		font-weight: 700;
-		line-height: 1.15rem;
+		line-height: 1;
 		text-align: center;
 	}
 	.rink-name {
-		position: absolute;
-		right: 0;
-		bottom: 0;
-		left: 0;
-		z-index: 1;
+		display: block;
 		width: 100%;
 		max-width: 100%;
-		overflow: hidden;
-		padding: 0.15rem 0.1rem;
-		background: color-mix(in srgb, var(--color-ink) 78%, transparent);
+		overflow: visible;
+		padding: 0.1rem 0.15rem;
+		border-radius: var(--radius-pill);
+		background: color-mix(in srgb, var(--color-ink) 82%, transparent);
 		color: var(--color-paper);
-		font-size: clamp(0.6rem, 1.8vw, 0.7rem);
+		font-size: clamp(0.65rem, 1.7vw, 0.7rem);
 		font-weight: 600;
 		line-height: 1.05;
 		text-align: center;
-		text-overflow: ellipsis;
-		/* Un nom de famille ne se coupe jamais : le jeton tronque au complet. */
-		hyphens: none;
-		white-space: nowrap;
+		text-overflow: clip;
+		/* Un nom de famille reste entier : l'étiquette se replie sur le trait
+		   d'union existant, sans coupure insérée ni points de suspension. */
+		hyphens: manual;
+		overflow-wrap: normal;
+		white-space: normal;
 	}
 	.rink-empty {
 		display: grid;
@@ -935,11 +932,53 @@
 		letter-spacing: 0.02em;
 		line-height: 1;
 	}
-	/* Au grand écran, le jeton est assez large pour porter ses libellés à la
-	   taille de lecture plancher, sans changer la géométrie de la glace. */
+	/* Une glace étroite garde six jetons lisibles : deux rangées, trois
+	   colonnes, jamais de chevauchement. Les attaquants restent devant, les
+	   défenseurs et le gardien derrière, chacun de son côté. */
+	@container (max-width: 559px) {
+		.rink {
+			aspect-ratio: 4 / 3;
+		}
+		.rink-token {
+			width: min(28%, 4rem);
+		}
+		.rink-token[data-lineup-key$=':forward:0'] {
+			top: 25%;
+			left: 20%;
+		}
+		.rink-token[data-lineup-key$=':forward:1'] {
+			top: 25%;
+			left: 50%;
+		}
+		.rink-token[data-lineup-key$=':forward:2'] {
+			top: 25%;
+			left: 80%;
+		}
+		.rink-token[data-lineup-key$=':defense:0'] {
+			top: 75%;
+			left: 20%;
+		}
+		.rink-token[data-lineup-key$=':defense:1'] {
+			top: 75%;
+			left: 50%;
+		}
+		.rink-token[data-lineup-key$=':goalie:0'] {
+			top: 75%;
+			left: 80%;
+		}
+		.rink-token[data-team='white'][data-lineup-key$=':defense:0'] {
+			left: 80%;
+		}
+		.rink-token[data-team='white'][data-lineup-key$=':defense:1'] {
+			left: 50%;
+		}
+		.rink-token[data-team='white'][data-lineup-key$=':goalie:0'] {
+			left: 20%;
+		}
+	}
+	/* Au grand écran, le numéro atteint la taille de lecture plancher; le nom
+	   garde sa taille de jeton pour tenir entre deux colonnes. */
 	@media (min-width: 900px) {
-		.rink-role,
-		.rink-name,
 		.rink-number {
 			font-size: var(--text-caption);
 		}
@@ -1562,5 +1601,14 @@
 	.btn-on-ink:hover,
 	.btn-on-ink:active {
 		transform: none;
+	}
+}
+
+/* Le z-20 de la rangée est une classe utilitaire : la règle d'état doit vivre
+   dans la même couche, après les utilitaires générés, pour qu'un menu ouvert
+   passe au-dessus des rangées suivantes. */
+@layer utilities {
+	details[open]:has(> .sheet) {
+		z-index: 30;
 	}
 }

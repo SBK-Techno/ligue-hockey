@@ -150,7 +150,7 @@ beforeEach(() => {
 });
 
 describe('unicité des identités actives', () => {
-	it('garde 58 identités actives distinctes et non nulles', () => {
+	it('garde toutes les identités actives distinctes et non nulles', () => {
 		for (const [index, avatarId] of IDENTITY_IDS.entries()) {
 			addPlayer(`player-${index}`, { avatarId });
 		}
@@ -158,12 +158,12 @@ describe('unicité des identités actives', () => {
 		const rows = sqlite
 			.prepare('select avatar_id, active from players where active = 1')
 			.all() as { avatar_id: string | null; active: number }[];
-		expect(rows).toHaveLength(58);
+		expect(rows).toHaveLength(IDENTITY_IDS.length);
 		expect(rows.every((row) => row.avatar_id !== null)).toBe(true);
-		expect(new Set(rows.map((row) => row.avatar_id)).size).toBe(58);
+		expect(new Set(rows.map((row) => row.avatar_id)).size).toBe(IDENTITY_IDS.length);
 	});
 
-	it('refuse le 59e joueur avec un message explicite et sans écrire de null', async () => {
+	it('refuse le joueur suivant avec un message explicite et sans écrire de null', async () => {
 		for (const [index, avatarId] of IDENTITY_IDS.entries()) {
 			addPlayer(`player-${index}`, { avatarId });
 		}
@@ -175,22 +175,22 @@ describe('unicité des identités actives', () => {
 		const rows = sqlite
 			.prepare('select avatar_id from players where active = 1')
 			.all() as { avatar_id: string | null }[];
-		expect(rows).toHaveLength(58);
+		expect(rows).toHaveLength(IDENTITY_IDS.length);
 		expect(rows.every((row) => row.avatar_id !== null)).toBe(true);
 	});
 
-	it('donne la dernière identité libre au 58e joueur', async () => {
-		for (const [index, avatarId] of IDENTITY_IDS.slice(0, 57).entries()) {
+	it('donne la dernière identité libre au joueur suivant', async () => {
+		for (const [index, avatarId] of IDENTITY_IDS.slice(0, -1).entries()) {
 			addPlayer(`player-${index}`, { avatarId });
 		}
 
 		await invitePlayer(admin, inviteInput);
 
-		expect(playerRow('new-player').avatar_id).toBe(IDENTITY_IDS[57]);
+		expect(playerRow('new-player').avatar_id).toBe(IDENTITY_IDS.at(-1));
 	});
 
 	it('nettoie le compte créé si la réservation échoue après la création', async () => {
-		for (const [index, avatarId] of IDENTITY_IDS.slice(0, 57).entries()) {
+		for (const [index, avatarId] of IDENTITY_IDS.slice(0, -1).entries()) {
 			addPlayer(`player-${index}`, { avatarId });
 		}
 		h.createUser.mockImplementation(async ({ email, name }: { email: string; name: string }) => {
@@ -201,7 +201,7 @@ describe('unicité des identités actives', () => {
 					 values (?, ?, ?, 1, ?, ?, 'player')`
 				)
 				.run(id, name, email, NOW, NOW);
-			addPlayer('race-winner', { avatarId: IDENTITY_IDS[57] });
+			addPlayer('race-winner', { avatarId: IDENTITY_IDS.at(-1)! });
 			return { id };
 		});
 

@@ -22,7 +22,7 @@ const positions = new Map<string, { x: number; y: number }>(
 /**
  * Le style de la tuile d'une identité dans la planche. Une image, une taille
  * de fond commune, une position par identité : le navigateur ne télécharge
- * jamais 58 fichiers.
+ * jamais un fichier par identité.
  */
 export function identitySheetStyle(identityId: string): string {
 	const position = positions.get(identityId);

@@ -3,6 +3,7 @@
 	import type { LocationMetrics } from '#lib/domain/locations/service.ts';
 	import { LOCATION_LIMITS } from '#config/games.ts';
 	import { formatCount, formatDate, t } from '#lib/shared/i18n/index.ts';
+	import AddressField from '#lib/ui/AddressField.svelte';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
@@ -66,7 +67,7 @@
 	<FormFeedback {form} />
 
 	<div class="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
-		<SectionCard title={t('admin.addLocation')}>
+		<SectionCard title={t('admin.addLocation')} clip={false}>
 			<form method="POST" action="?/create" use:progressiveForm class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
 				<div>
 					<label class="label" for="new-location-name">{t('admin.locationName')}</label>
@@ -78,27 +79,7 @@
 						required
 					/>
 				</div>
-				<div>
-					<label class="label" for="new-location-address">{t('admin.locationAddress')}</label>
-					<input
-						class="input"
-						id="new-location-address"
-						name="address"
-						maxlength={LOCATION_LIMITS.addressMax}
-					/>
-				</div>
-				<div class="sm:col-span-2 lg:col-span-1">
-					<label class="label" for="new-location-map">{t('admin.locationMap')}</label>
-					<input
-						class="input"
-						id="new-location-map"
-						name="mapUrl"
-						type="url"
-						maxlength={LOCATION_LIMITS.mapUrlMax}
-						placeholder="https://"
-					/>
-					<p class="hint">{t('admin.locationMapHelp')}</p>
-				</div>
+				<AddressField id="new-location-address" />
 				<div class="sm:col-span-2 lg:col-span-1">
 					<label class="label" for="new-location-notes">{t('admin.locationNotes')}</label>
 					<textarea
@@ -122,7 +103,7 @@
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<SectionCard flush>
+			<SectionCard flush clip={false}>
 				<p class="section-row text-meta text-muted">
 					{formatCount(data.locations.length, 'admin.locationCount.one', 'admin.locationCount.many')}
 				</p>
@@ -166,7 +147,7 @@
 									<form
 										method="POST"
 										action="?/update"
-										use:progressiveForm
+										use:progressiveForm={{ reset: false }}
 										class="mt-3 grid gap-3 sm:grid-cols-2"
 									>
 										<input type="hidden" name="id" value={location.id} />
@@ -183,30 +164,11 @@
 												required
 											/>
 										</div>
-										<div>
-											<label class="label" for="location-address-{location.id}">
-												{t('admin.locationAddress')}
-											</label>
-											<input
-												class="input"
-												id="location-address-{location.id}"
-												name="address"
-												value={location.address ?? ''}
-												maxlength={LOCATION_LIMITS.addressMax}
-											/>
-										</div>
 										<div class="sm:col-span-2">
-											<label class="label" for="location-map-{location.id}">
-												{t('admin.locationMap')}
-											</label>
-											<input
-												class="input"
-												id="location-map-{location.id}"
-												name="mapUrl"
-												type="url"
-												value={location.mapUrl ?? ''}
-												maxlength={LOCATION_LIMITS.mapUrlMax}
-												placeholder="https://"
+											<AddressField
+												id="location-address-{location.id}"
+												value={location.address ?? ''}
+												mapUrl={location.mapUrl ?? ''}
 											/>
 										</div>
 										<div class="sm:col-span-2">

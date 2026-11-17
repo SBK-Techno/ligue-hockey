@@ -2,6 +2,20 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.11.0 (in progress)
+
+- **Rink tokens.** The decorative centre faceoff ring is gone. A filled token clips only its painted portrait: the jersey number sits outside that clip and the last name below it, without ellipsis or an inserted hyphen. A rink narrower than 560 px switches to a three-column, two-row formation grid, so the six tokens never overlap at 320 px or in the 400 px rink at 900 px; empty slots keep their role initials. Long names keep their full markup and wrap only at a real hyphen.
+- **Menus.** An open `<details>` that owns a `.sheet` is lifted through the utilities layer above the row's `z-20`, so a three-dot menu paints above later rows instead of under them. The `menuUp` rule still flips the last two rows.
+- **Identity picker.** One catalogue only: 38 tribute legends (16 forwards, 16 defence, 6 goalies) cover the largest roster, while the 28 league faces remain as the current-identity fallback for existing profiles. Cards are single-column and names wrap instead of truncating. A taken identity is greyed, disabled and marked with a lock, never with an “Indisponible” label. The non-affiliation sentence is gone from the picker, dictionary and product docs.
+- **New tributes.** Georges Vézina, Bill Durnan, Tom Johnson, Jean-Guy Talbot, Rod Langway, Craig Ludwig, Patrice Brisebois and Guy Carbonneau join the catalogue with verified number, position and era facts; Vézina's career is corrected to 1910-1925. The regenerated identity sheet is 165 624 bytes, under the 220 KB budget.
+- **Locations.** The visible map URL field is gone. The address field searches Photon/OpenStreetMap after three characters, lets the member pick a suggestion, and writes the OpenStreetMap marker link into a hidden `mapUrl`; editing the address clears it, and a form reset clears the address and the hidden link together. The create form keeps only name, address and optional note. The internal `/api/address-search` route requires `manageGames`, allows 60 searches per minute per manager, caches results for ten minutes and returns the shared error envelope when the provider is down. Provider, limits and timeout live in `config/maps.ts`; the browser never calls Photon.
+- **Migration.** `0010_hesitant_lila_cheney.sql` is regenerated from the 66-identity catalogue, and the migration fixtures now assign all 66 identities or refuse an incomplete position.
+- **Gate.** `npm run gate` exit 0: 1187 tests in 165 files, svelte-check 0/0, architecture 418 files, generated assets and documentation current, 95 client chunks without zod.
+- **Browser evidence.** Chrome at 1440, 1024, 900, 640 and 320 reports zero horizontal overflow, zero console errors, zero rink-token overlaps and zero overflowing names. The three-dot menu paints above the next row at 900 and opens upward in the last row at 320. The defence picker shows 17 cards (16 legends plus the current face) with no clipped text and no “Indisponible” string. Address create, update and reset flows set and clear the hidden marker URL correctly; a saved location opens its marker link.
+- **Release.** Pending.
+- **Live.** Pending.
+- **Rollback.** Pending.
+
 ## Release 1.10.0 (shipped)
 
 - **One owner.** `/equipes/[id]` is the canonical team surface: next-match card, manager preparation, lineup editor, read-only teams and the last 20 past matches with their stored per-game team counts. `/equipes` redirects to the first relevant game, so every entry point owns a real game id. `/matchs/[id]` and `/admin/matchs/[id]` link to it and no longer render a lineup editor or a second team view. `TeamLineup.svelte` and the old match editor tests are removed.

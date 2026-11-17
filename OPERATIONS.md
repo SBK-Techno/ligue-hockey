@@ -8,6 +8,7 @@ Cette application est un conteneur unique : SvelteKit (Node 24), SQLite en mode 
 - Un nom de domaine et un proxy HTTPS devant le conteneur (Caddy, Traefik ou nginx).
 - Un serveur SMTP pour les courriels transactionnels.
 - Une paire de clés VAPID pour les notifications push.
+- Un accès HTTPS sortant vers `photon.komoot.io` pour la recherche d'adresses des lieux.
 
 ## Variables d'environnement
 
@@ -240,6 +241,7 @@ Ne copiez jamais une base WAL active fichier par fichier : utilisez `.backup` ou
 | Connexion impossible | Vérifier `ORIGIN`, `BETTER_AUTH_SECRET`, l'horloge système et `MAX_LOGIN_ATTEMPTS`. |
 | Courriels absents | Vérifier `SMTP_*`, `notifications.emailEnabled`, et `notification_jobs.last_error`. |
 | Push absent | Vérifier les clés VAPID, l'installation de la PWA et l'autorisation du navigateur. |
+| Recherche d'adresses indisponible | Vérifier l'accès HTTPS sortant vers `photon.komoot.io` et la limite de 60 recherches par minute et par gestionnaire; l'adresse reste saisissable à la main. |
 | Lien d'activation expiré | Le joueur utilise **Mot de passe oublié?** ou un administrateur renvoie un lien depuis la fiche du joueur. |
 | Mot de passe oublié sans courriel | Vérifier `SMTP_*`, `RESET_REQUESTS_PER_HOUR` et `notification_jobs.last_error`; les réponses restent génériques pour ne pas révéler les comptes. |
 | Équipes refusées | Vérifier que tous les joueurs retenus ont leurs quatre notes; les règles de paires peuvent rendre l'alignement impossible. |

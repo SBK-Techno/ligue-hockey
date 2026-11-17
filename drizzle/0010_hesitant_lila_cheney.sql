@@ -63,7 +63,15 @@ WITH catalogue(seq, id, position) AS (
   (55, 'legende-lemaire', 'forward'),
   (56, 'legende-shutt', 'forward'),
   (57, 'legende-damphousse', 'forward'),
-  (58, 'legende-morenz', 'forward')
+  (58, 'legende-morenz', 'forward'),
+  (59, 'legende-vezina', 'goalie'),
+  (60, 'legende-durnan', 'goalie'),
+  (61, 'legende-johnson', 'defense'),
+  (62, 'legende-talbot', 'defense'),
+  (63, 'legende-langway', 'defense'),
+  (64, 'legende-ludwig', 'defense'),
+  (65, 'legende-brisebois', 'defense'),
+  (66, 'legende-carbonneau', 'forward')
 )
 UPDATE players
 SET avatar_id = NULL
@@ -141,7 +149,15 @@ WITH catalogue(seq, id, position) AS (
   (55, 'legende-lemaire', 'forward'),
   (56, 'legende-shutt', 'forward'),
   (57, 'legende-damphousse', 'forward'),
-  (58, 'legende-morenz', 'forward')
+  (58, 'legende-morenz', 'forward'),
+  (59, 'legende-vezina', 'goalie'),
+  (60, 'legende-durnan', 'goalie'),
+  (61, 'legende-johnson', 'defense'),
+  (62, 'legende-talbot', 'defense'),
+  (63, 'legende-langway', 'defense'),
+  (64, 'legende-ludwig', 'defense'),
+  (65, 'legende-brisebois', 'defense'),
+  (66, 'legende-carbonneau', 'forward')
 ),
 used AS (
   SELECT avatar_id AS id
@@ -257,7 +273,15 @@ WITH catalogue(seq, id, position) AS (
   (55, 'legende-lemaire', 'forward'),
   (56, 'legende-shutt', 'forward'),
   (57, 'legende-damphousse', 'forward'),
-  (58, 'legende-morenz', 'forward')
+  (58, 'legende-morenz', 'forward'),
+  (59, 'legende-vezina', 'goalie'),
+  (60, 'legende-durnan', 'goalie'),
+  (61, 'legende-johnson', 'defense'),
+  (62, 'legende-talbot', 'defense'),
+  (63, 'legende-langway', 'defense'),
+  (64, 'legende-ludwig', 'defense'),
+  (65, 'legende-brisebois', 'defense'),
+  (66, 'legende-carbonneau', 'forward')
 )
 INSERT INTO identity_backfill_guard (ok)
 SELECT CASE

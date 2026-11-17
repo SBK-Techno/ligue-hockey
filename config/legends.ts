@@ -6,20 +6,20 @@ import type { Position } from './positions.ts';
  * The names, jersey numbers, positions and eras are historical facts about
  * Montréal Canadiens alumni. The portraits are original painted images,
  * recognizable through likeness, era and equipment: no photograph, logo or
- * official mark is used or implied. The disclaimer shown by the picker is the
- * single notice for the whole family.
+ * official mark is used or implied.
  *
  * A legend is a complete identity: its facts and its painted portrait belong
  * to the catalogue, and the picker only offers the legends that played the
  * player's position.
  *
- * Selection: thirty of the most popular alumni, distributed 15 forwards,
- * 11 defense and 4 goalies to mirror the league roster (14/10/4). The era is
- * the season span, first season start year to last season end year, so Roy is
- * 1984-1996 and Dryden is 1970-1979. Morenz is preferred to Näslund and
- * Tremblay to Brisebois because the retired-number core outranks longevity.
- * Duplicate jersey numbers are historical: 2, 3, 5, 6, 12, 16 and 25 were each
- * worn by two of these players.
+ * Selection: thirty-eight tribute identities, distributed 16 forwards,
+ * 16 defense and 6 goalies so every position covers the maximum roster
+ * (8+8+3 per team, two teams). The era is the season span, first season start
+ * year to last season end year, so Roy is 1984-1996 and Dryden is
+ * 1970-1979. Morenz is preferred to Näslund and Tremblay to Brisebois because
+ * the retired-number core outranks longevity. Duplicate jersey numbers are
+ * historical: 1, 2, 3, 5, 6, 10, 12, 16, 17 and 25 were each worn by more
+ * than one of these players.
  */
 type LegendShape = {
   id: string;
@@ -126,9 +126,8 @@ export const LEGENDS = [
     name: 'Saku Koivu',
     number: 11,
     position: 'forward',
-    era: '1995-2009',
-  }
-,
+    era: '1995-2009'
+  },
   {
     id: 'legende-laperriere',
     name: 'Jacques Laperrière',
@@ -239,7 +238,63 @@ export const LEGENDS = [
     name: 'Howie Morenz',
     number: 7,
     position: 'forward',
-    era: '1923-1937',
+    era: '1923-1937'
+  },
+  {
+    id: 'legende-vezina',
+    name: 'Georges Vézina',
+    number: 1,
+    position: 'goalie',
+    era: '1910-1925'
+  },
+  {
+    id: 'legende-durnan',
+    name: 'Bill Durnan',
+    number: 1,
+    position: 'goalie',
+    era: '1943-1950'
+  },
+  {
+    id: 'legende-johnson',
+    name: 'Tom Johnson',
+    number: 10,
+    position: 'defense',
+    era: '1947-1963'
+  },
+  {
+    id: 'legende-talbot',
+    name: 'Jean-Guy Talbot',
+    number: 17,
+    position: 'defense',
+    era: '1954-1967'
+  },
+  {
+    id: 'legende-langway',
+    name: 'Rod Langway',
+    number: 17,
+    position: 'defense',
+    era: '1978-1982'
+  },
+  {
+    id: 'legende-ludwig',
+    name: 'Craig Ludwig',
+    number: 17,
+    position: 'defense',
+    era: '1982-1990'
+  },
+  {
+    id: 'legende-brisebois',
+    name: 'Patrice Brisebois',
+    number: 43,
+    position: 'defense',
+    era: '1991-2009'
+  },
+  {
+    id: 'legende-carbonneau',
+    name: 'Guy Carbonneau',
+    number: 21,
+    position: 'forward',
+    era: '1980-1994'
   }
 ] as const satisfies readonly LegendShape[];
 
@@ -250,6 +305,14 @@ export const LEGEND_IDS = LEGENDS.map((legend) => legend.id) as [
   LegendId,
   ...LegendId[]
 ];
+
+const legendIdSet = new Set<string>(LEGEND_IDS);
+
+export function isLegendId(
+  value: string | null | undefined
+): value is LegendId {
+  return typeof value === 'string' && legendIdSet.has(value);
+}
 
 /** La première saison d'une ère, l'unique clé d'ordre du catalogue. */
 function eraStart(era: string): number {

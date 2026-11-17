@@ -16,7 +16,7 @@ Run one Sunday-morning hockey league end to end: schedule, presence, teams, subs
 
 ## Positioning
 
-A real Québec garage-league operating system, not a generic team app: French `tu` copy, real league rituals, position-aware identities, thirty fact-checked Montréal Canadiens tributes, and stats-only comparison with no skill ratings.
+A real Québec garage-league operating system, not a generic team app: French `tu` copy, real league rituals, position-aware identities, thirty-eight fact-checked Montréal Canadiens tributes, and stats-only comparison with no skill ratings.
 
 ## Operating Context
 
@@ -24,15 +24,15 @@ The league plays Sunday mornings on real arena ice. Players arrive with a hockey
 
 ## Capabilities and Constraints
 
-SvelteKit and Node, SQLite in WAL mode, one league per deployment. Presence, substitute requests, ratings, balances, chat, polls, push and email notifications. Every active player has one unique identity from a 58-identity catalogue: 28 league faces and 30 tributes, filtered by position. Players see their own season statistics, never skills or ratings of other players. No official league, team or Canadiens logo or photograph is used; a clear non-affiliation notice stays visible. Currency is CAD. The supported production entry point is `node serve.js`.
+SvelteKit and Node, SQLite in WAL mode, one league per deployment. Presence, substitute requests, ratings, balances, chat, polls, push and email notifications. Every active player has one unique identity from a 66-identity catalogue: 38 tribute legends and 28 league faces kept as capacity fallback. The picker offers the position-aware tribute legends; league faces remain for existing profiles and full leagues. Players see their own season statistics, never skills or ratings of other players. No official league, team or Canadiens logo or photograph is used. Currency is CAD. The supported production entry point is `node serve.js`.
 
 ## Brand Commitments
 
-Québec French in the `tu` form, sentence case, no English or jargon, no em or en dash. The league voice is warm, direct and a little dry. The visual world is paper and ice: real materials, printed and painted surfaces, flat controls, no AI gradients, glass or glows. The user confirmed on 2026-11-17 a system-wide move to realistic, natural and modern materials across every surface, with illustrated realism for player portraits. Each tribute portrait is an original painted image, recognizable as the real player through likeness, era and equipment; it is never an official photograph, logo or mark. The non-affiliation notice stays visible.
+Québec French in the `tu` form, sentence case, no English or jargon, no em or en dash. The league voice is warm, direct and a little dry. The visual world is paper and ice: real materials, printed and painted surfaces, flat controls, no AI gradients, glass or glows. The user confirmed on 2026-11-17 a system-wide move to realistic, natural and modern materials across every surface, with illustrated realism for player portraits. Each tribute portrait is an original painted image, recognizable as the real player through likeness, era and equipment; it is never an official photograph, logo or mark.
 
 ## Evidence on Hand
 
-The live league database, the 30 fact-checked tribute identities and their era/position facts, the existing paper/ice design system, and the generated identity and texture assets. No customer testimonials, benchmarks or commercial claims exist and none may be invented.
+The live league database, the 38 fact-checked tribute identities and their era/position facts, the existing paper/ice design system, and the generated identity and texture assets. No customer testimonials, benchmarks or commercial claims exist and none may be invented.
 
 ## Product Principles
 
