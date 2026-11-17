@@ -32,6 +32,7 @@
 	type DragSession = {
 		key: string;
 		pointerId: number;
+		pointerType: string;
 		startX: number;
 		startY: number;
 		x: number;
@@ -104,6 +105,16 @@
 
 	const assignmentsJson = $derived(JSON.stringify(assignmentsForSave(slots, assignments)));
 	const geometryStyle = rinkGeometryStyle();
+
+	/**
+	 * Le guide suit un seul chemin : choisir un joueur, choisir sa place,
+	 * enregistrer. Après un déplacement, les deux premiers gestes sont faits.
+	 */
+	const stepOne = $derived(selected !== null || dirty ? 'done' : 'active');
+	const stepTwo = $derived(
+		selected !== null ? 'active' : dirty ? 'done' : 'todo'
+	);
+	const stepThree = $derived(dirty ? 'active' : 'todo');
 
 	function playerById(playerId: string): BoardPlayer | null {
 		return players.find((player) => player.playerId === playerId) ?? null;
@@ -181,24 +192,37 @@
 		const key = lineupKeyAt(event.target);
 		if (!key) return;
 		const player = playerOf(key);
+		const touch = event.pointerType === 'touch';
 		drag = {
 			key,
 			pointerId: event.pointerId,
+			pointerType: event.pointerType,
 			startX: event.clientX,
 			startY: event.clientY,
 			x: event.clientX,
 			y: event.clientY,
 			dragging: false,
-			draggable: player !== null,
+			/* Au toucher, le geste reste un toucher : la page doit pouvoir
+			   défiler. Le déplacement se fait en deux touchers. */
+			draggable: !touch && player !== null,
 			fromSlot: benchPlayerId(key) === null
 		};
-		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+		if (!touch) {
+			(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+		}
 	}
 
 	function movePointer(event: PointerEvent) {
 		if (!drag || drag.pointerId !== event.pointerId) return;
 		const dx = event.clientX - drag.startX;
 		const dy = event.clientY - drag.startY;
+
+		if (drag.pointerType === 'touch') {
+			/* Un doigt qui glisse fait défiler la page, jamais un échange. */
+			if (Math.hypot(dx, dy) > 12) drag = null;
+			return;
+		}
+
 		if (!drag.dragging && Math.hypot(dx, dy) < 8) {
 			drag = { ...drag, x: event.clientX, y: event.clientY };
 			return;
@@ -276,17 +300,33 @@
 		<div>
 			<p class="sr-only">{t('rink.steps')}</p>
 			<ol class="lineup-steps">
-				<li data-state={selected ? 'done' : 'active'}>
+				<li data-state={stepOne} aria-current={stepOne === 'active' ? 'step' : undefined}>
 					<span class="step-mark" aria-hidden="true">1</span>
 					<span>{t('rink.stepPick')}</span>
+					<span class="sr-only">
+						{stepOne === 'done' ? t('rink.stepDone') : t('rink.stepActive')}
+					</span>
 				</li>
-				<li data-state={selected ? 'active' : 'todo'}>
+				<li data-state={stepTwo} aria-current={stepTwo === 'active' ? 'step' : undefined}>
 					<span class="step-mark" aria-hidden="true">2</span>
 					<span>{t('rink.stepPlace')}</span>
+					<span class="sr-only">
+						{stepTwo === 'done'
+							? t('rink.stepDone')
+							: stepTwo === 'active'
+								? t('rink.stepActive')
+								: t('rink.stepTodo')}
+					</span>
 				</li>
-				<li data-state={dirty ? 'active' : 'todo'}>
+				<li
+					data-state={stepThree}
+					aria-current={stepThree === 'active' ? 'step' : undefined}
+				>
 					<span class="step-mark" aria-hidden="true">3</span>
 					<span>{t('rink.stepSave')}</span>
+					<span class="sr-only">
+						{stepThree === 'active' ? t('rink.stepActive') : t('rink.stepTodo')}
+					</span>
 				</li>
 			</ol>
 		</div>
@@ -318,7 +358,6 @@
 								data-lineup-key={placement.key}
 								data-filled={player !== null}
 								data-selected={selected === placement.key}
-								data-draggable={canEdit && player ? 'true' : undefined}
 								data-drag-source={drag?.dragging && drag.key === placement.key}
 								data-drop-active={hoverKey === placement.key}
 								data-awaiting={canEdit && selected !== null && selected !== placement.key}
@@ -356,8 +395,7 @@
 									data-lineup-key={placement.key}
 									data-filled={player !== null}
 									data-selected={selected === placement.key}
-									data-draggable={canEdit && player ? 'true' : undefined}
-									data-drag-source={drag?.dragging && drag.key === placement.key}
+										data-drag-source={drag?.dragging && drag.key === placement.key}
 									data-drop-active={hoverKey === placement.key}
 									data-awaiting={canEdit && selected !== null && selected !== placement.key}
 									disabled={!canEdit && player === null}
@@ -408,7 +446,6 @@
 								data-lineup-key={benchKey(player.playerId)}
 								data-filled="true"
 								data-selected={selected === benchKey(player.playerId)}
-								data-draggable={canEdit ? 'true' : undefined}
 								data-drag-source={drag?.dragging && drag.key === benchKey(player.playerId)}
 								data-drop-active={hoverKey === benchKey(player.playerId)}
 								data-player-peek={!canEdit ? 'click' : undefined}

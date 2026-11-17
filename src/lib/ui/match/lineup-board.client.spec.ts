@@ -58,6 +58,20 @@ function fire(node: Element, type: string, x: number, y: number) {
 	flushSync();
 }
 
+function fireTouch(node: Element, type: string, x: number, y: number) {
+	const event = new MouseEvent(type, {
+		bubbles: true,
+		cancelable: true,
+		button: 0,
+		clientX: x,
+		clientY: y
+	});
+	Object.defineProperty(event, 'pointerId', { value: 2 });
+	Object.defineProperty(event, 'pointerType', { value: 'touch' });
+	node.dispatchEvent(event);
+	flushSync();
+}
+
 function drag(from: Element, to: Element) {
 	dropTarget = to;
 	fire(from, 'pointerdown', 10, 10);
@@ -79,6 +93,10 @@ function button(label: string): HTMLButtonElement {
 	);
 	if (!node) throw new Error(`bouton absent: ${label}`);
 	return node as HTMLButtonElement;
+}
+
+function currentStep(): HTMLElement | null {
+	return document.querySelector<HTMLElement>('.lineup-steps li[aria-current="step"]');
 }
 
 beforeEach(() => {
@@ -129,6 +147,7 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(token('white:forward:1').dataset.filled).toBe('true');
 		expect(token('white:forward:1').textContent).toContain('Roy');
+		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
 	});
 
 	it('touche un joueur puis une place pour le déplacer', () => {
@@ -136,10 +155,12 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.selected).toBe('true');
 		expect(token('white:forward:1').dataset.awaiting).toBe('true');
 		expect(document.body.textContent).toContain('Alice Roy');
+		expect(currentStep()?.textContent).toContain(t('rink.stepPlace'));
 
 		tap(token('white:forward:1'));
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(token('white:forward:1').textContent).toContain('Roy');
+		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
 	});
 
 	it('glisse un joueur du banc vers la glace', () => {
@@ -147,6 +168,7 @@ describe('gestes de la carte', () => {
 
 		expect(token('white:forward:1').textContent).toContain('Gagnon');
 		expect(document.querySelector('[data-lineup-key="bench:b"]')).toBeNull();
+		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
 	});
 
 	it('dépose un joueur sur le banc pour le retirer de la glace', () => {
@@ -168,6 +190,7 @@ describe('gestes de la carte', () => {
 
 		expect(token('white:forward:0').dataset.filled).toBe('true');
 		expect(token('white:forward:1').dataset.filled).toBe('false');
+		expect(currentStep()?.textContent).toContain(t('rink.stepPick'));
 	});
 
 	it('laisse la sélection en place quand le dépôt est annulé', () => {
@@ -176,6 +199,24 @@ describe('gestes de la carte', () => {
 		fire(token('white:forward:0'), 'pointerdown', 10, 10);
 		fire(token('white:forward:0'), 'pointermove', 40, 40);
 		fire(token('white:forward:0'), 'pointerup', 40, 40);
+
+		expect(token('white:forward:0').dataset.selected).toBe('true');
+	});
+
+	it('ne déplace pas un joueur pendant un défilement tactile', () => {
+		dropTarget = token('white:forward:1');
+		fireTouch(token('white:forward:0'), 'pointerdown', 10, 10);
+		fireTouch(token('white:forward:0'), 'pointermove', 10, 90);
+		fireTouch(token('white:forward:0'), 'pointerup', 10, 90);
+
+		expect(token('white:forward:0').dataset.filled).toBe('true');
+		expect(token('white:forward:1').dataset.filled).toBe('false');
+		expect(token('white:forward:0').dataset.selected).toBe('false');
+	});
+
+	it('sélectionne un joueur au toucher sans glisser', () => {
+		fireTouch(token('white:forward:0'), 'pointerdown', 10, 10);
+		fireTouch(token('white:forward:0'), 'pointerup', 10, 10);
 
 		expect(token('white:forward:0').dataset.selected).toBe('true');
 	});

@@ -64,6 +64,9 @@
 	// page ne paie la carte avant d'avoir interagi avec un joueur. La portée
 	// suit la capacité calculée par le serveur et vide le cache si elle change.
 	$effect(() => {
+		/* Aucune fiche joueur ne peut s'ouvrir sans session : la page de
+		   connexion ne télécharge donc pas ce morceau après la peinture. */
+		if (data.actor.kind === 'anonymous') return;
 		const scope = data.peekScope;
 		let active = true;
 		let dispose: (() => void) | undefined;

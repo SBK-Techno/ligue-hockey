@@ -4,15 +4,21 @@ import { render } from 'svelte/server';
 import { t } from '#lib/shared/i18n/index.ts';
 import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
+import { identitySheetStyle } from '#lib/ui/identity-display.ts';
 import LineupBoard from './LineupBoard.svelte';
 
-function player(id: string): GamePlayer {
+const knownAvatars: Record<string, string> = {
+	'white-forward-0': 'legende-lafleur',
+	'black-forward-0': 'capitaine-navy'
+};
+
+function player(id: string, avatarId: string | null = null): GamePlayer {
 	return {
 		playerId: id,
 		fullName: `${id} Test`,
 		position: 'forward',
 		jerseyNumber: Number(id.replace(/\D/g, '')) || 1,
-		avatarId: null,
+		avatarId,
 		kind: 'regular'
 	};
 }
@@ -23,11 +29,12 @@ function slot(
 	slotIndex: number,
 	filled: boolean
 ): GameSlotView {
+	const playerId = `${team}-${position}-${slotIndex}`;
 	return {
 		team,
 		position,
 		slotIndex,
-		player: filled ? player(`${team}-${position}-${slotIndex}`) : null
+		player: filled ? player(playerId, knownAvatars[playerId] ?? null) : null
 	};
 }
 
@@ -139,9 +146,18 @@ describe('rendu de la carte d’alignement', () => {
 
 		expect((body.match(/class="identity-portrait"/g) ?? []).length).toBe(37);
 		expect(body).toMatch(/background-image: url\(\/identities\/identities-[0-9a-f]{12}\.webp\)/);
+		for (const avatarId of Object.values(knownAvatars)) {
+			expect(body, avatarId).toContain(identitySheetStyle(avatarId));
+		}
+		expect(identitySheetStyle(knownAvatars['white-forward-0']!)).not.toBe(
+			identitySheetStyle(knownAvatars['black-forward-0']!)
+		);
 		expect(body).toContain(t('rink.stepPick'));
 		expect(body).toContain(t('rink.stepPlace'));
 		expect(body).toContain(t('rink.stepSave'));
+		expect(body).toContain(t('rink.stepActive'));
+		expect(body).toContain(t('rink.stepTodo'));
+		expect((body.match(/aria-current="step"/g) ?? []).length).toBe(1);
 		expect(body).toContain(t('rink.undo'));
 		expect(body).toContain('data-bench-drop="true"');
 

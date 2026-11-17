@@ -695,9 +695,6 @@
 			0 0 0 1px var(--color-paper),
 			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 	}
-	.rink-token[data-draggable='true'] {
-		touch-action: none;
-	}
 	.rink-token[data-awaiting='true'] {
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
 	}
@@ -809,9 +806,6 @@
 			border-color var(--duration-fast) linear,
 			background var(--duration-fast) linear,
 			opacity var(--duration-fast) linear;
-	}
-	.bench-chip[data-draggable='true'] {
-		touch-action: none;
 	}
 	.bench-chip[data-selected='true'] {
 		border-color: var(--color-accent);

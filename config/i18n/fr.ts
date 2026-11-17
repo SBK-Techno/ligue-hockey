@@ -536,8 +536,11 @@ export const fr = {
   'rink.stepPick': 'Choisis un joueur',
   'rink.stepPlace': 'Choisis sa place',
   'rink.stepSave': 'Enregistre',
+  'rink.stepDone': 'Terminé',
+  'rink.stepActive': 'En cours',
+  'rink.stepTodo': 'À faire',
   'rink.helpManager':
-    'Glisse un joueur vers une place, ou touche-le puis touche la place. Dépose-le sur le banc pour le retirer.',
+    'À la souris, glisse un joueur vers une place. Sur un écran tactile, touche-le puis touche la place. Utilise Envoyer au banc pour le retirer.',
   'rink.helpPlayer': 'La formation sur la glace, avec les numéros de chandail.',
   'rink.attackRight': 'Attaque vers la droite',
   'rink.attackLeft': 'Attaque vers la gauche',
