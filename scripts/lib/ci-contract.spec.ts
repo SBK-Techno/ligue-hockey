@@ -260,6 +260,50 @@ const mutations: Array<{
 		match: /métadonnées OCI/
 	},
 	{
+		name: 'rejects a release workflow that is not callable',
+		mutate: (inputs) =>
+			editWorkflow(inputs, 'release.yml', (doc) => {
+				delete object(doc.on).workflow_call;
+			}),
+		match: /appelable/
+	},
+	{
+		name: 'rejects a missing auto-release workflow',
+		mutate: (inputs) => {
+			inputs.workflows = inputs.workflows.filter(
+				(file) => !file.path.endsWith('/auto-release.yml')
+			);
+		},
+		match: /auto-release\.yml est requis/
+	},
+	{
+		name: 'rejects an auto-release without a publisher',
+		mutate: (inputs) =>
+			editWorkflow(inputs, 'auto-release.yml', (doc) => {
+				delete object(doc.jobs).publish;
+			}),
+		match: /plan, prepare, tag et publish/
+	},
+	{
+		name: 'rejects an auto-release that does not run the gate',
+		mutate: (inputs) =>
+			editWorkflow(inputs, 'auto-release.yml', (doc) => {
+				removeStep(doc, 'prepare', (step) =>
+					String(step.run).includes('gh workflow run ci.yml')
+				);
+			}),
+		match: /lancer la porte/
+	},
+	{
+		name: 'rejects a verify script without the release check',
+		mutate: (inputs) => {
+			const pkg = JSON.parse(inputs.packageFile.content) as { scripts: Record<string, string> };
+			pkg.scripts.verify = pkg.scripts.verify.replace(' && npm run verify:release', '');
+			inputs.packageFile.content = JSON.stringify(pkg, null, 2);
+		},
+		match: /verify:release/
+	},
+	{
 		name: 'rejects an unpinned action in any workflow',
 		mutate: (inputs) => {
 			inputs.workflows.push({

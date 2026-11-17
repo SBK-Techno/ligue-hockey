@@ -4,13 +4,19 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      tag:
+        description: Étiquette de version à publier
+        required: true
+        type: string
 
 permissions:
   contents: write
   packages: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -24,14 +30,18 @@ jobs:
       - name: Récupérer la révision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.tag || github.ref }}
           persist-credentials: false
       - name: Vérifier la version
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
+          tag="${RELEASE_TAG:-$GITHUB_REF_NAME}"
           version="$(node -p "require('./package.json').version")"
           expected="v$version"
-          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json $expected."
+          if [ "$tag" != "$expected" ]; then
+            echo "::error::Tag $tag does not match package.json $expected."
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
@@ -63,10 +73,12 @@ jobs:
       - name: Créer la version GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "La version $GITHUB_REF_NAME existe déjà."
+          tag="${RELEASE_TAG:-$GITHUB_REF_NAME}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "La version $tag existe déjà."
           else
-            gh release create "$GITHUB_REF_NAME" --generate-notes --title "$GITHUB_REF_NAME"
+            gh release create "$tag" --generate-notes --title "$tag"
           fi

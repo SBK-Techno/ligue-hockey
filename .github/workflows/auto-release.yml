@@ -1,0 +1,177 @@
+name: Auto-release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  packages: write
+
+concurrency:
+  group: auto-release-main
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Planifier
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      bump: ${{ steps.plan.outputs.bump }}
+      branch: ${{ steps.plan.outputs.branch }}
+    steps:
+      - name: Récupérer la révision et les étiquettes
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - name: Installer Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Installer les dépendances
+        run: npm ci --no-audit --no-fund
+      - name: Calculer le plan
+        id: plan
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          plan="$(npx tsx scripts/release/plan.ts)"
+          printf '%s\n' "$plan"
+          for key in mode version tag bump branch; do
+            value="$(jq -r --arg key "$key" '.[$key] // ""' <<<"$plan")"
+            echo "$key=$value" >> "$GITHUB_OUTPUT"
+          done
+          {
+            echo '### Plan de publication'
+            echo
+            echo '```json'
+            echo "$plan"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  prepare:
+    name: Préparer la version
+    needs: plan
+    if: needs.plan.outputs.mode == 'prepare'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      BUMP: ${{ needs.plan.outputs.bump }}
+      RELEASE_BRANCH: ${{ needs.plan.outputs.branch }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Récupérer la révision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Installer Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Installer les dépendances
+        run: npm ci --no-audit --no-fund
+      - name: Appliquer la version
+        run: npx tsx scripts/release/apply.ts --version "$VERSION"
+      - name: Publier la branche et la demande de fusion
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$RELEASE_BRANCH"
+          git add package.json package-lock.json .env.example
+          if git diff --cached --quiet; then
+            echo "Aucun changement de version à publier."
+            exit 0
+          fi
+          git commit -m "chore(release): $VERSION"
+          git push --force origin "$RELEASE_BRANCH"
+
+          body="$(printf 'Version proposée: %s (%s).\n\nCette demande ne modifie que les surfaces de version. La fusionner crée l’étiquette, la version GitHub et l’image publiée.\n' "$VERSION" "$BUMP")"
+          number="$(gh pr list --head "$RELEASE_BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$number" ]; then
+            gh pr create \
+              --base main \
+              --head "$RELEASE_BRANCH" \
+              --title "chore(release): $VERSION" \
+              --body "$body"
+          else
+            gh pr edit "$number" \
+              --title "chore(release): $VERSION" \
+              --body "$body"
+          fi
+      - name: Lancer la porte sur la branche de version
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if gh workflow run ci.yml --ref "$RELEASE_BRANCH"; then
+              echo "Porte lancée sur $RELEASE_BRANCH."
+              exit 0
+            fi
+            echo "Nouvelle tentative dans 3 secondes ($attempt/5)."
+            sleep 3
+          done
+          echo "::error::Impossible de lancer la porte sur $RELEASE_BRANCH."
+          exit 1
+
+  tag:
+    name: Étiqueter
+    needs: plan
+    if: needs.plan.outputs.mode == 'publish'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - name: Récupérer la révision et les étiquettes
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Créer l'étiquette
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+            tagged="$(git rev-list -n1 "$TAG")"
+            if [ "$tagged" != "$GITHUB_SHA" ]; then
+              echo "::error::L'étiquette $TAG pointe déjà sur $tagged, pas sur $GITHUB_SHA."
+              exit 1
+            fi
+            echo "L'étiquette $TAG existe déjà sur cette révision."
+          else
+            git tag -a "$TAG" -m "Version $VERSION"
+            git push origin "$TAG"
+          fi
+
+  publish:
+    name: Publier
+    needs: [plan, tag]
+    if: needs.plan.outputs.mode == 'publish'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.plan.outputs.tag }}
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write
