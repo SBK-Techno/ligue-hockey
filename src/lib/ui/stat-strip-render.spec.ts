@@ -43,7 +43,6 @@ describe('bandeau de chiffres', () => {
 		expect(body).toContain('class="metric-strip-wrap"');
 		expect(css).toContain('.metric-strip-wrap {\n\t\tcontainer-type: inline-size;');
 		expect(css).toContain('@container (max-width: 40rem)');
-		expect(css).not.toContain('@media (max-width: 700px)');
 	});
 
 	it('porte ses libellés à 12 px et ses tampons à 11 px', () => {

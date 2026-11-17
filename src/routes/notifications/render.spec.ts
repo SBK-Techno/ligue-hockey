@@ -67,10 +67,11 @@ describe('boîte de notifications', () => {
 
 	it('garde tout marquer comme lu en second plan et explique la page', () => {
 		const { body } = renderPage();
+		const button =
+			body.match(new RegExp(`<button[^>]*>${t('notifications.markAll')}`))?.[0] ?? '';
 
 		expect(body).toContain(t('notifications.help'));
-		expect(body).toMatch(
-			new RegExp(`btn-secondary btn-sm[^>]*>${t('notifications.markAll')}`)
-		);
+		expect(button).toContain('btn-secondary');
+		expect(button).not.toContain('btn-primary');
 	});
 });

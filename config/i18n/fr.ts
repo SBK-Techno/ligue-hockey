@@ -345,7 +345,7 @@ export const fr = {
   'home.allGames': 'Tous les matchs',
   'home.chatPreview': 'Dans la discussion',
   'home.attendance': 'Qui sera là',
-  'home.attendanceNames': 'Les noms',
+  'home.attendanceNames': 'Voir les noms',
   'home.showPresent.one': 'Voir {count} présent',
   'home.showPresent.many': 'Voir les {count} présents',
   'home.present': 'Présents',
@@ -987,7 +987,7 @@ export const fr = {
     'Ces raccourcis ouvrent les écrans que ton rôle permet de gérer.',
   'profile.signOutHelp': 'Tu peux fermer ta session sur cet appareil.',
   'notifications.title': 'Notifications',
-  'notifications.help': 'Les avis de match, de solde et de remplacement.',
+  'notifications.help': 'Les avis de match, de remplacement et de solde.',
   'notifications.settings': 'Choisir les avis reçus',
   'notifications.empty': 'Aucun avis.',
   'notifications.emptyHelp':
@@ -1224,8 +1224,9 @@ export const fr = {
   'admin.noResults': 'Aucun joueur ne correspond à la recherche.',
   'admin.rulesEmpty':
     'Aucune règle. Les équipes sont générées sans contrainte de paire.',
-  'admin.deleteRuleConfirm':
-    'Supprimer cette règle ? Elle ne s’appliquera plus aux prochains alignements.',
+  'admin.deleteRuleNamed': 'Supprimer la règle {names}',
+  'admin.deleteRuleConfirmNamed':
+    'Supprimer la règle entre {names} ? Elle ne s’appliquera plus aux prochains alignements.',
   'ruleMode.together': 'Doivent jouer ensemble',
   'ruleMode.togetherHelp': 'L’alignement place toujours ces deux joueurs dans la même équipe.',
   'ruleMode.togetherShort': 'Ensemble',

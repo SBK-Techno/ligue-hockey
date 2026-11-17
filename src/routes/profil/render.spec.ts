@@ -72,22 +72,22 @@ function renderPage() {
 }
 
 describe('sections du profil', () => {
-	it('ouvre le rendu serveur sur le compte et marque la section courante', async () => {
+	it('ne prétend pas connaître la section avant le client', async () => {
 		const { body } = await renderPage();
 		const start = body.indexOf(`aria-label="${t('profile.sections')}"`);
 		const nav = body.slice(start, body.indexOf('</nav>', start));
-		const current = [...nav.matchAll(/<a[^>]*aria-current="location"[^>]*>([\s\S]*?)<\/a>/g)];
 
 		expect(start).toBeGreaterThan(-1);
-		expect(current).toHaveLength(1);
-		expect(current[0][1]).toContain(t('profile.tab.account'));
+		expect(nav).not.toContain('aria-current');
 	});
 
 	it('garde le compte, les avis et la sécurité dans cet ordre', async () => {
 		const { body } = await renderPage();
-		const account = body.indexOf(t('profile.tab.account'));
-		const notifications = body.indexOf(t('profile.tab.notifications'));
-		const security = body.indexOf(t('profile.tab.security'));
+		const start = body.indexOf(`aria-label="${t('profile.sections')}"`);
+		const nav = body.slice(start, body.indexOf('</nav>', start));
+		const account = nav.indexOf(t('profile.tab.account'));
+		const notifications = nav.indexOf(t('profile.tab.notifications'));
+		const security = nav.indexOf(t('profile.tab.security'));
 
 		expect(account).toBeGreaterThan(-1);
 		expect(account).toBeLessThan(notifications);
