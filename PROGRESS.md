@@ -2,7 +2,17 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## A1 design pass 1.8.0 (in progress)
+## Release 1.8.0 (shipped)
+
+- PR #21 merged at `27d303c`, PR #22 at `83677e8`, release PR #23 (`1.7.0`) at `867bbcd` and release PR #24 (`1.8.0`) at `0a1137c`. The automatic workflow produced tags `v1.7.0` and `v1.8.0`, both GitHub releases and both GHCR images; no tag was created by hand.
+- Final tree: `npm run gate` exit 0 on the merged 1.7.0 tree, then every required check passed on #22 and on release PR #24. The gate reports 1123 tests in 155 files, svelte-check 0/0, architecture 394 files, generated assets and documentation current, 92 client chunks without zod, and `npm audit` reports zero vulnerabilities.
+- Live: image `ghcr.io/sbk-techno/ligue-hockey:1.8.0`, host digest `sha256:900c91ba5b11315b1a92a0c341d24e40adb6e96f08f78d11c5e33783e5254679`, local id `sha256:3e34e5bf577999265d5b3927fe837cb35038c8009433a710c5d2b3df986e775e`, healthy since 2026-11-17T12:57:22Z, zero restarts. Public health reports `ok`/`ok`/`applied` with HSTS; the database serves 29 active players across 15 applied migrations, and the first three minutes of logs carry no error.
+- Backup: `/home/jadorais/backups/ligue-20261117T075657.db`. The pre-update compose file is `/home/jadorais/compose.ligue-hockey.yml.1.6.0.bak`, with the verified `1.6.0` digest `sha256:1d07cb4223547278598a0766f9c35c39e65953d55ab8d87daa639562f70d5b07` and local id `sha256:236b44753bdc1fbf46ce6998429d29194d3fda4b5b87ed16b877465c38e858b6`.
+- **Environment vault.** The deployment secrets moved from `/tmp` to `/home/jadorais/.env.ligue-hockey` with mode `0600`; `OPERATIONS.md` names that path in every Compose command.
+- **Forge gap.** The organization policy forbids GitHub Actions from creating pull requests. `auto-release.yml` pushes `release/next` and stops at `createPullRequest`; the operator opens the release PR with the prepared title and body, then re-runs the failed job. Tags, GitHub releases and images remain automatic, and the recovery is documented in `OPERATIONS.md`.
+- `1.7.0` shipped the realistic painted identities, the lineup gestures and the dependency override. `1.8.0` shipped the A1 design pass below.
+
+## A1 design pass (shipped in 1.8.0)
 
 - Branch `feat/a1-pass-1.8.0`, branched from `feat/realism-1.7.0` (PR #21, merged). The pass follows the independent critique that scored the app 22/40: the login, home hero and desktop rink were reference-grade, while the mobile lineup, admin tables, settings, notifications and profile body were not.
 - **Milestone 1, mobile lineup.** An upcoming match now opens with the alignment, not the attendance roster. Presence is a compact strip above the board, with the deadline and the two responses; the named attendance list follows the alignment. The board shows a "Ton poste" summary (team, position, trio or pair), a visible role label on every filled token, a "Toi" ring and hidden accessible marker, and a "Toi" stamp in the bench and the text roster.
@@ -16,9 +26,9 @@ This file tracks the current milestone, verified evidence, and the work that is 
 - **Desktop evidence.** At 1440 the completed sheet drops from 2612 to 2004 px, admin Joueurs from 2484 to 1372, the player page from 3286 to 2168, Soldes from 1450 to 995, Matchs from 1775 to 1195, the evaluation match from 1806 to 1216, Lieux to 900 and the dashboard from 2192 to 1337. Headless Chromium at 1440, 1024, 390 and 320 reports no document overflow and no console errors; the only flagged overflow entries belong to the intentional horizontally scrolling admin tab strip.
 - **Gate.** `npm run gate` exit 0 after the desktop pass: 1123 tests in 155 files, svelte-check 0/0, architecture 394 files, generated assets and documentation current, 92 client chunks without zod.
 - **Review fixes.** The independent review closed six minor findings: odd ledgers now keep the penultimate row's rule, an empty upcoming or past list takes the full width, player rows keep all badges on the metadata line so both columns align, the location form stacks once it sits in its narrow column, the assessment grid moved to the single layout owner, and the sheet test no longer duplicates the full class list.
-- **Next.** PR #21 merged and `1.7.0` was released; this branch merges that release and targets `main` directly. Merging it lets the automatic release produce `1.8.0`; no further design work is planned in this branch.
+- **Next.** Merged at `83677e8` and shipped in `1.8.0`; no further design work is planned on this pass.
 
-## Release 1.7.0 (in progress)
+## Release 1.7.0 (shipped)
 
 - **Dependency override.** `drizzle-kit@0.31.11` still depends on the deprecated `@esbuild-kit/esm-loader`, which pins `esbuild@0.18.20` through `@esbuild-kit/core-utils`. The root `overrides` entry lifts that nested copy to `0.25.12`, the version `drizzle-kit` already resolves at its own level, so the development server advisory disappears and `npm audit` reports zero vulnerabilities. Generated migrations were rechecked after the change: `drizzle-kit generate` reads the TypeScript config and reports no schema changes.
 - **Override exit.** Remove the `overrides` entry once `drizzle-kit` drops `@esbuild-kit/esm-loader`; until then the nested copy stays on the patched line.

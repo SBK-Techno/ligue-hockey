@@ -91,14 +91,14 @@ Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, pu
 
 ## Cible de production vérifiée
 
-La cible ci-dessous a été vérifiée le 16 novembre 2026 sur l'hôte de référence :
+La cible ci-dessous a été vérifiée le 17 novembre 2026 sur l'hôte de référence :
 
 - Hôte : `home.backend.localserver.ca`, accès `ssh home`.
 - Répertoire Compose : `/home/jadorais`; fichier `/home/jadorais/compose.ligue-hockey.yml`; service et conteneur `ligue-hockey`.
 - Données : `/mnt/Docker/DockerApps/LigueHockey` monté sur `/app/data` (SQLite WAL).
 - URL publique : `https://hockey.sbktechno.com`.
-- Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.6.0`, publiée sur GHCR. Digest de l'hôte : `sha256:1d07cb4223547278598a0766f9c35c39e65953d55ab8d87daa639562f70d5b07`; identifiant local : `sha256:236b44753bdc1fbf46ce6998429d29194d3fda4b5b87ed16b877465c38e858b6`. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
-- Retour vérifié : `1.5.0`, digest hôte `sha256:ea411bacef9bbfae4d259bc21eb5e628958cb18a04bd588f964e722f0b67f0b1`, identifiant local `sha256:bdea12f292290e7a4540bc7772c49acbfcb76b92a6c792e40dbe0f53af853ae6`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.5.0.bak`; la base d'avant la migration est à `/app/data/ligue.db.pre-1.6.0`.
+- Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.8.0`, publiée sur GHCR. Digest de l'hôte : `sha256:900c91ba5b11315b1a92a0c341d24e40adb6e96f08f78d11c5e33783e5254679`; identifiant local : `sha256:3e34e5bf577999265d5b3927fe837cb35038c8009433a710c5d2b3df986e775e`. Le conteneur est sain depuis le 17 novembre 2026 à 12:57:22 UTC, sans redémarrage. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
+- Retour vérifié : `1.6.0`, digest hôte `sha256:1d07cb4223547278598a0766f9c35c39e65953d55ab8d87daa639562f70d5b07`, identifiant local `sha256:236b44753bdc1fbf46ce6998429d29194d3fda4b5b87ed16b877465c38e858b6`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.6.0.bak`; la base d'avant la mise à jour est `/home/jadorais/backups/ligue-20261117T075657.db`.
 - Environnement : le déploiement fournit un fichier `--env-file` hors dépôt, qui contient les secrets et n'est jamais versionné. Le coffre de l'hôte est `/home/jadorais/.env.ligue-hockey`, lisible par le seul propriétaire (`0600`), et toutes les commandes ci-dessous le passent à `--env-file`.
 
 Le projet Compose de l'hôte porte le nom `jadorais` et contient d'autres services. `docker compose up -d` peut afficher un avertissement d'orphelins; ne lancez jamais `--remove-orphans`, qui supprimerait ces autres conteneurs.
@@ -173,6 +173,8 @@ La protection de `main` refuse les poussées directes et exige le statut agrég�
 La version de `package.json` est l'unique source. `auto-release.yml` prépare la publication à chaque poussée vers `main`; ses étapes appartiennent au workflow. Les règles de montée appartiennent à `config/release.ts`, et `scripts/release/plan.ts` les applique. Ne recopiez ni les types de commit ni les seuils dans un autre document.
 
 Le seul geste d'approbation est de fusionner la demande `release/next` après une porte verte. Cette fusion approuve la version; la poussée suivante crée l'étiquette `v<version>` et appelle `release.yml`.
+
+La politique de l'organisation interdit à GitHub Actions de créer des demandes de fusion. Quand `auto-release.yml` a poussé `release/next` mais s'arrête sur `createPullRequest`, ouvrez la demande avec un compte opérateur en reprenant le titre et le corps prévus, puis relancez le travail échoué de ce run. L'étiquette, la version GitHub et l'image restent produites par le workflow; ne créez jamais l'étiquette à la main.
 
 `npm run verify:release` refuse trois surfaces de version désaccordées. En cas de reprise manuelle:
 
