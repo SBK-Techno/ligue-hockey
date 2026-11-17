@@ -1,4 +1,5 @@
-import type { ServerLoad } from '@sveltejs/kit';
+import type { Actions, ServerLoad } from '@sveltejs/kit';
+import { z } from 'zod';
 import { getAvailability } from '#lib/domain/availability/service.ts';
 import { listBalances } from '#lib/domain/finance/service.ts';
 import { getGame, listSchedule } from '#lib/domain/games/service.ts';
@@ -6,6 +7,16 @@ import { nextGameId, splitSchedule } from '#lib/domain/games/schedule.ts';
 import { listAdminPlayers } from '#lib/domain/players/service.ts';
 import { listOpenRequests } from '#lib/domain/roster/service.ts';
 import { can } from '#lib/domain/auth/policy.ts';
+import { listFailedJobs, retryFailedJob } from '#lib/domain/notifications/service.ts';
+import { queueSnapshot } from '#lib/server/notifications/status.ts';
+import { triggerNotificationTick } from '#lib/server/notifications/scheduler.ts';
+import { actionError } from '#lib/server/action.ts';
+import { t } from '#lib/shared/i18n/index.ts';
+import { parseForm } from '#lib/shared/validation.ts';
+
+const retrySchema = z.object({
+	jobId: z.string().min(1)
+});
 
 export const load: ServerLoad = ({ locals }) => {
 	const actor = locals.actor;
@@ -30,7 +41,8 @@ export const load: ServerLoad = ({ locals }) => {
 				openRequests: 0
 			},
 			outstandingCents: 0,
-			currency: ''
+			currency: '',
+			notifications: null
 		};
 	}
 
@@ -73,6 +85,24 @@ export const load: ServerLoad = ({ locals }) => {
 			openRequests: requests.length
 		},
 		outstandingCents: balances.reduce((total, balance) => total + balance.outstandingCents, 0),
-		currency: balances[0]?.currency ?? ''
+		currency: balances[0]?.currency ?? '',
+		// Le panneau d'exploitation n'expose que des compteurs et des travaux
+		// sans destinataire ni contenu.
+		notifications: can(actor, 'manageSettings')
+			? { snapshot: queueSnapshot(), failed: listFailedJobs(actor) }
+			: null
 	};
+};
+
+export const actions: Actions = {
+	retry: async ({ request, locals }) => {
+		try {
+			const parsed = parseForm(retrySchema, await request.formData());
+			retryFailedJob(locals.actor, parsed.jobId);
+			triggerNotificationTick();
+			return { ok: true, message: t('notifications.retryDone') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	}
 };

@@ -4,7 +4,7 @@
 	import { avatarColor, resolveAvatarId } from '#lib/domain/players/identity.ts';
 	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
-	import { identitySymbolId } from './identity-symbol.ts';
+	import { identitySymbolId, monogram } from './identity-display.ts';
 
 	type AvatarSize = 24 | 32 | 40 | 48 | 64 | 96;
 
@@ -31,14 +31,6 @@
 		return isIdentityId(id) ? identityById[id] : undefined;
 	}
 
-	function monogram(name: string): string {
-		return name
-			.trim()
-			.split(/\s+/)
-			.slice(0, 2)
-			.map((part) => part[0]?.toUpperCase() ?? '')
-			.join('');
-	}
 </script>
 
 <!-- The span is a button only when peek is enabled and the avatar is exposed;

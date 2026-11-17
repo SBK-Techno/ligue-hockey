@@ -20,7 +20,7 @@ export const branding = {
     "muted": "#5e6a6a",
     "brand": "#b4432f"
   },
-  "socialImage": "/social/apercu.jpg",
+  "socialImage": "/social/apercu-9166f43c7711.jpg",
   "auth": {
     "src": "/auth/dressing-room-1200-3012b5b41fdc.webp",
     "srcset": "/auth/dressing-room-640-ef36f1188f7d.webp 640w, /auth/dressing-room-960-430e80cf4704.webp 960w, /auth/dressing-room-1200-3012b5b41fdc.webp 1200w",
@@ -36,7 +36,7 @@ export const branding = {
     "/robots.txt",
     "/service-worker.js",
     "/generated-assets.json",
-    "/social/apercu.jpg",
+    "/social/apercu-9166f43c7711.jpg",
     "/auth/dressing-room-640-ef36f1188f7d.webp",
     "/auth/dressing-room-960-430e80cf4704.webp",
     "/auth/dressing-room-1200-3012b5b41fdc.webp",

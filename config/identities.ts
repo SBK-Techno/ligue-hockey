@@ -36,8 +36,9 @@ export function isIdentityId(
 export function legendForIdentity(
   identityId: string | null | undefined
 ): Legend | null {
-  if (!identityId) return null;
-  return LEGENDS.find((legend) => legend.id === identityId) ?? null;
+  if (!identityId || !isIdentityId(identityId)) return null;
+  const identity = identityById[identityId];
+  return 'name' in identity ? identity : null;
 }
 
 /**

@@ -10,7 +10,7 @@ import {
 } from '#lib/domain/chat/service.ts';
 import { canCreatePoll } from '#lib/domain/auth/policy.ts';
 import { CHAT_LIMITS, voteInputSchema } from '#lib/domain/chat/validators.ts';
-import { decodeCursor } from '#lib/domain/chat/cursor.ts';
+import { decodeCursor } from '#lib/shared/paging/cursor.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';

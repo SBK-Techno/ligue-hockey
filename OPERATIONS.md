@@ -59,6 +59,8 @@ L'application ne termine pas TLS et n'émet jamais `Strict-Transport-Security` :
 
 Le smoke de conteneur et les tests de contrat lisent `config/performance.ts`; aucun script ne recopie un seuil ni la liste des pages. `MEASURED_PAGES` est le seul propriétaire des routes mesurées : l'accueil, le profil et la discussion partagent le budget de 20 requêtes JavaScript initiales. Les valeurs protégées sont la page de connexion (60 Ko, 20 Ko de CSS critique), le profil (120 Ko), la discussion avec 20 messages (150 Ko), les textures (5 Ko chacune), la photo de connexion mobile (35 Ko) et la planche d'identités (220 Ko). Une page de 376 Ko fait échouer `scripts/ci/container-smoke.sh`.
 
+Les actifs générés nommés par contenu (icônes, photo de connexion, textures, planche d'identités, image sociale) sont servis immuables. Une régénération conserve les anciens noms pendant sept jours avant de les supprimer, pour qu'un document encore en cache ne demande jamais un fichier absent.
+
 Les panneaux sous la ligne de flottaison sont des îlots : ils sont importés au niveau du module de la page et rendus par le serveur, puis chargés par le navigateur après la peinture initiale. Ce rendu asynchrone est activé par `compilerOptions.experimental.async` dans `vite.config.ts`; le retirer viderait les îlots du HTML serveur.
 
 ## Première mise en service
@@ -84,7 +86,8 @@ Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, pu
 
 ## Santé et supervision
 
-- `GET /api/health` retourne `status`, `database`, `migrations` (`applied`/`missing`) et le dernier battement du planificateur (`scheduler.lastTickAt`).
+- `GET /api/health` retourne `status`, `database`, `migrations` (`applied`/`missing`), le dernier battement du planificateur (`scheduler.lastTickAt`) et un instantané de la file (`notifications.pending`, `.failed`, `.oldestDueAt`, `.suppressed`, `.push`). Aucun destinataire, sujet ou corps de message n'y figure. Les compteurs de suppression et de livraison push repartent à zéro au redémarrage du processus.
+- Le tableau de bord `/admin` affiche le même instantané et la liste des envois en échec; un opérateur avec `manageSettings` peut relancer un envoi. Chaque relance est tracée dans `audit_log` sous `notification.retry`.
 - Les journaux sont des lignes JSON uniques avec `event`, `requestId`, et redaction des secrets. `docker compose logs -f ligue`.
 - Le planificateur tourne toutes les `NOTIFICATION_TICK_MS` millisecondes. Un `lastTickAt` qui vieillit indique un processus bloqué.
 - Les actions administratives et les notifications sont tracées dans `audit_log` et consultables en base.

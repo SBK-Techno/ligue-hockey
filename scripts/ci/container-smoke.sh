@@ -95,6 +95,20 @@ fetch /api/health health
 expect_header "$TMP/health.headers" 'content-encoding' '\(gzip\|br\)' 'santé compressée'
 expect_header "$TMP/health.headers" 'vary' 'accept-encoding' 'santé et Vary'
 
+# C4 : la santé expose la file sans destinataire ni contenu.
+jq -e '
+	.notifications
+	| (.pending | type == "number")
+	and (.failed | type == "number")
+	and (.oldestDueAt == null or (.oldestDueAt | type == "number"))
+	and (.suppressed | type == "object")
+	and (.push | type == "object")
+' "$TMP/health.body" >/dev/null
+if grep -q '@' "$TMP/health.body"; then
+	printf 'erreur: /api/health expose une adresse\n' >&2
+	exit 1
+fi
+
 # P1/P2/P11 : la coquille anonyme est compressée, sa tranche critique reste
 # petite et le préchargement n'utilise plus le survol.
 fetch /connexion connexion
@@ -170,6 +184,15 @@ if [ -z "$texture" ]; then
 fi
 curl -sS -D "$TMP/texture.headers" -o /dev/null "$BASE$texture"
 expect_header "$TMP/texture.headers" 'cache-control' 'public, max-age=31536000, immutable' 'texture immuable'
+social="$(curl -sS "$BASE/generated-assets.json" \
+	| jq -r '.files | keys[] | select(startswith("static/social/"))' \
+	| head -n 1 | sed 's/^static//')"
+if [ -z "$social" ]; then
+	printf 'erreur: aucune image sociale dans generated-assets.json\n' >&2
+	exit 1
+fi
+curl -sS -D "$TMP/social.headers" -o /dev/null "$BASE$social"
+expect_header "$TMP/social.headers" 'cache-control' 'public, max-age=31536000, immutable' 'image sociale immuable'
 curl -sS -D "$TMP/manifest.headers" -o /dev/null "$BASE/manifest.webmanifest"
 expect_header "$TMP/manifest.headers" 'cache-control' 'public, max-age=300' 'manifeste court'
 curl -sS -D "$TMP/sw.headers" -o /dev/null "$BASE/service-worker.js"

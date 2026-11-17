@@ -7,7 +7,7 @@ export const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable';
 export const SHORT_CACHE = 'public, max-age=300';
 export const NO_CACHE = 'no-cache';
 
-const IMMUTABLE_PREFIXES = ['/icons/', '/auth/', '/textures/', '/identities/'];
+const IMMUTABLE_PREFIXES = ['/icons/', '/auth/', '/textures/', '/identities/', '/social/'];
 const SHORT_PATHS = new Set([
 	'/generated-assets.json',
 	'/manifest.webmanifest',
@@ -28,6 +28,8 @@ export function generatedAssetPaths(manifest) {
 export function cachePolicyFor(pathname, immutablePaths) {
 	if (immutablePaths.has(pathname)) return IMMUTABLE_CACHE;
 	if (pathname === '/service-worker.js') return NO_CACHE;
+	// Le chemin social historique n'est plus nommé par contenu; un actif
+	// remplacé garde un cache court, jamais immuable.
 	if (SHORT_PATHS.has(pathname) || pathname.startsWith('/social/')) return SHORT_CACHE;
 	return null;
 }

@@ -3,7 +3,6 @@
 	import { browser } from '$app/env';
 	import { page } from '$app/state';
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
-	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { positionDefinition, type Position } from '#config/positions.ts';
 	import {
 		formatCount,
@@ -19,6 +18,7 @@
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
+	import { monogram } from '#lib/ui/identity-display.ts';
 	import { pushPreferenceState } from './push-preference.ts';
 	import type { PageProps } from './$types';
 
@@ -82,14 +82,6 @@
 		pushPreferenceState(pushStatus, data.notifications.pushEnabled)
 	);
 
-	function monogram(name: string): string {
-		return name
-			.trim()
-			.split(/\s+/)
-			.slice(0, 2)
-			.map((part) => part[0]?.toUpperCase() ?? '')
-			.join('');
-	}
 
 	function deviceLabel(userAgent: string | null): string {
 		if (!userAgent) return t('profile.unknownDevice');
@@ -392,7 +384,7 @@
 										name="firstName"
 										value={profile.firstName}
 										required
-										maxlength={PLAYER_LIMITS.nameMax}
+										maxlength={data.limits.nameMax}
 										autocomplete="given-name"
 									/>
 								</div>
@@ -404,7 +396,7 @@
 										name="lastName"
 										value={profile.lastName}
 										required
-										maxlength={PLAYER_LIMITS.nameMax}
+										maxlength={data.limits.nameMax}
 										autocomplete="family-name"
 									/>
 								</div>
@@ -416,8 +408,8 @@
 										name="age"
 										type="number"
 										inputmode="numeric"
-										min={PLAYER_LIMITS.ageMin}
-										max={PLAYER_LIMITS.ageMax}
+										min={data.limits.ageMin}
+										max={data.limits.ageMax}
 										value={profile.age}
 										required
 									/>
@@ -436,15 +428,15 @@
 										name="jerseyNumber"
 										type="number"
 										inputmode="numeric"
-										min={PLAYER_LIMITS.jerseyMin}
-										max={PLAYER_LIMITS.jerseyMax}
+										min={data.limits.jerseyMin}
+										max={data.limits.jerseyMax}
 										value={profile.jerseyNumber ?? ''}
-										placeholder={String(PLAYER_LIMITS.jerseyExample)}
+										placeholder={String(data.limits.jerseyExample)}
 									/>
 									<p class="hint">
 										{t('profile.jerseyHelp', {
-											min: PLAYER_LIMITS.jerseyMin,
-											max: PLAYER_LIMITS.jerseyMax
+											min: data.limits.jerseyMin,
+											max: data.limits.jerseyMax
 										})}
 									</p>
 								</div>

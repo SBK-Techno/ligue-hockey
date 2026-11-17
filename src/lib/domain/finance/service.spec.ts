@@ -5,7 +5,9 @@ vi.mock('#lib/domain/settings/service.ts', () => ({
 	getSettings: () => ({
 		'finance.overdueGraceDays': 0,
 		'finance.installment1Due': '2026-11-01',
-		'finance.installment2Due': '2026-12-01'
+		'finance.installment2Due': '2026-12-01',
+		'notifications.emailEnabled': true,
+		'notifications.pushEnabled': false
 	})
 }));
 
@@ -34,7 +36,7 @@ vi.mock('#lib/server/db/index.ts', async () => {
 });
 
 const { sqlite } = await import('#lib/server/db/index.ts');
-const { recordPayment } = await import('./service.ts');
+const { notifyOverdueBalances, recordPayment } = await import('./service.ts');
 
 const actor: Actor = {
 	kind: 'user', active: true,
@@ -168,5 +170,40 @@ describe('atomicité de l’audit financier', () => {
 			note: null
 		});
 		expect(paymentCount()).toBe(1);
+	});
+});
+
+describe('avis de retard', () => {
+	function jobs(): { count: number } {
+		return sqlite
+			.prepare(
+				"select count(*) as count from notification_jobs where event_key = 'balance_overdue'"
+			)
+			.get() as { count: number };
+	}
+
+	it('crée un travail par canal une seule fois, même sur deux balayages', () => {
+		sqlite
+			.prepare(
+				`insert into payment_plans (id, player_id, total_cents, first_cents, second_cents, first_due_date, second_due_date, created_at, updated_at)
+				 values ('plan', 'player', 30000, 15000, 15000, '2020-01-01', '2099-01-01', 0, 0)`
+			)
+			.run();
+
+		expect(notifyOverdueBalances()).toBe(2);
+		expect(notifyOverdueBalances()).toBe(0);
+		expect(jobs().count).toBe(2);
+	});
+
+	it('ne signale pas un plan qui n’est pas encore dû', () => {
+		sqlite
+			.prepare(
+				`insert into payment_plans (id, player_id, total_cents, first_cents, second_cents, first_due_date, second_due_date, created_at, updated_at)
+				 values ('plan', 'player', 30000, 15000, 15000, '2099-01-01', '2099-02-01', 0, 0)`
+			)
+			.run();
+
+		expect(notifyOverdueBalances()).toBe(0);
+		expect(jobs().count).toBe(0);
 	});
 });

@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { rinkGeometryStyle } from '#config/rink.ts';
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
-	import type { GameBenchView, GameSlotView } from '#lib/domain/games/types.ts';
+	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import {
 		assignmentsForSave,
+		benchKey,
+		benchPlayerId,
 		boardPlacements,
+		clearSelectedPlace,
 		initialAssignments,
-		placeFromBench,
-		removePlayer,
+		selectBenchPlayer,
+		selectPlace,
 		slotAriaLabel,
-		swapPlayers,
 		type LineupAssignmentMap,
 		type LineupPlacement
 	} from './lineup-board.ts';
@@ -29,7 +31,7 @@
 		expectedGeneratedAt
 	}: {
 		slots: readonly GameSlotView[];
-		bench: readonly GameBenchView[];
+		bench: readonly GamePlayer[];
 		canEdit: boolean;
 		expectedGeneratedAt: number | null;
 	} = $props();
@@ -82,40 +84,20 @@
 
 	function selectSlot(key: string) {
 		if (!canEdit) return;
-		if (selected === key) {
-			selected = null;
-			return;
-		}
-		if (selected === null) {
-			selected = assignments[key] ? key : null;
-			return;
-		}
-		if (selected.startsWith('bench:')) {
-			choosePlace(selected.slice(6), key);
-			return;
-		}
-		swap(selected, key);
-	}
-
-	function choosePlace(playerId: string, target: string) {
-		assignments = placeFromBench(assignments, playerId, target);
-		selected = null;
-	}
-
-	function swap(from: string, to: string) {
-		assignments = swapPlayers(assignments, from, to);
-		selected = null;
+		const next = selectPlace({ selected, assignments }, key);
+		selected = next.selected;
+		assignments = next.assignments;
 	}
 
 	function selectBench(playerId: string) {
 		if (!canEdit) return;
-		selected = selected === `bench:${playerId}` ? null : `bench:${playerId}`;
+		selected = selectBenchPlayer({ selected, assignments }, playerId).selected;
 	}
 
 	function removeSelected() {
-		if (!selected || selected.startsWith('bench:')) return;
-		assignments = removePlayer(assignments, selected);
-		selected = null;
+		const next = clearSelectedPlace({ selected, assignments });
+		selected = next.selected;
+		assignments = next.assignments;
 	}
 
 	function reset() {
@@ -215,9 +197,9 @@
 							class="bench-chip"
 							data-player-id={player.playerId}
 							data-player-peek={!canEdit ? 'click' : undefined}
-							data-selected={selected === `bench:${player.playerId}`}
+							data-selected={selected === benchKey(player.playerId)}
 							onclick={() => selectBench(player.playerId)}
-							aria-pressed={selected === `bench:${player.playerId}`}
+							aria-pressed={selected === benchKey(player.playerId)}
 						>
 							<span class="font-mono text-caption text-muted">{player.jerseyNumber ?? '?'}</span>
 							{player.fullName}
@@ -230,9 +212,9 @@
 
 	{#if canEdit && selected}
 		<div class="flex flex-wrap items-center gap-2 border-t border-line pt-3" role="status">
-			{#if selected.startsWith('bench:')}
+			{#if benchPlayerId(selected)}
 				{@const selectedBench = benchPlayers.find(
-					(player) => `bench:${player.playerId}` === selected
+					(player) => benchKey(player.playerId) === selected
 				)}
 				{#if selectedBench}
 					<p class="text-body font-semibold">{selectedBench.fullName}</p>

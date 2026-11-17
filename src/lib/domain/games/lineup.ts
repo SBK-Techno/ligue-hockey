@@ -62,6 +62,7 @@ export function lineupBoardView(game: GameView): GameView {
 				fullName: pool.names.get(entry.playerId) ?? entry.playerId,
 				position: entry.position,
 				jerseyNumber: members.get(entry.playerId)?.jerseyNumber ?? null,
+				avatarId: members.get(entry.playerId)?.avatarId ?? null,
 				kind: entry.kind
 			}))
 		}
@@ -86,6 +87,9 @@ export function saveManualLineup(
 	}
 	if (!isLineupEditable(row)) {
 		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
+	}
+	if (row.generatedAt === null) {
+		throw new AppError('CONFLICT', { key: 'rating.gameNotGenerated' });
 	}
 
 	const currentSlots = listSlotAssignments(gameId);

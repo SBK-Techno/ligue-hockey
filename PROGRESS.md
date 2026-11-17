@@ -4,12 +4,11 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `feat/match-1.5.0`, based on `1.4.0` (merged, tagged, released, live).
-- Target version: `1.5.0`.
+- Branch: `feat/legends-1.6.0`, based on `1.5.0` (Batch 5 committed and in review).
+- Target version: `1.6.0`.
 - Shipped in `1.4.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
-- In flight for `1.5.0`: season agenda replacing the month calendar; chat rebuilt around player colour, avatar and jersey with grouped days, menus and readable polls; phase-aware game sheet with goals, penalties, totals and finalization; player avatars with unique colours and jerseys; paper and ice material pass; desktop compositions for home, match, schedule, balance, notifications, substitutes and profile.
-- Verified in this slice: `npm run gate` green (452 tests, 51 files), generated assets and documentation site current, production build served against a copy of the seeded database, home/discussion/match/schedule/admin pages fetched, and a goal written through the real action then read back from the sheet.
-- Next release step: commit, push, open the PR, merge after review, tag `v1.5.0`, release, promote and verify health.
+- In flight for `1.6.0`: see the section below; the remaining work is the team season page, chat history pagination and the confirmed triple-check findings.
+- Verified after Batch 7: `npm run gate` green (811 tests, 95 files), generated assets and documentation site current, architecture check green over 326 files, and the client bundle holds 90 chunks without zod.
 
 ## Triple-check round 1 (in progress)
 

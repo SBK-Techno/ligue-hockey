@@ -8,16 +8,19 @@ import {
 	retryJob
 } from '#lib/domain/notifications/service.ts';
 import type { NotificationJobRow } from '#lib/domain/notifications/schema.ts';
+import { notifyOverdueBalances } from '#lib/domain/finance/service.ts';
 import { env } from '#lib/shared/config/env.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { sendEmail } from './email.ts';
 import { HOUR_MS } from '#config/time.ts';
-import { sendPush } from './push.ts';
+import { sendPush, type PushDeliveryResult } from './push.ts';
+import { beginTick, queueSnapshot, recordPushDelivery } from './status.ts';
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let running: Promise<void> | null = null;
 let lastTickAt: number | null = null;
+let lastOverdueScanAt: number | null = null;
 
 export function schedulerHeartbeat(): number | null {
 	return lastTickAt;
@@ -27,7 +30,13 @@ function isChannel(value: string): value is NotificationChannel {
 	return (NOTIFICATION_CHANNEL_KEYS as readonly string[]).includes(value);
 }
 
-async function deliver(job: NotificationJobRow): Promise<void> {
+const NO_DELIVERY: PushDeliveryResult = {
+	delivered: 0,
+	failed: 0,
+	lastError: null
+};
+
+async function deliver(job: NotificationJobRow): Promise<PushDeliveryResult> {
 	const message = jobMessage(job);
 
 	if (!isChannel(job.channel)) {
@@ -36,13 +45,12 @@ async function deliver(job: NotificationJobRow): Promise<void> {
 
 	switch (job.channel) {
 		case 'in_app':
-			return;
+			return NO_DELIVERY;
 		case 'email':
 			await sendEmail(job.userId, message);
-			return;
+			return NO_DELIVERY;
 		case 'push':
-			await sendPush(job.userId, message);
-			return;
+			return sendPush(job.userId, message);
 	}
 }
 
@@ -50,18 +58,41 @@ function retryDelayMs(attempts: number): number {
 	return Math.min(HOUR_MS, env.notificationTickMs * Math.max(1, attempts));
 }
 
+/**
+ * Le balayage des retards coûte deux lectures; il tourne au plus une fois par
+ * heure. La clé de dédoublonnage du propriétaire finance rend les appels
+ * suivants inoffensifs.
+ */
+function scanOverdue(now: number): void {
+	if (lastOverdueScanAt !== null && now - lastOverdueScanAt < HOUR_MS) return;
+	lastOverdueScanAt = now;
+	const queued = notifyOverdueBalances();
+	if (queued > 0) {
+		logger.info('notification.overdue_queued', { count: queued });
+	}
+}
+
 async function tick(): Promise<void> {
 	const now = clock.nowMs();
 	lastTickAt = now;
+	beginTick();
 	const requeued = requeueStale(now - env.notificationClaimTimeoutMs);
 	if (requeued > 0) {
 		logger.warn('notification.requeued', { count: requeued });
 	}
 
+	scanOverdue(now);
+
 	const jobs = claimJobs(now, env.notificationBatchSize);
 	for (const job of jobs) {
 		try {
-			await deliver(job);
+			const delivery = await deliver(job);
+			if (job.channel === 'push') {
+				recordPushDelivery(delivery);
+			}
+			if (delivery.delivered === 0 && delivery.failed > 0) {
+				throw delivery.lastError ?? new Error('Push delivery failed');
+			}
 			completeJob(job.id);
 		} catch (error) {
 			if (job.attempts >= env.notificationMaxAttempts) {
@@ -87,6 +118,8 @@ async function tick(): Promise<void> {
 			}
 		}
 	}
+
+	logger.info('notification.queue_snapshot', queueSnapshot());
 }
 
 export function runNotificationTick(): Promise<void> {

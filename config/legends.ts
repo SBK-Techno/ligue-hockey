@@ -490,18 +490,29 @@ export const LEGEND_IDS = LEGENDS.map((legend) => legend.id) as [
   ...LegendId[]
 ];
 
-export const legendById = Object.fromEntries(
-  LEGENDS.map((legend) => [legend.id, legend])
-) as Readonly<Record<LegendId, Legend>>;
-
-export function isLegendId(value: string | null | undefined): value is LegendId {
-  return typeof value === 'string' && Object.hasOwn(legendById, value);
-}
-
 /**
  * The tribute list for one position. Callers pass the position currently
  * selected in the form, so changing position immediately changes the list.
  */
 export function legendsForPosition(position: Position): readonly Legend[] {
   return LEGENDS.filter((legend) => legend.position === position);
+}
+
+/**
+ * La liste du sélecteur : les légendes du poste courant, plus la légende
+ * déjà enregistrée si elle vient d'un autre poste. Elle reste donc visible et
+ * soumise, plutôt que de disparaître sous les pieds du joueur.
+ */
+export function legendOptionsForPosition(
+  position: Position,
+  selectedId: string | null
+): readonly Legend[] {
+  const available = legendsForPosition(position);
+  const selected = selectedId
+    ? LEGENDS.find((legend) => legend.id === selectedId)
+    : undefined;
+  if (!selected || available.some((legend) => legend.id === selected.id)) {
+    return available;
+  }
+  return [selected, ...available];
 }

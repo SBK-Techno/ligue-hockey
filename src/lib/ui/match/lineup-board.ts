@@ -47,6 +47,17 @@ export function slotAriaLabel(
  */
 export type LineupAssignmentMap = Record<string, string | null>;
 
+/** Le protocole du banc : une seule chaîne, lue et écrite par ce module. */
+const BENCH_PREFIX = 'bench:';
+
+export function benchKey(playerId: string): string {
+	return `${BENCH_PREFIX}${playerId}`;
+}
+
+export function benchPlayerId(key: string): string | null {
+	return key.startsWith(BENCH_PREFIX) ? key.slice(BENCH_PREFIX.length) : null;
+}
+
 export type LineupPlacement = {
 	key: string;
 	team: GameSlotView['team'];
@@ -66,7 +77,7 @@ export function initialAssignments(
 	return map;
 }
 
-export function placementsOf(
+function placementsOf(
 	slots: readonly GameSlotView[],
 	map: LineupAssignmentMap
 ): LineupPlacement[] {
@@ -123,6 +134,62 @@ export function removePlayer(
 ): LineupAssignmentMap {
 	if (!(key in map)) return map;
 	return { ...map, [key]: null };
+}
+
+export type LineupSelection = {
+	selected: string | null;
+	assignments: LineupAssignmentMap;
+};
+
+/**
+ * La sélection d'une place : un premier clic choisit un joueur, un second
+ * clic sur la même place le relâche, une place vide ne se sélectionne pas.
+ * Ces transitions sont pures pour être testées sans navigateur.
+ */
+export function selectPlace(
+	state: LineupSelection,
+	key: string
+): LineupSelection {
+	if (state.selected === key) {
+		return { selected: null, assignments: state.assignments };
+	}
+	if (state.selected === null) {
+		return {
+			selected: state.assignments[key] ? key : null,
+			assignments: state.assignments
+		};
+	}
+	const playerId = benchPlayerId(state.selected);
+	if (playerId !== null) {
+		return {
+			selected: null,
+			assignments: placeFromBench(state.assignments, playerId, key)
+		};
+	}
+	return {
+		selected: null,
+		assignments: swapPlayers(state.assignments, state.selected, key)
+	};
+}
+
+export function selectBenchPlayer(
+	state: LineupSelection,
+	playerId: string
+): LineupSelection {
+	return {
+		selected: state.selected === benchKey(playerId) ? null : benchKey(playerId),
+		assignments: state.assignments
+	};
+}
+
+export function clearSelectedPlace(state: LineupSelection): LineupSelection {
+	if (state.selected === null || benchPlayerId(state.selected) !== null) {
+		return state;
+	}
+	return {
+		selected: null,
+		assignments: removePlayer(state.assignments, state.selected)
+	};
 }
 
 /**

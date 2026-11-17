@@ -1,9 +1,9 @@
 /**
- * Le curseur de la discussion : un couple (date, identifiant) qui départage
- * deux messages écrits dans la même milliseconde. Un curseur invalide est
- * ignoré, jamais interprété comme une date arbitraire.
+ * Un curseur de liste : un couple (date, identifiant) qui départage deux
+ * lignes écrites dans la même milliseconde. Un curseur invalide est ignoré,
+ * jamais interprété comme une date arbitraire.
  */
-export type ChatCursor = {
+export type Cursor = {
 	createdAt: number;
 	id: string;
 };
@@ -12,7 +12,7 @@ export function encodeCursor(row: { createdAt: number; id: string }): string {
 	return `${row.createdAt}:${row.id}`;
 }
 
-export function decodeCursor(value: string | null | undefined): ChatCursor | null {
+export function decodeCursor(value: string | null | undefined): Cursor | null {
 	if (!value) return null;
 	const separator = value.indexOf(':');
 	if (separator <= 0) return null;

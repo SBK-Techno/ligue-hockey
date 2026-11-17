@@ -137,6 +137,14 @@ export function listRoster(actor: Actor): PublicPlayer[] {
 	return listActivePlayers().map(toPublic);
 }
 
+/**
+ * Les comptes actifs, sans acteur : réservé aux balayages système qui ne
+ * répondent à aucune demande (retards de paiement, tâches planifiées).
+ */
+export function listActivePlayerIds(): string[] {
+	return listActivePlayers().map((player) => player.userId);
+}
+
 export function listAdminPlayers(actor: Actor): AdminPlayer[] {
 	requirePermission(actor, 'managePlayers');
 	return listAllPlayersWithEmail().map(toAdmin);
@@ -171,9 +179,8 @@ export function getOwnProfile(actor: Actor): SelfProfile {
 	return profile;
 }
 
-export function getOwnAvatarPicker(actor: Actor): AvatarPickerView {
-	const user = requireUser(actor);
-	const row = findPlayer(user.userId);
+function avatarPickerFor(playerId: string): AvatarPickerView {
+	const row = findPlayer(playerId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
@@ -183,16 +190,14 @@ export function getOwnAvatarPicker(actor: Actor): AvatarPickerView {
 	};
 }
 
+export function getOwnAvatarPicker(actor: Actor): AvatarPickerView {
+	const user = requireUser(actor);
+	return avatarPickerFor(user.userId);
+}
+
 export function getAdminAvatarPicker(actor: Actor, playerId: string): AvatarPickerView {
 	requirePermission(actor, 'managePlayers');
-	const row = findPlayer(playerId);
-	if (!row) {
-		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
-	}
-	return {
-		selected: resolveAvatarId(row.userId, row.avatarId),
-		taken: takenAvatarIds(row.userId)
-	};
+	return avatarPickerFor(playerId);
 }
 
 export function getPlayer(actor: Actor, playerId: string): SelfProfile | PublicPlayer {

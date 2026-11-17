@@ -6,10 +6,15 @@ import type { GameSlotView } from '#lib/domain/games/types.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import {
 	assignmentsForSave,
+	benchKey,
+	benchPlayerId,
 	boardPlacements,
+	clearSelectedPlace,
 	initialAssignments,
 	placeFromBench,
 	removePlayer,
+	selectBenchPlayer,
+	selectPlace,
 	slotAriaLabel,
 	swapPlayers
 } from './lineup-board.ts';
@@ -163,5 +168,69 @@ describe('lisibilité des jetons sur la glace', () => {
 		expect(css).toMatch(
 			/@media \(max-width: 639px\)[\s\S]{0,80}\.rink-name[\s\S]{0,40}display: none/
 		);
+	});
+});
+
+describe('sélection de la carte', () => {
+	it('encode et décode la clé du banc', () => {
+		expect(benchKey('d')).toBe('bench:d');
+		expect(benchPlayerId(benchKey('d'))).toBe('d');
+		expect(benchPlayerId('white:forward:0')).toBeNull();
+	});
+
+	it('choisit une place occupée, puis la relâche au second clic', () => {
+		const assignments = initialAssignments(slots);
+		const selected = selectPlace({ selected: null, assignments }, 'white:forward:0');
+		expect(selected).toEqual({ selected: 'white:forward:0', assignments });
+
+		expect(selectPlace(selected, 'white:forward:0')).toEqual({
+			selected: null,
+			assignments
+		});
+	});
+
+	it('ne sélectionne jamais une place vide', () => {
+		expect(
+			selectPlace(
+				{ selected: null, assignments: initialAssignments(slots) },
+				'black:goalie:0'
+			)
+		).toEqual({ selected: null, assignments: initialAssignments(slots) });
+	});
+
+	it('pose un joueur du banc sur une place et vide sa sélection', () => {
+		const state = selectBenchPlayer(
+			{ selected: null, assignments: initialAssignments(slots) },
+			'd'
+		);
+		expect(state.selected).toBe('bench:d');
+
+		const placed = selectPlace(state, 'white:forward:0');
+		expect(placed.selected).toBeNull();
+		expect(placed.assignments['white:forward:0']).toBe('d');
+		expect(Object.values(placed.assignments)).not.toContain('a');
+	});
+
+	it('échange deux joueurs sélectionnés l’un après l’autre', () => {
+		const first = selectPlace(
+			{ selected: null, assignments: initialAssignments(slots) },
+			'white:forward:0'
+		);
+		const swapped = selectPlace(first, 'black:forward:0');
+		expect(swapped.assignments['white:forward:0']).toBe('c');
+		expect(swapped.assignments['black:forward:0']).toBe('a');
+	});
+
+	it('retire le joueur sélectionné et ignore une sélection de banc', () => {
+		const removed = clearSelectedPlace({
+			selected: 'white:forward:1',
+			assignments: initialAssignments(slots)
+		});
+		expect(removed.assignments['white:forward:1']).toBeNull();
+		expect(removed.selected).toBeNull();
+
+		const bench = { selected: benchKey('d'), assignments: initialAssignments(slots) };
+		expect(clearSelectedPlace(bench)).toBe(bench);
+		expect(clearSelectedPlace({ selected: null, assignments: initialAssignments(slots) }).selected).toBeNull();
 	});
 });

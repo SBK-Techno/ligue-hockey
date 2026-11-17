@@ -1030,50 +1030,6 @@ if (cancelledGame) {
 	}
 }
 
-const paidTotals = new Map<string, number>();
-for (const row of db
-	.select({ playerId: payments.playerId, amountCents: payments.amountCents })
-	.from(payments)
-	.all()) {
-	paidTotals.set(row.playerId, (paidTotals.get(row.playerId) ?? 0) + row.amountCents);
-}
-
-const overdue = db
-	.select({
-		playerId: paymentPlans.playerId,
-		totalCents: paymentPlans.totalCents,
-		firstCents: paymentPlans.firstCents,
-		firstDueDate: paymentPlans.firstDueDate,
-		secondDueDate: paymentPlans.secondDueDate
-	})
-	.from(paymentPlans)
-	.all();
-
-for (const plan of overdue) {
-	const paid = paidTotals.get(plan.playerId) ?? 0;
-	const firstDue = plan.firstDueDate ?? '';
-	const secondDue = plan.secondDueDate ?? '';
-	let amountCents = 0;
-	let dueDate = '';
-
-	if (paid < plan.firstCents && firstDue !== '' && firstDue < today) {
-		amountCents = plan.firstCents - paid;
-		dueDate = firstDue;
-	} else if (paid < plan.totalCents && secondDue !== '' && secondDue < today) {
-		amountCents = plan.totalCents - paid;
-		dueDate = secondDue;
-	}
-
-	if (amountCents === 0 || dueDate === '') continue;
-	inApp(
-		plan.playerId,
-		'balance_overdue',
-		{ amountCents, currency: 'CAD', dueDate },
-		now - 2 * 86_400_000,
-		next() < 0.5
-	);
-}
-
 for (const fill of fills) {
 	const game = planned.find((entry) => entry.id === fill.gameId);
 	if (!game) continue;

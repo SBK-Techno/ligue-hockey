@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { IDENTITIES } from '#config/identities.ts';
@@ -13,6 +13,7 @@ import {
 	type TextureKey
 } from '#config/branding-schema.ts';
 import { avatarSymbol } from '../../src/lib/ui/avatar-art.ts';
+import { retainedForCache } from './asset-retention.ts';
 import { emailPaletteFrom, parsePalette, type EmailPalette, type Palette } from './palette.ts';
 
 export type GeneratedFile = {
@@ -297,13 +298,24 @@ export function criticalStyleHash(css: string): string {
 	return `sha256-${createHash('sha256').update(css).digest('base64')}`;
 }
 
+/**
+ * Le chemin public d'un actif nommé par son contenu. Le nom logique reste la
+ * seule entrée de `config/branding.json`; le suffixe vient des octets.
+ */
+export function contentHashedPath(logicalPath: string, contents: Buffer | string): string {
+	const extension = path.extname(logicalPath);
+	const base = logicalPath.slice(0, -extension.length);
+	return `${base}-${sha256(contents).slice(0, 12)}${extension}`;
+}
+
 function buildBrandingModule(
 	branding: Branding,
 	icons: Record<IconRole, string>,
 	palette: EmailPalette,
 	auth: AuthImages,
 	identitySprite: string,
-	textures: Record<TextureKey, string>
+	textures: Record<TextureKey, string>,
+	socialImage: string
 ) {
 	const value = {
 		name: branding.name,
@@ -319,7 +331,7 @@ function buildBrandingModule(
 		themeColor: palette.ink,
 		backgroundColor: palette.paper,
 		emailPalette: palette,
-		socialImage: branding.socialImage,
+		socialImage,
 		auth,
 		identitySprite,
 		manifestPath: MANIFEST_PATH,
@@ -337,7 +349,7 @@ function buildBrandingModule(
 				ROBOTS_PATH,
 				SERVICE_WORKER_PATH,
 				GENERATED_ASSETS_PATH,
-				branding.socialImage,
+				socialImage,
 				...auth.srcset.split(', ').map((entry) => entry.split(' ')[0]),
 				identitySprite,
 				...Object.values(icons),
@@ -552,18 +564,20 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 	const identitySprite = `/identities/identities-${sha256(spriteContents).slice(0, 12)}.svg`;
 	files.push({ path: `static${identitySprite}`, contents: spriteContents });
 
+	const social = await renderSocialImage(root, branding, svg, palette);
+	const socialImage = contentHashedPath(branding.socialImage, social);
+	files.push({ path: `static${socialImage}`, contents: social });
+
 	const moduleSource = buildBrandingModule(
 		branding,
 		icons,
 		palette,
 		auth,
 		identitySprite,
-		textures
+		textures,
+		socialImage
 	);
 	files.push({ path: 'src/lib/generated/branding.ts', contents: moduleSource });
-
-	const social = await renderSocialImage(root, branding, svg, palette);
-	files.push({ path: `static${branding.socialImage}`, contents: social });
 
 	const checksums = {
 		generatedBy: 'scripts/generate.ts',
@@ -582,7 +596,8 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 
 export async function writeGeneratedFiles(
 	root: string,
-	files: GeneratedFile[]
+	files: GeneratedFile[],
+	nowMs: number = Date.now()
 ): Promise<void> {
 	for (const file of files) {
 		const target = path.join(root, file.path);
@@ -590,16 +605,25 @@ export async function writeGeneratedFiles(
 		await writeFile(target, file.contents);
 	}
 
-	// Les icônes, la photo de connexion et les textures sont nommées par
-	// contenu : une régénération laisse sinon des fichiers orphelins que le
-	// service worker précacherait pour rien.
+	// Les icônes, la photo de connexion, la planche, les textures et l'image
+	// sociale sont nommées par contenu. Une génération remplace le nom, donc
+	// l'ancien reste servi pendant la fenêtre de cache des documents actifs;
+	// au-delà, il est supprimé pour ne pas accumuler des octets morts.
 	const expected = new Set(files.map((file) => file.path.split(path.sep).join('/')));
-	for (const dir of ['static/icons', 'static/auth', 'static/textures', 'static/identities']) {
+	for (const dir of [
+		'static/icons',
+		'static/auth',
+		'static/textures',
+		'static/identities',
+		'static/social'
+	]) {
 		for (const name of await readdir(path.join(root, dir)).catch(() => [])) {
 			const relative = `${dir}/${name}`;
-			if (!expected.has(relative)) {
-				await unlink(path.join(root, dir, name));
-			}
+			if (expected.has(relative)) continue;
+			const target = path.join(root, dir, name);
+			const info = await stat(target);
+			if (retainedForCache(info.mtimeMs, nowMs)) continue;
+			await unlink(target);
 		}
 	}
 }

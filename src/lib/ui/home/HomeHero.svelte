@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { AvailabilityView } from '#lib/domain/availability/service.ts';
 	import type { GameView } from '#lib/domain/games/service.ts';
-	import type { GameBenchView, GameSlotView } from '#lib/domain/games/types.ts';
+	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import type { HeroVariant } from '#lib/domain/home/composition.ts';
 	import type { SubRequestWithGame } from '#lib/domain/roster/service.ts';
 	import { filledRequestLabel } from '#lib/ui/filled-request.ts';
@@ -33,7 +33,7 @@
 		teamLabel: string | null;
 		availability: AvailabilityView | null;
 		ownSlot: GameSlotView | null;
-		ownBench: GameBenchView | null;
+		ownBench: GamePlayer | null;
 		ownRequest: SubRequestWithGame | null;
 		isSubstitute: boolean;
 		isManager: boolean;

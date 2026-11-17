@@ -25,7 +25,7 @@ import {
 	softDeleteMessage,
 	type MessageRow
 } from './queries.ts';
-import { decodeCursor, encodeCursor } from './cursor.ts';
+import { decodeCursor, encodeCursor } from '#lib/shared/paging/cursor.ts';
 import { messageInputSchema, pollInputSchema, voteInputSchema } from './validators.ts';
 
 export type ChatPollOptionView = {

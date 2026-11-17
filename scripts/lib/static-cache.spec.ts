@@ -13,7 +13,7 @@ const manifest = {
 		'static/auth/dressing-room-640-abcdef123456.webp': 'x',
 		'static/textures/paper-abcdef123456.webp': 'x',
 		'static/identities/identities-abcdef123456.svg': 'x',
-		'static/social/apercu.jpg': 'x',
+		'static/social/apercu-abcdef123456.jpg': 'x',
 		'static/offline.html': 'x',
 		'static/generated-assets.json': 'x',
 		'src/app.html': 'x'
@@ -28,6 +28,7 @@ describe('cache des actifs générés', () => {
 			'/auth/dressing-room-640-abcdef123456.webp',
 			'/icons/favicon-32.abcdef123456.png',
 			'/identities/identities-abcdef123456.svg',
+			'/social/apercu-abcdef123456.jpg',
 			'/textures/paper-abcdef123456.webp'
 		]);
 	});
@@ -42,6 +43,7 @@ describe('cache des actifs générés', () => {
 		['/manifest.webmanifest', SHORT_CACHE],
 		['/offline.html', SHORT_CACHE],
 		['/robots.txt', SHORT_CACHE],
+		['/social/apercu-abcdef123456.jpg', IMMUTABLE_CACHE],
 		['/social/apercu.jpg', SHORT_CACHE],
 		['/_app/immutable/entry/app.js', null]
 	])('politique de %s', (pathname, expected) => {

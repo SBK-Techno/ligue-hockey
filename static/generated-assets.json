@@ -18,7 +18,7 @@
     "static/textures/paper-fc4ef8d7aad2.webp": "fc4ef8d7aad26d31e2a6c78ba0b8a9fea62dc6f18d5488327af60b8604605ca6",
     "static/textures/ice-e5f5845016e5.webp": "e5f5845016e5bf0f8e8cf287f68d922cb3e802f05225d37488b5aefc8b909525",
     "static/identities/identities-edd83902f68c.svg": "edd83902f68cc0708047cda1883c92060ce5d0bc017a3b8700a01209e72b305c",
-    "src/lib/generated/branding.ts": "5e9d5d528185a4983f3b1ee285b65f53ec7cc63a584d3e7ee9ed68023b7c71dd",
-    "static/social/apercu.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02"
+    "static/social/apercu-9166f43c7711.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02",
+    "src/lib/generated/branding.ts": "a8228aa9c762171f880455bb4f44d85b5d883ec01f03533eef3825832429ae36"
   }
 }

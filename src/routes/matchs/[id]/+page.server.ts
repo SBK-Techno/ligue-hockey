@@ -50,36 +50,31 @@ const manualRequestSchema = z.object({
 const goalIdSchema = z.object({ goalId: z.string().min(1) });
 const penaltyIdSchema = z.object({ penaltyId: z.string().min(1) });
 
+/** La vue vide d'un match absent ou refusé, écrite une seule fois. */
+function emptyMatchView(positions: Position[]) {
+	return {
+		game: null,
+		availability: null,
+		requests: [],
+		isSubstitute: false,
+		positions,
+		canManage: false,
+		editable: false,
+		playable: false,
+		sheet: null
+	};
+}
+
 export const load: ServerLoad = ({ locals, params }) => {
 	const actor = locals.actor;
 	const positions: Position[] =
 		actor.kind === 'user' ? getMySubProfile(actor).positions : [];
 	if (actor.kind !== 'user') {
-		return {
-			game: null,
-			availability: null,
-			requests: [],
-			isSubstitute: false,
-			positions,
-			canManage: false,
-			editable: false,
-			playable: false,
-			sheet: null
-		};
+		return emptyMatchView(positions);
 	}
 	const gameId = params.id;
 	if (!gameId) {
-		return {
-			game: null,
-			availability: null,
-			requests: [],
-			isSubstitute: false,
-			positions,
-			canManage: false,
-			editable: false,
-			playable: false,
-			sheet: null
-		};
+		return emptyMatchView(positions);
 	}
 
 	const loaded = getGame(actor, gameId);

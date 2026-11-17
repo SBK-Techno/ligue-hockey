@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
+import type { Cursor } from '#lib/shared/paging/cursor.ts';
 import { db } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { players } from '#lib/domain/players/schema.ts';
@@ -50,7 +51,7 @@ function messageQuery() {
  */
 export function listMessages(
 	limit: number,
-	before: { createdAt: number; id: string } | null
+	before: Cursor | null
 ): MessageRow[] {
 	return messageQuery()
 		.where(

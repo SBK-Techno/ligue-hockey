@@ -28,14 +28,6 @@ export type GameSlotView = {
 	player: GamePlayer | null;
 };
 
-export type GameBenchView = {
-	playerId: string;
-	fullName: string;
-	position: Position;
-	jerseyNumber: number | null;
-	kind: 'regular' | 'sub';
-};
-
 export type GameRuleViolationView = {
 	ruleId: string;
 	kind: 'must' | 'must_not';
@@ -56,6 +48,6 @@ export type GameGenerationView = {
 	 */
 	warnings: GameWarning[];
 	ruleViolations: GameRuleViolationView[];
-	bench: GameBenchView[];
+	bench: GamePlayer[];
 	generatedAt: number;
 };

@@ -1,5 +1,5 @@
 import type { AvatarArt } from '#config/avatars.ts';
-import { identitySymbolId } from './identity-symbol.ts';
+import { identitySymbolId } from './identity-display.ts';
 
 /**
  * Renders an avatar from the catalogue. The SVG contains only custom

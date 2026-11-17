@@ -10,14 +10,18 @@ import { recordAudit } from '#lib/domain/audit/service.ts';
 import {
 	findOwnProfile,
 	getPlayer,
+	listActivePlayerIds,
 	listAdminPlayers
 } from '#lib/domain/players/service.ts';
+import { notify } from '#lib/domain/notifications/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { db } from '#lib/server/db/index.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
+import { overdueNotices } from './overdue.ts';
+
 import { applyDiscount, splitPlan } from './plan.ts';
 import { computeBalance, planIsActive, type Balance, type Payment, type PaymentPlan } from './policy.ts';
 import {
@@ -216,6 +220,47 @@ export function listBalances(actor: Actor): AdminBalanceRow[] {
 			hasPlan: planIsActive(plan)
 		};
 	});
+}
+
+/**
+ * Signale une seule fois chaque versement en retard. Le balayage est appelé
+ * par la tâche planifiée des notifications; la clé de dédoublonnage est
+ * `balance_overdue:<joueur>:<versement>:<échéance>`, donc un tick suivant ne
+ * crée aucun doublon et un nouveau plan produit un nouvel avis.
+ */
+export function notifyOverdueBalances(): number {
+	const active = new Set(listActivePlayerIds());
+	const payments = new Map<string, PaymentRow[]>();
+	for (const payment of listAllPayments()) {
+		const rows = payments.get(payment.playerId) ?? [];
+		rows.push(payment);
+		payments.set(payment.playerId, rows);
+	}
+
+	const candidates = listPlans()
+		.filter((plan) => active.has(plan.playerId))
+		.map((plan) => ({
+			playerId: plan.playerId,
+			plan: planFromRow(plan),
+			payments: paymentsFromRows(payments.get(plan.playerId) ?? [])
+		}));
+
+	let created = 0;
+	for (const notice of overdueNotices(candidates, today(), graceDays())) {
+		created += notify(
+			'balance_overdue',
+			[{ userId: notice.playerId }],
+			{
+				amountCents: notice.amountCents,
+				currency: CURRENCY,
+				dueDate: notice.dueDate
+			},
+			{
+				dedupeKey: `balance_overdue:${notice.playerId}:${notice.installment}:${notice.dueDate}`
+			}
+		);
+	}
+	return created;
 }
 
 export function applyDefaultPlan(actor: Actor, playerId: string): BalanceView | null {

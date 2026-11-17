@@ -38,7 +38,12 @@ import {
 } from './queries.ts';
 import { generationPlan, lineupPool, type PoolSlot } from './pool.ts';
 import type { GameRow } from './schema.ts';
-import type { GameBenchView, GameGenerationView, GameSlotView, GameSummary } from './types.ts';
+import type {
+	GameGenerationView,
+	GamePlayer,
+	GameSlotView,
+	GameSummary
+} from './types.ts';
 import {
 	gameInputSchema,
 	generationSnapshotSchema,
@@ -89,18 +94,33 @@ function snapshotFrom(row: GameRow): GenerationSnapshot | null {
 	}
 }
 
+type NamedPlayer = {
+	fullName: string;
+	position: Position;
+	jerseyNumber: number | null;
+	avatarId: string | null;
+	active: boolean;
+};
+
+/** La seule projection nommée des joueurs d'un match, partagée par les vues. */
+function namedPlayers(playerIds: Iterable<string>): Map<string, NamedPlayer> {
+	return new Map(
+		playersByIds([...new Set(playerIds)]).map((player) => [
+			player.userId,
+			{
+				fullName: player.fullName,
+				position: player.position,
+				jerseyNumber: player.jerseyNumber,
+				avatarId: player.avatarId,
+				active: player.active
+			}
+		])
+	);
+}
+
 function generationView(
 	row: GameRow,
-	names: Map<
-		string,
-		{
-			fullName: string;
-			position: Position;
-			jerseyNumber: number | null;
-			avatarId: string | null;
-			active: boolean;
-		}
-	>,
+	names: Map<string, NamedPlayer>,
 	includeMetrics: boolean
 ): GameGenerationView | null {
 	const snapshot = snapshotFrom(row);
@@ -138,6 +158,7 @@ function generationView(
 			fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
 			position: entry.position,
 			jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
+			avatarId: names.get(entry.playerId)?.avatarId ?? null,
 			kind: entry.kind
 		})),
 		generatedAt: snapshot.generatedAt
@@ -165,19 +186,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		...(snapshot?.bench.map((entry) => entry.playerId) ?? []),
 		...(snapshot?.ruleViolations.flatMap((violation) => violation.playerIds) ?? [])
 	];
-	const players = playersByIds([...new Set(playerIds)]);
-	const names = new Map(
-		players.map((player) => [
-			player.userId,
-			{
-				fullName: player.fullName,
-				position: player.position,
-				jerseyNumber: player.jerseyNumber,
-				avatarId: player.avatarId,
-				active: player.active
-			}
-		])
-	);
+	const names = namedPlayers(playerIds);
 
 	const slots: GameSlotView[] = assignments.map((assignment) => ({
 		team: assignment.team,
@@ -481,22 +490,13 @@ export function regenerateGame(
 		...plan.bench.map((entry) => entry.playerId),
 		...result.violations.flatMap((violation) => violation.playerIds)
 	];
-	const names = new Map(
-		playersByIds([...new Set(namedIds)]).map((player) => [
-			player.userId,
-			{
-				fullName: player.fullName,
-				position: player.position,
-				jerseyNumber: player.jerseyNumber,
-				avatarId: player.avatarId
-			}
-		])
-	);
-	const benchViews: GameBenchView[] = plan.bench.map((entry) => ({
+	const names = namedPlayers(namedIds);
+	const benchViews: GamePlayer[] = plan.bench.map((entry) => ({
 		playerId: entry.playerId,
 		fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
 		position: entry.position,
 		jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
+		avatarId: names.get(entry.playerId)?.avatarId ?? null,
 		kind: entry.kind
 	}));
 

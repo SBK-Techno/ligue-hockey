@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { AVATARS } from '#config/avatars.ts';
-	import { legendForIdentity } from '#config/identities.ts';
-	import { legendsForPosition } from '#config/legends.ts';
+	import { legendOptionsForPosition } from '#config/legends.ts';
 	import type { Position } from '#config/positions.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import Avatar from './Avatar.svelte';
@@ -34,21 +33,13 @@
 	// svelte-ignore state_referenced_locally
 	let current = $state(selected);
 
-	const selectedLegend = $derived(legendForIdentity(current));
-	const positionLegends = $derived(position ? legendsForPosition(position) : []);
 	/**
 	 * A saved legend stays visible even when the chosen position no longer
 	 * matches, so the radio group always has a checked card to submit.
 	 */
-	const legendOptions = $derived.by(() => {
-		if (
-			selectedLegend &&
-			!positionLegends.some((legend) => legend.id === selectedLegend.id)
-		) {
-			return [selectedLegend, ...positionLegends];
-		}
-		return positionLegends;
-	});
+	const legendOptions = $derived(
+		position ? legendOptionsForPosition(position, current) : []
+	);
 
 	function isMismatch(legendPosition: Position): boolean {
 		return position !== null && legendPosition !== position;

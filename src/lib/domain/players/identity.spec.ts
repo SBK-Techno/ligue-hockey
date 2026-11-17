@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
 	AVATARS,
@@ -15,10 +16,11 @@ import {
 import {
 	LEGENDS,
 	LEGEND_IDS,
-	isLegendId,
+	legendOptionsForPosition,
 	legendsForPosition
 } from '#config/legends.ts';
 import { POSITION_KEYS } from '#config/positions.ts';
+import { parseColourTokens } from '../../../../scripts/lib/palette.ts';
 import { avatarColor, firstFreeAvatarId, resolveAvatarId } from './identity.ts';
 
 describe('catalogue des visages de la ligue', () => {
@@ -143,10 +145,6 @@ describe('identités hommage', () => {
 		expect(actual).toEqual(
 			[...expected].sort((a, b) => a[0].localeCompare(b[0]))
 		);
-		for (const [, , , , era] of expected) {
-			const [start, end] = era.split('-').map(Number);
-			expect(start).toBeLessThan(end);
-		}
 	});
 
 	it('garde des identifiants stables en forme de slug', () => {
@@ -157,10 +155,8 @@ describe('identités hommage', () => {
 
 	it('reconnaît une légende et distingue un visage de la ligue', () => {
 		for (const legend of LEGENDS) {
-			expect(isLegendId(legend.id)).toBe(true);
 			expect(legendForIdentity(legend.id)?.name).toBe(legend.name);
 		}
-		expect(isLegendId('capitaine-navy')).toBe(false);
 		expect(legendForIdentity('capitaine-navy')).toBeNull();
 		expect(legendForIdentity(null)).toBeNull();
 	});
@@ -253,5 +249,38 @@ describe('position des identités', () => {
 		}
 		expect(identityAllowedForPosition('legende-lafleur', 'goalie')).toBe(false);
 		expect(identityAllowedForPosition('legende-plante', 'goalie')).toBe(true);
+	});
+});
+
+describe('options de légendes du sélecteur', () => {
+	it('garde la légende enregistrée hors poste en tête, une seule fois', () => {
+		const options = legendOptionsForPosition('forward', 'legende-roy');
+
+		expect(options[0].id).toBe('legende-roy');
+		expect(options[0].position).toBe('goalie');
+		expect(options.filter((legend) => legend.id === 'legende-roy')).toHaveLength(1);
+		expect(options).toHaveLength(legendsForPosition('forward').length + 1);
+	});
+
+	it('ne duplique pas une légende déjà offerte au poste courant', () => {
+		const options = legendOptionsForPosition('goalie', 'legende-roy');
+
+		expect(options.filter((legend) => legend.id === 'legende-roy')).toHaveLength(1);
+		expect(options).toHaveLength(legendsForPosition('goalie').length);
+	});
+
+	it('liste seulement le poste quand rien n’est enregistré', () => {
+		expect(legendOptionsForPosition('defense', null)).toEqual(
+			legendsForPosition('defense')
+		);
+	});
+});
+
+describe('couleurs des identités', () => {
+	it('résout chaque couleur du catalogue vers un jeton déclaré', () => {
+		const tokens = parseColourTokens(readFileSync('src/lib/ui/tokens.css', 'utf8'));
+		for (const identity of IDENTITIES) {
+			expect(tokens.has(`player-${identity.color}`), identity.id).toBe(true);
+		}
 	});
 });

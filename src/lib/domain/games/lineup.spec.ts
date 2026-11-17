@@ -312,6 +312,19 @@ describe('alignement manuel', () => {
 		});
 	});
 
+	it('refuse un alignement manuel sur un match jamais généré', () => {
+		sqlite
+			.prepare(
+				"update games set generated_at = null, generation_json = null where id = 'game'"
+			)
+			.run();
+
+		expect(
+			captureError(() => saveManualLineup(manager, 'game', fullLineup()))
+		).toMatchObject({ code: 'CONFLICT', key: 'rating.gameNotGenerated' });
+		expect(lineups('game')).toEqual([]);
+	});
+
 	it('enregistre l’alignement et marque la génération comme manuelle', () => {
 		const view = saveManualLineup(manager, 'game', fullLineup());
 

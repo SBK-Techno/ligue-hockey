@@ -1,41 +1,39 @@
 import { redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
-import { INBOX } from '#config/notifications.ts';
 import {
-	listInbox,
-	markInboxRead,
+	listInboxPage,
+	markAllInboxRead,
 	openInboxItem,
 	unreadCount
 } from '#lib/domain/notifications/service.ts';
 import { actionError } from '#lib/server/action.ts';
+import { decodeCursor } from '#lib/shared/paging/cursor.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
-
-const readSchema = z.object({
-	ids: z.preprocess(
-		(value) => (value === undefined ? [] : Array.isArray(value) ? value : [value]),
-		z.array(z.string().min(1))
-	)
-});
 
 const openSchema = z.object({
 	id: z.string().min(1)
 });
 
-export const load: ServerLoad = ({ locals }) => {
+export const load: ServerLoad = ({ locals, url }) => {
 	const actor = locals.actor;
-	if (actor.kind !== 'user') return { items: [], unread: 0 };
+	const before = decodeCursor(url.searchParams.get('before'));
+	if (actor.kind !== 'user') {
+		return { items: [], unread: 0, nextCursor: null, before: null };
+	}
+	const page = listInboxPage(actor, before);
 	return {
-		items: listInbox(actor, { limit: INBOX.pageSize }),
+		items: page.items,
+		nextCursor: page.nextCursor,
+		before: before ? url.searchParams.get('before') : null,
 		unread: unreadCount(actor)
 	};
 };
 
 export const actions: Actions = {
-	read: async ({ request, locals }) => {
+	read: async ({ locals }) => {
 		try {
-			const parsed = parseForm(readSchema, await request.formData());
-			markInboxRead(locals.actor, parsed.ids);
+			markAllInboxRead(locals.actor);
 			return { ok: true, message: t('notifications.allRead') };
 		} catch (cause) {
 			return actionError(cause);

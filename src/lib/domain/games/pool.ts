@@ -29,6 +29,7 @@ export type LineupMember = SelectionCandidate & {
 	name: string;
 	age: number;
 	jerseyNumber: number | null;
+	avatarId: string | null;
 	overall: number | null;
 	placed: boolean;
 };
@@ -202,6 +203,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 			order,
 			age: detail.age,
 			jerseyNumber: detail.jerseyNumber,
+			avatarId: detail.avatarId,
 			overall: overalls.get(playerId) ?? null,
 			placed: placedIds.has(playerId)
 		});
@@ -241,6 +243,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 			order: 0,
 			age: detail.age,
 			jerseyNumber: detail.jerseyNumber,
+			avatarId: detail.avatarId,
 			overall,
 			placed: true
 		};

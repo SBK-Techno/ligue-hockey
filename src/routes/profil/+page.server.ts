@@ -1,6 +1,7 @@
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
 import { ACCOUNT_LIMITS, AUTH_POLICY } from '#config/account.ts';
+import { PLAYER_LIMITS } from '#config/players.ts';
 import { legendForIdentity } from '#config/identities.ts';
 import { roleDefinition } from '#config/roles.ts';
 import type { Position } from '#config/positions.ts';
@@ -65,6 +66,14 @@ export const load: ServerLoad = ({ locals }) => {
 			currentSessionId: null,
 			vapidPublicKey: publicEnv.vapidPublicKey,
 			minLength: publicEnv.passwordMinLength,
+			limits: {
+				nameMax: PLAYER_LIMITS.nameMax,
+				ageMin: PLAYER_LIMITS.ageMin,
+				ageMax: PLAYER_LIMITS.ageMax,
+				jerseyMin: PLAYER_LIMITS.jerseyMin,
+				jerseyMax: PLAYER_LIMITS.jerseyMax,
+				jerseyExample: PLAYER_LIMITS.jerseyExample
+			},
 			nav: {
 				canViewAdmin: false,
 				canSeeRatings: false,
@@ -94,6 +103,16 @@ export const load: ServerLoad = ({ locals }) => {
 		currentSessionId: locals.sessionId,
 		vapidPublicKey: publicEnv.vapidPublicKey,
 		minLength: publicEnv.passwordMinLength,
+		// Les bornes du formulaire sont lues une fois ici : la page ne charge
+		// pas le module de configuration pour trois nombres.
+		limits: {
+			nameMax: PLAYER_LIMITS.nameMax,
+			ageMin: PLAYER_LIMITS.ageMin,
+			ageMax: PLAYER_LIMITS.ageMax,
+			jerseyMin: PLAYER_LIMITS.jerseyMin,
+			jerseyMax: PLAYER_LIMITS.jerseyMax,
+			jerseyExample: PLAYER_LIMITS.jerseyExample
+		},
 		// Les capacités et les destinations sont résolues côté serveur : le
 		// navigateur ne reçoit que les entrées déjà autorisées.
 		nav: {

@@ -7,32 +7,41 @@ import {
 } from '#config/notification-events.ts';
 import type { NotificationChannel } from '#config/notification-channels.ts';
 import { INBOX } from '#config/notifications.ts';
-import { requireUser } from '#lib/domain/auth/policy.ts';
+import { recordAudit } from '#lib/domain/audit/service.ts';
+import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { newId } from '#lib/shared/ids/id.ts';
+import { db } from '#lib/server/db/index.ts';
 import { AppError } from '#lib/shared/errors.ts';
+import { encodeCursor, type Cursor } from '#lib/shared/paging/cursor.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
 	claimDueJobs,
+	countQueue,
 	countUnread,
 	deletePushSubscriptionForUser,
+	findFailedJob,
 	findInAppJob,
 	findPreferences,
 	insertJobs,
+	listFailedJobs as listFailedJobRows,
 	listInAppJobs,
 	listPreferences,
 	listPushSubscriberIds,
+	markAllJobsRead,
 	markFailed,
 	markJobsRead,
 	markSent,
+	requeueFailedJob,
 	requeueStaleSending,
 	reschedule,
 	upsertPreferences,
 	upsertPushSubscription,
 	type NewJob
 } from './queries.ts';
+import { recordSuppression } from './suppression.ts';
 import { renderJob, type RenderedNotification } from './templates.ts';
 import type { NotificationJobRow } from './schema.ts';
 import {
@@ -101,11 +110,18 @@ export function notify<K extends NotificationEventKey>(
 
 	for (const userId of userIds) {
 		for (const channel of definition.channels) {
-			if (!channelEnabled(channel)) continue;
-			if (channel !== 'in_app' && !preferenceEnabled(channel, userId, preferences)) {
+			if (!channelEnabled(channel)) {
+				recordSuppression('channel_disabled');
 				continue;
 			}
-			if (channel === 'push' && !pushSubscribers.has(userId)) continue;
+			if (channel !== 'in_app' && !preferenceEnabled(channel, userId, preferences)) {
+				recordSuppression('preference_disabled');
+				continue;
+			}
+			if (channel === 'push' && !pushSubscribers.has(userId)) {
+				recordSuppression('no_push_subscription');
+				continue;
+			}
 
 			jobs.push({
 				id: newId('job'),
@@ -205,25 +221,41 @@ export function unsubscribeFromPush(actor: Actor, endpoint: string): void {
 	deletePushSubscriptionForUser(user.userId, endpoint);
 }
 
-export function listInbox(
-	actor: Actor,
-	options: { limit: number; before?: number | null }
-): InboxItem[] {
-	const user = requireUser(actor);
-	const limit = Math.min(Math.max(options.limit, 1), INBOX.maxPageSize);
+export type InboxPage = {
+	items: InboxItem[];
+	/** Curseur de la page suivante, ou null quand la boîte est complète. */
+	nextCursor: string | null;
+};
 
-	return listInAppJobs(user.userId, limit, options.before ?? null).map((job) => {
-		const rendered = renderJob(job.eventKey, job.payloadJson);
-		return {
-			id: job.id,
-			eventKey: job.eventKey,
-			title: rendered.title,
-			body: rendered.body,
-			url: rendered.url,
-			createdAt: job.createdAt,
-			readAt: job.readAt
-		};
-	});
+function toInboxItem(job: NotificationJobRow): InboxItem {
+	const rendered = renderJob(job.eventKey, job.payloadJson);
+	return {
+		id: job.id,
+		eventKey: job.eventKey,
+		title: rendered.title,
+		body: rendered.body,
+		url: rendered.url,
+		createdAt: job.createdAt,
+		readAt: job.readAt
+	};
+}
+
+/**
+ * La page est lue avec un élément de plus que la taille publiée : sa présence
+ * prouve qu'une page suivante existe sans compter toute la boîte. La taille
+ * vient du propriétaire `INBOX`, jamais d'un paramètre de requête.
+ */
+export function listInboxPage(actor: Actor, before: Cursor | null): InboxPage {
+	const user = requireUser(actor);
+	const rows = listInAppJobs(user.userId, INBOX.pageSize + 1, before);
+	const page = rows.slice(0, INBOX.pageSize);
+	return {
+		items: page.map(toInboxItem),
+		nextCursor:
+			rows.length > INBOX.pageSize && page.length > 0
+				? encodeCursor(page[page.length - 1])
+				: null
+	};
 }
 
 export function unreadCount(actor: Actor): number {
@@ -231,9 +263,10 @@ export function unreadCount(actor: Actor): number {
 	return countUnread(user.userId);
 }
 
-export function markInboxRead(actor: Actor, ids: readonly string[]): number {
+/** Efface toute la boîte, pas seulement la page affichée. */
+export function markAllInboxRead(actor: Actor): number {
 	const user = requireUser(actor);
-	return markJobsRead(user.userId, ids, clock.nowMs());
+	return markAllJobsRead(user.userId, clock.nowMs());
 }
 
 export function openInboxItem(actor: Actor, id: string): string {
@@ -283,4 +316,60 @@ export function retryJob(job: NotificationJobRow, error: unknown, retryAt: numbe
 		retryAt,
 		error instanceof Error ? error.message : String(error)
 	);
+}
+
+export function queueCounts(): {
+	pending: number;
+	failed: number;
+	oldestDueAt: number | null;
+} {
+	return countQueue();
+}
+
+export type FailedJobView = {
+	id: string;
+	eventKey: string;
+	channel: string;
+	attempts: number;
+	scheduledFor: number;
+	lastError: string | null;
+};
+
+export function listFailedJobs(actor: Actor): FailedJobView[] {
+	requirePermission(actor, 'manageSettings');
+	return listFailedJobRows(INBOX.failedPageSize).map((job) => ({
+		id: job.id,
+		eventKey: job.eventKey,
+		channel: job.channel,
+		attempts: job.attempts,
+		scheduledFor: job.scheduledFor,
+		lastError: job.lastError
+	}));
+}
+
+/**
+ * Relance un envoi échoué. La reprise et sa trace d'audit partagent la même
+ * transaction : aucun opérateur ne peut relancer sans laisser de trace.
+ */
+export function retryFailedJob(actor: Actor, jobId: string): void {
+	requirePermission(actor, 'manageSettings');
+	const job = findFailedJob(jobId);
+	if (!job) {
+		throw new AppError('NOT_FOUND', { key: 'error.notFound' });
+	}
+	db.transaction((tx) => {
+		if (requeueFailedJob(jobId, clock.nowMs(), tx) === 0) {
+			throw new AppError('CONFLICT', { key: 'error.notFound' });
+		}
+		recordAudit(
+			actor,
+			{
+				action: 'notification.retry',
+				entityType: 'notification',
+				entityId: jobId,
+				metadata: { eventKey: job.eventKey, channel: job.channel }
+			},
+			tx
+		);
+	});
 }
