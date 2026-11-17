@@ -14,6 +14,7 @@
 	import { resolvePageTitle } from '#lib/ui/page-title.ts';
 	import type { ConfirmRequest } from '#lib/ui/confirm.svelte.ts';
 	import { CONFIRM_REQUEST_EVENT, PLAYER_PEEK_EVENT } from '#lib/ui/events.ts';
+	import { reloadOnServiceWorkerUpdate } from '#lib/ui/service-worker-update.ts';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
@@ -42,6 +43,7 @@
 	}
 
 	onMount(() => {
+		const stopServiceWorkerReload = reloadOnServiceWorkerUpdate();
 		const showPeek = () => {
 			peekHost = true;
 		};
@@ -55,6 +57,7 @@
 		window.addEventListener(PLAYER_PEEK_EVENT, showPeek);
 		window.addEventListener(CONFIRM_REQUEST_EVENT, showConfirm);
 		return () => {
+			stopServiceWorkerReload();
 			window.removeEventListener(PLAYER_PEEK_EVENT, showPeek);
 			window.removeEventListener(CONFIRM_REQUEST_EVENT, showConfirm);
 		};
@@ -120,7 +123,7 @@
 			<img
 				src={branding.auth.src}
 				srcset={branding.auth.srcset}
-				sizes="(min-width: 1024px) 60vw, 100vw"
+				sizes="(min-width: 900px) 60vw, 100vw"
 				width={branding.auth.width}
 				height={branding.auth.height}
 				alt=""

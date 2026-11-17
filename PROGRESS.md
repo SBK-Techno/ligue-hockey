@@ -2,6 +2,15 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.8.1 (in progress)
+
+- **Desktop threshold.** The desktop composition started at 1024 px, so a 900 to 1023 px desktop window still received the phone column even though the shell is a desktop. The `lg` breakpoint in `tokens.css` is now 900 px and the authored media queries in `layout.css` and `critical.css` follow it. The shell, navigation, page grids, chat rows and rink labels compose from 900 px.
+- **Dense grids.** The two-column ledger and the collapsed assessment cards keep a 1024 px threshold; below it their rows keep the full width, so a name no longer breaks into syllables. The dashboard right rail and the four rating criteria use one column until 1280 px.
+- **Service worker.** A page that was already controlled reloads once when a new worker takes over. The old page kept its route manifest after a deploy and the hashed chunks it referenced were gone; the first install still does not reload. The decision is covered by a unit test.
+- **Evidence.** Every authenticated and public route rendered at 900 px with no horizontal overflow and no console errors. The manager navigation keeps all six items on one line, the admin ledger and assessment rows are single-column, and the admin dashboard stacks its rail. The 900 px home drops from 2773 to 1925 px. The densest routes were rechecked at 1024 and 1440 px, where the ledger, assessment cards, dashboard and rating criteria return to their two-column compositions.
+- **Gate.** `npm run gate` exit 0: 1125 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
+- **Next.** Merge, release `1.8.1` and deploy.
+
 ## Release 1.8.0 (shipped)
 
 - PR #21 merged at `27d303c`, PR #22 at `83677e8`, release PR #23 (`1.7.0`) at `867bbcd` and release PR #24 (`1.8.0`) at `0a1137c`. The automatic workflow produced tags `v1.7.0` and `v1.8.0`, both GitHub releases and both GHCR images; no tag was created by hand.

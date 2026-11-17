@@ -549,7 +549,8 @@
 	}
 	/* Un registre de deux colonnes au grand écran : les rangées gardent leur
 	   trait et la feuille se lit comme une page de registre, sans défilement
-	   inutile. Sous 1024 px, la pile garde un seul trait entre chaque rangée. */
+	   inutile. Le registre demande 1024 px : sous ce seuil, une rangée de
+	   325 px casse les noms et la pile garde un seul trait. */
 	.ledger-columns > * {
 		border-bottom: 1px solid var(--color-line);
 	}
@@ -936,7 +937,7 @@
 	}
 	/* Au grand écran, le jeton est assez large pour porter ses libellés à la
 	   taille de lecture plancher, sans changer la géométrie de la glace. */
-	@media (min-width: 1024px) {
+	@media (min-width: 900px) {
 		.rink-role,
 		.rink-name,
 		.rink-number {
@@ -1251,7 +1252,7 @@
 		color: var(--color-muted);
 	}
 	/* Au grand écran, le menu d'un message s'efface tant qu'on ne le vise pas. */
-	@media (hover: hover) and (min-width: 1024px) {
+	@media (hover: hover) and (min-width: 900px) {
 		.chat-row .action-menu {
 			opacity: 0;
 			transition: opacity var(--duration-fast) var(--ease-out-expo);
@@ -1261,7 +1262,7 @@
 			opacity: 1;
 		}
 	}
-	@media (min-width: 1024px) {
+	@media (min-width: 900px) {
 		.chat-row {
 			grid-template-columns: 3rem 12.5rem minmax(0, 1fr);
 			grid-template-areas: 'avatar meta body';
@@ -1383,7 +1384,7 @@
 		grid-template-columns: minmax(0, 1fr);
 		gap: 1rem;
 	}
-	@media (min-width: 1024px) {
+	@media (min-width: 900px) {
 		.board-grid {
 			grid-template-columns: repeat(12, minmax(0, 1fr));
 		}
@@ -1393,8 +1394,9 @@
 		}
 	}
 
-	/* Les fiches d'évaluation repliées forment deux colonnes; la fiche ouverte
-	   prend toute la largeur pour garder ses quatre échelles ensemble. */
+	/* Les fiches d'évaluation repliées forment deux colonnes à partir de 1024 px;
+	   la fiche ouverte prend toute la largeur pour garder ses quatre échelles
+	   ensemble. Sous ce seuil, les libellés ont besoin de toute la rangée. */
 	.assessment-grid {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
