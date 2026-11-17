@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
 	composeHome,
+	PANEL_KINDS,
 	PANEL_SPANS,
+	PANEL_ZONES,
 	type ActionKind,
 	type HeroVariant,
 	type HomeCompositionInput,
@@ -437,6 +439,7 @@ describe('composition de l’accueil', () => {
 		expect(result.actions.map((action) => action.kind)).toEqual(actions);
 		expect(result.panels.map((panel) => panel.kind)).toEqual(panels);
 		expect(result.panels.map((panel) => panel.span)).toEqual(spans);
+		expect(result.panels.every((panel) => panel.zone === PANEL_ZONES[panel.kind])).toBe(true);
 
 		const kinds = result.panels.map((panel) => panel.kind);
 		expect(new Set(kinds).size).toBe(kinds.length);
@@ -445,6 +448,23 @@ describe('composition de l’accueil', () => {
 		for (const panel of result.panels) {
 			expect(PANEL_SPANS).toContain(panel.span);
 		}
+	});
+});
+
+describe('colonnes de l’accueil', () => {
+	it('garde l’ordre de la composition quand les deux colonnes sont réunies', () => {
+		for (const entry of cases) {
+			const { panels } = composeHome({ ...base, ...entry.input });
+			const ordered = [
+				...panels.filter((panel) => panel.zone === 'main'),
+				...panels.filter((panel) => panel.zone === 'rail')
+			].map((panel) => panel.kind);
+			expect(ordered, entry.name).toEqual(panels.map((panel) => panel.kind));
+		}
+	});
+
+	it('donne une colonne à chaque panneau', () => {
+		expect(Object.keys(PANEL_ZONES).sort()).toEqual([...PANEL_KINDS].sort());
 	});
 });
 
