@@ -112,7 +112,7 @@
 						</EmptyState>
 					</div>
 				{:else}
-					<ul role="list" class="divide-y divide-line">
+					<ul role="list" class={hasAside ? 'divide-y divide-line' : 'ledger-columns'}>
 						{#each data.requests as request (request.id)}
 							<li class="section-row">
 								<div class="flex flex-wrap items-start justify-between gap-3">
@@ -159,7 +159,11 @@
 												/>
 											</form>
 										{/if}
-										<a class="link text-body" href="/matchs/{request.gameId}">{t('subs.viewGame')}</a>
+										<a
+											class="link inline-flex min-h-11 items-center text-body"
+											href="/matchs/{request.gameId}"
+											>{t('subs.viewGame')}</a
+										>
 									</div>
 								</div>
 							</li>

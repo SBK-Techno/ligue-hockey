@@ -87,7 +87,7 @@
 		<div class="notice">{t('rating.gameNotPlayed')}</div>
 	{/if}
 
-	<div class="space-y-2">
+	<div class="assessment-grid">
 		{#each assessment.players as player (player.playerId)}
 			{@const attributes = gameRatingAttributes(player.position)}
 			<details
@@ -133,7 +133,10 @@
 						class="section-row border-t border-line"
 					>
 						<input type="hidden" name="playerId" value={player.playerId} />
-						<fieldset class="contents" disabled={!assessment.canRate}>
+						<fieldset
+							class="grid gap-x-8 sm:grid-cols-2"
+							disabled={!assessment.canRate}
+						>
 							{#each attributes as attribute (attribute.key)}
 								<RatingScale
 									name={attribute.key}

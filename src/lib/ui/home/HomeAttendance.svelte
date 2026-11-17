@@ -28,7 +28,7 @@
 />
 
 {#if hasNames}
-	<details class="group mt-2">
+	<details class="group mt-2" open>
 		<summary
 			class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-body font-semibold marker:content-none"
 		>

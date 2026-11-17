@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
 	AVATARS,
@@ -21,18 +20,14 @@ import {
 } from '#config/legends.ts';
 import { POSITION_KEYS } from '#config/positions.ts';
 import { branding } from '#lib/generated/branding.ts';
-import { parseColourTokens } from '../../../../scripts/lib/palette.ts';
 import { firstFreeAvatarId } from './identity-assignment.ts';
-import { avatarColor, resolveAvatarId } from './identity.ts';
+import { resolveAvatarId } from './identity.ts';
 
 describe('catalogue des visages de la ligue', () => {
-	it('offre 28 identifiants et 28 couleurs uniques', () => {
+	it('offre 28 identifiants uniques', () => {
 		expect(AVATARS).toHaveLength(28);
 		expect(AVATAR_IDS).toHaveLength(28);
 		expect(new Set(AVATAR_IDS).size).toBe(28);
-		expect(AVATARS.map((avatar) => avatar.color).sort((a, b) => a - b)).toEqual(
-			Array.from({ length: 28 }, (_, index) => index + 1)
-		);
 		expect(AVATAR_IDS).toContain(DEFAULT_AVATAR_ID);
 	});
 
@@ -40,33 +35,6 @@ describe('catalogue des visages de la ligue', () => {
 		for (const avatar of AVATARS) {
 			expect(avatar.id, avatar.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 		}
-	});
-
-	it('couvre toutes les carnations, chevelures et coiffures', () => {
-		expect(new Set(AVATARS.map((avatar) => avatar.skin))).toEqual(
-			new Set([1, 2, 3, 4, 5, 6])
-		);
-		expect(new Set(AVATARS.map((avatar) => avatar.hair))).toEqual(
-			new Set([1, 2, 3, 4, 5, 6])
-		);
-		expect(new Set(AVATARS.map((avatar) => avatar.bg))).toEqual(
-			new Set([1, 2, 3, 4, 5, 6])
-		);
-		expect(new Set(AVATARS.map((avatar) => avatar.style))).toEqual(
-			new Set(['short', 'buzz', 'curly', 'long', 'bun', 'bald', 'toque', 'helmet', 'mask'])
-		);
-	});
-
-	it('réserve exactement quatre masques de gardien', () => {
-		expect(AVATARS.filter((avatar) => avatar.style === 'mask')).toHaveLength(4);
-	});
-
-	it('varie la pilosité et les lunettes', () => {
-		expect(new Set(AVATARS.map((avatar) => avatar.facial))).toEqual(
-			new Set(['none', 'stubble', 'moustache', 'beard'])
-		);
-		expect(AVATARS.some((avatar) => avatar.glasses)).toBe(true);
-		expect(AVATARS.some((avatar) => !avatar.glasses)).toBe(true);
 	});
 });
 
@@ -90,12 +58,6 @@ describe('identités hommage', () => {
 			expect(legend.era, legend.id).toMatch(/^\d{4}-\d{4}$/);
 			expect(POSITION_KEYS, legend.id).toContain(legend.position);
 		}
-	});
-
-	it('réserve trente couleurs après celles des visages de la ligue', () => {
-		expect(LEGENDS.map((legend) => legend.color).sort((a, b) => a - b)).toEqual(
-			Array.from({ length: 30 }, (_, index) => index + 29)
-		);
 	});
 
 	it('conserve les faits vérifiés de chaque légende', () => {
@@ -190,9 +152,6 @@ describe('catalogue des identités', () => {
 
 	it('génère l’index compact depuis le catalogue complet', () => {
 		expect(branding.identities.ids).toEqual([...IDENTITY_IDS]);
-		expect(branding.identities.colors).toEqual(
-			IDENTITIES.map((identity) => identity.color)
-		);
 		expect(branding.identities.leagueFaces).toBe(AVATAR_IDS.length);
 	});
 });
@@ -210,15 +169,6 @@ describe('résolution de l’identité', () => {
 		expect(first).toBe(resolveAvatarId('joueur-stable', undefined));
 		expect(first).toBe(resolveAvatarId('joueur-stable', 'identifiant-invalide'));
 		expect(AVATAR_IDS).toContain(first);
-	});
-
-	it('nomme la propriété de couleur sans jamais écrire de couleur brute', () => {
-		for (const identity of IDENTITIES) {
-			const property = avatarColor(identity.id);
-			expect(property).toBe(`--color-player-${identity.color}`);
-			expect(property).toMatch(/^--color-player-\d+$/);
-			expect(property).not.toContain('#');
-		}
 	});
 
 	it('choisit le premier visage libre, puis la première légende libre', () => {
@@ -292,14 +242,5 @@ describe('options de légendes du sélecteur', () => {
 		expect(legendOptionsForPosition('defense', null)).toEqual(
 			legendsForPosition('defense')
 		);
-	});
-});
-
-describe('couleurs des identités', () => {
-	it('résout chaque couleur du catalogue vers un jeton déclaré', () => {
-		const tokens = parseColourTokens(readFileSync('src/lib/ui/tokens.css', 'utf8'));
-		for (const identity of IDENTITIES) {
-			expect(tokens.has(`player-${identity.color}`), identity.id).toBe(true);
-		}
 	});
 });

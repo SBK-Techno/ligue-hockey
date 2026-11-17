@@ -101,6 +101,20 @@ describe('feuille de match terminée', () => {
 		expect(body.match(new RegExp(t('games.status.completed'), 'g'))).toHaveLength(1);
 	});
 
+	it('place les buts et les totaux côte à côte au grand écran', () => {
+		const body = completedBody();
+		const columns = body.indexOf('lg:grid-cols-[minmax(0,1.05fr)');
+		const wrapper = body.lastIndexOf('<div', columns);
+		const goals = body.indexOf(t('gamesheet.goals'));
+		const totals = body.indexOf(t('gamesheet.totals'));
+
+		expect(columns).toBeGreaterThan(-1);
+		expect(wrapper).toBeGreaterThan(-1);
+		expect(goals).toBeGreaterThan(wrapper);
+		expect(totals).toBeGreaterThan(goals);
+		expect(body.slice(columns, columns + 120)).toContain('lg:items-start');
+	});
+
 	it('laisse le trait au balisage, sans classe ni pseudo-élément de tableau', () => {
 		const css = readFileSync(new URL('../../layout.css', import.meta.url), 'utf8');
 		const sheetSource = readFileSync(

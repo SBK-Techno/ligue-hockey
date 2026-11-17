@@ -56,6 +56,7 @@ export const fr = {
   'nav.chat': 'Discussion',
   'nav.chatShort': 'Jaser',
   'nav.profile': 'Mon profil',
+  'nav.profileShort': 'Profil',
   'nav.admin': 'Gestion',
   'nav.logout': 'Se déconnecter',
   'nav.login': 'Se connecter',
@@ -532,6 +533,9 @@ export const fr = {
   'rink.short.leftWing': 'AG',
   'rink.short.rightWing': 'AD',
   'rink.board': 'Formation sur la glace',
+  'rink.yourSpot': 'Ton poste',
+  'rink.chooseTeam': 'Choisis une équipe',
+  'rink.roster': 'La formation en liste',
   'rink.steps': 'Étapes pour placer les joueurs',
   'rink.stepPick': 'Choisis un joueur',
   'rink.stepPlace': 'Choisis sa place',
@@ -855,6 +859,8 @@ export const fr = {
     'Les notifications sont bloquées dans les réglages du navigateur.',
   'profile.pushUnconfigured':
     'Les notifications sur l’appareil ne sont pas activées pour la ligue.',
+  'profile.pushUnavailable':
+    'Impossible de vérifier les notifications sur cet appareil. Recharge la page.',
   'profile.pushFailed': 'Impossible d’activer les notifications. Réessaie.',
   'profile.pushPreferenceHelp':
     'Active cet appareil ci-dessous pour recevoir les notifications. La préférence reste enregistrée.',
@@ -936,6 +942,7 @@ export const fr = {
   'peek.positionSkills': 'Au poste',
   'peek.overall': 'Note globale',
   'peek.positionOverall': 'Note au poste',
+  'admin.identityChange': 'Changer l’identité de ce joueur',
   'admin.legendsTitle': 'Légendes au poste du joueur',
   'admin.legendsHelp': 'Des identités hommage, choisies pour le poste de ce joueur.',
   'admin.avatarHelp':
@@ -981,6 +988,7 @@ export const fr = {
     'Ces raccourcis ouvrent les écrans que ton rôle permet de gérer.',
   'profile.signOutHelp': 'Tu peux fermer ta session sur cet appareil.',
   'notifications.title': 'Notifications',
+  'notifications.help': 'Les avis de match, de remplacement et de solde.',
   'notifications.settings': 'Choisir les avis reçus',
   'notifications.empty': 'Aucun avis.',
   'notifications.emptyHelp':
@@ -995,13 +1003,15 @@ export const fr = {
   'notifications.latest': 'Revenir aux plus récents',
   'notifications.retry': 'Relancer',
   'notifications.retryDone': 'Envoi relancé.',
-  'notifications.queue': 'File d’envoi',
+  'notifications.queue': 'Notifications',
   'notifications.pending': 'En attente',
   'notifications.failed': 'Échecs',
-  'notifications.oldestDue': 'Plus ancien dû',
+  'notifications.oldestDue': 'Plus ancien en attente',
   'notifications.noneQueued': 'Rien en attente',
-  'notifications.lastPush': 'Push du dernier tick',
+  'notifications.lastPush': 'Dernier envoi',
   'notifications.noneFailed': 'Aucun envoi en échec.',
+  'notifications.failedSend': 'Envoi en échec',
+  'notifications.technicalDetails': 'Détails techniques',
   'notifications.attempts': 'Tentatives : {count}',
   'notifications.suppression.channelDisabled': 'Canal désactivé',
   'notifications.suppression.preferenceDisabled': 'Préférence du joueur',
@@ -1087,7 +1097,12 @@ export const fr = {
   'admin.dashboard': 'Cette semaine',
   'admin.dashboardHelp': 'Ce qui demande ton attention cette semaine.',
   'admin.todo': 'À faire',
+  'admin.todoBalances': 'Soldes à recevoir · {count}',
+  'admin.todoRequests': 'Places à combler · {count}',
+  'admin.allBalancesPaid': 'Tous les soldes sont à jour.',
+  'admin.noOverdue': 'Aucun solde en retard.',
   'admin.thisWeek': 'Cette semaine',
+  'admin.thisWeekShort': 'Semaine',
   'admin.settingsJump': 'Aller à une section',
   'admin.settingsSaveHint': 'Les changements s’appliquent à l’enregistrement.',
   'admin.settingCount.one': '{count} réglage',
@@ -1120,6 +1135,8 @@ export const fr = {
   'admin.gamesHelp':
     'La prochaine date est proposée automatiquement. Vérifie l’heure et le lieu avant de créer.',
   'admin.locations': 'Lieux',
+  'admin.locationCount.one': '{count} lieu',
+  'admin.locationCount.many': '{count} lieux',
   'admin.locationsTitle': 'Lieux des matchs',
   'admin.locationsHelp':
     'Un lieu se choisit à la création d’un match. Renommer un lieu ne change pas les matchs déjà créés.',
@@ -1160,6 +1177,7 @@ export const fr = {
   'admin.cancelGameQuestion':
     'Annuler le match du {date} ? Tous les joueurs seront avisés.',
   'admin.rules': 'Règles d’alignement',
+  'admin.rulesShort': 'Règles',
   'admin.balances': 'Soldes',
   'admin.balancesHelp':
     'Les frais, les versements et les retards de chaque joueur.',
@@ -1184,8 +1202,16 @@ export const fr = {
   'balance.applyDefaultsConfirm':
     'Appliquer les frais par défaut ? Le plan actuel sera remplacé.',
   'admin.evaluationsSeason': 'Fiches de saison',
-  'admin.evaluationsGames': 'Matchs à évaluer',
+  'admin.evaluationsGames': 'Matchs joués',
   'admin.evaluationsEmpty': 'Aucun joueur à évaluer.',
+  'admin.evaluationsProgress': '{done} fiches complètes sur {total}.',
+  'admin.evaluationsAllComplete': 'Toutes les fiches de saison sont complètes.',
+  'admin.showComplete.one': 'Voir {count} fiche complète',
+  'admin.showComplete.many': 'Voir les {count} fiches complètes',
+  'admin.hideComplete': 'Masquer les fiches complètes',
+  'admin.gamesToRate.one': '{count} match à évaluer',
+  'admin.gamesToRate.many': '{count} matchs à évaluer',
+  'admin.gamesAllRated': 'Tous les matchs sont évalués.',
   'admin.evaluationBack': 'Retour aux évaluations',
   'admin.seasonComplete': 'Fiche complète',
   'admin.seasonIncomplete': 'À compléter',
@@ -1199,8 +1225,9 @@ export const fr = {
   'admin.noResults': 'Aucun joueur ne correspond à la recherche.',
   'admin.rulesEmpty':
     'Aucune règle. Les équipes sont générées sans contrainte de paire.',
-  'admin.deleteRuleConfirm':
-    'Supprimer cette règle ? Elle ne s’appliquera plus aux prochains alignements.',
+  'admin.deleteRuleNamed': 'Supprimer la règle {names}',
+  'admin.deleteRuleConfirmNamed':
+    'Supprimer la règle entre {names} ? Elle ne s’appliquera plus aux prochains alignements.',
   'ruleMode.together': 'Doivent jouer ensemble',
   'ruleMode.togetherHelp': 'L’alignement place toujours ces deux joueurs dans la même équipe.',
   'ruleMode.togetherShort': 'Ensemble',

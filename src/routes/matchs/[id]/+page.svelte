@@ -58,11 +58,14 @@
 		)
 	);
 	const completed = $derived(game?.status === 'completed');
+	const showPresence = $derived(
+		hasProfile && availability !== null && data.editable
+	);
 	const sectionOrder = $derived(
 		game
 			? matchSectionOrder({
 					completed,
-					hasAttendance: availability !== null,
+					hasAttendance,
 					hasSubstitutes: completed ? data.requests.length > 0 : hasSubsPanel,
 					hasSheet: Boolean(data.playable && data.sheet),
 					// Un match annulé n'a pas d'alignement à publier : ni carte
@@ -134,36 +137,20 @@
 		</div>
 	{/if}
 
-{#snippet attendancePanel()}
-	<SectionCard
-		class="lg:col-span-12"
-		title={hasProfile ? t('home.availability') : t('availability.title')}
-	>
-
-		{#if isManager && !hasProfile}
-			<p class="mt-3 text-body text-muted">{t('home.adminHero')}</p>
-		{:else if availability?.substitute && data.editable}
-			<p class="mt-3 text-body text-muted">{t('availability.substituteHint')}</p>
-			<a class="btn-secondary btn-sm mt-3" href="/remplacants">{t('home.substituteCta')}</a>
-		{:else if availability?.locked}
-			<p class="mt-3 text-body font-medium text-muted">{t('availability.locked')}</p>
-			{#if availability.canWithdraw}
-				<p class="hint mt-1">{t('availability.lockedHelp')}</p>
-				<form method="POST" action="?/availability" use:progressiveForm class="mt-3">
-					<input type="hidden" name="gameId" value={game.id} />
-					<input type="hidden" name="status" value="absent" />
-					<ConfirmSubmit
-						label={t('availability.withdraw')}
-						question={t('availability.withdrawConfirm')}
-						confirmLabel={t('availability.withdraw')}
-						class="btn-secondary btn-sm"
-					/>
-				</form>
-			{/if}
-		{:else if availability?.canRespond}
-			<div class="mt-4 flex flex-wrap items-center justify-between gap-4">
-				<div>
-					<p class="text-body font-semibold">
+{#snippet presenceStrip()}
+	{#if availability && (availability.substitute || availability.locked || availability.canRespond)}
+		<section class="presence-strip" aria-labelledby="presence-titre">
+			<div class="min-w-0">
+				<p id="presence-titre" class="micro-label">{t('home.availability')}</p>
+				{#if availability.substitute && data.editable}
+					<p class="mt-1 text-body font-semibold">{t('availability.substituteHint')}</p>
+				{:else if availability.locked}
+					<p class="mt-1 text-body font-semibold">{t('availability.locked')}</p>
+					{#if availability.canWithdraw}
+						<p class="hint mt-1">{t('availability.lockedHelp')}</p>
+					{/if}
+				{:else if availability.canRespond}
+					<p class="mt-1 text-body font-semibold">
 						{#if availability.own === 'present'}
 							{t('home.replyPresent')}
 						{:else if availability.own === 'absent'}
@@ -172,15 +159,20 @@
 							{t('home.awaitingReply')}
 						{/if}
 					</p>
-					<p class="mt-1 text-meta text-muted">
+					<p class="mt-0.5 text-meta text-muted">
 						{t('home.deadline', { date: availability.closesAtLabel })}
 					</p>
-				</div>
+				{/if}
+				{#if ownRequest}
+					<p class="hint mt-2">{t('subs.ownRequestOpen')}</p>
+				{/if}
+			</div>
+			{#if availability.canRespond}
 				<form
 					method="POST"
 					action="?/availability"
 					use:progressiveForm
-					class="grid w-full grid-cols-2 gap-2 sm:inline-flex sm:w-auto"
+					class="presence-actions"
 				>
 					<button
 						class="chip justify-center"
@@ -201,29 +193,39 @@
 						{t('availability.markAbsent')}
 					</button>
 				</form>
-			</div>
-			{#if ownRequest}
-				<p class="hint mt-3">{t('subs.ownRequestOpen')}</p>
+			{:else if availability.locked && availability.canWithdraw}
+				<form method="POST" action="?/availability" use:progressiveForm>
+					<input type="hidden" name="gameId" value={game.id} />
+					<input type="hidden" name="status" value="absent" />
+					<ConfirmSubmit
+						label={t('availability.withdraw')}
+						question={t('availability.withdrawConfirm')}
+						confirmLabel={t('availability.withdraw')}
+						class="btn-secondary btn-sm"
+					/>
+				</form>
+			{:else if availability.substitute && data.editable}
+				<a class="btn-secondary btn-sm" href="/remplacants">{t('home.substituteCta')}</a>
 			{/if}
-		{/if}
+		</section>
+	{/if}
+{/snippet}
 
-	</SectionCard>
-
+{#snippet attendancePanel()}
 	{#if hasAttendance && availability}
 		<SectionCard
-			class={hasSubsPanel ? 'lg:col-span-5' : 'lg:col-span-12'}
+			class="self-start {hasSubsPanel ? 'lg:col-span-5' : 'lg:col-span-12'}"
 			title={t('home.attendance')}
 		>
 			<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
 		</SectionCard>
 	{/if}
-
 {/snippet}
 
 {#snippet substitutesPanel()}
 	{#if hasSubsPanel}
 		<SectionCard
-			class={hasAttendance ? 'lg:col-span-7' : 'lg:col-span-12'}
+			class="self-start {hasAttendance ? 'lg:col-span-7' : 'lg:col-span-12'}"
 			title={t('subs.title')}
 			flush
 		>
@@ -402,6 +404,8 @@
 					bench={game.generation?.bench ?? []}
 					canEdit={data.canManage && data.editable}
 					expectedGeneratedAt={game.generation?.generatedAt ?? null}
+					actorId={hasProfile ? actor?.userId ?? null : null}
+					{ownTeam}
 				/>
 				{/key}
 			</div>
@@ -475,6 +479,10 @@
 		</SectionCard>
 	{/if}
 {/snippet}
+
+	{#if showPresence}
+		{@render presenceStrip()}
+	{/if}
 
 	<div class="board-grid">
 {#each sectionOrder as section (section)}

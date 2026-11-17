@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { positionDefinition } from '#config/positions.ts';
 	import { rinkGeometryStyle } from '#config/rink.ts';
-	import { TEAMS, teamDefinition } from '#config/teams.ts';
+	import { TEAMS, teamDefinition, type Team } from '#config/teams.ts';
 	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
+	import TeamRoster from '#lib/ui/TeamRoster.svelte';
 	import {
 		assignmentsForSave,
 		benchKey,
@@ -17,6 +19,7 @@
 		selectBenchPlayer,
 		selectPlace,
 		slotAriaLabel,
+		viewerSpot,
 		type LineupAssignmentMap,
 		type LineupPlacement
 	} from './lineup-board.ts';
@@ -25,8 +28,10 @@
 	type BoardPlayer = {
 		playerId: string;
 		fullName: string;
+		position: GamePlayer['position'];
 		jerseyNumber: number | null;
 		avatarId: string | null;
+		kind: GamePlayer['kind'];
 	};
 
 	type DragSession = {
@@ -46,15 +51,26 @@
 		slots,
 		bench,
 		canEdit,
-		expectedGeneratedAt
+		expectedGeneratedAt,
+		actorId = null,
+		ownTeam = null
 	}: {
 		slots: readonly GameSlotView[];
 		bench: readonly GamePlayer[];
 		canEdit: boolean;
 		expectedGeneratedAt: number | null;
+		actorId?: string | null;
+		ownTeam?: Team | null;
 	} = $props();
 
 	const placements = $derived.by<LineupPlacement[]>(() => boardPlacements(slots));
+	const orderedTeams = $derived(
+		ownTeam
+			? [...TEAMS].sort((a, b) => (a.key === ownTeam ? -1 : b.key === ownTeam ? 1 : 0))
+			: [...TEAMS]
+	);
+	// svelte-ignore state_referenced_locally
+	let activeTeam = $state<Team>(ownTeam ?? TEAMS[0].key);
 
 	// La carte est remontée quand la génération change; l'état initial est stable.
 	// svelte-ignore state_referenced_locally
@@ -75,8 +91,10 @@
 			list.push({
 				playerId: slot.player.playerId,
 				fullName: slot.player.fullName,
+				position: slot.player.position,
 				jerseyNumber: slot.player.jerseyNumber,
-				avatarId: slot.player.avatarId
+				avatarId: slot.player.avatarId,
+				kind: slot.player.kind
 			});
 		}
 		for (const entry of bench) {
@@ -84,8 +102,10 @@
 			list.push({
 				playerId: entry.playerId,
 				fullName: entry.fullName,
+				position: entry.position,
 				jerseyNumber: entry.jerseyNumber,
-				avatarId: entry.avatarId
+				avatarId: entry.avatarId,
+				kind: entry.kind
 			});
 		}
 		return list;
@@ -105,6 +125,66 @@
 
 	const assignmentsJson = $derived(JSON.stringify(assignmentsForSave(slots, assignments)));
 	const geometryStyle = rinkGeometryStyle();
+
+	/**
+	 * La liste de la formation suit les gestes en cours, pas seulement la
+	 * formation publiée : un gérant qui déplace un joueur voit la liste changer
+	 * sous ses doigts.
+	 */
+	const rosterSlots = $derived.by<GameSlotView[]>(() =>
+		placements.map((placement) => {
+			const playerId = assignments[placement.key] ?? null;
+			const player = playerId ? playerById(playerId) : null;
+			return {
+				team: placement.team,
+				position: placement.position,
+				slotIndex: placement.slotIndex,
+				player: player
+					? {
+							playerId: player.playerId,
+							fullName: player.fullName,
+							position: player.position,
+							jerseyNumber: player.jerseyNumber,
+							avatarId: player.avatarId,
+							kind: player.kind
+						}
+					: null
+			};
+		})
+	);
+
+	/**
+	 * Le résumé du joueur suit les gestes en cours : déplacer son propre jeton
+	 * met « Ton poste » à jour avant même d'enregistrer.
+	 */
+	const viewer = $derived(viewerSpot(rosterSlots, benchPlayers, actorId));
+	const viewerSummary = $derived.by(() => {
+		if (!viewer) return null;
+		if (viewer.kind === 'bench') {
+			return {
+				title: null,
+				text: t('home.teamBench'),
+				help: t('home.teamBenchHelp')
+			};
+		}
+		if (viewer.kind === 'absent') {
+			return {
+				title: null,
+				text: t('home.teamNoSlot'),
+				help: t('home.teamNoSlotHelp')
+			};
+		}
+		const parts = [
+			t(teamDefinition(viewer.team).labelKey),
+			t(positionDefinition(viewer.position).labelKey)
+		];
+		if (viewer.line !== null) parts.push(t('rink.line', { line: viewer.line }));
+		else if (viewer.pair !== null) parts.push(t('rink.pair', { pair: viewer.pair }));
+		else if (viewer.role === null) {
+			parts.push(t('rink.extraSlot', { index: viewer.slotIndex + 1 }));
+		}
+		return { title: t('rink.yourSpot'), text: parts.join(' · '), help: null };
+	});
 
 	/**
 	 * Le guide suit un seul chemin : choisir un joueur, choisir sa place,
@@ -137,6 +217,15 @@
 			userId: player.playerId,
 			avatarId: player.avatarId
 		};
+	}
+
+	function isViewer(playerId: string): boolean {
+		return actorId !== null && actorId === playerId;
+	}
+
+	/** Le nom accessible annonce « Toi » quand la place est celle du joueur. */
+	function ariaWithYou(label: string, player: BoardPlayer): string {
+		return isViewer(player.playerId) ? `${label}, ${t('common.you')}` : label;
 	}
 
 	/**
@@ -296,6 +385,20 @@
 >
 	<h2 id="alignement-titre" class="sr-only">{t('rink.board')}</h2>
 
+	{#if viewerSummary}
+		<div class="you-spot">
+			{#if viewerSummary.title}
+				<span class="stamp border-ice bg-ice-soft text-ice-deep">{viewerSummary.title}</span>
+			{/if}
+			<div class="min-w-0">
+				<p class="text-body font-semibold">{viewerSummary.text}</p>
+				{#if viewerSummary.help}
+					<p class="hint mt-0.5">{viewerSummary.help}</p>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
 	{#if canEdit}
 		<div>
 			<p class="sr-only">{t('rink.steps')}</p>
@@ -336,11 +439,37 @@
 		{canEdit ? t('rink.helpManager') : t('rink.helpPlayer')}
 	</p>
 
+	<div class="rink-switch" role="group" aria-label={t('rink.chooseTeam')}>
+		{#each orderedTeams as team (team.key)}
+			<button
+				type="button"
+				class="chip justify-center"
+				aria-pressed={activeTeam === team.key}
+				aria-controls="rink-team-{team.key}"
+				onclick={() => (activeTeam = team.key)}
+			>
+				{t(teamDefinition(team.key).shortLabelKey)}
+				{#if ownTeam === team.key}
+					<span class="sr-only"> · {t('home.team')}</span>
+				{/if}
+			</button>
+		{/each}
+	</div>
+
 	<div class="grid gap-4 lg:grid-cols-2">
-		{#each TEAMS as team (team.key)}
-			<div class="min-w-0">
-				<div class="mb-2 flex items-baseline justify-between gap-2">
-					<h3 class="text-subhead font-semibold">{t(teamDefinition(team.key).labelKey)}</h3>
+		{#each orderedTeams as team (team.key)}
+			<div
+				class="rink-team min-w-0"
+				id="rink-team-{team.key}"
+				data-active={activeTeam === team.key}
+			>
+				<div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+					<div class="flex min-w-0 items-baseline gap-2">
+						<h3 class="text-subhead font-semibold">{t(teamDefinition(team.key).labelKey)}</h3>
+						{#if ownTeam === team.key}
+							<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('home.team')}</span>
+						{/if}
+					</div>
 					<span class="text-caption text-muted">
 						{team.key === 'black' ? t('rink.attackLeft') : t('rink.attackRight')}
 					</span>
@@ -357,6 +486,7 @@
 								data-player-id={player?.playerId}
 								data-lineup-key={placement.key}
 								data-filled={player !== null}
+								data-you={player !== null && isViewer(player.playerId)}
 								data-selected={selected === placement.key}
 								data-drag-source={drag?.dragging && drag.key === placement.key}
 								data-drop-active={hoverKey === placement.key}
@@ -364,7 +494,7 @@
 								disabled={!canEdit && player === null}
 								data-player-peek={!canEdit && player ? 'click' : undefined}
 								onclick={(event) => handleClick(event, placement.key)}
-								aria-label={slotAriaLabel(team.key, placement, player)}
+								aria-label={player ? ariaWithYou(slotAriaLabel(team.key, placement, player), player) : slotAriaLabel(team.key, placement, null)}
 								aria-haspopup={!canEdit && player ? 'dialog' : undefined}
 								aria-expanded={!canEdit && player ? 'false' : undefined}
 								aria-pressed={canEdit && player ? selected === placement.key : undefined}
@@ -373,6 +503,9 @@
 									<span class="rink-portrait">
 										<Avatar player={portrait(player)} fill />
 									</span>
+									<span class="rink-role" aria-hidden="true"
+										>{rinkRoleShortLabel(placement.role)}</span
+									>
 									<span class="rink-number">{player.jerseyNumber ?? '?'}</span>
 									<span class="rink-name">{rinkPlayerLastName(player.fullName)}</span>
 								{:else}
@@ -394,6 +527,7 @@
 									data-player-id={player?.playerId}
 									data-lineup-key={placement.key}
 									data-filled={player !== null}
+									data-you={player !== null && isViewer(player.playerId)}
 									data-selected={selected === placement.key}
 										data-drag-source={drag?.dragging && drag.key === placement.key}
 									data-drop-active={hoverKey === placement.key}
@@ -401,7 +535,7 @@
 									disabled={!canEdit && player === null}
 									data-player-peek={!canEdit && player ? 'click' : undefined}
 									onclick={(event) => handleClick(event, placement.key)}
-									aria-label={slotAriaLabel(team.key, placement, player)}
+									aria-label={player ? ariaWithYou(slotAriaLabel(team.key, placement, player), player) : slotAriaLabel(team.key, placement, null)}
 									aria-haspopup={!canEdit && player ? 'dialog' : undefined}
 									aria-expanded={!canEdit && player ? 'false' : undefined}
 									aria-pressed={canEdit && player ? selected === placement.key : undefined}
@@ -414,6 +548,11 @@
 											>{player.jerseyNumber ?? '?'}</span
 										>
 										<span class="bench-name">{player.fullName}</span>
+										{#if isViewer(player.playerId)}
+											<span class="stamp border-ice bg-ice-soft text-ice-deep"
+												>{t('common.you')}</span
+											>
+										{/if}
 									{:else}
 										<span class="bench-empty-mark" aria-hidden="true">+</span>
 										<span class="text-muted">{t('rink.emptySlot')}</span>
@@ -422,6 +561,20 @@
 							</li>
 						{/each}
 					</ul>
+				{/if}
+
+				{#if activeTeam === team.key}
+					<div class="rink-roster mt-3">
+						<p class="micro-label px-3">{t('rink.roster')}</p>
+						<TeamRoster
+							slots={rosterSlots}
+							team={team.key}
+							{actorId}
+							{ownTeam}
+							heading={false}
+							peek={!canEdit}
+						/>
+					</div>
 				{/if}
 			</div>
 		{/each}
@@ -445,11 +598,13 @@
 								data-player-id={player.playerId}
 								data-lineup-key={benchKey(player.playerId)}
 								data-filled="true"
+								data-you={isViewer(player.playerId)}
 								data-selected={selected === benchKey(player.playerId)}
 								data-drag-source={drag?.dragging && drag.key === benchKey(player.playerId)}
 								data-drop-active={hoverKey === benchKey(player.playerId)}
 								data-player-peek={!canEdit ? 'click' : undefined}
 								onclick={(event) => handleClick(event, benchKey(player.playerId))}
+								aria-label={ariaWithYou(`${player.jerseyNumber ?? '?'} ${player.fullName}`, player)}
 								aria-haspopup={!canEdit ? 'dialog' : undefined}
 								aria-expanded={!canEdit ? 'false' : undefined}
 								aria-pressed={canEdit ? selected === benchKey(player.playerId) : undefined}
@@ -459,6 +614,9 @@
 								</span>
 								<span class="font-mono text-caption text-muted">{player.jerseyNumber ?? '?'}</span>
 								<span class="bench-name">{player.fullName}</span>
+								{#if isViewer(player.playerId)}
+									<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>
+								{/if}
 							</button>
 						</li>
 					{/each}

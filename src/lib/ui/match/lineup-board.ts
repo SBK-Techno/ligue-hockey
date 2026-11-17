@@ -3,7 +3,7 @@ import { rinkRole, type RinkPlacement, type RinkRoleKey } from '#config/rink.ts'
 import { slotKey } from '#config/slot.ts';
 import { teamDefinition, type Team } from '#config/teams.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
-import type { GameSlotView } from '#lib/domain/games/types.ts';
+import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 
 type NamedPlacement = {
@@ -133,6 +133,47 @@ export function boardPlacements(
 	slots: readonly GameSlotView[]
 ): LineupPlacement[] {
 	return placementsOf(slots, initialAssignments(slots));
+}
+
+/**
+ * La place du joueur connecté dans la formation publiée. Une seule fonction
+ * décide s'il est sur la glace, sur le banc ou absent, pour que le résumé, le
+ * marqueur « Toi » et le commutateur d'équipe ne divergent jamais.
+ */
+export type ViewerSpot =
+	| {
+			kind: 'slot';
+			team: Team;
+			position: Position;
+			slotIndex: number;
+			role: RinkRoleKey | null;
+			line: number | null;
+			pair: number | null;
+	  }
+	| { kind: 'bench' }
+	| { kind: 'absent' };
+
+export function viewerSpot(
+	slots: readonly GameSlotView[],
+	bench: readonly GamePlayer[],
+	actorId: string | null
+): ViewerSpot | null {
+	if (!actorId) return null;
+	const slot = slots.find((entry) => entry.player?.playerId === actorId);
+	if (slot) {
+		const role = rinkRole(slot.position, slot.slotIndex);
+		return {
+			kind: 'slot',
+			team: slot.team,
+			position: slot.position,
+			slotIndex: slot.slotIndex,
+			role: role?.key ?? null,
+			line: role && slot.position === 'forward' ? role.line : null,
+			pair: role && slot.position === 'defense' ? role.pair : null
+		};
+	}
+	if (bench.some((player) => player.playerId === actorId)) return { kind: 'bench' };
+	return { kind: 'absent' };
 }
 
 /** Échange deux places, même quand l'une des deux est vide. */

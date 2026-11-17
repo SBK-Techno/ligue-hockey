@@ -10,6 +10,7 @@
 		tone = 'danger',
 		submitName,
 		submitValue,
+		ariaLabel,
 		class: className = tone === 'danger' ? 'btn-danger btn-sm' : 'btn-secondary btn-sm'
 	}: {
 		label: string;
@@ -22,6 +23,8 @@
 		/** Nom et valeur du bouton soumis par la confirmation, quand le formulaire en a besoin. */
 		submitName?: string;
 		submitValue?: string;
+		/** Un nom accessible qui distingue plusieurs déclencheurs de même libellé. */
+		ariaLabel?: string;
 		class?: string;
 	} = $props();
 
@@ -54,4 +57,12 @@
 	}
 </script>
 
-<button bind:this={trigger} type="button" class={className} onclick={open}>{label}</button>
+<button
+	bind:this={trigger}
+	type="button"
+	class={className}
+	aria-label={ariaLabel}
+	onclick={open}
+>
+	{label}
+</button>

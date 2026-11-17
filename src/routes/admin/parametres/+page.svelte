@@ -41,11 +41,11 @@
 	class="space-y-4"
 	oninvalidcapture={revealInvalid}
 >
-	{#each data.groups as group, index (group.key)}
+	{#each data.groups as group (group.key)}
 		<details
 			id="groupe-{group.key}"
 			class="group border-t border-line"
-			open={index === 0}
+			open
 		>
 			<summary
 				class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2"

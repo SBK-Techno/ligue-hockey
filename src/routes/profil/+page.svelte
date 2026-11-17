@@ -19,7 +19,14 @@
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
 	import { monogram } from '#lib/ui/identity-display.ts';
-	import { pushPreferenceState } from './push-preference.ts';
+	import {
+		pushPreferenceState,
+		type PushDeviceStatus
+	} from './push-preference.ts';
+	import {
+		PushDeviceTimeout,
+		serviceWorkerRegistration
+	} from './push-device.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -102,11 +109,8 @@
 	const currentSession = $derived(
 		data.sessions.find((session) => session.id === data.currentSessionId)
 	);
-	const currentHash = $derived(page.url.hash);
 
-	let pushStatus = $state<
-		'checking' | 'off' | 'on' | 'denied' | 'unsupported' | 'unconfigured'
-	>('checking');
+	let pushStatus = $state<PushDeviceStatus>('checking');
 	let pushError = $state<string | null>(null);
 	const pushPreference = $derived(
 		pushPreferenceState(pushStatus, data.notifications.pushEnabled)
@@ -163,9 +167,13 @@
 			pushStatus = 'denied';
 			return;
 		}
-		const registration = await navigator.serviceWorker.ready;
-		const subscription = await registration.pushManager.getSubscription();
-		pushStatus = subscription ? 'on' : 'off';
+		try {
+			const registration = await serviceWorkerRegistration();
+			const subscription = await registration.pushManager.getSubscription();
+			pushStatus = subscription ? 'on' : 'off';
+		} catch {
+			pushStatus = 'unavailable';
+		}
 	});
 
 	async function enablePush() {
@@ -180,7 +188,7 @@
 				pushStatus = 'denied';
 				return;
 			}
-			const registration = await navigator.serviceWorker.ready;
+			const registration = await serviceWorkerRegistration();
 			const key = data.vapidPublicKey;
 			if (!key) return;
 			const subscription =
@@ -196,15 +204,16 @@
 			});
 			if (!response.ok) throw new Error('subscribe failed');
 			pushStatus = 'on';
-		} catch {
-			pushError = t('profile.pushFailed');
+		} catch (error) {
+			if (error instanceof PushDeviceTimeout) pushStatus = 'unavailable';
+			else pushError = t('profile.pushFailed');
 		}
 	}
 
 	async function disablePush() {
 		pushError = null;
 		try {
-			const registration = await navigator.serviceWorker.ready;
+			const registration = await serviceWorkerRegistration();
 			const subscription = await registration.pushManager.getSubscription();
 			if (subscription) {
 				await fetch('/api/push/abonnement', {
@@ -215,8 +224,9 @@
 				await subscription.unsubscribe();
 			}
 			pushStatus = 'off';
-		} catch {
-			pushError = t('error.generic');
+		} catch (error) {
+			if (error instanceof PushDeviceTimeout) pushStatus = 'unavailable';
+			else pushError = t('error.generic');
 		}
 	}
 
@@ -225,6 +235,18 @@
 			/iphone|ipad|ipod/i.test(navigator.userAgent) &&
 			!window.matchMedia('(display-mode: standalone)').matches
 	);
+
+	/** L'aide du contrôle désactivé cite exactement l'état visible. */
+	const pushStatusMessageId = $derived.by(() => {
+		if (pushStatus === 'unsupported') return 'push-device-unsupported';
+		if (pushStatus === 'unconfigured') return 'push-device-unconfigured';
+		if (isIos) return 'push-device-ios';
+		if (pushStatus === 'denied') return 'push-device-denied';
+		if (pushStatus === 'unavailable') return 'push-device-unavailable';
+		if (pushStatus === 'on') return undefined;
+		if (pushStatus === 'off') return 'push-preference-help';
+		return 'push-device-checking';
+	});
 
 	const passwordError = $derived(fieldErrorFor(form, 'securite', 'currentPassword'));
 
@@ -257,6 +279,48 @@
 		{ id: 'securite', label: t('profile.tab.security') },
 		...(isManager ? [{ id: 'administration', label: t('profile.tab.admin') }] : [])
 	]);
+
+	let activeSection = $state<string | null>(null);
+
+	$effect(() => {
+		const hash = page.url.hash.replace('#', '');
+		if (hash) activeSection = hash;
+	});
+
+	onMount(() => {
+		if (!activeSection) activeSection = sections[0]?.id ?? null;
+		if (!browser || !('IntersectionObserver' in window)) return;
+		// À partir de xl, les sections vivent dans deux colonnes : aucune
+		// n'est « la » section courante pendant le défilement. Le hash et le
+		// clic restent la seule source, et l'observateur ne sert qu'à une
+		// colonne unique.
+		const singleColumn = window.matchMedia('(max-width: 1279px)');
+		let observer: IntersectionObserver | null = null;
+		const observe = () => {
+			observer?.disconnect();
+			observer = null;
+			if (!singleColumn.matches) return;
+			observer = new IntersectionObserver(
+				(entries) => {
+					const visible = entries
+						.filter((entry) => entry.isIntersecting)
+						.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+					if (visible[0]) activeSection = visible[0].target.id;
+				},
+				{ rootMargin: '-20% 0px -65% 0px' }
+			);
+			for (const section of sections) {
+				const element = document.getElementById(section.id);
+				if (element) observer.observe(element);
+			}
+		};
+		observe();
+		singleColumn.addEventListener('change', observe);
+		return () => {
+			singleColumn.removeEventListener('change', observe);
+			observer?.disconnect();
+		};
+	});
 </script>
 
 <PageHeader title={t('profile.title')} />
@@ -336,7 +400,7 @@
 				class="grid grid-cols-2 gap-1 border-y border-line bg-paper py-1.5 lg:grid-cols-1 lg:border-0 lg:bg-transparent lg:py-0"
 			>
 				{#each sections as item (item.id)}
-					{@const current = currentHash === `#${item.id}`}
+					{@const current = activeSection === item.id}
 					<a
 						href="#{item.id}"
 						class="flex min-h-11 items-center border-l-[3px] px-2.5 text-body font-medium no-underline transition-colors {current
@@ -526,9 +590,7 @@
 						{/if}
 					</SectionCard>
 				{/if}
-			</div>
 
-			<div class="page-stack min-w-0">
 				{#if data.stats}
 					<div id="stats">
 						<SectionCard title={t('stats.title')}>
@@ -548,7 +610,9 @@
 						</SectionCard>
 					</div>
 				{/if}
+			</div>
 
+			<div class="page-stack min-w-0">
 				<div id="notifications">
 					<SectionCard title={t('profile.notifications')}>
 						<p class="hint">{t('profile.notificationsHelp')}</p>
@@ -569,7 +633,7 @@
 									name={pushPreference.disabled ? undefined : 'pushEnabled'}
 									checked={pushPreference.checked}
 									disabled={pushPreference.disabled}
-									aria-describedby={pushPreference.hint ? 'push-preference-help' : undefined}
+									aria-describedby={pushPreference.disabled ? pushStatusMessageId : undefined}
 									class="h-4 w-4"
 								/>
 								{t('profile.pushNotifications')}
@@ -580,25 +644,41 @@
 									name="pushEnabled"
 									value={data.notifications.pushEnabled ? 'on' : ''}
 								/>
-								<p id="push-preference-help" class="hint">
-									{t('profile.pushPreferenceHelp')}
-								</p>
+								{#if pushStatus === 'off'}
+									<p id="push-preference-help" class="hint">
+										{t('profile.pushPreferenceHelp')}
+									</p>
+								{/if}
 							{/if}
 							<button class="btn-primary" type="submit">{t('common.save')}</button>
 						</form>
 
 						<div class="mt-5 border-t border-line pt-4">
 							{#if pushStatus === 'unsupported'}
-								<p class="hint">{t('profile.pushUnsupported')}</p>
+								<p id="push-device-unsupported" class="hint" role="status">
+									{t('profile.pushUnsupported')}
+								</p>
 							{:else if pushStatus === 'unconfigured'}
-								<p class="hint">{t('profile.pushUnconfigured')}</p>
+								<p id="push-device-unconfigured" class="hint" role="status">
+									{t('profile.pushUnconfigured')}
+								</p>
 							{:else if isIos}
-								<p class="hint">{t('profile.pushIosInstall')}</p>
+								<p id="push-device-ios" class="hint" role="status">
+									{t('profile.pushIosInstall')}
+								</p>
 							{:else if pushStatus === 'denied'}
-								<p class="notice">{t('profile.pushDenied')}</p>
+								<p id="push-device-denied" class="notice" role="status">
+									{t('profile.pushDenied')}
+								</p>
+							{:else if pushStatus === 'unavailable'}
+								<p id="push-device-unavailable" class="hint" role="status">
+									{t('profile.pushUnavailable')}
+								</p>
 							{:else if pushStatus === 'on'}
 								<div class="flex flex-wrap items-center gap-2">
-									<span class="badge-ok">{t('profile.pushEnabled')}</span>
+									<span class="badge-ok" role="status">
+										{t('profile.pushEnabled')}
+									</span>
 									<button class="btn-ghost btn-sm" type="button" onclick={disablePush}>
 										{t('profile.pushDisable')}
 									</button>
@@ -608,7 +688,9 @@
 									{t('profile.pushEnable')}
 								</button>
 							{:else}
-								<p class="hint">{t('common.loading')}</p>
+								<p id="push-device-checking" class="hint" role="status">
+									{t('common.loading')}
+								</p>
 							{/if}
 							{#if pushError}
 								<p class="field-error" role="alert">{pushError}</p>

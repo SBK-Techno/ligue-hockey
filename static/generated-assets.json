@@ -8,8 +8,8 @@
     "static/icons/icon-512-512.904ac52376ea.png": "904ac52376eaeb02303f8823cbf0e045adcdf1ed3ec75f77cadbe60659c597b1",
     "static/icons/maskable-512-512.5c023d038900.png": "5c023d03890083491048c095c2200b59fa3d60a4a950031fe15158bb4a8a839e",
     "static/manifest.webmanifest": "8bc2b5af4ff652be2b15fd5d5803f40744328b9c63216dcbdf15b2ee111ae020",
-    "src/app.html": "3646279d4104bd4417971727efbf93225a7c457b9ff9df7eada68242008f78e0",
-    "src/lib/generated/critical-style.ts": "3be96f85760224f3ffcbfa57a123b8b064427248dd07afa2f08d188117104517",
+    "src/app.html": "230cf9ea6ce551b443844fd62b38831a6c67d390d1b0c65cf3fae88b50e67148",
+    "src/lib/generated/critical-style.ts": "1c8e6922aaa1ccf6cec9fb2ee4e9a9ae5d63adcb84c65a4a1fb70958ef5c7ab0",
     "static/robots.txt": "815bcd053b51b42648ea3f8103c8c9f86eb64d2d6eaad8f3b45b673b47f959b7",
     "static/offline.html": "cfb47ac1ce31ce89d8f08a894a38e69f582bd79298dcb362dcf75f0f09a3139b",
     "static/auth/dressing-room-640-ef36f1188f7d.webp": "ef36f1188f7d583a4f7404c98cf1e96f89b7bab1984d4a9a01af127e4b31df87",
@@ -19,6 +19,6 @@
     "static/textures/ice-4aef57e48b6b.webp": "4aef57e48b6b9dcec9d9c2932007f5b7977aa3d19db567cfdaa725f25ab84c6d",
     "static/identities/identities-cef75f290495.webp": "cef75f29049543b0b233fc77d06a916b4f9523a9bc55d7c1186ad9c349930bf9",
     "static/social/apercu-9166f43c7711.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02",
-    "src/lib/generated/branding.ts": "501b6ca5d096f9c21a6922c9b40a96089a4dabc7525e5c962e55ca69cdb132af"
+    "src/lib/generated/branding.ts": "63cf742a8c0f499a4f9af4e2ae980fd8c7f53caa7f4f6ef7df338edcacd5d4c0"
   }
 }

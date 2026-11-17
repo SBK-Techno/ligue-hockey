@@ -6,8 +6,8 @@ import type { Position } from './positions.ts';
  * The one player identity catalogue.
  *
  * Two families share it: the 28 league avatars and the tribute legends. Every
- * consumer that needs to render, validate, colour or reserve an identity reads
- * this module, so adding a family never leaves a second lookup behind.
+ * consumer that needs to render, validate or reserve an identity reads this
+ * module, so adding a family never leaves a second lookup behind.
  *
  * The order matters: base avatars come first, which keeps automatic assignment
  * for a new profile on the league faces until they are all taken.

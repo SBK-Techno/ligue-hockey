@@ -25,12 +25,31 @@ describe('bandeau de chiffres', () => {
 	it('donne à une seule cellule sa largeur de contenu', () => {
 		const { body } = render(StatStrip, { props: { cells: cells.slice(0, 1) } });
 		const css = readFileSync(new URL('../../routes/layout.css', import.meta.url), 'utf8');
+		const flat = css.replace(/\s+/g, ' ');
 
 		expect(body).toContain('data-cells="1"');
-		expect(css).toContain(".metric-strip[data-cells='1']");
-		expect(css).toContain('width: fit-content');
-		expect(css).toContain('.metric-cell:last-child:nth-child(odd)');
-		expect(css).toContain('grid-column: span 2');
+		expect(flat).toContain(".metric-strip[data-cells='1']");
+		expect(flat).toContain('width: fit-content');
+		expect(flat).toContain(
+			".metric-strip:not([data-cells='1']) .metric-cell:last-child:nth-child(odd)"
+		);
+		expect(flat).toContain('grid-column: span 2');
+	});
+
+	it('répond à la largeur de son contenant, pas à celle de la fenêtre', () => {
+		const { body } = render(StatStrip, { props: { cells } });
+		const css = readFileSync(new URL('../../routes/layout.css', import.meta.url), 'utf8');
+
+		expect(body).toContain('class="metric-strip-wrap"');
+		expect(css).toContain('.metric-strip-wrap {\n\t\tcontainer-type: inline-size;');
+		expect(css).toContain('@container (max-width: 40rem)');
+	});
+
+	it('porte ses libellés à 12 px et ses tampons à 11 px', () => {
+		const tokens = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8');
+
+		expect(tokens).toContain('--text-caption: 0.75rem;');
+		expect(tokens).toContain('--text-stamp: 0.6875rem;');
 	});
 });
 

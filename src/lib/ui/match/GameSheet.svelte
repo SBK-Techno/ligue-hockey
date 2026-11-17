@@ -83,203 +83,222 @@
 </script>
 
 <div class="space-y-5">
-	<div class="overflow-hidden rounded-card border border-line bg-ink px-4 py-3 text-paper">
-		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-			{#each TEAMS as team, index (team.key)}
-				{#if index === 1}
-					<span class="mx-auto h-8 w-px bg-paper/25" aria-hidden="true"></span>
+	<div class="overflow-hidden rounded-card border border-line bg-ink px-4 py-2.5 text-paper sm:px-5">
+		<div class="flex items-center justify-between gap-4">
+			{#each TEAMS as team (team.key)}
+				{#if team.key === 'black'}
+					<span class="h-8 w-px bg-paper/25 shrink-0" aria-hidden="true"></span>
 				{/if}
-				<div class={index === 0 ? 'text-right' : 'text-left'}>
-					<p class="text-caption text-paper/70">{t(teamDefinition(team.key).shortLabelKey)}</p>
-					<p class="font-mono text-figure font-semibold tabular-nums">{sheet.score[team.key]}</p>
+				<div
+					class="flex min-w-0 flex-1 items-baseline gap-2.5 {team.key === 'white'
+						? 'justify-end'
+						: 'justify-start'}"
+				>
+					{#if team.key === 'white'}
+						<span class="truncate text-caption font-semibold text-paper/70"
+							>{t(teamDefinition(team.key).labelKey)}</span
+						>
+						<span class="numeric text-figure">{sheet.score[team.key]}</span>
+					{:else}
+						<span class="numeric text-figure">{sheet.score[team.key]}</span>
+						<span class="truncate text-caption font-semibold text-paper/70"
+							>{t(teamDefinition(team.key).labelKey)}</span
+						>
+					{/if}
 				</div>
 			{/each}
 		</div>
 	</div>
 
-	<section>
-		<h3 class="text-subhead font-semibold">{t('gamesheet.goals')}</h3>
-		{#if sheet.goals.length === 0}
-			<p class="mt-2 text-body text-muted">{t('gamesheet.noGoals')}</p>
-		{:else}
-			{#each goalPeriods as group (group.period)}
-				<p class="mt-4 text-caption font-semibold text-muted">
-					{t('gamesheet.period')} {group.period}
-				</p>
-				<ul role="list" class="mt-1 divide-y divide-line border-y border-line">
-					{#each group.rows as goal (goal.id)}
-						<li class="flex items-start gap-2.5 py-2">
-							<span class="w-11 shrink-0 pt-0.5 font-mono text-meta tabular-nums text-muted">
-								{goal.clock}
-							</span>
-							<span
-								class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {goal.team === 'black'
-									? 'bg-team-black'
-									: 'border border-line-strong bg-team-white'}"
-								aria-hidden="true"
-							></span>
-							<div class="min-w-0 flex-1">
-								<p class="text-body font-semibold">
-									{#if goal.scorer}
-										<span class="font-mono text-meta text-muted"
-											>{number(goal.scorer.jerseyNumber)}</span
-										>
-										<PlayerName
-											playerId={goal.scorer.playerId}
-											name={goal.scorer.fullName}
-										/>
-									{:else}
-										{t('gamesheet.noGoals')}
+	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start lg:gap-8">
+		<div class="space-y-5">
+			<section>
+				<h3 class="text-subhead font-semibold">{t('gamesheet.goals')}</h3>
+				{#if sheet.goals.length === 0}
+					<p class="mt-2 text-body text-muted">{t('gamesheet.noGoals')}</p>
+				{:else}
+					{#each goalPeriods as group (group.period)}
+						<p class="mt-4 text-caption font-semibold text-muted">
+							{t('gamesheet.period')} {group.period}
+						</p>
+						<ul role="list" class="mt-1 divide-y divide-line border-y border-line">
+							{#each group.rows as goal (goal.id)}
+								<li class="flex items-start gap-2.5 py-2">
+									<span class="w-11 shrink-0 pt-0.5 font-mono text-meta tabular-nums text-muted">
+										{goal.clock}
+									</span>
+									<span
+										class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {goal.team === 'black'
+											? 'bg-team-black'
+											: 'border border-line-strong bg-team-white'}"
+										aria-hidden="true"
+									></span>
+									<div class="min-w-0 flex-1">
+										<p class="text-body font-semibold">
+											{#if goal.scorer}
+												<span class="font-mono text-meta text-muted"
+													>{number(goal.scorer.jerseyNumber)}</span
+												>
+												<PlayerName
+													playerId={goal.scorer.playerId}
+													name={goal.scorer.fullName}
+												/>
+											{:else}
+												{t('gamesheet.noGoals')}
+											{/if}
+										</p>
+										{#if goal.assists.length > 0}
+											<p class="text-meta text-muted">
+												{t('gamesheet.assists')}:
+												{#each goal.assists as assist, index (`${goal.id}:${index}`)}
+													{#if index > 0}<span aria-hidden="true"> · </span>{/if}
+													<span class="font-mono text-meta text-muted"
+														>{number(assist.jerseyNumber)}</span
+													>
+													<PlayerName playerId={assist.playerId} name={assist.fullName} />
+												{/each}
+											</p>
+										{/if}
+									</div>
+									{#if goal.kind !== 'even'}
+										<span class="badge shrink-0">{t(goalKindDefinition(goal.kind).labelKey)}</span>
 									{/if}
-								</p>
-								{#if goal.assists.length > 0}
-									<p class="text-meta text-muted">
-										{t('gamesheet.assists')}:
-										{#each goal.assists as assist, index (`${goal.id}:${index}`)}
-											{#if index > 0}<span aria-hidden="true"> · </span>{/if}
+									{#if canManage}
+										<details class="action-menu shrink-0">
+											<summary aria-label={t('gamesheet.deleteGoal')}>
+												<svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
+													<circle cx="4" cy="10" r="1.5" fill="currentColor" />
+													<circle cx="10" cy="10" r="1.5" fill="currentColor" />
+													<circle cx="16" cy="10" r="1.5" fill="currentColor" />
+												</svg>
+											</summary>
+											<div class="action-menu-panel">
+												<form method="POST" action="?/deleteGoal" use:progressiveForm>
+													<input type="hidden" name="goalId" value={goal.id} />
+													<ConfirmSubmit
+														label={t('gamesheet.deleteGoal')}
+														question={t('gamesheet.deleteGoalConfirm')}
+														class="btn-ghost btn-sm"
+													/>
+												</form>
+											</div>
+										</details>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					{/each}
+				{/if}
+			</section>
+
+			<section>
+				<h3 class="text-subhead font-semibold">{t('gamesheet.penalties')}</h3>
+				{#if sheet.penalties.length === 0}
+					<p class="mt-2 text-body text-muted">{t('gamesheet.noPenalties')}</p>
+				{:else}
+					{#each penaltyPeriods as group (group.period)}
+						<p class="mt-4 text-caption font-semibold text-muted">
+							{t('gamesheet.period')} {group.period}
+						</p>
+						<ul role="list" class="mt-1 divide-y divide-line border-y border-line">
+							{#each group.rows as penalty (penalty.id)}
+								<li class="flex items-start gap-2.5 py-2">
+									<span class="w-11 shrink-0 pt-0.5 font-mono text-meta tabular-nums text-muted">
+										{penalty.clock}
+									</span>
+									<span
+										class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {penalty.team === 'black'
+											? 'bg-team-black'
+											: 'border border-line-strong bg-team-white'}"
+										aria-hidden="true"
+									></span>
+									<div class="min-w-0 flex-1">
+										<p class="text-body font-semibold">
 											<span class="font-mono text-meta text-muted"
-												>{number(assist.jerseyNumber)}</span
+												>{number(penalty.player.jerseyNumber)}</span
 											>
-											<PlayerName playerId={assist.playerId} name={assist.fullName} />
-										{/each}
-									</p>
-								{/if}
-							</div>
-							{#if goal.kind !== 'even'}
-								<span class="badge shrink-0">{t(goalKindDefinition(goal.kind).labelKey)}</span>
-							{/if}
-							{#if canManage}
-								<details class="action-menu shrink-0">
-									<summary aria-label={t('gamesheet.deleteGoal')}>
-										<svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
-											<circle cx="4" cy="10" r="1.5" fill="currentColor" />
-											<circle cx="10" cy="10" r="1.5" fill="currentColor" />
-											<circle cx="16" cy="10" r="1.5" fill="currentColor" />
-										</svg>
-									</summary>
-									<div class="action-menu-panel">
-										<form method="POST" action="?/deleteGoal" use:progressiveForm>
-											<input type="hidden" name="goalId" value={goal.id} />
-											<ConfirmSubmit
-												label={t('gamesheet.deleteGoal')}
-												question={t('gamesheet.deleteGoalConfirm')}
-												class="btn-ghost btn-sm"
+											<PlayerName
+												playerId={penalty.player.playerId}
+												name={penalty.player.fullName}
 											/>
-										</form>
+										</p>
+										<p class="text-meta text-muted">
+											{t(infractionDefinition(penalty.infraction).labelKey)} · {penalty.minutes}
+											{t('gamesheet.minutes')}
+											{#if penalty.coincidental}· {t('gamesheet.coincidental')}{/if}
+										</p>
 									</div>
-								</details>
-							{/if}
-						</li>
+									{#if canManage}
+										<details class="action-menu shrink-0">
+											<summary aria-label={t('gamesheet.deletePenalty')}>
+												<svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
+													<circle cx="4" cy="10" r="1.5" fill="currentColor" />
+													<circle cx="10" cy="10" r="1.5" fill="currentColor" />
+													<circle cx="16" cy="10" r="1.5" fill="currentColor" />
+												</svg>
+											</summary>
+											<div class="action-menu-panel">
+												<form method="POST" action="?/deletePenalty" use:progressiveForm>
+													<input type="hidden" name="penaltyId" value={penalty.id} />
+													<ConfirmSubmit
+														label={t('gamesheet.deletePenalty')}
+														question={t('gamesheet.deletePenaltyConfirm')}
+														class="btn-ghost btn-sm"
+													/>
+												</form>
+											</div>
+										</details>
+									{/if}
+								</li>
+							{/each}
+						</ul>
 					{/each}
-				</ul>
-			{/each}
-		{/if}
-	</section>
+				{/if}
+			</section>
+		</div>
 
-	<section>
-		<h3 class="text-subhead font-semibold">{t('gamesheet.penalties')}</h3>
-		{#if sheet.penalties.length === 0}
-			<p class="mt-2 text-body text-muted">{t('gamesheet.noPenalties')}</p>
-		{:else}
-			{#each penaltyPeriods as group (group.period)}
-				<p class="mt-4 text-caption font-semibold text-muted">
-					{t('gamesheet.period')} {group.period}
-				</p>
-				<ul role="list" class="mt-1 divide-y divide-line border-y border-line">
-					{#each group.rows as penalty (penalty.id)}
-						<li class="flex items-start gap-2.5 py-2">
-							<span class="w-11 shrink-0 pt-0.5 font-mono text-meta tabular-nums text-muted">
-								{penalty.clock}
-							</span>
-							<span
-								class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {penalty.team === 'black'
-									? 'bg-team-black'
-									: 'border border-line-strong bg-team-white'}"
-								aria-hidden="true"
-							></span>
-							<div class="min-w-0 flex-1">
-								<p class="text-body font-semibold">
-									<span class="font-mono text-meta text-muted"
-										>{number(penalty.player.jerseyNumber)}</span
-									>
-									<PlayerName
-										playerId={penalty.player.playerId}
-										name={penalty.player.fullName}
-									/>
-								</p>
-								<p class="text-meta text-muted">
-									{t(infractionDefinition(penalty.infraction).labelKey)} · {penalty.minutes}
-									{t('gamesheet.minutes')}
-									{#if penalty.coincidental}· {t('gamesheet.coincidental')}{/if}
-								</p>
-							</div>
-							{#if canManage}
-								<details class="action-menu shrink-0">
-									<summary aria-label={t('gamesheet.deletePenalty')}>
-										<svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
-											<circle cx="4" cy="10" r="1.5" fill="currentColor" />
-											<circle cx="10" cy="10" r="1.5" fill="currentColor" />
-											<circle cx="16" cy="10" r="1.5" fill="currentColor" />
-										</svg>
-									</summary>
-									<div class="action-menu-panel">
-										<form method="POST" action="?/deletePenalty" use:progressiveForm>
-											<input type="hidden" name="penaltyId" value={penalty.id} />
-											<ConfirmSubmit
-												label={t('gamesheet.deletePenalty')}
-												question={t('gamesheet.deletePenaltyConfirm')}
-												class="btn-ghost btn-sm"
-											/>
-										</form>
-									</div>
-								</details>
-							{/if}
-						</li>
-					{/each}
-				</ul>
-			{/each}
-		{/if}
-	</section>
-
-	<section>
-		<h3 class="text-subhead font-semibold">{t('gamesheet.totals')}</h3>
-		<table class="mt-2 w-full text-meta">
-			<thead>
-				<tr class="border-b border-line text-left text-caption text-muted">
-					<th class="w-8 py-1 font-semibold">{t('gamesheet.jerseyShort')}</th>
-					<th class="py-1 font-semibold">{t('gamesheet.player')}</th>
-					<th class="w-7 py-1 text-right font-semibold">{t('gamesheet.goalsShort')}</th>
-					<th class="w-7 py-1 text-right font-semibold">{t('gamesheet.assistsShort')}</th>
-					<th class="w-7 py-1 text-right font-semibold">{t('gamesheet.pointsShort')}</th>
-					<th class="w-9 py-1 text-right font-semibold">{t('gamesheet.penaltyMinutesShort')}</th>
-				</tr>
-			</thead>
-			{#each TEAMS as team (team.key)}
-				<tbody>
-					<tr>
-						<th
-							colspan="6"
-							class="pt-3 pb-1 text-left text-caption font-semibold text-muted"
-						>
-							{t(teamDefinition(team.key).labelKey)}
-						</th>
-					</tr>
-					{#each sheet.totals.filter((row) => row.team === team.key) as row, index (row.playerId || 'deleted:' + team.key + ':' + index)}
-						<tr class="border-b border-line last:border-b-0">
-							<td class="py-1.5 font-mono text-muted">{row.jerseyNumber ?? ''}</td>
-							<td class="py-1.5 pr-2 font-medium">
-								<PlayerName playerId={row.playerId} name={row.fullName} />
-							</td>
-							<td class="py-1.5 text-right font-mono tabular-nums">{row.goals}</td>
-							<td class="py-1.5 text-right font-mono tabular-nums">{row.assists}</td>
-							<td class="py-1.5 text-right font-mono font-semibold tabular-nums">{row.points}</td>
-							<td class="py-1.5 text-right font-mono tabular-nums">{row.penaltyMinutes}</td>
+		<div class="space-y-5">
+			<section>
+				<h3 class="text-subhead font-semibold">{t('gamesheet.totals')}</h3>
+				<table class="mt-2 w-full text-meta">
+					<thead>
+						<tr class="border-b border-line text-left text-caption text-muted">
+							<th class="w-8 py-1 font-semibold">{t('gamesheet.jerseyShort')}</th>
+							<th class="py-1 font-semibold">{t('gamesheet.player')}</th>
+							<th class="w-7 py-1 text-right font-semibold">{t('gamesheet.goalsShort')}</th>
+							<th class="w-7 py-1 text-right font-semibold">{t('gamesheet.assistsShort')}</th>
+							<th class="w-7 py-1 text-right font-semibold">{t('gamesheet.pointsShort')}</th>
+							<th class="w-9 py-1 text-right font-semibold">{t('gamesheet.penaltyMinutesShort')}</th>
 						</tr>
+					</thead>
+					{#each TEAMS as team (team.key)}
+						<tbody>
+							<tr>
+								<th
+									colspan="6"
+									class="pt-3 pb-1 text-left text-caption font-semibold text-muted"
+								>
+									{t(teamDefinition(team.key).labelKey)}
+								</th>
+							</tr>
+							{#each sheet.totals.filter((row) => row.team === team.key) as row, index (row.playerId || 'deleted:' + team.key + ':' + index)}
+								<tr class="border-b border-line last:border-b-0">
+									<td class="py-1.5 font-mono text-muted">{row.jerseyNumber ?? ''}</td>
+									<td class="py-1.5 pr-2 font-medium">
+										<PlayerName playerId={row.playerId} name={row.fullName} />
+									</td>
+									<td class="py-1.5 text-right font-mono tabular-nums">{row.goals}</td>
+									<td class="py-1.5 text-right font-mono tabular-nums">{row.assists}</td>
+									<td class="py-1.5 text-right font-mono font-semibold tabular-nums">{row.points}</td>
+									<td class="py-1.5 text-right font-mono tabular-nums">{row.penaltyMinutes}</td>
+								</tr>
+							{/each}
+						</tbody>
 					{/each}
-				</tbody>
-			{/each}
-		</table>
-	</section>
+				</table>
+			</section>
+		</div>
+	</div>
 
 	{#if canManage}
 		<div class="grid gap-3 lg:grid-cols-2">

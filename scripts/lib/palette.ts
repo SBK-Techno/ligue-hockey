@@ -3,9 +3,8 @@
  * les documents et les images générées ne peuvent pas lire des variables CSS,
  * donc le générateur extrait les mêmes valeurs au lieu de les recopier.
  *
- * Deux familles sont déclarées ici : la palette sémantique et les couleurs de
- * joueur (une par identité du catalogue). Un jeton absent ou en trop fait
- * échouer le test de catalogue.
+ * La palette sémantique est la seule famille déclarée ici : un jeton absent ou
+ * en trop fait échouer le test de catalogue.
  */
 export const PALETTE_KEYS = [
 	'ink',
@@ -43,11 +42,6 @@ export type EmailPalette = {
 	brand: string;
 };
 
-export type ColourFamilies = {
-	palette: readonly string[];
-	player: readonly string[];
-};
-
 const COLOUR = /--color-([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})\s*;/g;
 
 /** Tous les jetons de couleur du fichier, dans l'ordre où ils sont déclarés. */
@@ -57,23 +51,6 @@ export function parseColourTokens(css: string): Map<string, string> {
 		found.set(match[1], match[2].toLowerCase());
 	}
 	return found;
-}
-
-/**
- * Le catalogue attendu pour un catalogue d'identités donné. La famille
- * `player` a exactement une couleur par identité : elle ne peut donc pas
- * prendre du retard sur `config/avatars.ts` et `config/legends.ts`.
- */
-export function colourFamilies(identityCount: number): ColourFamilies {
-	return {
-		palette: [...PALETTE_KEYS],
-		player: Array.from({ length: identityCount }, (_, index) => `player-${index + 1}`)
-	};
-}
-
-export function allColourKeys(identityCount: number): string[] {
-	const families = colourFamilies(identityCount);
-	return [...families.palette, ...families.player];
 }
 
 export function parsePalette(css: string): Palette {

@@ -56,9 +56,10 @@
 	--text-subhead: 1rem;
 	--text-body: 0.9375rem;
 	--text-meta: 0.8125rem;
-	/* Libellé dense : une seule taille entre la méta et le tampon. */
-	--text-caption: 0.6875rem;
-	--text-stamp: 0.625rem;
+	/* Libellé dense : une seule taille entre la méta et le tampon. Le plancher
+	   reste à 12 px pour le texte porteur d'information; le tampon à 11 px. */
+	--text-caption: 0.75rem;
+	--text-stamp: 0.6875rem;
 	--text-clock: clamp(3.5rem, 9vw, 5.5rem);
 	/* Unité du cadran : relative à l'horloge, jamais une taille de texte. */
 	--text-clock-unit: 0.45em;
@@ -69,72 +70,6 @@
 
 	/* Largeur de lecture confortable pour les messages et les textes longs. */
 	--measure: 68ch;
-}
-
-/*
- * Player accents are composed by `avatarColor` outside Tailwind utilities.
- * `static` prevents these variables from being pruned.
- */
-@theme static {
-	/* Player accents: 58 dark shades that read on cream paper. */
-	--color-player-1: #1f3a5f;
-	--color-player-2: #8c3223;
-	--color-player-3: #2c6e5b;
-	--color-player-4: #5b3d8a;
-	--color-player-5: #a3561f;
-	--color-player-6: #1e6b8c;
-	--color-player-7: #7a2f4f;
-	--color-player-8: #3f6b4c;
-	--color-player-9: #4a4f9c;
-	--color-player-10: #9a6a1f;
-	--color-player-11: #2f7a7a;
-	--color-player-12: #6b3524;
-	--color-player-13: #7a3f8c;
-	--color-player-14: #a13b3b;
-	--color-player-15: #2d5f3f;
-	--color-player-16: #8a4b7a;
-	--color-player-17: #1f5c99;
-	--color-player-18: #b06a2c;
-	--color-player-19: #3d4b7a;
-	--color-player-20: #6a7a2f;
-	--color-player-21: #7c2d3a;
-	--color-player-22: #2c5a6b;
-	--color-player-23: #9b4b2f;
-	--color-player-24: #4a3b78;
-	--color-player-25: #24665a;
-	--color-player-26: #8a6a3a;
-	--color-player-27: #5c2f5f;
-	--color-player-28: #335c8c;
-	--color-player-29: #7a4a2a;
-	--color-player-30: #2e6f7a;
-	--color-player-31: #6e2f79;
-	--color-player-32: #a86b1f;
-	--color-player-33: #2f6a3f;
-	--color-player-34: #9c3448;
-	--color-player-35: #3a5a9c;
-	--color-player-36: #7a7a22;
-	--color-player-37: #8f4a1f;
-	--color-player-38: #4c3378;
-	--color-player-39: #1f6a63;
-	--color-player-40: #9c3f6f;
-	--color-player-41: #b08a2a;
-	--color-player-42: #4f6a1f;
-	--color-player-43: #6a3a1f;
-	--color-player-44: #2f5f6e;
-	--color-player-45: #8a3f2a;
-	--color-player-46: #4b3d8f;
-	--color-player-47: #6f6a1f;
-	--color-player-48: #9c2f5f;
-	--color-player-49: #2c6b4f;
-	--color-player-50: #7a4f1f;
-	--color-player-51: #3a3f8c;
-	--color-player-52: #8c5f2a;
-	--color-player-53: #5c2f4f;
-	--color-player-54: #1f6a5f;
-	--color-player-55: #6b3f1f;
-	--color-player-56: #7a2f3f;
-	--color-player-57: #2f4f6a;
-	--color-player-58: #5f6a2f;
 }
 
 :root {

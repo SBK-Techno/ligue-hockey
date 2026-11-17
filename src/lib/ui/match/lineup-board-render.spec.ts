@@ -64,11 +64,11 @@ describe('rendu de la carte d’alignement', () => {
 				expectedGeneratedAt: 123
 			}
 		});
-		const labels = [...body.matchAll(/aria-label="([^"]*)"/g)].map(
-			(match) => match[1]
-		);
+		const labels = [
+			...body.matchAll(/<button[^>]*aria-label="([^"]*)"[^>]*>/g)
+		].map((match) => match[1]);
 
-		expect(labels).toHaveLength(36);
+		expect(labels).toHaveLength(38);
 		expect(new Set(labels).size).toBe(labels.length);
 		expect(labels.some((label) => label.includes(t('rink.emptySlot')))).toBe(true);
 		expect(body).toContain(t('rink.bench'));
@@ -144,7 +144,9 @@ describe('rendu de la carte d’alignement', () => {
 			props: { slots: fullSlots, bench, canEdit: true, expectedGeneratedAt: 123 }
 		});
 
-		expect((body.match(/class="identity-portrait"/g) ?? []).length).toBe(37);
+		expect((body.match(/class="rink-portrait"/g) ?? []).length).toBe(34);
+		expect((body.match(/class="bench-portrait"/g) ?? []).length).toBe(3);
+		expect((body.match(/rink-roster/g) ?? []).length).toBe(1);
 		expect(body).toMatch(/background-image: url\(\/identities\/identities-[0-9a-f]{12}\.webp\)/);
 		for (const avatarId of Object.values(knownAvatars)) {
 			expect(body, avatarId).toContain(identitySheetStyle(avatarId));
@@ -164,6 +166,96 @@ describe('rendu de la carte d’alignement', () => {
 		const keys = [...body.matchAll(/data-lineup-key="([^"]*)"/g)].map((match) => match[1]);
 		expect(keys).toHaveLength(38);
 		expect(new Set(keys).size).toBe(keys.length);
+	});
+
+	it('marque le joueur connecté, son poste et la position de chaque jeton', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench,
+				canEdit: false,
+				expectedGeneratedAt: 123,
+				actorId: 'white-forward-0',
+				ownTeam: 'white'
+			}
+		});
+		const token =
+			body.match(/<button[^>]*data-player-id="white-forward-0"[^>]*>/)?.[0] ?? '';
+
+		expect(token).toContain('data-you="true"');
+		expect(token).toMatch(new RegExp(`, ${t('common.you')}"`));
+		expect(body).toContain(t('rink.yourSpot'));
+		expect(body).toContain(t('team.white'));
+		expect(body).toContain(t('position.forward'));
+		expect(body).toContain(t('rink.line', { line: 1 }));
+		expect(body).toMatch(/class="rink-role"[^>]*>C</);
+		expect((body.match(/class="rink-role"/g) ?? []).length).toBe(34);
+		const row =
+			body.match(
+				/<li class="ledger-row[^"]*"[^>]*data-you="true"[^>]*>([\s\S]*?)<\/li>/
+			)?.[1] ?? '';
+		expect(row).toContain('white-forward-0 Test');
+		expect(row).toContain(t('common.you'));
+	});
+
+	it('place le joueur du banc et son marqueur « Toi » sur la carte', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench,
+				canEdit: false,
+				expectedGeneratedAt: 123,
+				actorId: 'bench-1'
+			}
+		});
+		const chip =
+			body.match(/<button[^>]*data-player-id="bench-1"[^>]*>/)?.[0] ?? '';
+
+		expect(body).toContain(t('home.teamBench'));
+		expect(body).toContain(t('home.teamBenchHelp'));
+		expect(chip).toContain('data-you="true"');
+		expect(chip).toContain(t('common.you'));
+	});
+
+	it('dit franchement qu’un joueur n’est pas dans la formation publiée', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench,
+				canEdit: false,
+				expectedGeneratedAt: 123,
+				actorId: 'absent'
+			}
+		});
+
+		expect(body).toContain(t('home.teamNoSlot'));
+		expect(body).toContain(t('home.teamNoSlotHelp'));
+		expect(body).not.toContain(t('rink.yourSpot'));
+	});
+
+	it('ouvre la carte sur l’équipe du joueur et garde l’autre derrière le commutateur', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench,
+				canEdit: false,
+				expectedGeneratedAt: 123,
+				actorId: 'black-forward-0',
+				ownTeam: 'black'
+			}
+		});
+		const start = body.indexOf('class="rink-switch"');
+		const switcher = body.slice(start, body.indexOf('</div>', start));
+		const first = switcher.indexOf(t('team.black.short'));
+		const second = switcher.indexOf(t('team.white.short'));
+
+		expect(first).toBeGreaterThan(-1);
+		expect(second).toBeGreaterThan(first);
+		expect(switcher).toContain('aria-pressed="true"');
+		expect(switcher).toContain('aria-controls="rink-team-black"');
+		expect(switcher).toContain('aria-controls="rink-team-white"');
+		expect(body).toContain('id="rink-team-black" data-active="true"');
+		expect(body).toContain('id="rink-team-white" data-active="false"');
 	});
 
 	it('masque le guide et la cible du banc en lecture seule', () => {

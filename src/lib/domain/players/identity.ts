@@ -17,10 +17,7 @@ import { branding } from '#lib/generated/branding.ts';
 export type { IdentityId };
 
 const identityIds = branding.identities.ids as readonly IdentityId[];
-const identityColors = branding.identities.colors;
-const indexById = new Map<string, number>(
-	identityIds.map((identityId, index) => [identityId, index])
-);
+const identitySet = new Set<string>(identityIds);
 const leagueIds = identityIds.slice(0, branding.identities.leagueFaces);
 
 /** FNV-1a 32 bits: short, deterministic and dependency-free. */
@@ -36,7 +33,7 @@ function stableHash(value: string): number {
 export function isIdentityId(
 	value: string | null | undefined
 ): value is IdentityId {
-	return typeof value === 'string' && indexById.has(value);
+	return typeof value === 'string' && identitySet.has(value);
 }
 
 export function resolveAvatarId(
@@ -45,10 +42,4 @@ export function resolveAvatarId(
 ): IdentityId {
 	if (isIdentityId(avatarId)) return avatarId;
 	return leagueIds[stableHash(userId) % leagueIds.length] ?? identityIds[0]!;
-}
-
-/** The CSS property name, never a raw colour. */
-export function avatarColor(avatarId: IdentityId): string {
-	const index = indexById.get(avatarId);
-	return `--color-player-${identityColors[index ?? 0]}`;
 }

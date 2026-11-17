@@ -28,31 +28,35 @@
 	{#if date}
 		<span class="record-date">{date}</span>
 	{/if}
-	<span class="min-w-0 flex-1">
+	<span class="record-body">
 		<span class="block break-words text-body font-semibold">{title}</span>
 		{#if meta}
 			<span class="mt-0.5 block break-words text-meta text-muted">{meta}</span>
 		{/if}
 	</span>
-	{#if badge}
-		<span class="{badgeClass(badgeTone)} shrink-0" aria-label={badgeLabel} title={badgeLabel}>
-			{badge}
+	{#if badge || trailing || href}
+		<span class="record-tail" data-compact={!badge && !trailing ? 'true' : undefined}>
+			{#if badge}
+				<span class="{badgeClass(badgeTone)} shrink-0" aria-label={badgeLabel} title={badgeLabel}>
+					{badge}
+				</span>
+			{/if}
+			{#if trailing}
+				<span class="numeric shrink-0 text-body">{trailing}</span>
+			{/if}
+			{#if href}
+				<svg
+					viewBox="0 0 24 24"
+					class="h-4 w-4 shrink-0 text-muted"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+				>
+					<path d="m9 6 6 6-6 6" />
+				</svg>
+			{/if}
 		</span>
-	{/if}
-	{#if trailing}
-		<span class="numeric shrink-0 text-body">{trailing}</span>
-	{/if}
-	{#if href}
-		<svg
-			viewBox="0 0 24 24"
-			class="h-4 w-4 shrink-0 text-muted"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="2"
-			aria-hidden="true"
-		>
-			<path d="m9 6 6 6-6 6" />
-		</svg>
 	{/if}
 {/snippet}
 

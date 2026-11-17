@@ -217,6 +217,44 @@ describe('propriétaire de la régénération d’alignement', () => {
 		expect(scheduled.body).toContain(t('games.lineupSoonAdmin'));
 	});
 
+	it('met la réponse de présence dans une bande avant l’alignement, puis la liste des présents', () => {
+		const page = render(MatchPage, {
+			props: {
+				data: {
+					...layout,
+					detailTitle: 'Match',
+					game,
+					availability: {
+						...availability,
+						rows: [
+							{ playerId: 'present-1', fullName: 'Présent Test', status: 'present' as const }
+						],
+						present: 1,
+						canRespond: true
+					},
+					requests: [],
+					positions: [],
+					canManage: true,
+					editable: true,
+					playable: false,
+					sheet: null
+				},
+				form: null,
+				params: { id: game.id }
+			}
+		});
+		const presence = page.body.indexOf(t('home.availability'));
+		const lineup = page.body.indexOf(t('games.roster'));
+		const attendance = page.body.indexOf(t('home.attendance'));
+
+		expect(presence).toBeGreaterThan(-1);
+		expect(presence).toBeLessThan(lineup);
+		expect(lineup).toBeLessThan(attendance);
+		expect(page.body).toContain('presence-strip');
+		expect(page.body).toContain(t('availability.markPresent'));
+		expect(page.body).toContain(t('availability.markAbsent'));
+	});
+
 	it('garde le banc dans la carte d’alignement, sans le répéter', () => {
 		const benchPlayer = {
 			playerId: 'bench-1',
@@ -231,7 +269,7 @@ describe('propriétaire de la régénération d’alignement', () => {
 		});
 
 		expect(page.body.split(t('rink.bench'))).toHaveLength(2);
-		expect(page.body.split(benchPlayer.fullName)).toHaveLength(2);
+		expect(page.body.split('data-lineup-key="bench:bench-1"')).toHaveLength(2);
 	});
 
 	it('rend la rétroaction d’alignement dans sa carte, avec une cible de focus', () => {

@@ -100,7 +100,7 @@ describe('page de discussion', () => {
 
 	it('borne la liste et le composeur dans une seule colonne', async () => {
 		const { body } = await render(Page, { props: { data, form: null, params: {} } });
-		const start = body.indexOf('mx-auto w-full max-w-3xl');
+		const start = body.indexOf('mx-auto w-full max-w-4xl');
 		const openEnd = body.indexOf('>', start) + 1;
 		const sheet = body.indexOf('<section class="sheet"');
 		const composer = body.indexOf('action="?/send"');
@@ -116,7 +116,7 @@ describe('page de discussion', () => {
 			expect(depth, tag[0]).toBeGreaterThanOrEqual(0);
 		}
 
-		expect(body.match(/\bmax-w-3xl\b/g)).toHaveLength(1);
+		expect(body.match(/\bmax-w-4xl\b/g)).toHaveLength(1);
 		expect(body.split(t('chat.writeTitle'))).toHaveLength(2);
 		const sendForm = body.match(/<form[^>]*action="\?\/send"[^>]*>/)?.[0] ?? '';
 		expect(sendForm).toContain(`aria-label="${t('chat.writeTitle')}"`);
