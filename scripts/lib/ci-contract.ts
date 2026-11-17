@@ -24,6 +24,7 @@ const VERIFY_COMMANDS = [
 	'npm run lint',
 	'npm run test',
 	'npm run verify:architecture',
+	'npm run verify:release',
 	'npm run verify:generated',
 	'npm run verify:shell',
 	'npm run docs:check'
@@ -273,6 +274,17 @@ function checkRelease(
 	expectedImage: string | null
 ): void {
 	checkTriggers(file, workflow, { tags: ['v*'] }, findings);
+	const triggers = asObject(workflow.on);
+	if (!triggers || !('workflow_call' in triggers)) {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'workflow_call:'), 'La publication doit être appelable par le plan de version.')
+		);
+	}
+	if (!file.content.includes('inputs.tag')) {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'inputs:'), "La publication doit accepter l'étiquette à publier.")
+		);
+	}
 	const permissions = asObject(workflow.permissions);
 	if (permissions?.contents !== 'write' || permissions?.packages !== 'write') {
 		findings.push(
@@ -312,6 +324,50 @@ function checkRelease(
 	if (!runs.some((run) => run.includes('gh release create'))) {
 		findings.push(
 			finding(file.path, lineOf(file.content, 'run:'), 'La publication doit créer une version GitHub.')
+		);
+	}
+}
+
+function checkAutoRelease(file: ContractFile, workflow: Json, findings: ContractFinding[]): void {
+	checkTriggers(file, workflow, { branches: ['main'] }, findings);
+	const permissions = asObject(workflow.permissions);
+	for (const key of ['contents', 'pull-requests', 'actions']) {
+		if (permissions?.[key] !== 'write') {
+			findings.push(
+				finding(file.path, lineOf(file.content, 'permissions:'), `Le plan de version doit déclarer ${key}: write.`)
+			);
+		}
+	}
+	const jobs = asObject(workflow.jobs);
+	const plan = asObject(jobs?.plan);
+	const prepare = asObject(jobs?.prepare);
+	const tag = asObject(jobs?.tag);
+	const publish = asObject(jobs?.publish);
+	if (!plan || !prepare || !tag || !publish) {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'jobs:'), 'Les tâches plan, prepare, tag et publish sont requises.')
+		);
+		return;
+	}
+	if (!hasRun(plan, 'scripts/release/plan.ts')) {
+		findings.push(finding(file.path, lineOf(file.content, 'run:'), 'Le plan doit exécuter scripts/release/plan.ts.'));
+	}
+	if (!hasRun(prepare, 'scripts/release/apply.ts')) {
+		findings.push(finding(file.path, lineOf(file.content, 'run:'), 'La préparation doit exécuter scripts/release/apply.ts.'));
+	}
+	if (!hasRun(prepare, 'gh pr create')) {
+		findings.push(finding(file.path, lineOf(file.content, 'run:'), 'La préparation doit ouvrir une demande de fusion.'));
+	}
+	if (!hasRun(prepare, 'gh workflow run ci.yml')) {
+		findings.push(finding(file.path, lineOf(file.content, 'run:'), 'La préparation doit lancer la porte sur la branche de version.'));
+	}
+	if (!hasRun(tag, 'git tag')) {
+		findings.push(finding(file.path, lineOf(file.content, 'run:'), "La tâche tag doit créer l'étiquette."));
+	}
+	const publishWorkflow = typeof publish.uses === 'string' ? publish.uses : '';
+	if (!publishWorkflow.startsWith('./.github/workflows/release.yml')) {
+		findings.push(
+			finding(file.path, lineOf(file.content, 'uses:'), 'La publication doit appeler le workflow release.yml.')
 		);
 	}
 }
@@ -427,7 +483,7 @@ export function checkCiContract(inputs: ContractInputs): ContractFinding[] {
 		);
 	}
 
-	for (const name of ['ci.yml', 'docs.yml', 'pages.yml', 'release.yml', 'security.yml', 'codeql.yml', 'dependency-review.yml']) {
+	for (const name of ['ci.yml', 'docs.yml', 'pages.yml', 'release.yml', 'auto-release.yml', 'security.yml', 'codeql.yml', 'dependency-review.yml']) {
 		if (!byName(name)) findings.push(finding(name, 1, `Le workflow ${name} est requis.`));
 	}
 
@@ -443,6 +499,12 @@ export function checkCiContract(inputs: ContractInputs): ContractFinding[] {
 	const release = parseFile(releaseFile, findings);
 	if (release && releaseFile) {
 		checkRelease(releaseFile, release, findings, expectedImage);
+	}
+
+	const autoReleaseFile = byName('auto-release.yml');
+	const autoRelease = parseFile(autoReleaseFile, findings);
+	if (autoRelease && autoReleaseFile) {
+		checkAutoRelease(autoReleaseFile, autoRelease, findings);
 	}
 
 	const docsFile = byName('docs.yml');

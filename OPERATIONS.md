@@ -74,27 +74,33 @@ Le dépôt est publié sur GitHub à `https://github.com/SBK-Techno/ligue-hockey
 - `ci.yml` s'exécute sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. `verify` installe Node depuis `.nvmrc` et exécute `npm run gate`; `container` construit l'image et vérifie `/api/health`; `required` agrège les deux et constitue le statut requis par la protection de `main`.
 - `docs.yml` valide le site quand la documentation, la marque ou le générateur changent.
 - `pages.yml` publie le site sur `https://sbk-techno.github.io/ligue-hockey/`.
-- `release.yml` s'exécute sur une étiquette `v*`: il vérifie que l'étiquette correspond à `package.json`, construit l'image, la pousse sur `ghcr.io/sbk-techno/ligue-hockey` avec les étiquettes de version, de révision et `latest`, puis crée la version GitHub.
+- `auto-release.yml` s'exécute à chaque poussée vers `main`. Il calcule la prochaine version depuis les commits, prépare ou met à jour la branche `release/next`, ouvre la demande de fusion et lance la porte dessus. Après la fusion de cette demande, il crée l'étiquette `v<version>` et appelle `release.yml`.
+- `release.yml` publie une version, sur une étiquette `v*` ou par appel de `auto-release.yml`: il vérifie que l'étiquette correspond à `package.json`, construit l'image, la pousse sur `ghcr.io/sbk-techno/ligue-hockey` avec les étiquettes de version, de révision et `latest`, puis crée la version GitHub.
 - `security.yml` audite les dépendances d'exécution chaque semaine; `codeql.yml` analyse le code; `dependency-review.yml` bloque les changements à risque élevé; Dependabot propose les mises à jour.
 
-`npm run verify:architecture` analyse les workflows et le dépôt, et refuse: un déclencheur manquant, une tâche `verify`, `container` ou `required` absente, une étape `npm run gate` absente ou enveloppée, un `npm ci` absent, un `setup-node` sans `.nvmrc` ou sans cache, une action non épinglée à un SHA complet, une publication Pages sans permission OIDC, une publication qui n'écoute pas les étiquettes `v*` ou qui ne pousse pas sur GHCR, un script `gate` ou `verify` affaibli, un major Node différent entre `package.json`, `.nvmrc` et le Dockerfile, ou une métadonnée OCI absente.
+`npm run verify:architecture` analyse les workflows et le dépôt, et refuse: un déclencheur manquant, une tâche `verify`, `container` ou `required` absente, une étape `npm run gate` absente ou enveloppée, un `npm ci` absent, un `setup-node` sans `.nvmrc` ou sans cache, une action non épinglée à un SHA complet, une publication Pages sans permission OIDC, une publication qui n'écoute pas les étiquettes `v*` ou qui ne pousse pas sur GHCR, un plan de version sans porte, sans demande de fusion ou sans appel à `release.yml`, un script `gate` ou `verify` affaibli, un major Node différent entre `package.json`, `.nvmrc` et le Dockerfile, ou une métadonnée OCI absente.
 
 La protection de `main` refuse les poussées directes et exige le statut `required`. Le statut porte sur la tête de la demande de fusion, pas sur un commit de fusion.
 
 ## Publication d'une version
 
-La version de `package.json` est l'unique source. La montée de version passe par une demande de fusion, puis l'étiquette est créée sur le commit fusionné:
+La version de `package.json` est l'unique source. `auto-release.yml` prépare la publication à chaque poussée vers `main`:
+
+1. `scripts/release/plan.ts` lit l'étiquette la plus récente et les commits depuis celle-ci. `config/release.ts` décide de la montée: une rupture passe en majeure, `feat` en mineure, le reste en correctrice; `chore`, `docs`, `test`, `ci`, `build` et `style` ne déclenchent rien.
+2. Si une version est à préparer, le workflow met à jour `release/next` avec `scripts/release/apply.ts`, qui synchronise `package.json`, `package-lock.json` et `.env.example`. Il ouvre ou actualise la demande de fusion et lance `ci.yml` sur la branche.
+3. La fusion de cette demande approuve la version. La poussée suivante crée l'étiquette `v<version>` et appelle `release.yml`, qui publie l'image et la version GitHub.
+
+La fusion de la demande de version est la seule approbation humaine. Ne créez pas d'étiquette à la main.
+
+`npm run verify:release` refuse trois surfaces de version désaccordées. En cas de reprise manuelle:
 
 ```bash
-npm version patch --no-git-tag-version   # ou minor, major
-git switch -c chore/version-x.y.z
-git commit -am "chore(version): x.y.z"
-git push -u origin chore/version-x.y.z
-# Ouvrir et fusionner la demande de fusion.
-git switch main && git pull --ff-only
-version="$(node -p "require('./package.json').version")"
-git tag -a "v$version" -m "Version $version"
-git push origin "v$version"
+npm run release:plan
+npm run release:apply -- --version x.y.z
+git switch -c chore/release-x.y.z
+git commit -am "chore(release): x.y.z"
+git push -u origin chore/release-x.y.z
+# Ouvrir et fusionner la demande de fusion; auto-release.yml crée l'étiquette.
 ```
 
 Vérifiez ensuite la version GitHub et l'image:
@@ -107,7 +113,7 @@ docker pull "ghcr.io/sbk-techno/ligue-hockey:$version"
 
 ## Mise à jour et retour arrière
 
-L'image de production vient de GHCR. `LIGUE_IMAGE` est obligatoire et porte la version publiée. `package.json` est la source de la version; `.env.example` doit la refléter, sinon `verify:architecture` échoue.
+L'image de production vient de GHCR. `LIGUE_IMAGE` est obligatoire et porte la version publiée. `package.json` est la source de la version; le suffixe de `.env.example` est une surface générée par `npm run release:apply` et contrôlée par `npm run verify:release`.
 
 ```bash
 version="$(node -p "require('./package.json').version")"

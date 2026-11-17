@@ -25,6 +25,7 @@ npm run check        # types et diagnostics Svelte
 npm run lint         # ESLint
 npm run test         # Vitest
 npm run verify       # porte complète, sans le build
+npm run verify:release # versions cohérentes entre package.json, le lock et .env.example
 npm run gate         # verify + build, la porte de CI
 npm run docs:build   # génère le site de documentation
 npm run docs:check   # génère et valide liens, ancres et métadonnées
@@ -52,21 +53,11 @@ Le site est publié par GitHub Pages à `https://sbk-techno.github.io/ligue-hock
 
 ## Publication
 
-La version de `package.json` est l'unique source. La montée de version passe par une demande de fusion, puis l'étiquette est créée sur le commit fusionné:
+La version de `package.json` est l'unique source. Ne créez pas d'étiquette à la main.
 
-```bash
-npm version patch --no-git-tag-version   # ou minor, major
-git switch -c chore/version-x.y.z
-git commit -am "chore(version): x.y.z"
-git push -u origin chore/version-x.y.z
-# Ouvrir et fusionner la demande de fusion.
-git switch main && git pull --ff-only
-version="$(node -p "require('./package.json').version")"
-git tag -a "v$version" -m "Version $version"
-git push origin "v$version"
-```
+`auto-release.yml` calcule la prochaine version à chaque poussée vers `main`, prépare ou met à jour la branche `release/next` avec `package.json`, `package-lock.json` et `.env.example`, ouvre la demande de fusion et lance la porte dessus. La fusion de cette demande approuve la version; `auto-release.yml` crée alors l'étiquette `v<version>` et appelle `release.yml`, qui publie l'image et la version GitHub.
 
-Le workflow `release.yml` vérifie que l'étiquette `v<version>` correspond à `package.json`, construit l'image, la pousse sur `ghcr.io/sbk-techno/ligue-hockey` avec les étiquettes de version, de révision et `latest`, puis crée la version GitHub avec les notes générées.
+Les règles de montée vivent dans `config/release.ts`; `npm run release:plan` les applique et `npm run verify:release` contrôle les trois surfaces de version.
 
 Le déploiement, la sauvegarde et le retour arrière sont décrits dans [OPERATIONS.md](OPERATIONS.md).
 
