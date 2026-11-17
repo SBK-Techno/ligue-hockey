@@ -2,14 +2,16 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release 1.9.1 (in progress)
+## Release 1.9.1 (shipped)
 
 - **Admin Accueil.** An account without a player profile has no presence, poll or discussion, so 1.9.0 collapsed its home to one full-width column. The manager preparation panel and the season now share the 12-column main grid at 1024 px and up: the match to prepare takes 5 columns and the season 7, instead of stacking two wide bands. The 900 to 1023 px board uses the same 5/7 split. A no-profile player still receives the single profile surface.
 - **Mode marker.** The dashboard exposes its composed mode through `data-mode` so the layout audit can name the variant it rendered.
 - **Evidence.** Every home composition was audited at 1440 and 900 px: presence, announced, lineup with a slot, lineup on the bench, absent, game-day, cancelled, no-game, substitute, manager, no-profile manager, no-profile player and an unvoted poll. The no-profile manager home now places the match to prepare at 511 px beside a 721 px season at 1440, and 352 px beside 500 px at 900; its 900 px height drops from 1389 to 1130. No audited variant overflows horizontally or logs a console error, and the 320 px variants stay one column.
 - **Functionalities.** On the local preview, answering presence recorded `present` and showed the confirmation, voting moved the poll from Samedi to Vendredi, claiming a substitute place filled the request and moved the player into the lineup, the hero, season, discussion and account links reached their routes, and logout returned to the connection page.
 - **Gate.** `npm run gate` exit 0: 1129 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
-- **Next.** PR, release 1.9.1, deploy and verify Carl's live home.
+- **Release.** PR #35 merged at `a0841bd`; release PR #36 merged at `91c80dc`. The automatic workflow produced tag `v1.9.1`, the GitHub release and the GHCR image without a manual tag.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.9.1`, host digest `sha256:0c7415e1ac9dd4d0feef9c89bb121f3db0d184d30bfbfdf73d4f5ccdf5f8dfd3`, local id `sha256:eb7558c44c0fdd9f5e45b040b4e784647a02f0558d4e7bf726a2f76c328acfef`, healthy since 2026-11-17T16:24:53Z with zero restarts. Public health reports `ok`/`ok`/`applied`, and the first three minutes of logs carry no error. Carl's live session at 1440 renders the 511 px match preparation panel beside the 721 px season, `/admin/matchs/...` and `/admin` open without a refusal, logout returns to `/connexion`, and no console error appears.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261117T112430.db`; the 1.9.0 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.9.0.bak`.
 
 ## Release 1.9.0 (shipped)
 
