@@ -7,13 +7,17 @@ import {
 } from '#lib/domain/ratings/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { actionError, loadError } from '#lib/server/action.ts';
-import { t } from '#lib/shared/i18n/index.ts';
+import { formatDate, t } from '#lib/shared/i18n/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 
 export const load: ServerLoad = ({ locals, params }) => {
 	try {
 		requirePermission(locals.actor, 'editRatings');
-		return { assessment: getGameAssessment(locals.actor, params.id!) };
+		const assessment = getGameAssessment(locals.actor, params.id!);
+		return {
+			assessment,
+			detailTitle: `${t('rating.gameTitle')} · ${formatDate(assessment.gameDate)}`
+		};
 	} catch (cause) {
 		return loadError(cause);
 	}

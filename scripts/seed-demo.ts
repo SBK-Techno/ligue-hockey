@@ -26,18 +26,28 @@ import {
 	overallRating
 } from '#config/rating-attributes.ts';
 import { AVATAR_IDS } from '#config/avatars.ts';
-import { buildSlotDefinitions, slotId, type RosterTemplate } from '#config/roster.ts';
+import {
+	buildSlotDefinitions,
+	rosterTemplateFromSettings,
+	type RosterTemplate
+} from '#config/roster.ts';
+import { slotKey, slotRowId } from '#config/slot.ts';
 import {
 	NOTIFICATION_EVENTS,
 	type NotificationEventKey
 } from '#config/notification-events.ts';
 import { parseSettings } from '#config/settings-registry.ts';
 import type { Position } from '#config/positions.ts';
+import type { Team } from '#config/teams.ts';
 import type { GameStatus } from '#lib/domain/games/schema.ts';
 import { gameAvailability, gameSlots, games } from '#lib/domain/games/schema.ts';
 import { selectGenerationPlayers, type SelectionCandidate } from '#lib/domain/games/selection.ts';
 import { generationSnapshotSchema } from '#lib/domain/games/validators.ts';
 import { players } from '#lib/domain/players/schema.ts';
+import { goalRowFrom } from '#lib/domain/gamesheet/entry.ts';
+import { goalInputSchema } from '#lib/domain/gamesheet/validators.ts';
+import { gameGoals } from '#lib/domain/gamesheet/schema.ts';
+import { parseSchema } from '#lib/shared/validation.ts';
 import { gamePlayerRatings, playerRatings } from '#lib/domain/ratings/schema.ts';
 import { paymentPlans, payments } from '#lib/domain/finance/schema.ts';
 import { chatMessages, pollOptions, pollVotes, polls } from '#lib/domain/chat/schema.ts';
@@ -54,7 +64,7 @@ import {
 import { branding } from '#lib/generated/branding.ts';
 import { account, user } from '#lib/server/db/auth.schema.ts';
 import { addDays, clock, todayInZone, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
-import { CHAT_LINES, LOCATIONS, PLAYERS, POLLS, RULES } from './demo/catalogue.ts';
+import { CHAT_LINES, LOCATIONS, PLAYERS, POLLS, RULES, SCORES } from './demo/catalogue.ts';
 import { scriptEnv } from './lib/env.ts';
 import { migrateDatabase, openDatabase } from './lib/db.ts';
 
@@ -66,12 +76,14 @@ const DEMO_USERS = `select id from user where email like ${DEMO_EMAIL}`;
 const DEMO_PLAYERS = `select user_id from players where user_id in (${DEMO_USERS})`;
 
 /** Une ligue de garage: deux équipes de six, une glace le dimanche matin. */
-const TEMPLATE: RosterTemplate = { goaliesPerTeam: 1, forwardsPerTeam: 3, defensePerTeam: 2 };
 const GAME_TIME = '08:30';
 
 const SETTINGS: Record<string, unknown> = {
 	'league.seasonLabel': 'Saison 2026-2027',
 	'games.defaultStartTime': GAME_TIME,
+	'roster.goaliesPerTeam': 1,
+	'roster.forwardsPerTeam': 3,
+	'roster.defensePerTeam': 2,
 	'finance.totalCents': 24_000,
 	'finance.firstInstallmentPercent': 50,
 	'finance.installment1Due': '2026-09-15',
@@ -182,6 +194,8 @@ type PlannedGame = {
 };
 
 const settings = parseSettings(SETTINGS);
+// Le modèle vient des réglages, jamais d'une seconde constante recopiée.
+const TEMPLATE: RosterTemplate = rosterTemplateFromSettings(settings);
 const slotDefinitions = buildSlotDefinitions(TEMPLATE);
 
 // ---------------------------------------------------------------------------
@@ -605,6 +619,8 @@ function writeGameRatings(gameId: string, dressed: readonly string[]): void {
 	if (rows.length > 0) db.insert(gamePlayerRatings).values(rows).run();
 }
 
+const dressedByGame = new Map<string, { team: Team; playerId: string }[]>();
+
 for (const game of planned) {
 	db.delete(gameSlots).where(eq(gameSlots.gameId, game.id)).run();
 
@@ -644,6 +660,14 @@ for (const game of planned) {
 		}
 	});
 
+	dressedByGame.set(
+		game.id,
+		result.assignments.map((assignment) => ({
+			team: assignment.team,
+			playerId: assignment.playerId
+		}))
+	);
+
 	const kinds = new Map(selection.selected.map((candidate) => [candidate.playerId, candidate.kind]));
 	const snapshot = generationSnapshotSchema.parse({
 		skillDiff: result.skillDiff,
@@ -680,7 +704,7 @@ for (const game of planned) {
 
 	const assignments = new Map(
 		result.assignments.map((assignment) => [
-			`${assignment.team}:${assignment.position}:${assignment.slotIndex}`,
+			slotKey(assignment),
 			assignment
 		])
 	);
@@ -688,9 +712,14 @@ for (const game of planned) {
 	db.insert(gameSlots)
 		.values(
 			slotDefinitions.map((slot) => {
-				const assignment = assignments.get(`${slot.team}:${slot.position}:${slot.index}`);
+				const slotRef = {
+					team: slot.team,
+					position: slot.position,
+					slotIndex: slot.index
+				};
+				const assignment = assignments.get(slotKey(slotRef));
 				return {
-					id: slotId(game.id, slot),
+					id: slotRowId(game.id, slotRef),
 					gameId: game.id,
 					team: slot.team,
 					position: slot.position,
@@ -709,6 +738,88 @@ for (const game of planned) {
 			game.id,
 			selection.selected.map((candidate) => candidate.playerId)
 		);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Feuilles de match
+// ---------------------------------------------------------------------------
+
+/**
+ * Les buts viennent du catalogue et passent par le propriétaire de la feuille
+ * de match : les buteurs et les aides sont des joueurs réellement habillés, et
+ * les noms et les numéros sont résolus par la feuille. Le jeu de démonstration
+ * n'écrit pas de trace d'audit; le score affiché n'est jamais écrit à la main.
+ */
+if (completed.length !== SCORES.length) {
+	throw new Error(
+		`Catalogue: ${SCORES.length} résultats pour ${completed.length} matchs terminés.`
+	);
+}
+
+let resultIndex = 0;
+for (const game of completed) {
+	const score = SCORES[resultIndex % SCORES.length];
+	resultIndex += 1;
+	const dressed = dressedByGame.get(game.id) ?? [];
+	const byId = new Map(demoPlayers.map((player) => [player.userId, player]));
+	const entryGame = {
+		slots: dressed.map((entry) => {
+			const player = byId.get(entry.playerId);
+			return {
+				team: entry.team,
+				player: player
+					? {
+							playerId: player.userId,
+							fullName: player.fullName,
+							jerseyNumber: player.jersey
+						}
+					: null
+			};
+		})
+	};
+	const names = new Map(
+		dressed.map((entry) => [entry.playerId, byId.get(entry.playerId)?.fullName ?? ''])
+	);
+	let sequence = 0;
+
+	for (const team of ['white', 'black'] as const) {
+		const roster = [
+			...new Set(
+				dressed
+					.filter((entry) => entry.team === team)
+					.map((entry) => entry.playerId)
+			)
+		];
+		const goals = team === 'white' ? score.white : score.black;
+
+		for (let goal = 0; goal < goals; goal += 1) {
+			if (roster.length > 0) {
+				const parsed = parseSchema(goalInputSchema, {
+					team,
+					period: (sequence % 3) + 1,
+					clock: `${String(18 - (sequence % 17)).padStart(2, '0')}:${String(
+						(sequence * 13) % 60
+					).padStart(2, '0')}`,
+					kind: 'even',
+					scorerPlayerId: roster[(sequence * 2 + 1) % roster.length],
+					assist1PlayerId:
+						roster.length > 1 ? roster[(sequence * 2 + 2) % roster.length] : null,
+					assist2PlayerId:
+						roster.length > 2 ? roster[(sequence * 2 + 3) % roster.length] : null
+				});
+				const createdAt = gameStart(game.gameDate) + 3_600_000;
+				const row = goalRowFrom(entryGame, parsed, {
+					id: `${PREFIX}goal_${game.gameDate.replaceAll('-', '_')}_${team}_${goal + 1}`,
+					gameId: game.id,
+					createdAt,
+					createdBy: admin.id,
+					names
+				});
+				db.insert(gameGoals).values(row).run();
+			}
+			sequence += 1;
+		}
 	}
 }
 
@@ -902,11 +1013,13 @@ for (const [index, fill] of fills.entries()) {
 			createdByUserId: fill.absentId,
 			position: fill.position,
 			reason: 'absence',
-			status: 'filled',
+			// La fin du match ferme la demande mais garde le remplaçant : le
+			// même état que `finalizeGame`, jamais `filled` sur un match terminé.
+			status: 'cancelled',
 			createdAt: gameStart(game.gameDate) - 4 * 86_400_000,
 			filledByPlayerId: fill.substitute.userId,
 			filledAt: gameStart(game.gameDate) - 3 * 86_400_000,
-			cancelledAt: null
+			cancelledAt: gameStart(game.gameDate) + 2 * 3_600_000
 		})
 		.run();
 }
@@ -1024,50 +1137,6 @@ if (cancelledGame) {
 	}
 }
 
-const paidTotals = new Map<string, number>();
-for (const row of db
-	.select({ playerId: payments.playerId, amountCents: payments.amountCents })
-	.from(payments)
-	.all()) {
-	paidTotals.set(row.playerId, (paidTotals.get(row.playerId) ?? 0) + row.amountCents);
-}
-
-const overdue = db
-	.select({
-		playerId: paymentPlans.playerId,
-		totalCents: paymentPlans.totalCents,
-		firstCents: paymentPlans.firstCents,
-		firstDueDate: paymentPlans.firstDueDate,
-		secondDueDate: paymentPlans.secondDueDate
-	})
-	.from(paymentPlans)
-	.all();
-
-for (const plan of overdue) {
-	const paid = paidTotals.get(plan.playerId) ?? 0;
-	const firstDue = plan.firstDueDate ?? '';
-	const secondDue = plan.secondDueDate ?? '';
-	let amountCents = 0;
-	let dueDate = '';
-
-	if (paid < plan.firstCents && firstDue !== '' && firstDue < today) {
-		amountCents = plan.firstCents - paid;
-		dueDate = firstDue;
-	} else if (paid < plan.totalCents && secondDue !== '' && secondDue < today) {
-		amountCents = plan.totalCents - paid;
-		dueDate = secondDue;
-	}
-
-	if (amountCents === 0 || dueDate === '') continue;
-	inApp(
-		plan.playerId,
-		'balance_overdue',
-		{ amountCents, currency: 'CAD', dueDate },
-		now - 2 * 86_400_000,
-		next() < 0.5
-	);
-}
-
 for (const fill of fills) {
 	const game = planned.find((entry) => entry.id === fill.gameId);
 	if (!game) continue;
@@ -1106,6 +1175,7 @@ console.log(`  joueurs:          ${count('players')} (${demoPlayers.length} de d
 console.log(`  matchs:           ${count('games')}`);
 console.log(`  présences:        ${count('game_availability')}`);
 console.log(`  places:           ${count('game_slots')}`);
+console.log(`  buts:             ${count('game_goals')}`);
 console.log(`  notes de saison:  ${count('player_ratings')}`);
 console.log(`  notes de match:   ${count('game_player_ratings')}`);
 console.log(`  paiements:        ${count('payments')}`);

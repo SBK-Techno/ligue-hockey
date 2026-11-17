@@ -10,8 +10,7 @@ import { getSettings, updateSettings } from '#lib/domain/settings/service.ts';
 import { settingDescription } from '#lib/domain/settings/descriptions.ts';
 import { settingsFormValues, settingsInputFromFormData } from '#lib/domain/settings/form.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
-import { actionError, loadError } from '#lib/server/action.ts';
-import { isAppError } from '#lib/shared/errors.ts';
+import { actionError, failingField, loadError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 
 export const load: ServerLoad = ({ locals }) => {
@@ -56,13 +55,7 @@ export const actions: Actions = {
 			updateSettings(locals.actor, input as Record<SettingsKey, unknown>);
 			return { ok: true, message: t('admin.settingsSaved') };
 		} catch (cause) {
-			return actionError(cause, { setting: failingSetting(cause) });
+			return actionError(cause, { setting: failingField(cause) });
 		}
 	}
 };
-
-function failingSetting(cause: unknown): string | null {
-	if (!isAppError(cause)) return null;
-	const details = cause.details as Array<{ path?: string }> | undefined;
-	return details?.find((entry) => entry.path)?.path ?? null;
-}

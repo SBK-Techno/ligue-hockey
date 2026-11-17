@@ -1,4 +1,5 @@
 import type { Actor } from '#lib/domain/auth/types.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { insertAudit, type AuditEntry } from './queries.ts';
 
@@ -21,6 +22,15 @@ export function auditEntry(actor: Actor, entry: AuditAction): AuditEntry {
 	};
 }
 
-export function recordAudit(actor: Actor, entry: AuditAction): void {
-	insertAudit(auditEntry(actor, entry));
+/**
+ * Écrit l'audit dans l'exécuteur du service appelant. Un service qui possède
+ * déjà une transaction lui passe son exécuteur : la mutation et sa trace
+ * réussissent ou échouent ensemble.
+ */
+export function recordAudit(
+	actor: Actor,
+	entry: AuditAction,
+	executor: DbExecutor = db
+): void {
+	insertAudit(auditEntry(actor, entry), executor);
 }

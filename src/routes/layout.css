@@ -7,6 +7,8 @@
 	html {
 		color-scheme: light;
 		background: var(--color-paper);
+		scroll-padding-top: calc(var(--anchor-offset) + var(--surface-top-inset, 0px));
+		scroll-padding-bottom: calc(var(--bottom-bar-offset) + var(--surface-bottom-inset, 0px));
 		scrollbar-color: var(--color-line) transparent;
 		-webkit-tap-highlight-color: color-mix(in srgb, var(--color-ice) 12%, transparent);
 	}
@@ -113,10 +115,10 @@
 		z-index: -1;
 		pointer-events: none;
 		background-color: var(--color-paper);
-		background-image: var(--page-texture);
-		background-position: center;
-		background-size: cover;
-		background-repeat: no-repeat;
+		background-image: var(--page-material-image);
+		background-position: 0 0;
+		background-size: var(--page-material-size);
+		background-repeat: var(--page-material-repeat);
 	}
 
 	/* Une feuille : papier chaud posé sur la page, coins ronds et ombre douce. */
@@ -169,6 +171,9 @@
 	/* Le rythme vertical d'une page : un seul empilement. */
 	.page-stack {
 		display: grid;
+		/* La colonne unique ne prend jamais la largeur min-content d'un enfant :
+		   une phrase longue ne peut donc pas élargir la page sous 320 px. */
+		grid-template-columns: minmax(0, 1fr);
 		gap: 1rem;
 	}
 	/* Une surface de lecture étroite garde son en-tête aligné. */
@@ -239,9 +244,11 @@
 		min-width: 2.75rem;
 		padding-inline: 0;
 	}
-	/* Entrée de page : courte, commune à toutes les surfaces. */
+	/* Entrée de page : courte, commune à toutes les surfaces. Le remplissage
+	   s'arrête à la fin : aucun transform retenu ne transforme la page en bloc
+	   conteneur pour les éléments fixes (la pastille de nouveaux messages). */
 	.page-enter {
-		animation: page-rise var(--duration-base) var(--ease-out-expo) both;
+		animation: page-rise var(--duration-base) var(--ease-out-expo) backwards;
 	}
 	.reveal {
 		animation: page-rise var(--duration-slow) var(--ease-out-expo) both;
@@ -263,144 +270,6 @@
 		color: var(--color-on-brand);
 		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-on-brand) 8%, transparent);
 	}
-	.scoreboard::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-		background: linear-gradient(
-			90deg,
-			transparent 0 49.7%,
-			color-mix(in srgb, var(--color-on-brand) 12%, transparent) 49.7% 50.3%,
-			transparent 50.3%
-		);
-	}
-
-	/* Connexion : la photo de vestiaire, puis la même feuille que le reste. */
-	.auth-shell {
-		position: relative;
-		min-height: 100dvh;
-		background: var(--color-paper);
-	}
-	.auth-hero {
-		position: relative;
-		height: max(28dvh, 11rem);
-		overflow: hidden;
-	}
-	.auth-hero img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: 68% 50%;
-	}
-	.auth-scrim {
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(
-			to bottom,
-			color-mix(in srgb, var(--color-ink) 78%, transparent),
-			transparent 72%
-		);
-	}
-	.auth-header {
-		position: absolute;
-		inset: 0 0 auto;
-		z-index: 1;
-		padding: 1.25rem;
-	}
-	.auth-body {
-		position: relative;
-		margin-top: -2rem;
-		padding: 0 0.75rem calc(env(safe-area-inset-bottom) + 1.5rem);
-	}
-	.auth-main {
-		position: relative;
-		z-index: 1;
-		padding: 0;
-	}
-	.auth-panel {
-		width: 100%;
-		max-width: 24rem;
-		margin-inline: auto;
-	}
-	.auth-panel .card {
-		padding: 1.5rem;
-		border: 1px solid var(--color-line);
-		border-radius: var(--radius-card);
-		background: var(--color-surface);
-		box-shadow: none;
-	}
-	.auth-caption {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin: 1.25rem auto 0;
-		color: var(--color-muted);
-	}
-	/* Un téléphone court garde le bouton de connexion au-dessus de la ligne. */
-	@media (max-height: 720px) {
-		.auth-hero {
-			height: 9rem;
-		}
-		.auth-body {
-			margin-top: -1.5rem;
-		}
-	}
-	@media (min-width: 640px) {
-		.auth-hero {
-			height: max(32dvh, 14rem);
-		}
-		.auth-header {
-			padding: 1.75rem;
-		}
-		.auth-body {
-			padding: 0 1.5rem 2rem;
-		}
-		.auth-panel .card {
-			padding: 1.75rem;
-		}
-	}
-	@media (min-width: 1024px) {
-		.auth-shell {
-			display: grid;
-			grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 0.85fr);
-			background: var(--color-paper);
-		}
-		.auth-hero {
-			grid-column: 1;
-			grid-row: 1;
-			height: 100dvh;
-			position: sticky;
-			top: 0;
-		}
-		.auth-hero img {
-			object-position: center;
-		}
-		.auth-header {
-			padding: 2.5rem;
-		}
-		.auth-body {
-			display: flex;
-			flex-direction: column;
-			grid-column: 2;
-			grid-row: 1;
-			justify-content: center;
-			min-height: 100dvh;
-			margin-top: 0;
-			padding: 3rem;
-		}
-		.auth-panel {
-			max-width: 25rem;
-		}
-		.auth-panel .card {
-			padding: 2rem;
-		}
-		.auth-caption {
-			margin-top: 1.75rem;
-		}
-	}
-
 	/* Chiffres de feuille de match : une seule famille, alignée, stable. */
 	.numeric {
 		font-family: var(--font-mono);
@@ -520,7 +389,7 @@
 		background: var(--color-paper-deep);
 	}
 	.btn-sm {
-		@apply min-h-10 px-3 py-1.5 text-meta;
+		@apply min-h-11 px-3 py-1.5 text-meta;
 	}
 
 	.input {
@@ -695,7 +564,7 @@
 		width: 4rem;
 		flex-shrink: 0;
 		font-family: var(--font-mono);
-		font-size: 0.75rem;
+		font-size: var(--text-meta);
 		color: var(--color-muted);
 		white-space: nowrap;
 	}
@@ -729,6 +598,210 @@
 		height: 0.5rem;
 		border-radius: var(--radius-pill);
 		background: currentColor;
+	}
+
+	/* La glace : un vrai demi-terrain, des lignes peintes, des jetons posés.
+	   Les lignes sont des traits fonctionnels, jamais un dégradé décoratif. */
+	.rink {
+		position: relative;
+		aspect-ratio: 5 / 3;
+		overflow: hidden;
+		border: 2px solid var(--color-line-strong);
+		border-radius: var(--radius-card);
+		background-color: var(--color-ice-soft);
+		background-image:
+			linear-gradient(90deg, transparent calc(var(--rink-center) - 0.3%), var(--color-accent) calc(var(--rink-center) - 0.3%) calc(var(--rink-center) + 0.3%), transparent calc(var(--rink-center) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-blue-left) - 0.3%), var(--color-ice-deep) calc(var(--rink-blue-left) - 0.3%) calc(var(--rink-blue-left) + 0.3%), transparent calc(var(--rink-blue-left) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-blue-right) - 0.3%), var(--color-ice-deep) calc(var(--rink-blue-right) - 0.3%) calc(var(--rink-blue-right) + 0.3%), transparent calc(var(--rink-blue-right) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-goal-left) - 0.3%), var(--color-accent) calc(var(--rink-goal-left) - 0.3%) calc(var(--rink-goal-left) + 0.3%), transparent calc(var(--rink-goal-left) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-goal-right) - 0.3%), var(--color-accent) calc(var(--rink-goal-right) - 0.3%) calc(var(--rink-goal-right) + 0.3%), transparent calc(var(--rink-goal-right) + 0.3%)),
+			var(--rink-material-image);
+		background-size:
+			100% 100%,
+			100% 100%,
+			100% 100%,
+			100% 100%,
+			100% 100%,
+			var(--rink-material-size);
+		background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, var(--rink-material-repeat);
+		background-position: center;
+	}
+	.rink::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: var(--rink-circle);
+		aspect-ratio: 1;
+		transform: translate(-50%, -50%);
+		border: 2px solid color-mix(in srgb, var(--color-ice-deep) 55%, transparent);
+		border-radius: 50%;
+	}
+	.rink-token {
+		position: absolute;
+		/* Le gardien et les défenseurs frôlent les bandes : sous 400 px, le
+		   jeton et son anneau de focus sortiraient de la glace. L'inset garde
+		   le centre du jeton à une demi-largeur mesurée de la bande. */
+		top: clamp(2.25rem, var(--y), calc(100% - 2.25rem));
+		left: clamp(2.25rem, var(--x), calc(100% - 2.25rem));
+		z-index: 2;
+		display: grid;
+		place-items: center;
+		width: clamp(2.75rem, 13%, 3.5rem);
+		aspect-ratio: 1;
+		padding: 0.15rem;
+		transform: translate(-50%, -50%);
+		border: 2px solid var(--color-paper);
+		border-radius: 50%;
+		background: var(--color-ink);
+		color: var(--color-paper);
+		box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
+		cursor: pointer;
+	}
+	.rink-token[data-team='white'] {
+		background: var(--color-paper);
+		color: var(--color-ink);
+		border-color: var(--color-ink);
+	}
+	.rink-token[data-team='black'] {
+		background: var(--color-ink);
+		color: var(--color-paper);
+		border-color: var(--color-paper);
+	}
+	.rink-token[data-filled='false'] {
+		background: color-mix(in srgb, var(--color-paper) 55%, transparent);
+		border: 2px dashed color-mix(in srgb, var(--color-ink) 35%, transparent);
+		color: var(--color-muted);
+		box-shadow: none;
+	}
+	.rink-token[data-selected='true'] {
+		/* La sélection garde son anneau, mais sur l'ombre : le contour reste
+		   réservé au focus clavier, même quand les deux se superposent. */
+		box-shadow:
+			0 0 0 3px var(--color-accent),
+			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
+	}
+	.rink-token:disabled {
+		cursor: default;
+	}
+	.rink-number {
+		font-family: var(--font-mono);
+		font-size: clamp(0.8rem, 4vw, 1.05rem);
+		font-weight: 700;
+		line-height: 1;
+	}
+	.rink-name {
+		width: 100%;
+		max-width: 100%;
+		overflow: hidden;
+		font-size: clamp(0.5rem, 1.7vw, 0.625rem);
+		font-weight: 600;
+		line-height: 1.05;
+		text-align: center;
+		text-overflow: ellipsis;
+		/* Un nom de famille ne se coupe jamais : le jeton tronque au complet. */
+		hyphens: none;
+		white-space: nowrap;
+	}
+	/* Sous 640 px, le jeton de 44 px ne peut pas porter un nom lisible :
+	   le numéro reste seul, le nom complet vit dans le libellé accessible. */
+	@media (max-width: 639px) {
+		.rink-name {
+			display: none;
+		}
+	}
+	.rink-empty {
+		font-size: 1.25rem;
+		line-height: 1;
+	}
+	.bench-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		min-height: 2.75rem;
+		padding: 0.25rem 0.6rem;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-control);
+		background: var(--color-surface);
+		font-size: var(--text-meta);
+		cursor: pointer;
+	}
+	.bench-chip[data-selected='true'] {
+		border-color: var(--color-accent);
+		background: var(--color-accent-soft);
+	}
+	.bench-chip:disabled {
+		cursor: default;
+	}
+
+	/* La fiche joueur : un carton posé sur la page, jamais une fenêtre système. */
+	.player-peek {
+		position: fixed;
+		z-index: 80;
+		max-height: min(72vh, 34rem);
+		overflow-y: auto;
+		padding: 0.9rem;
+		border: 1px solid var(--color-line-strong);
+		border-radius: var(--radius-card);
+		background: var(--color-surface);
+		box-shadow: var(--shadow-card);
+	}
+	.player-peek:focus-visible {
+		outline: 2px solid var(--color-ice);
+		outline-offset: 2px;
+	}
+	.player-peek-sheet {
+		left: 0.75rem;
+		right: 0.75rem;
+		bottom: calc(var(--bottom-bar-offset) + 0.5rem);
+		width: auto;
+		max-height: 80vh;
+	}
+	.player-peek-close {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		display: grid;
+		place-items: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-pill);
+		color: var(--color-muted);
+		cursor: pointer;
+	}
+	.player-peek-close:hover {
+		border-color: var(--color-line);
+		color: var(--color-ink);
+	}
+	.player-peek-close:focus-visible {
+		outline: 2px solid var(--color-ice);
+		outline-offset: 1px;
+	}
+	.player-name {
+		display: inline-flex;
+		align-items: center;
+		/* La cible fait 44 px sans ajouter une ligne : la marge négative rend
+		   au flux la hauteur du texte, le remplissage reste cliquable. */
+		min-height: 2.75rem;
+		margin-block: -0.65rem;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		text-align: left;
+		text-decoration: underline;
+		text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+		text-underline-offset: 0.15em;
+		cursor: pointer;
+	}
+	.player-name:hover {
+		text-decoration-color: currentColor;
+	}
+	.player-name:focus-visible {
+		outline: 2px solid var(--color-ice);
+		outline-offset: 2px;
 	}
 
 	/* Discussion : un mur de vestiaire, pas une pile de bulles. Chaque joueur
@@ -926,6 +999,10 @@
 		background: var(--color-surface);
 		overflow: hidden;
 	}
+	.metric-strip[data-cells='1'] {
+		width: fit-content;
+		grid-auto-columns: max-content;
+	}
 	.metric-cell {
 		display: flex;
 		flex-direction: column;
@@ -940,6 +1017,9 @@
 			grid-auto-flow: row;
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
+		.metric-strip[data-cells='1'] {
+			grid-template-columns: minmax(0, 1fr);
+		}
 		.metric-cell {
 			border-left: 0;
 			border-top: 1px solid var(--color-line);
@@ -949,6 +1029,9 @@
 		}
 		.metric-cell:nth-child(even) {
 			border-left: 1px solid var(--color-line);
+		}
+		.metric-cell:last-child:nth-child(odd) {
+			grid-column: span 2;
 		}
 	}
 }

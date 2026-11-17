@@ -3,9 +3,8 @@ import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
 import { getGame, completeGame, type GameView } from '#lib/domain/games/service.ts';
-import { isGameStarted } from '#lib/domain/games/playability.ts';
-import type { GamePlayer } from '#lib/domain/games/types.ts';
-import { playersByIds } from '#lib/domain/players/candidates.ts';
+import { isGamePlayable } from '#lib/domain/games/playability.ts';
+import { deletedPlayerIds, playersByIds } from '#lib/domain/players/candidates.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { clock } from '#lib/shared/time/clock.ts';
@@ -39,25 +38,33 @@ import type {
 import {
 	goalInputSchema,
 	penaltyInputSchema,
-	type GoalInput,
 	type PenaltyInput
 } from './validators.ts';
+import {
+	goalRowFrom,
+	resolveGoalEntry,
+	resolvePenaltyEntry
+} from './entry.ts';
 
 function playerRef(
 	team: Team,
 	playerId: string | null,
 	fullName: string,
-	jerseyNumber: number | null
+	jerseyNumber: number | null,
+	deleted: ReadonlySet<string>
 ): GamePlayerRef {
 	return {
-		playerId: playerId ?? '',
+		playerId: playerId !== null && !deleted.has(playerId) ? playerId : '',
 		fullName,
 		jerseyNumber,
 		team
 	};
 }
 
-function goalView(row: GameGoalRow): GameGoalView {
+function goalView(
+	row: GameGoalRow,
+	deleted: ReadonlySet<string> = new Set()
+): GameGoalView {
 	const assists: GamePlayerRef[] = [];
 	if (row.assist1Name !== null) {
 		assists.push(
@@ -65,7 +72,8 @@ function goalView(row: GameGoalRow): GameGoalView {
 				row.team,
 				row.assist1PlayerId,
 				row.assist1Name,
-				row.assist1Number
+				row.assist1Number,
+				deleted
 			)
 		);
 	}
@@ -75,7 +83,8 @@ function goalView(row: GameGoalRow): GameGoalView {
 				row.team,
 				row.assist2PlayerId,
 				row.assist2Name,
-				row.assist2Number
+				row.assist2Number,
+				deleted
 			)
 		);
 	}
@@ -86,10 +95,11 @@ function goalView(row: GameGoalRow): GameGoalView {
 		clock: row.clock,
 		kind: row.kind,
 		scorer: playerRef(
-			row.team,
+			row.kind === 'own_goal' ? otherTeam(row.team) : row.team,
 			row.scorerPlayerId,
 			row.scorerName,
-			row.scorerNumber
+			row.scorerNumber,
+			deleted
 		),
 		assists,
 		ownGoal: row.kind === 'own_goal',
@@ -97,7 +107,10 @@ function goalView(row: GameGoalRow): GameGoalView {
 	};
 }
 
-function penaltyView(row: GamePenaltyRow): GamePenaltyView {
+function penaltyView(
+	row: GamePenaltyRow,
+	deleted: ReadonlySet<string> = new Set()
+): GamePenaltyView {
 	return {
 		id: row.id,
 		team: row.team,
@@ -107,25 +120,13 @@ function penaltyView(row: GamePenaltyRow): GamePenaltyView {
 			row.team,
 			row.playerId,
 			row.playerName,
-			row.playerNumber
+			row.playerNumber,
+			deleted
 		),
 		infraction: row.infraction,
 		minutes: row.minutes,
 		coincidental: row.coincidental
 	};
-}
-
-function dressedKey(team: Team, playerId: string): string {
-	return `${team}:${playerId}`;
-}
-
-function dressedSlots(game: GameView): Map<string, GamePlayer> {
-	const slots = new Map<string, GamePlayer>();
-	for (const slot of game.slots) {
-		if (!slot.player) continue;
-		slots.set(dressedKey(slot.team, slot.player.playerId), slot.player);
-	}
-	return slots;
 }
 
 function nameOf(playerIds: ReadonlySet<string>): Map<string, string> {
@@ -137,105 +138,13 @@ function nameOf(playerIds: ReadonlySet<string>): Map<string, string> {
 	);
 }
 
-function requireDressed(
-	slots: ReadonlyMap<string, GamePlayer>,
-	team: Team,
-	playerId: string,
-	names: ReadonlyMap<string, string>,
-	key:
-		| 'gamesheet.scorerNotDressed'
-		| 'gamesheet.assistNotDressed'
-		| 'gamesheet.penaltyPlayerNotDressed'
-): GamePlayer {
-	const player = slots.get(dressedKey(team, playerId));
-	if (!player) {
-		throw new AppError('VALIDATION', {
-			key,
-			params: { name: names.get(playerId) ?? playerId }
-		});
-	}
-	return player;
-}
-
-/**
- * Vérifie que le but appartient bien à des joueurs habillés de la même équipe.
- * Le gardien peut marquer ou être crédité d'une aide : il occupe une place
- * comme les autres et aucune position ne restreint la feuille.
- */
-function resolveGoal(
-	game: GameView,
-	input: GoalInput
-): {
-	scorer: GamePlayer;
-	assists: { slot: GamePlayer; playerId: string }[];
-} {
-	const slots = dressedSlots(game);
-	const ids = new Set(
-		[input.scorerPlayerId, input.assist1PlayerId, input.assist2PlayerId].filter(
-			(value): value is string => value !== null
-		)
-	);
-	const names = nameOf(ids);
-	// Un but contre son camp crédite l'autre camp, mais le buteur appartient
-	// à l'équipe qui l'a marqué contre elle-même.
-	const scoringTeam = input.kind === 'own_goal' ? otherTeam(input.team) : input.team;
-	const scorer = requireDressed(
-		slots,
-		scoringTeam,
-		input.scorerPlayerId,
-		names,
-		'gamesheet.scorerNotDressed'
-	);
-
-	const assistIds = [input.assist1PlayerId, input.assist2PlayerId].filter(
-		(value): value is string => value !== null
-	);
-	if (input.kind === 'own_goal' && assistIds.length > 0) {
-		throw new AppError('VALIDATION', { key: 'gamesheet.ownGoalNoAssists' });
-	}
-	const seen = new Set<string>();
-	for (const assistId of assistIds) {
-		if (assistId === input.scorerPlayerId) {
-			throw new AppError('VALIDATION', { key: 'gamesheet.assistIsScorer' });
-		}
-		if (seen.has(assistId)) {
-			throw new AppError('VALIDATION', { key: 'gamesheet.assistDuplicate' });
-		}
-		seen.add(assistId);
-	}
-	for (const assistId of assistIds) {
-		const slot = requireDressed(
-			slots,
-			scoringTeam,
-			assistId,
-			names,
-			'gamesheet.assistNotDressed'
-		);
-		if (slot.fullName === scorer.fullName) {
-			throw new AppError('VALIDATION', {
-				key: 'gamesheet.assistDuplicateName',
-				params: { name: slot.fullName }
-			});
-		}
-	}
-
-	return {
-		scorer,
-		assists: assistIds.map((playerId) => ({
-			playerId,
-			slot: slots.get(dressedKey(scoringTeam, playerId))!
-		}))
-	};
-}
-
 function startedGame(actor: Actor, gameId: string): GameView {
 	requirePermission(actor, 'manageGames');
 	const game = getGame(actor, gameId);
-	if (game.status === 'cancelled') {
-		throw new AppError('CONFLICT', { key: 'gamesheet.cancelled' });
-	}
-	if (!isGameStarted(game)) {
-		throw new AppError('CONFLICT', { key: 'games.notStarted' });
+	if (!isGamePlayable(game)) {
+		throw new AppError('CONFLICT', {
+			key: game.status === 'cancelled' ? 'gamesheet.cancelled' : 'games.notStarted'
+		});
 	}
 	return game;
 }
@@ -265,11 +174,26 @@ export function listGameScores(
 	return scores;
 }
 
-export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
+export function getGameSheet(actor: Actor, game: GameView): GameSheetView {
 	requireUser(actor);
-	const game = getGame(actor, gameId);
-	const goals = listGoals(gameId);
-	const penalties = listPenalties(gameId);
+	if (!isGamePlayable(game)) {
+		throw new AppError('CONFLICT', {
+			key: game.status === 'cancelled' ? 'gamesheet.cancelled' : 'games.notStarted'
+		});
+	}
+	const goals = listGoals(game.id);
+	const penalties = listPenalties(game.id);
+	const deleted = deletedPlayerIds([
+		...game.slots.flatMap((slot) => (slot.player ? [slot.player.playerId] : [])),
+		...goals.flatMap((goal) => [
+			...(goal.scorerPlayerId ? [goal.scorerPlayerId] : []),
+			...(goal.assist1PlayerId ? [goal.assist1PlayerId] : []),
+			...(goal.assist2PlayerId ? [goal.assist2PlayerId] : [])
+		]),
+		...penalties.flatMap((penalty) =>
+			penalty.playerId ? [penalty.playerId] : []
+		)
+	]);
 
 	const score = Object.fromEntries(
 		TEAMS.map((team) => [team.key, 0])
@@ -313,7 +237,11 @@ export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
 
 	const teamOrder = new Map(TEAMS.map((team, index) => [team.key, index]));
 	const rows = [...totals.values()]
-		.map((entry) => ({ ...entry, points: entry.goals + entry.assists }))
+		.map((entry) => ({
+			...entry,
+			playerId: deleted.has(entry.playerId) ? '' : entry.playerId,
+			points: entry.goals + entry.assists
+		}))
 		.sort(
 			(a, b) =>
 				(teamOrder.get(a.team) ?? 0) - (teamOrder.get(b.team) ?? 0) ||
@@ -324,9 +252,9 @@ export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
 		);
 
 	return {
-		gameId,
-		goals: goals.map(goalView),
-		penalties: penalties.map(penaltyView),
+		gameId: game.id,
+		goals: goals.map((goal) => goalView(goal, deleted)),
+		penalties: penalties.map((penalty) => penaltyView(penalty, deleted)),
 		score,
 		totals: rows,
 		finalized: game.completedAt !== null
@@ -336,29 +264,21 @@ export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
 export function addGoal(actor: Actor, gameId: string, input: unknown): GameGoalView {
 	const game = startedGame(actor, gameId);
 	const parsed = parseSchema(goalInputSchema, input);
-	const resolved = resolveGoal(game, parsed);
 	const now = clock.nowMs();
 	const id = newId('goal');
-	const row: NewGameGoalRow = {
+	const row: NewGameGoalRow = goalRowFrom(game, parsed, {
 		id,
 		gameId,
-		team: parsed.team,
-		period: parsed.period,
-		clock: parsed.clock,
-		kind: parsed.kind,
-		scorerPlayerId: parsed.scorerPlayerId,
-		scorerName: resolved.scorer.fullName,
-		scorerNumber: resolved.scorer.jerseyNumber,
-		assist1PlayerId: parsed.assist1PlayerId,
-		assist1Name: resolved.assists[0]?.slot.fullName ?? null,
-		assist1Number: resolved.assists[0]?.slot.jerseyNumber ?? null,
-		assist2PlayerId: parsed.assist2PlayerId,
-		assist2Name: resolved.assists[1]?.slot.fullName ?? null,
-		assist2Number: resolved.assists[1]?.slot.jerseyNumber ?? null,
 		createdAt: now,
 		createdBy: actor.kind === 'user' ? actor.userId : null,
-		updatedAt: now
-	};
+		names: nameOf(
+			new Set(
+				[parsed.scorerPlayerId, parsed.assist1PlayerId, parsed.assist2PlayerId].filter(
+					(value): value is string => value !== null
+				)
+			)
+		)
+	});
 	insertGoal(
 		row,
 		auditEntry(actor, {
@@ -391,7 +311,17 @@ export function updateGoal(
 		throw new AppError('NOT_FOUND', { key: 'gamesheet.goalNotFound' });
 	}
 	const parsed = parseSchema(goalInputSchema, input);
-	const resolved = resolveGoal(game, parsed);
+	const resolved = resolveGoalEntry(
+		game,
+		parsed,
+		nameOf(
+			new Set(
+				[parsed.scorerPlayerId, parsed.assist1PlayerId, parsed.assist2PlayerId].filter(
+					(value): value is string => value !== null
+				)
+			)
+		)
+	);
 	const now = clock.nowMs();
 	const patch: Partial<NewGameGoalRow> = {
 		team: parsed.team,
@@ -453,18 +383,12 @@ export function deleteGoal(
 	}
 }
 
-function resolvePenalty(
-	game: GameView,
-	input: PenaltyInput
-): GamePlayer {
-	const slots = dressedSlots(game);
-	const names = nameOf(new Set([input.playerId]));
-	return requireDressed(
-		slots,
+function resolvePenalty(game: GameView, input: PenaltyInput) {
+	return resolvePenaltyEntry(
+		game,
 		input.team,
 		input.playerId,
-		names,
-		'gamesheet.penaltyPlayerNotDressed'
+		nameOf(new Set([input.playerId]))
 	);
 }
 

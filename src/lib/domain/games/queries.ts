@@ -1,7 +1,9 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
+import { slotKey } from '#config/slot.ts';
+import { isPublished } from './published.ts';
 import { players } from '#lib/domain/players/schema.ts';
 import { deleteGameRatingsForPlayers } from '#lib/domain/ratings/queries.ts';
 import { gameAvailability, gameSlots, games } from './schema.ts';
@@ -42,6 +44,63 @@ export function listRecentGames(limit: number) {
 		.all();
 }
 
+export type GameListRow = {
+	id: string;
+	gameDate: string;
+	startTime: string;
+	locationId: string;
+	location: string;
+	status: 'scheduled' | 'cancelled' | 'completed';
+	generated: boolean;
+	openSlots: number;
+};
+
+/**
+ * La projection de liste : l'état de génération et le nombre de places vides
+ * de plusieurs matchs, en deux lectures bornées. Aucun appelant ne rejoue une
+ * fiche complète par ligne.
+ */
+export function listGameListRows(gameIds: readonly string[]): GameListRow[] {
+	if (gameIds.length === 0) return [];
+	const rows = db
+		.select({
+			id: games.id,
+			gameDate: games.gameDate,
+			startTime: games.startTime,
+			locationId: games.locationId,
+			location: games.location,
+			status: games.status,
+			generatedAt: games.generatedAt,
+			generationJson: games.generationJson
+		})
+		.from(games)
+		.where(inArray(games.id, [...gameIds]))
+		.all();
+	const counts = db
+		.select({ gameId: gameSlots.gameId, open: count() })
+		.from(gameSlots)
+		.where(
+			and(
+				inArray(gameSlots.gameId, [...gameIds]),
+				isNull(gameSlots.assignedPlayerId)
+			)
+		)
+		.groupBy(gameSlots.gameId)
+		.all();
+	const open = new Map(counts.map((row) => [row.gameId, row.open]));
+
+	return rows.map((row) => ({
+		id: row.id,
+		gameDate: row.gameDate,
+		startTime: row.startTime,
+		locationId: row.locationId,
+		location: row.location,
+		status: row.status,
+		generated: isPublished(row),
+		openSlots: open.get(row.id) ?? 0
+	}));
+}
+
 export function listSlots(gameId: string) {
 	return db
 		.select()
@@ -80,8 +139,12 @@ export type SlotAssignment = {
 export type SaveAssignmentsOptions = {
 	/** Audits écrits dans la même transaction que les places. */
 	audits?: readonly AuditEntry[];
-	/** Joueurs sortis de l'alignement dont les notes de match sont purgées. */
-	removedRatedPlayerIds?: readonly string[];
+	/**
+	 * Construit l'audit de purge à partir des joueurs dont les notes ont
+	 * réellement été retirées. Le diff est calculé dans la transaction, entre
+	 * l'ancien alignement et le nouveau, donc le banc n'est jamais purgé.
+	 */
+	ratingsAudit?: (playerIds: readonly string[]) => AuditEntry;
 	/**
 	 * Jeton de concurrence : la génération enregistrée doit encore être celle
 	 * que l'appelant a lue. Absent, aucune condition n'est posée; null exige
@@ -100,12 +163,6 @@ export function saveAssignments(
 	updatedAt: number,
 	options: SaveAssignmentsOptions = {}
 ): boolean {
-	const written = new Set(assignments.map((assignment) => assignment.playerId));
-	for (const playerId of options.removedRatedPlayerIds ?? []) {
-		if (written.has(playerId)) {
-			throw new Error(`Cannot purge ratings for a dressed player: ${playerId}`);
-		}
-	}
 	const hasCondition = 'expectedGeneratedAt' in options;
 
 	return db.transaction((tx) => {
@@ -137,6 +194,23 @@ export function saveAssignments(
 			if (claimed.changes !== 1) return false;
 		}
 
+		// Le seul propriétaire du diff de purge : l'ancien ensemble habillé
+		// moins le nouveau. Un joueur au banc n'a jamais été habillé et garde
+		// donc ses notes; un joueur sorti de la glace les perd.
+		const previousDressed = new Set(
+			tx
+				.select({ playerId: gameSlots.assignedPlayerId })
+				.from(gameSlots)
+				.where(eq(gameSlots.gameId, gameId))
+				.all()
+				.map((row) => row.playerId)
+				.filter((playerId): playerId is string => playerId !== null)
+		);
+		const nextDressed = new Set(assignments.map((assignment) => assignment.playerId));
+		const removedRatedPlayerIds = [...previousDressed].filter(
+			(playerId) => !nextDressed.has(playerId)
+		);
+
 		tx.update(gameSlots)
 			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt })
 			.where(eq(gameSlots.gameId, gameId))
@@ -161,7 +235,7 @@ export function saveAssignments(
 				.run();
 			if (writtenSlot.changes !== 1) {
 				throw new Error(
-					`Unknown alignment slot: ${assignment.team}:${assignment.position}:${assignment.slotIndex}`
+					`Unknown alignment slot: ${slotKey(assignment)}`
 				);
 			}
 		}
@@ -170,13 +244,98 @@ export function saveAssignments(
 			tx.update(games).set(generation).where(eq(games.id, gameId)).run();
 		}
 
-		deleteGameRatingsForPlayers(gameId, options.removedRatedPlayerIds ?? [], tx);
+		deleteGameRatingsForPlayers(gameId, removedRatedPlayerIds, tx);
+		if (removedRatedPlayerIds.length > 0 && options.ratingsAudit) {
+			insertAudit(options.ratingsAudit(removedRatedPlayerIds), tx);
+		}
 		for (const audit of options.audits ?? []) {
 			insertAudit(audit, tx);
 		}
 
 		return true;
 	});
+}
+
+/**
+ * Retire un joueur du bassin publié d'un match à venir : sa place redevient
+ * vide et il quitte le banc de l'instantané. La place, le banc, la purge de
+ * ses notes de match et l'audit tiennent dans une seule transaction.
+ */
+export function releasePlayerSlot(
+	gameId: string,
+	playerId: string,
+	releasedAt: number,
+	audit: AuditEntry,
+	executor: DbExecutor = db
+): boolean {
+	if (executor === db) {
+		return db.transaction((tx) =>
+			releasePlayerSlotIn(tx, gameId, playerId, releasedAt, audit)
+		);
+	}
+	return releasePlayerSlotIn(executor, gameId, playerId, releasedAt, audit);
+}
+
+function releasePlayerSlotIn(
+	executor: DbExecutor,
+	gameId: string,
+	playerId: string,
+	releasedAt: number,
+	audit: AuditEntry
+): boolean {
+	const row = executor.select().from(games).where(eq(games.id, gameId)).get();
+	if (!row) return false;
+	const slot = executor
+		.select({ id: gameSlots.id })
+		.from(gameSlots)
+		.where(
+			and(
+				eq(gameSlots.gameId, gameId),
+				eq(gameSlots.assignedPlayerId, playerId)
+			)
+		)
+		.get();
+
+	let generationJson = row.generationJson;
+	let onBench = false;
+	if (generationJson) {
+		try {
+			const snapshot = JSON.parse(generationJson) as {
+				bench?: { playerId?: unknown }[];
+			};
+			onBench =
+				Array.isArray(snapshot.bench) &&
+				snapshot.bench.some((entry) => entry.playerId === playerId);
+			if (onBench) {
+				generationJson = JSON.stringify({
+					...snapshot,
+					bench: snapshot.bench!.filter((entry) => entry.playerId !== playerId)
+				});
+			}
+		} catch {
+			generationJson = row.generationJson;
+		}
+	}
+
+	if (!slot && !onBench) return false;
+
+	if (slot) {
+		executor
+			.update(gameSlots)
+			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt: releasedAt })
+			.where(eq(gameSlots.id, slot.id))
+			.run();
+		deleteGameRatingsForPlayers(gameId, [playerId], executor);
+	}
+	if (generationJson !== row.generationJson) {
+		executor
+			.update(games)
+			.set({ generationJson, updatedAt: releasedAt })
+			.where(eq(games.id, gameId))
+			.run();
+	}
+	insertAudit(audit, executor);
+	return true;
 }
 
 /**
@@ -187,7 +346,8 @@ export function saveAssignments(
 export function completeGame(
 	gameId: string,
 	at: number,
-	audit: AuditEntry
+	audit: AuditEntry,
+	finalize?: (executor: DbExecutor) => void
 ): boolean {
 	return db.transaction((tx) => {
 		const result = tx
@@ -197,6 +357,7 @@ export function completeGame(
 			.run();
 		if (result.changes !== 1) return false;
 		insertAudit(audit, tx);
+		finalize?.(tx);
 		return true;
 	});
 }
@@ -207,40 +368,55 @@ export function updateGame(
 		Pick<NewGame, 'gameDate' | 'startTime' | 'locationId' | 'location' | 'notes' | 'status'>
 	>,
 	updatedAt: number,
-	expectedUpdatedAt: number
+	expectedUpdatedAt: number,
+	audit?: AuditEntry
 ): boolean {
-	const result = db
-		.update(games)
-		.set({ ...patch, updatedAt })
-		.where(
-			and(
-				eq(games.id, gameId),
-				eq(games.status, 'scheduled'),
-				eq(games.updatedAt, expectedUpdatedAt)
+	return db.transaction((tx) => {
+		const result = tx
+			.update(games)
+			.set({ ...patch, updatedAt })
+			.where(
+				and(
+					eq(games.id, gameId),
+					eq(games.status, 'scheduled'),
+					eq(games.updatedAt, expectedUpdatedAt)
+				)
 			)
-		)
-		.run();
-	return result.changes === 1;
+			.run();
+		if (result.changes !== 1) return false;
+		if (audit) insertAudit(audit, tx);
+		return true;
+	});
 }
 
 /**
- * Annule seulement un match encore programmé et jamais terminé. Le statut et
- * l'estampille de fin sont dans la condition : un finalize concurrent gagne et
- * l'annulation échoue au lieu d'écraser l'historique.
+ * Annule seulement un match encore programmé et jamais terminé. Le statut, la
+ * trace d'audit et la fermeture des demandes vivent dans la même transaction :
+ * une erreur de fermeture laisse le match intact.
  */
-export function cancelGame(gameId: string, updatedAt: number): boolean {
-	const result = db
-		.update(games)
-		.set({ status: 'cancelled', updatedAt })
-		.where(
-			and(
-				eq(games.id, gameId),
-				eq(games.status, 'scheduled'),
-				isNull(games.completedAt)
+export function cancelGame(
+	gameId: string,
+	updatedAt: number,
+	audit: AuditEntry,
+	close?: (executor: DbExecutor) => void
+): boolean {
+	return db.transaction((tx) => {
+		const result = tx
+			.update(games)
+			.set({ status: 'cancelled', updatedAt })
+			.where(
+				and(
+					eq(games.id, gameId),
+					eq(games.status, 'scheduled'),
+					isNull(games.completedAt)
+				)
 			)
-		)
-		.run();
-	return result.changes === 1;
+			.run();
+		if (result.changes !== 1) return false;
+		insertAudit(audit, tx);
+		close?.(tx);
+		return true;
+	});
 }
 
 export function listAvailability(gameId: string) {
@@ -283,9 +459,11 @@ export function upsertAvailability(
 	gameId: string,
 	playerId: string,
 	status: 'present' | 'absent',
-	updatedAt: number
+	updatedAt: number,
+	executor: DbExecutor = db
 ): void {
-	db.insert(gameAvailability)
+	executor
+		.insert(gameAvailability)
 		.values({ gameId, playerId, status, updatedAt })
 		.onConflictDoUpdate({
 			target: [gameAvailability.gameId, gameAvailability.playerId],

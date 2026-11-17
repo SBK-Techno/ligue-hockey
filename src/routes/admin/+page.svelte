@@ -2,8 +2,16 @@
 	import { balanceStatusDefinition } from '#config/balance-status.ts';
 	import { gameStatus } from '#config/game-status.ts';
 	import { positionDefinition } from '#config/positions.ts';
-	import { formatCount, formatDate, formatMoney, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import {
+		formatCount,
+		formatDate,
+		formatMoney,
+		formatTime,
+		formatTimestamp,
+		t
+	} from '#lib/shared/i18n/index.ts';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import RecordRow from '#lib/ui/RecordRow.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import StatStrip from '#lib/ui/StatStrip.svelte';
@@ -18,6 +26,11 @@
 	const pendingNames = $derived(
 		data.nextAvailability?.pending.map((entry) => entry.fullName) ?? []
 	);
+	const SUPPRESSIONS = [
+		{ key: 'channel_disabled', labelKey: 'notifications.suppression.channelDisabled' },
+		{ key: 'preference_disabled', labelKey: 'notifications.suppression.preferenceDisabled' },
+		{ key: 'no_push_subscription', labelKey: 'notifications.suppression.noPushSubscription' }
+	] as const;
 </script>
 
 <PageHeader title={t('admin.dashboard')} meta={t('admin.dashboardHelp')} />
@@ -45,13 +58,52 @@
 				? [{ value: data.counts.openRequests, label: t('admin.openRequests') }]
 				: []),
 			...(data.permissions.games
-				? [{ value: data.counts.unanswered, label: t('admin.unanswered') }]
+				? [{ value: data.counts.unanswered, label: t('availability.noAnswer') }]
 				: [])
 		]}
 	/>
 
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-		<div class="space-y-4">
+		{#if data.permissions.games}
+			<SectionCard class="lg:col-start-1 lg:row-start-1" title={t('home.nextGame')}>
+				{#if data.nextGame}
+					<p class="serial">{formatDate(data.nextGame.gameDate)}</p>
+					<p class="mt-1 font-display text-subhead font-semibold leading-tight">
+						{formatTime(data.nextGame.startTime)} · {data.nextGame.location}
+					</p>
+					<div class="mt-3 flex flex-wrap gap-1.5">
+						<span class={data.nextGame.generated ? 'badge-ok' : 'badge'}>
+							{data.nextGame.generated ? t('games.generated') : t('games.notGenerated')}
+						</span>
+						{#if openSlots > 0}
+							<span class="badge-ice">
+								{formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many')}
+							</span>
+						{/if}
+					</div>
+					{#if data.nextAvailability}
+						<p class="mt-3 font-mono text-meta text-muted">{data.nextAvailability.summary}</p>
+						{#if pendingNames.length > 0}
+							<p class="mt-1 text-meta leading-snug text-muted">
+								{t('admin.unansweredNames', { names: pendingNames.slice(0, 5).join(', ') })}
+							</p>
+						{/if}
+					{/if}
+					<a class="btn-primary mt-4 w-full" href="/admin/matchs/{data.nextGame.id}">
+						{t('admin.openSheet')}
+					</a>
+				{:else}
+					<p class="text-body text-muted">{t('home.noGame')}</p>
+					<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
+				{/if}
+			</SectionCard>
+		{/if}
+
+		<div
+			class="space-y-4 lg:col-start-1 {data.permissions.games
+				? 'lg:row-start-2'
+				: 'lg:row-start-1'}"
+		>
 			<SectionCard title={t('admin.todo')} flush>
 				{#if hasTodo}
 					<ul role="list" class="divide-y divide-line">
@@ -116,42 +168,7 @@
 			{/if}
 		</div>
 
-		<div class="space-y-4">
-			{#if data.permissions.games}
-				<SectionCard title={t('home.nextGame')}>
-					{#if data.nextGame}
-						<p class="serial">{formatDate(data.nextGame.gameDate)}</p>
-						<p class="mt-1 font-display text-subhead font-semibold leading-tight">
-							{formatTime(data.nextGame.startTime)} · {data.nextGame.location}
-						</p>
-						<div class="mt-3 flex flex-wrap gap-1.5">
-							<span class={data.nextGame.generated ? 'badge-ok' : 'badge'}>
-								{data.nextGame.generated ? t('games.generated') : t('games.notGenerated')}
-							</span>
-							{#if openSlots > 0}
-								<span class="badge-ice">
-									{formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many')}
-								</span>
-							{/if}
-						</div>
-						{#if data.nextAvailability}
-							<p class="mt-3 font-mono text-meta text-muted">{data.nextAvailability.summary}</p>
-							{#if pendingNames.length > 0}
-								<p class="mt-1 text-meta leading-snug text-muted">
-									{t('admin.unansweredNames', { names: pendingNames.slice(0, 5).join(', ') })}
-								</p>
-							{/if}
-						{/if}
-						<a class="btn-primary mt-4 w-full" href="/admin/matchs/{data.nextGame.id}">
-							{t('admin.openSheet')}
-						</a>
-					{:else}
-						<p class="text-body text-muted">{t('home.noGame')}</p>
-						<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
-					{/if}
-				</SectionCard>
-			{/if}
-
+		<div class="space-y-4 lg:col-start-2 lg:row-start-1 lg:row-span-2">
 			{#if data.upcoming.length > 0}
 				<SectionCard
 					title={t('home.upcoming')}
@@ -171,6 +188,74 @@
 							</li>
 						{/each}
 					</ul>
+				</SectionCard>
+			{/if}
+
+			{#if data.notifications}
+				<SectionCard title={t('notifications.queue')}>
+					<dl class="grid grid-cols-2 gap-3">
+						<div>
+							<dt class="micro-label">{t('notifications.pending')}</dt>
+							<dd class="numeric text-subhead">{data.notifications.snapshot.pending}</dd>
+						</div>
+						<div>
+							<dt class="micro-label">{t('notifications.failed')}</dt>
+							<dd
+								class="numeric text-subhead {data.notifications.snapshot.failed > 0
+									? 'text-alert'
+									: ''}"
+							>
+								{data.notifications.snapshot.failed}
+							</dd>
+						</div>
+						<div>
+							<dt class="micro-label">{t('notifications.oldestDue')}</dt>
+							<dd class="text-meta text-muted">
+								{data.notifications.snapshot.oldestDueAt
+									? formatTimestamp(data.notifications.snapshot.oldestDueAt)
+									: t('notifications.noneQueued')}
+							</dd>
+						</div>
+						<div>
+							<dt class="micro-label">{t('notifications.lastPush')}</dt>
+							<dd class="numeric text-meta">
+								{data.notifications.snapshot.push.delivered} / {data.notifications.snapshot.push
+									.failed}
+							</dd>
+						</div>
+					</dl>
+
+					<ul class="mt-3 space-y-1 text-meta text-muted">
+						{#each SUPPRESSIONS as reason (reason.key)}
+							<li>
+								{t(reason.labelKey)} : {data.notifications.snapshot.suppressed[reason.key]}
+							</li>
+						{/each}
+					</ul>
+
+					{#if data.notifications.failed.length > 0}
+						<ul role="list" class="mt-4 divide-y divide-line border-t border-line">
+							{#each data.notifications.failed as job (job.id)}
+								<li class="py-2.5">
+									<p class="text-meta font-semibold">{job.eventKey} · {job.channel}</p>
+									<p class="text-caption text-muted">
+										{t('notifications.attempts', { count: job.attempts })}
+									</p>
+									{#if job.lastError}
+										<p class="mt-0.5 break-words text-caption text-alert">{job.lastError}</p>
+									{/if}
+									<form method="POST" action="?/retry" use:progressiveForm class="mt-1.5">
+										<input type="hidden" name="jobId" value={job.id} />
+										<button class="btn-secondary btn-sm" type="submit">
+											{t('notifications.retry')}
+										</button>
+									</form>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="hint mt-3">{t('notifications.noneFailed')}</p>
+					{/if}
 				</SectionCard>
 			{/if}
 		</div>

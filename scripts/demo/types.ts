@@ -50,6 +50,13 @@ export type DemoPoll = {
 	votes: number[];
 };
 
+export type DemoScore = {
+	/** Buts de l'équipe blanche. */
+	white: number;
+	/** Buts de l'équipe noire. */
+	black: number;
+};
+
 export type DemoRules = {
 	/** Paires qui doivent jouer ensemble. */
 	together: [number, number][];

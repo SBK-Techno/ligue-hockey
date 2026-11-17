@@ -1,13 +1,11 @@
 import { z } from 'zod';
 import { POSITION_KEYS } from '#config/positions.ts';
+import { GAME_LIMITS } from '#config/games.ts';
 import { GAME_WARNING_KEYS } from '#config/game-warnings.ts';
+import { ROSTER_LIMITS } from '#config/roster.ts';
 import { TEAM_KEYS } from '#config/teams.ts';
 import { DATE_PATTERN, TIME_PATTERN } from '#config/time.ts';
 import { isRealDate } from '#lib/shared/time/clock.ts';
-
-export const GAME_LIMITS = {
-	notesMax: 1000
-} as const;
 
 export const gameInputSchema = z.object({
 	gameDate: z
@@ -50,19 +48,37 @@ export const generationSnapshotSchema = z.object({
 });
 
 export type GameInput = z.infer<typeof gameInputSchema>;
+
+/**
+ * Le formulaire d'édition transporte le jeton `updatedAt` qu'il a lu. Le
+ * service ne le remplace jamais par une lecture fraîche : un formulaire
+ * périmé doit perdre la course.
+ */
+export const updateGameInputSchema = gameInputSchema.extend({
+	expectedUpdatedAt: z.coerce.number().int()
+});
+
+export type UpdateGameInput = z.infer<typeof updateGameInputSchema>;
 export type GenerationSnapshot = z.infer<typeof generationSnapshotSchema>;
 
 export const manualLineupInputSchema = z.object({
 	/** Jeton de concurrence : génération lue par le gestionnaire, null si aucune. */
 	expectedGeneratedAt: z.number().int().nullable(),
-	assignments: z.array(
-		z.object({
-			team: z.enum(TEAM_KEYS),
-			position: z.enum(POSITION_KEYS),
-			slotIndex: z.number().int().min(0),
-			playerId: z.string().trim().min(1)
-		})
-	)
+	/**
+	 * Une formation complète : chaque place du modèle est envoyée, avec
+	 * `null` pour une place vide. Le service compare les clés au modèle du
+	 * match; un envoi partiel ne peut donc pas effacer l'alignement.
+	 */
+	assignments: z
+		.array(
+			z.object({
+				team: z.enum(TEAM_KEYS),
+				position: z.enum(POSITION_KEYS),
+				slotIndex: z.number().int().min(0).max(ROSTER_LIMITS.maxSlotIndex),
+				playerId: z.string().trim().min(1).nullable()
+			})
+		)
+		.max(ROSTER_LIMITS.maxAssignments)
 });
 
 export type ManualLineupInput = z.infer<typeof manualLineupInputSchema>;

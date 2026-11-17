@@ -1,25 +1,35 @@
 import type { I18nKey } from '#config/i18n/fr.ts';
+import type { Position } from '#config/positions.ts';
 import { HOUR_MS } from '#config/time.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
-import { isGameStarted } from '#lib/domain/games/playability.ts';
-import { requireUser } from '#lib/domain/auth/policy.ts';
+import {
+	isGameStarted,
+	isLineupEditable,
+	visibleParticipants
+} from '#lib/domain/games/playability.ts';
+import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { insertAudit } from '#lib/domain/audit/queries.ts';
+import { auditEntry } from '#lib/domain/audit/service.ts';
 import {
 	getGame,
 	listGamePresence,
 	listPlayerAvailability,
 	regenerateIfGenerated,
-	setGamePresence
+	releaseSlotIn,
+	writePresenceIn
 } from '#lib/domain/games/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import { findOwnProfile, getOwnProfile } from '#lib/domain/players/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import {
-	cancelForReturn,
-	createAbsenceRequest
-} from '#lib/domain/subs/service.ts';
+	cancelRequestForReturnIn,
+	createAbsenceRequestIn
+} from '#lib/domain/subs/generation.ts';
+import type { SubRequestRow } from '#lib/domain/subs/schema.ts';
+import { notifyBumped, notifyRequestWaves } from '#lib/domain/subs/service.ts';
+import { db } from '#lib/server/db/index.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
@@ -76,6 +86,103 @@ export type AvailabilityResult = {
 	warning?: I18nKey;
 };
 
+type AvailabilityWriteInput = {
+	actor: Actor;
+	game: GameSummary;
+	playerId: string;
+	status: AvailabilityStatus;
+	at: number;
+	position: Position;
+	/** L'alignement se modifie encore : une place peut être libérée. */
+	releaseSlot: boolean;
+	/** Le joueur était attendu : sa sortie ouvre une demande de remplaçant. */
+	requestAbsence: boolean;
+	availabilityAudit: ReturnType<typeof auditEntry>;
+};
+
+type AvailabilityWriteResult = {
+	/** Demande créée par cette transaction, à notifier après la validation. */
+	requestCreated: SubRequestRow | null;
+	bumpedPlayerId: string | null;
+	/** Demande annulée par le retour du joueur, à notifier après la validation. */
+	bumpedRequest: SubRequestRow | null;
+};
+
+/**
+ * La réponse de présence est une seule transaction : présence, libération de
+ * place, demande d'absence ou retour du joueur, et toutes leurs traces. Un
+ * échec ne laisse jamais une présence sans sa demande ni son audit; un nouvel
+ * essai repart de l'état réellement validé.
+ */
+function writeAvailability(input: AvailabilityWriteInput): AvailabilityWriteResult {
+	return db.transaction((tx) => {
+		writePresenceIn(tx, input.game.id, input.playerId, input.status, input.at);
+
+		let requestCreated: SubRequestRow | null = null;
+		let bumpedPlayerId: string | null = null;
+		let bumpedRequest: SubRequestRow | null = null;
+
+		if (input.status === 'absent') {
+			if (input.releaseSlot) {
+				releaseSlotIn(
+					tx,
+					input.game.id,
+					input.playerId,
+					input.at,
+					auditEntry(input.actor, {
+						action: 'game.lineup_release',
+						entityType: 'game',
+						entityId: input.game.id,
+						metadata: { playerId: input.playerId, reason: 'absence' }
+					})
+				);
+			}
+			if (input.requestAbsence) {
+				const write = createAbsenceRequestIn(
+					tx,
+					input.actor,
+					input.game,
+					{
+						userId: input.playerId,
+						position: input.position,
+						isSubstitute: false
+					},
+					input.at
+				);
+				if (write?.created) requestCreated = write.request;
+			}
+		} else {
+			const cancelled = cancelRequestForReturnIn(
+				tx,
+				input.actor,
+				input.game,
+				input.playerId,
+				input.at
+			);
+			if (cancelled) {
+				bumpedRequest = cancelled.request;
+				bumpedPlayerId = cancelled.bumpedPlayerId;
+				if (bumpedPlayerId && input.releaseSlot) {
+					releaseSlotIn(
+						tx,
+						input.game.id,
+						bumpedPlayerId,
+						input.at,
+						auditEntry(input.actor, {
+							action: 'game.lineup_release',
+							entityType: 'game',
+							entityId: input.game.id,
+							metadata: { playerId: bumpedPlayerId, reason: 'bumped' }
+						})
+					);
+				}
+			}
+		}
+
+		insertAudit(input.availabilityAudit, tx);
+		return { requestCreated, bumpedPlayerId, bumpedRequest };
+	});
+}
 
 function availabilitySummary(counts: {
 	present: number;
@@ -111,14 +218,20 @@ function isLocked(game: GameSummary): boolean {
 
 export function availabilityForGame(actor: Actor, game: GameSummary): AvailabilityView {
 	const user = requireUser(actor);
-	const rows = listGamePresence(game.id);
+	const candidates = generationCandidates();
+	const activeIds = new Set(candidates.map((player) => player.userId));
+	// Un match à venir cache les joueurs désactivés; un match passé garde les
+	// présences enregistrées. La règle appartient à `visibleParticipants`.
+	const rows = visibleParticipants(game, listGamePresence(game.id), (playerId) =>
+		activeIds.has(playerId)
+	);
 	const names = new Map(
 		playersByIds(rows.map((row) => row.playerId)).map((player) => [
 			player.userId,
 			player.fullName
 		])
 	);
-	const roster = generationCandidates().filter((player) => !player.isSubstitute);
+	const roster = candidates.filter((player) => !player.isSubstitute);
 	const answered = new Set(rows.map((row) => row.playerId));
 	const own = rows.find((row) => row.playerId === user.userId)?.status ?? null;
 	const present = rows.filter((row) => row.status === 'present').length;
@@ -159,16 +272,12 @@ export function availabilityForGame(actor: Actor, game: GameSummary): Availabili
 	};
 }
 
-export function getAvailability(actor: Actor, gameId: string): AvailabilityView {
-	return availabilityForGame(actor, getGame(actor, gameId));
-}
-
 export function markAvailability(
 	actor: Actor,
 	gameId: string,
 	status: AvailabilityStatus
 ): AvailabilityResult {
-	const user = requireUser(actor);
+	const user = requirePermission(actor, 'manageOwnAvailability');
 	const player = getOwnProfile(actor);
 	if (player.isSubstitute) {
 		throw new AppError('FORBIDDEN', { key: 'availability.substituteNoConfirm' });
@@ -191,27 +300,38 @@ export function markAvailability(
 	const previous =
 		listGamePresence(gameId).find((row) => row.playerId === user.userId)?.status ?? null;
 
-	setGamePresence(gameId, user.userId, status, clock.nowMs());
-
-	let bumpedPlayerId: string | null = null;
-	let requestCreated = false;
-	if (status === 'absent') {
+	const at = clock.nowMs();
+	const write = writeAvailability({
+		actor,
+		game,
+		playerId: user.userId,
+		status,
+		at,
+		position: player.position,
+		// La place libérée l'est avant la demande : la lecture suivante ne
+		// contient plus le joueur, même si l'alignement était manuel.
+		releaseSlot: isLineupEditable(game),
 		// Une place ne s'ouvre que si le joueur était réellement attendu.
-		if (previous === 'present' && getSettings()['notifications.subRequestOnAbsence']) {
-			const request = createAbsenceRequest(actor, game, player);
-			requestCreated = request !== null;
-		}
-	} else {
-		bumpedPlayerId = cancelForReturn(actor, game, user.userId);
-	}
-
-	recordAudit(actor, {
-		action: 'availability.set',
-		entityType: 'game',
-		entityId: gameId,
-		metadata: { status }
+		requestAbsence:
+			status === 'absent' &&
+			previous === 'present' &&
+			getSettings()['notifications.subRequestOnAbsence'],
+		availabilityAudit: auditEntry(actor, {
+			action: 'availability.set',
+			entityType: 'game',
+			entityId: gameId,
+			metadata: { status }
+		})
 	});
 
+	// Les avis partent après la validation, jamais dans sa transaction.
+	if (write.requestCreated) notifyRequestWaves(write.requestCreated, game);
+	if (write.bumpedRequest && write.bumpedPlayerId) {
+		notifyBumped(write.bumpedRequest, game, write.bumpedPlayerId, 'regular-returned');
+	}
+
+	const requestCreated = write.requestCreated !== null;
+	const bumpedPlayerId = write.bumpedPlayerId;
 	const regeneration = regenerateIfGenerated(gameId);
 	const messageKey: I18nKey = bumpedPlayerId
 		? 'availability.savedBumped'

@@ -27,15 +27,13 @@ npm run build            # production build
 npm run db:generate      # generate a migration from schema changes
 ```
 
-Demo data is created through the admin screens. For a rich local or staging set, `npm run seed:demo -- --yes --password <secret>` writes a marked demonstration season: it only touches rows prefixed `demo_` or accounts at `@demo.liguehockey.local`, reuses the league generator for every lineup, and lists the four demonstration accounts. The password is supplied by the operator and is never logged.
+Regular data is created through the admin screens. For a preview or staging set, `npm run seed:demo -- --yes --password <secret>` creates a marked demonstration season on an empty database: it writes `demo_` rows and `@demo.liguehockey.local` accounts, reuses the league generator for every lineup, and lists the four demonstration accounts. On a populated database it also updates existing games with presence and lineups, so never run it on a production copy (see `OPERATIONS.md`). The password is supplied by the operator and is never logged.
 
 ## Intégration continue et publication
 
-GitHub Actions exécute `.github/workflows/ci.yml` sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. `verify` installe Node depuis `.nvmrc` et appelle `npm run gate`; `container` construit l'image et vérifie `/api/health`; `required` agrège les deux résultats et constitue le statut exigé par la protection de `main`. Aucune étape de vérification n'est copiée dans un workflow.
+Les workflows de `.github/workflows/` sont l'unique propriétaire des déclencheurs, des tâches, des actions et des commandes de publication; ne recopiez pas leur contenu dans un autre document. La porte locale est `npm run gate`. `npm run verify:architecture` vérifie le contrat de publication à partir de `scripts/lib/ci-contract.ts` et de `config/release.ts`; ses règles appartiennent à ces fichiers.
 
-`pages.yml` publie le site généré par `scripts/docs/` sur `https://sbk-techno.github.io/ligue-hockey/`. `auto-release.yml` calcule la prochaine version, prépare ou met à jour la demande de fusion `release/next` et lance la porte dessus. La fusion de cette demande approuve la version; `auto-release.yml` crée alors l'étiquette `v*` et appelle `release.yml`, qui publie l'image sur GHCR et crée la version GitHub. La politique de montée vit dans `config/release.ts`; les surfaces de version sont écrites par `scripts/release/apply.ts` et contrôlées par `npm run verify:release`. Ne créez pas d'étiquette à la main.
-
-`npm run verify:architecture` valide le contrat de publication dans `scripts/lib/ci-contract.ts`: déclencheurs, tâches `verify`, `container` et `required`, étape exacte `npm run gate`, `npm ci`, `setup-node` avec `.nvmrc` et cache, actions épinglées, permissions Pages, plan de version avec porte et demande de fusion, appel unique à `release.yml`, cible GHCR, scripts `gate`, `verify` et `verify:release`, major Node identique dans `package.json`, `.nvmrc` et le Dockerfile, et métadonnées OCI de l'image.
+La version de `package.json` est l'unique source. `auto-release.yml` prépare la demande `release/next`, et sa fusion approuve la version. Ne créez pas d'étiquette à la main.
 
 ## Boundaries
 

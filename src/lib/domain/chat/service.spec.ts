@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * La discussion porte l'identité visuelle du joueur et refuse un vote sur un
- * message supprimé. Ces deux règles sont vérifiées ici, au service, parce
- * qu'elles ne doivent jamais dépendre de ce que la page affiche.
+ * message supprimé. La pagination est vérifiée ici, au service, parce que le
+ * curseur ne doit jamais dépendre de ce que la page affiche.
  */
 
 const h = vi.hoisted(() => ({
 	listMessages: vi.fn(),
+	listLatestVisibleMessage: vi.fn(),
+	listOpenPollMessages: vi.fn(),
 	listPolls: vi.fn(),
 	listOptions: vi.fn(),
 	listVotes: vi.fn(),
@@ -24,7 +26,7 @@ vi.mock('#lib/domain/settings/service.ts', () => ({
 }));
 
 vi.mock('#lib/domain/auth/policy.ts', () => ({
-	requireUser: () => ({ kind: 'user', userId: 'me', role: 'player', name: 'Moi' }),
+	requireUser: () => ({ kind: 'user', active: true, userId: 'me', role: 'player', name: 'Moi' }),
 	can: () => false,
 	canCreatePoll: () => false
 }));
@@ -37,7 +39,7 @@ vi.mock('#lib/shared/time/clock.ts', () => ({
 
 vi.mock('#lib/shared/i18n/index.ts', () => ({ t: (key: string) => key }));
 
-import { castPollVote, listChat } from './service.ts';
+import { castPollVote, listChatPage, listChatSummary } from './service.ts';
 
 const message = {
 	id: 'msg_1',
@@ -53,22 +55,36 @@ const message = {
 	deletedBy: null
 };
 
-describe('discussion', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-		h.listMessages.mockReturnValue([message]);
-		h.listPolls.mockReturnValue([]);
-		h.listOptions.mockReturnValue([]);
-		h.listVotes.mockReturnValue([]);
-	});
+const actor = {
+	kind: 'user' as const,
+	active: true,
+	userId: 'me',
+	role: 'player' as const,
+	name: 'Moi'
+};
 
+function rows(count: number) {
+	return Array.from({ length: count }, (_, index) => ({
+		...message,
+		id: `msg_${String(count - index).padStart(2, '0')}`,
+		body: `Message ${count - index}`,
+		createdAt: 10_000 - index
+	}));
+}
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	h.listMessages.mockReturnValue([message]);
+	h.listLatestVisibleMessage.mockReturnValue(message);
+	h.listOpenPollMessages.mockReturnValue([]);
+	h.listPolls.mockReturnValue([]);
+	h.listOptions.mockReturnValue([]);
+	h.listVotes.mockReturnValue([]);
+});
+
+describe('discussion', () => {
 	it('expose l’avatar, le chandail, le poste et le message du membre', () => {
-		const [view] = listChat({
-			kind: 'user',
-			userId: 'me',
-			role: 'player',
-			name: 'Moi'
-		});
+		const [view] = listChatPage(actor).messages;
 
 		expect(view).toMatchObject({
 			authorAvatarId: 'tuque-rouge',
@@ -93,12 +109,7 @@ describe('discussion', () => {
 			{ messageId: 'msg_1', optionId: 'opt_2', userId: 'trois' }
 		]);
 
-		const [view] = listChat({
-			kind: 'user',
-			userId: 'me',
-			role: 'player',
-			name: 'Moi'
-		});
+		const [view] = listChatPage(actor).messages;
 
 		expect(view?.poll?.options).toEqual([
 			{ id: 'opt_1', label: 'Oui', votes: 2, myVote: true },
@@ -110,12 +121,81 @@ describe('discussion', () => {
 		h.findMessage.mockReturnValue({ ...message, deletedAt: 950 });
 
 		expect(() =>
-			castPollVote(
-				{ kind: 'user', userId: 'me', role: 'player', name: 'Moi' },
-				{ messageId: 'msg_1', optionId: 'opt_1' }
-			)
+			castPollVote(actor, { messageId: 'msg_1', optionId: 'opt_1' })
 		).toThrowError();
 		expect(h.findPoll).not.toHaveBeenCalled();
 		expect(h.castVote).not.toHaveBeenCalled();
+	});
+});
+
+describe('pagination de la discussion', () => {
+	it('charge 20 messages, puis le curseur suivant sans doublon ni trou', () => {
+		const all = rows(45);
+		h.listMessages.mockImplementation(
+			(limit: number, before: { createdAt: number; id: string } | null) => {
+				const remaining = before
+					? all.filter(
+							(row) =>
+								row.createdAt < before.createdAt ||
+								(row.createdAt === before.createdAt && row.id < before.id)
+						)
+					: all;
+				return remaining.slice(0, limit);
+			}
+		);
+
+		const first = listChatPage(actor);
+		expect(first.messages).toHaveLength(20);
+		expect(first.messages[0].id).toBe('msg_45');
+		expect(first.messages.at(-1)?.id).toBe('msg_26');
+		expect(first.nextCursor).not.toBeNull();
+		expect(h.listMessages).toHaveBeenCalledWith(21, null);
+
+		const second = listChatPage(actor, first.nextCursor);
+		expect(second.messages).toHaveLength(20);
+		expect(second.messages[0].id).toBe('msg_25');
+		expect(second.messages.at(-1)?.id).toBe('msg_06');
+		expect(second.nextCursor).not.toBeNull();
+
+		const third = listChatPage(actor, second.nextCursor);
+		expect(third.messages).toHaveLength(5);
+		expect(third.messages[0].id).toBe('msg_05');
+		expect(third.messages.at(-1)?.id).toBe('msg_01');
+		expect(third.nextCursor).toBeNull();
+	});
+
+	it('ignore un curseur invalide et repart de la première page', () => {
+		listChatPage(actor, 'pas-un-curseur');
+		expect(h.listMessages).toHaveBeenCalledWith(21, null);
+	});
+});
+
+describe('résumé de l’accueil', () => {
+	it('ne charge qu’un message et les sondages ouverts', () => {
+		const poll = {
+			...message,
+			id: 'msg_poll',
+			kind: 'poll',
+			body: null,
+			createdAt: 950
+		};
+		h.listLatestVisibleMessage.mockReturnValue(message);
+		h.listOpenPollMessages.mockReturnValue([poll]);
+		h.listPolls.mockReturnValue([
+			{ messageId: 'msg_poll', question: 'On joue ?', closesAt: null, createdAt: 950 }
+		]);
+		h.listOptions.mockReturnValue([
+			{ id: 'opt_1', messageId: 'msg_poll', label: 'Oui', optionIndex: 0 }
+		]);
+		h.listVotes.mockReturnValue([]);
+
+		const summary = listChatSummary(actor);
+
+		expect(h.listLatestVisibleMessage).toHaveBeenCalledTimes(1);
+		expect(summary.latestMessage?.id).toBe('msg_1');
+		expect(summary.openPoll).toMatchObject({
+			messageId: 'msg_poll',
+			unvoted: true
+		});
 	});
 });

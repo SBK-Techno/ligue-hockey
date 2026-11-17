@@ -3,7 +3,7 @@
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
 	import { teamDefinition } from '#config/teams.ts';
 	import type { GameView } from '#lib/domain/games/service.ts';
-	import type { GameBenchView, GameSlotView } from '#lib/domain/games/types.ts';
+	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 
@@ -15,7 +15,7 @@
 	}: {
 		game: GameView;
 		ownSlot: GameSlotView | null;
-		ownBench: GameBenchView | null;
+		ownBench: GamePlayer | null;
 		actorId: string;
 	} = $props();
 

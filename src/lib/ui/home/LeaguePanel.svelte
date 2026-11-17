@@ -2,6 +2,7 @@
 	import type { ChatMessageView } from '#lib/domain/chat/service.ts';
 	import { formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 	import PollOptions from '#lib/ui/PollOptions.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 
@@ -19,7 +20,7 @@
 			size={24}
 		/>
 		<span class="min-w-0 break-words">
-			{message.authorName} · {formatTimestamp(message.createdAt)}
+			<PlayerName playerId={message.authorUserId} name={message.authorName} /> · {formatTimestamp(message.createdAt)}
 		</span>
 	</p>
 

@@ -8,13 +8,15 @@
 	import { teamDefinition } from '#config/teams.ts';
 	import { formatDate, formatTime, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
+	import { balanceLine } from '#lib/ui/game-balance.ts';
 	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import GameSheet from '#lib/ui/match/GameSheet.svelte';
-	import TeamLineup from '#lib/ui/TeamLineup.svelte';
+	import { matchSectionOrder } from '#lib/ui/match/match-layout.ts';
+	import LineupBoard from '#lib/ui/match/LineupBoard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -49,7 +51,26 @@
 	const hasSubsPanel = $derived(data.requests.length > 0 || isManager);
 	const hasBalancePanel = $derived(Boolean(game?.generation && data.canManage));
 	const filledRequests = $derived(
-		data.requests.filter((request) => request.status === 'filled')
+		data.requests.filter(
+			(request) =>
+				request.status === 'filled' ||
+				(request.status === 'cancelled' && request.filledByPlayerId !== null)
+		)
+	);
+	const completed = $derived(game?.status === 'completed');
+	const sectionOrder = $derived(
+		game
+			? matchSectionOrder({
+					completed,
+					hasAttendance: availability !== null,
+					hasSubstitutes: completed ? data.requests.length > 0 : hasSubsPanel,
+					hasSheet: Boolean(data.playable && data.sheet),
+					// Un match annulé n'a pas d'alignement à publier : ni carte
+					// vide, ni invite à générer une équipe.
+					hasLineup:
+						game.status === 'cancelled' ? false : completed ? game.generated : true
+				})
+			: []
 	);
 </script>
 
@@ -113,15 +134,13 @@
 		</div>
 	{/if}
 
-	<div class="board-grid">
+{#snippet attendancePanel()}
 	<SectionCard
 		class="lg:col-span-12"
 		title={hasProfile ? t('home.availability') : t('availability.title')}
 	>
 
-		{#if game.status === 'cancelled'}
-			<p class="mt-2 text-body text-muted">{t('games.cancelledNotice')}</p>
-		{:else if isManager && !hasProfile}
+		{#if isManager && !hasProfile}
 			<p class="mt-3 text-body text-muted">{t('home.adminHero')}</p>
 		{:else if availability?.substitute && data.editable}
 			<p class="mt-3 text-body text-muted">{t('availability.substituteHint')}</p>
@@ -199,6 +218,9 @@
 		</SectionCard>
 	{/if}
 
+{/snippet}
+
+{#snippet substitutesPanel()}
 	{#if hasSubsPanel}
 		<SectionCard
 			class={hasAttendance ? 'lg:col-span-7' : 'lg:col-span-12'}
@@ -252,7 +274,11 @@
 									{#if data.canManage && data.editable && request.status === 'open'}
 										<form method="POST" action="?/cancelRequest" use:progressiveForm>
 											<input type="hidden" name="requestId" value={request.id} />
-											<button class="btn-ghost btn-sm" type="submit">{t('subs.cancelRequest')}</button>
+											<ConfirmSubmit
+												label={t('subs.cancelRequest')}
+												question={t('subs.cancelRequestConfirm')}
+												confirmLabel={t('subs.cancelRequest')}
+											/>
 										</form>
 									{/if}
 								</div>
@@ -333,13 +359,11 @@
 		</SectionCard>
 	{/if}
 
-	{#if data.started && data.sheet}
+{/snippet}
+
+{#snippet sheetPanel()}
+	{#if data.playable && data.sheet}
 		<SectionCard class="lg:col-span-12" title={t('gamesheet.title')} clip={false}>
-			{#snippet actions()}
-				{#if data.sheet?.finalized}
-					<span class="badge-ok">{t('gamesheet.finalized')}</span>
-				{/if}
-			{/snippet}
 			<GameSheet
 				sheet={data.sheet}
 				slots={game.slots}
@@ -349,6 +373,9 @@
 		</SectionCard>
 	{/if}
 
+{/snippet}
+
+{#snippet lineupPanel()}
 	{#if game.generated}
 		<SectionCard
 			class={hasBalancePanel ? 'lg:col-span-8' : 'lg:col-span-12'}
@@ -356,7 +383,11 @@
 			flush
 		>
 			{#snippet actions()}
-				<span class="badge-ok">{t('games.generated')}</span>
+				{#if game.lineupComplete}
+					<span class="badge-ok">{t('games.generated')}</span>
+				{:else}
+					<span class="badge-alert">{t('games.rosterIncomplete')}</span>
+				{/if}
 			{/snippet}
 			<div class="section-body">
 				{#if game.generation}
@@ -364,17 +395,22 @@
 						{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
 					</p>
 				{/if}
-				<TeamLineup slots={game.slots} ownTeam={ownTeam} actorId={actor?.userId ?? null} />
+				<FormFeedback {form} section="lineup" focusOnChange class="mb-3" />
+				{#key game.generation?.generatedAt}
+				<LineupBoard
+					slots={game.slots}
+					bench={game.generation?.bench ?? []}
+					canEdit={data.canManage && data.editable}
+					expectedGeneratedAt={game.generation?.generatedAt ?? null}
+				/>
+				{/key}
 			</div>
 		</SectionCard>
 
 		{#if game.generation && data.canManage}
-			<SectionCard class="lg:col-span-4" title={t('team.balance')}>
+			<SectionCard class="self-start lg:col-span-4" title={t('team.balance')}>
 				<p class="text-body text-muted">
-					{t('games.teamBalance', {
-						skill: game.generation.skillDiffLabel ?? '',
-						age: game.generation.ageDiffLabel ?? ''
-					})}
+					{balanceLine(game.generation.skillDiffLabel, game.generation.ageDiffLabel)}
 				</p>
 				{#each game.generation.warnings as warning (warning)}
 					{@const definition = gameWarningDefinition(warning)}
@@ -414,20 +450,14 @@
 						</ul>
 					</div>
 				{/if}
-				{#if game.generation.bench.length > 0}
-					<p class="micro-label mt-4">{t('games.bench')}</p>
-					<ul role="list" class="mt-2 flex flex-wrap gap-2">
-						{#each game.generation.bench as entry (entry.playerId)}
-							<li class="badge">
-								{#if entry.jerseyNumber}<span class="numeric">{entry.jerseyNumber}</span>{/if}
-								{entry.fullName} · {t(positionDefinition(entry.position).shortLabelKey)}
-							</li>
-						{/each}
-					</ul>
-				{/if}
 				{#if data.canManage && data.editable}
 					<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
-						<button class="btn-secondary btn-sm" type="submit">{t('games.regenerate')}</button>
+						<ConfirmSubmit
+							label={t('games.regenerate')}
+							question={t('games.regenerateConfirm')}
+							confirmLabel={t('games.regenerate')}
+							class="btn-secondary btn-sm"
+						/>
 					</form>
 				{/if}
 			</SectionCard>
@@ -444,6 +474,20 @@
 			{/if}
 		</SectionCard>
 	{/if}
+{/snippet}
+
+	<div class="board-grid">
+{#each sectionOrder as section (section)}
+		{#if section === 'attendance'}
+			{@render attendancePanel()}
+		{:else if section === 'substitutes'}
+			{@render substitutesPanel()}
+		{:else if section === 'sheet'}
+			{@render sheetPanel()}
+		{:else}
+			{@render lineupPanel()}
+		{/if}
+	{/each}
 	</div>
 	</div>
 {/if}

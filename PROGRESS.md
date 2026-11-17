@@ -4,16 +4,15 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `feat/match-1.5.0`, based on `1.4.0` (merged, tagged, released, live).
-- Target version: `1.5.0`.
-- Shipped in `1.4.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
-- In flight for `1.5.0`: season agenda replacing the month calendar; chat rebuilt around player colour, avatar and jersey with grouped days, menus and readable polls; phase-aware game sheet with goals, penalties, totals and finalization; player avatars with unique colours and jerseys; paper and ice material pass; desktop compositions for home, match, schedule, balance, notifications, substitutes and profile.
-- Verified in this slice: `npm run gate` green (452 tests, 51 files), generated assets and documentation site current, production build served against a copy of the seeded database, home/discussion/match/schedule/admin pages fetched, and a goal written through the real action then read back from the sheet.
-- Next release step: commit, push, open the PR, merge after review, tag `v1.5.0`, release, promote and verify health.
+- Branch: `feat/legends-1.6.0`, based on `v1.5.0`. Round-1 batches 1 to 7 end at `ef1f1c3`; the last round-1 batch is `b5455e7`, and round-2 block 1 starts at `86329da`. Round-3 blocks run from `8f7f82d` to `7550e04` and fixed the 18 confirmed mediums across auth, domain atomicity, home and match UI, delivery and test truth.
+- The round-3 B4 delivery, performance, docs and tests batch is applied on top of `7550e04`: docs social image from the hashed owner, every static and parameterised route budgeted, season penalty minutes, the demo closed state, title/caption landmarks, retention and jersey documentation, and the shell-only precache. `npm run gate` is green on 1069 tests in 146 files; generated assets and the docs site are current, and the architecture check covers 383 files.
+- Target version: `1.6.0`. `package.json`, `package-lock.json` and `.env.example` still carry the published `1.5.0`; `npm run release:apply` aligns them at release time.
+- Shipped in `1.3.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
+- Verified on the round-2 block-4 tree after the nineteen fixes: `npm run gate` green (930 tests, 124 files), generated assets and documentation site current, architecture check green over 356 files, and the client bundle holds 92 chunks without zod.
 
-## Triple-check round 1 (in progress)
+## Triple-check round 1 (closed)
 
-Eight read-only auditors run in parallel, each on a distinct surface, then one consolidator rechecks every finding before a single writer touches code:
+Eight read-only auditors covered distinct surfaces, and one consolidator rechecked every finding before a single writer touched code. Confirmed findings were fixed across Batches 1 to 7. A16 was rechecked and already matched the documented retained-legend behaviour, so it was not rewritten.
 
 | Auditor | Surface |
 |---|---|
@@ -26,7 +25,21 @@ Eight read-only auditors run in parallel, each on a distinct surface, then one c
 | Visual identity | materials, buttons, imagery, typography, AI tells, player colour |
 | Accessibility, performance, tests | semantics, contrast, bundles, N+1, missing regression coverage |
 
-Findings are confirmed against source before any edit; the round is only closed when a recheck agent returns no confirmed finding.
+## 1.6.0 shipped
+
+- **Rink board.** `config/rink.ts` owns the geometry and presentation roles; `LineupBoard.svelte` renders both team halves, and the `?/lineup` action saves through `saveManualLineup` with the generation token. Pure placement rules live in `src/lib/ui/match/lineup-board.ts`; the board names every slot, keeps a stable key per place, and the manual save no longer publishes a lineup before teams exist.
+- **Identity catalogue.** `config/legends.ts` holds 30 Canadiens tribute legends (15 forwards, 11 defense, 4 goalies) with name, number, position and era; `config/identities.ts` composes them with the 28 league faces into one catalogue of 58. The picker offers the legends of the selected position and keeps a saved legend from another position visible and flagged; the server enforces the same rule.
+- **Identity uniqueness and active accounts.** `players_active_avatar_unique` is a partial unique index over active players; assignment, activation and profile writes reserve the identity in the same transaction. Reactivation revalidates a retired or taken identity. A deactivated account no longer acts with an old session, and a deactivated player is removed from future lineups.
+- **Player peek.** Every avatar and player name opens one shared card from `getPlayerPeek`; season totals and position are public, ratings stay behind the ratings capability. The card is a hover popover on desktop and a sheet on mobile, and its cache policy follows the session policy.
+- **Game-day correctness.** The match page reads the live roster and presence, the sheet appears only in a phase where it can accept events, a cancelled game cannot be scored, and the sheet and the ratings share one playability rule.
+- **Security hardening.** Throttle buckets are bounded, member writes are rate-limited, lineup payloads are validated, and finance, settings and player writes are atomic with their audit entries. CSP is enabled, and response headers and cache policy have one owner.
+- **Delivery budgets.** SSR HTML and JSON are compressed, critical CSS is inlined within its budget, the measured pages stay at the JavaScript request budget, and the client graph contains no zod. Content-hashed assets are served immutable for one year; a replaced name stays on disk for the retention window owned by `GENERATED_ASSET_RETENTION_DAYS`, so a document already in flight can finish loading it.
+- **Operator signals.** `/api/health` and `/admin` share one queue snapshot (pending, failed, oldest due, suppression reasons, last-tick push counts); a `manageSettings` operator can retry a failed job with an audit entry, and the scheduler emits one `notification.queue_snapshot` per tick.
+
+## Remaining after 1.6.0
+
+- Team season page `/equipe`: roster, attendance history, Black/White history and a past-game timeline, ratings only behind the ratings capability.
+- Connection-lost banner for the discussion.
 
 ## 1.5.0 decisions
 
@@ -55,23 +68,14 @@ Findings are confirmed against source before any edit; the round is only closed 
 | `3728997` | `1.3.3` `/remplacants` inline pool and request actions | 350 tests, check, lint |
 | `b54d7c8` | `1.4.0` home board, admin surfaces, shared UI system | gate, PR 16, live |
 
-## Next: 1.6.0
-
-- Rink placement board on the match page: `config/rink.ts` owns the geometry, but no surface renders it yet. A manager should place players, see pair-rule lines and save with the generation token.
-- Team season page `/equipe`: roster, attendance history, Black/White history and a past-game timeline, ratings only behind the ratings capability.
-- Chat history pagination and the connection-lost banner.
-- Admin row menus beyond the player list: move the remaining absolutely positioned menus out of clipped sheets where they still exist.
-
 ## Deferred to a later milestone
 
 - Finance model rewrite: N installments, charges, allocations, credits, refunds, receipts, interest-only arrears, no fixed late fee, no card surcharge, trust-sum flag. Legal constraints are in `/tmp/opencode/finance-legal.md`.
-- Archive pagination, batch game reads, admin dashboard payload trimming.
-- Cancelled-game metrics and the `completed` status writer.
-- Chat history pagination and connection-lost UI.
+- Archive pagination and admin dashboard payload trimming.
+- Cancelled-game metrics.
 - Gitea migration of the publication contract (explicit platform gap).
 
 ## Environment and operations
 
-- Live SMTP is still misconfigured.
-- The GHCR package is private; the server needs a classic PAT with `read:packages`.
-- Live promotion: pull the pinned image, map the existing container environment, recreate, then verify `/api/health`, the version label and the revision label.
+- The GHCR package is private (anonymous manifest requests return 401); the host must authenticate with a token that can `read:packages` before pulling.
+- The verified production target, update, rollback, backup and preview rules are in `OPERATIONS.md`.

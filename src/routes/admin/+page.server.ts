@@ -1,11 +1,22 @@
-import type { ServerLoad } from '@sveltejs/kit';
-import { getAvailability } from '#lib/domain/availability/service.ts';
+import type { Actions, ServerLoad } from '@sveltejs/kit';
+import { z } from 'zod';
+import { availabilityForGame } from '#lib/domain/availability/service.ts';
 import { listBalances } from '#lib/domain/finance/service.ts';
 import { getGame, listSchedule } from '#lib/domain/games/service.ts';
 import { nextGameId, splitSchedule } from '#lib/domain/games/schedule.ts';
 import { listAdminPlayers } from '#lib/domain/players/service.ts';
 import { listOpenRequests } from '#lib/domain/roster/service.ts';
 import { can } from '#lib/domain/auth/policy.ts';
+import { listFailedJobs, retryFailedJob } from '#lib/domain/notifications/service.ts';
+import { queueSnapshot } from '#lib/server/notifications/status.ts';
+import { triggerNotificationTick } from '#lib/server/notifications/scheduler.ts';
+import { actionError } from '#lib/server/action.ts';
+import { t } from '#lib/shared/i18n/index.ts';
+import { parseForm } from '#lib/shared/validation.ts';
+
+const retrySchema = z.object({
+	jobId: z.string().min(1)
+});
 
 export const load: ServerLoad = ({ locals }) => {
 	const actor = locals.actor;
@@ -30,7 +41,8 @@ export const load: ServerLoad = ({ locals }) => {
 				openRequests: 0
 			},
 			outstandingCents: 0,
-			currency: ''
+			currency: '',
+			notifications: null
 		};
 	}
 
@@ -42,13 +54,14 @@ export const load: ServerLoad = ({ locals }) => {
 	};
 	const players = permissions.players ? listAdminPlayers(actor) : [];
 	const balances = permissions.balances ? listBalances(actor) : [];
-	const requests = permissions.subs ? listOpenRequests(actor) : [];
-	const schedule = permissions.games ? listSchedule(actor) : [];
+	const schedule =
+		permissions.games || permissions.subs ? listSchedule(actor) : [];
+	const requests = permissions.subs ? listOpenRequests(actor, schedule) : [];
 	const { upcoming: upcomingAll } = splitSchedule(schedule);
 	const nextId = nextGameId(schedule);
 	const next = nextId ? (upcomingAll.find((game) => game.id === nextId) ?? null) : null;
 	const nextGame = next ? getGame(actor, next.id) : null;
-	const nextAvailability = next ? getAvailability(actor, next.id) : null;
+	const nextAvailability = nextGame ? availabilityForGame(actor, nextGame) : null;
 	const upcoming = upcomingAll.filter((game) => game.id !== nextId).slice(0, 3);
 	const unpaid = balances.filter((balance) => balance.outstandingCents > 0);
 	const withoutPlan = balances.filter((balance) => !balance.hasPlan);
@@ -73,6 +86,24 @@ export const load: ServerLoad = ({ locals }) => {
 			openRequests: requests.length
 		},
 		outstandingCents: balances.reduce((total, balance) => total + balance.outstandingCents, 0),
-		currency: balances[0]?.currency ?? ''
+		currency: balances[0]?.currency ?? '',
+		// Le panneau d'exploitation n'expose que des compteurs et des travaux
+		// sans destinataire ni contenu.
+		notifications: can(actor, 'manageSettings')
+			? { snapshot: queueSnapshot(), failed: listFailedJobs(actor) }
+			: null
 	};
+};
+
+export const actions: Actions = {
+	retry: async ({ request, locals }) => {
+		try {
+			const parsed = parseForm(retrySchema, await request.formData());
+			retryFailedJob(locals.actor, parsed.jobId);
+			triggerNotificationTick();
+			return { ok: true, message: t('notifications.retryDone') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	}
 };

@@ -9,8 +9,7 @@
 		gameDate,
 		startTime,
 		location,
-		showGameMeta = false,
-		showAttendance = false
+		showGameMeta = false
 	}: {
 		summary: {
 			openSlots: number;
@@ -24,18 +23,13 @@
 		startTime: string;
 		location: string;
 		showGameMeta?: boolean;
-		showAttendance?: boolean;
 	} = $props();
 
 	const cells = $derived([
 		{ value: summary.openSlots, label: t('home.openPlaces') },
-		...(showAttendance
-			? [
-					{ value: summary.present, label: t('home.present') },
-					{ value: summary.absent, label: t('home.absent') },
-					{ value: summary.unknown, label: t('availability.unknown') }
-				]
-			: [])
+		{ value: summary.present, label: t('home.present') },
+		{ value: summary.absent, label: t('home.absent') },
+		{ value: summary.unknown, label: t('availability.noAnswer') }
 	]);
 </script>
 

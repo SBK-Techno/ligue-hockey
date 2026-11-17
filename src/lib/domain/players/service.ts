@@ -1,27 +1,33 @@
 import type { Position } from '#config/positions.ts';
-import { DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
-import type { AvatarId } from '#config/avatars.ts';
+import { ADMIN_ROLE, DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
+import type { IdentityId } from '#config/identities.ts';
 import { branding } from '#lib/generated/branding.ts';
-import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
+import { can, playerDeletion, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { identity } from '#lib/domain/auth/identity.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { setUserRole } from '#lib/domain/auth/queries.ts';
+import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
-import { AppError } from '#lib/shared/errors.ts';
+import { AppError, isAppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
+import { db } from '#lib/server/db/index.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock, timeInZone, todayInZone } from '#lib/shared/time/clock.ts';
 import {
+	countActiveAdmins,
 	deletePlayerAccount,
 	findPlayer,
 	findPlayerWithEmail,
-	insertPlayer,
-	listActiveAvatarAssignments,
+	hasFreeAvatarForPosition,
+	insertPlayerWithNextAvatar,
+	isJerseyNumberTaken,
 	listActivePlayers,
 	listAllPlayersWithEmail,
-	updatePlayer
+	listAvatarAssignments,
+	updatePlayer,
+	type PlayerUpdateResult
 } from './queries.ts';
-import { firstFreeAvatarId, resolveAvatarId } from './identity.ts';
+import { resolveAvatarId } from './identity.ts';
 import { toPublic } from './public.ts';
 import type {
 	AdminUpdatePlayerInput,
@@ -83,49 +89,60 @@ function toAdmin(row: ReturnType<typeof findPlayerWithEmail>): AdminPlayer {
 }
 
 export type AvatarPickerView = {
-	selected: AvatarId;
-	taken: AvatarId[];
+	selected: IdentityId;
+	taken: IdentityId[];
 };
 
 /**
- * The displayed identity of every active player, whether the avatar is stored
- * or derived. Two active players must never share the same appearance.
+ * The displayed identity of every visible player, whether the avatar is stored
+ * or derived. Two visible rows must never share the same appearance: an
+ * inactive row keeps its identity until it changes or is reactivated.
  */
-function activeAvatarUsage(): { userId: string; avatarId: AvatarId }[] {
-	return listActiveAvatarAssignments().map((row) => ({
+function avatarUsage(): { userId: string; avatarId: IdentityId }[] {
+	return listAvatarAssignments().map((row) => ({
 		userId: row.userId,
 		avatarId: resolveAvatarId(row.userId, row.avatarId)
 	}));
 }
 
-function takenAvatarIds(playerId: string): AvatarId[] {
+function takenAvatarIds(playerId: string): IdentityId[] {
 	return [
 		...new Set(
-			activeAvatarUsage()
+			avatarUsage()
 				.filter((entry) => entry.userId !== playerId)
 				.map((entry) => entry.avatarId)
 		)
 	];
 }
 
-function assertAvatarAvailable(playerId: string, avatarId: AvatarId): void {
-	if (takenAvatarIds(playerId).includes(avatarId)) {
-		throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+function applyPlayerUpdate(result: PlayerUpdateResult): string[] {
+	switch (result.status) {
+		case 'updated':
+			return result.cleared;
+		case 'not-found':
+			throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+		case 'identity-position':
+			throw new AppError('VALIDATION', { key: 'error.identityWrongPosition' });
+		case 'avatar-taken':
+			throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+		case 'jersey-taken':
+			throw new AppError('CONFLICT', { key: 'error.jerseyTaken' });
+		case 'no-identity':
+			throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
 	}
-}
-
-function nextFreeAvatarId(): AvatarId | null {
-	return firstFreeAvatarId(activeAvatarUsage().map((entry) => entry.avatarId));
-}
-
-export function isSubstitutePlayer(actor: Actor): boolean {
-	const user = requireUser(actor);
-	return findPlayer(user.userId)?.isSubstitute ?? false;
 }
 
 export function listRoster(actor: Actor): PublicPlayer[] {
 	requireUser(actor);
 	return listActivePlayers().map(toPublic);
+}
+
+/**
+ * Les comptes actifs, sans acteur : réservé aux balayages système qui ne
+ * répondent à aucune demande (retards de paiement, tâches planifiées).
+ */
+export function listActivePlayerIds(): string[] {
+	return listActivePlayers().map((player) => player.userId);
 }
 
 export function listAdminPlayers(actor: Actor): AdminPlayer[] {
@@ -162,9 +179,8 @@ export function getOwnProfile(actor: Actor): SelfProfile {
 	return profile;
 }
 
-export function getOwnAvatarPicker(actor: Actor): AvatarPickerView {
-	const user = requireUser(actor);
-	const row = findPlayer(user.userId);
+function avatarPickerFor(playerId: string): AvatarPickerView {
+	const row = findPlayer(playerId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
@@ -174,16 +190,14 @@ export function getOwnAvatarPicker(actor: Actor): AvatarPickerView {
 	};
 }
 
+export function getOwnAvatarPicker(actor: Actor): AvatarPickerView {
+	const user = requireUser(actor);
+	return avatarPickerFor(user.userId);
+}
+
 export function getAdminAvatarPicker(actor: Actor, playerId: string): AvatarPickerView {
 	requirePermission(actor, 'managePlayers');
-	const row = findPlayer(playerId);
-	if (!row) {
-		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
-	}
-	return {
-		selected: resolveAvatarId(row.userId, row.avatarId),
-		taken: takenAvatarIds(row.userId)
-	};
+	return avatarPickerFor(playerId);
 }
 
 export function getPlayer(actor: Actor, playerId: string): SelfProfile | PublicPlayer {
@@ -203,11 +217,39 @@ export function getAdminPlayer(actor: Actor, playerId: string): AdminPlayer {
 	return toAdmin(row);
 }
 
+/**
+ * La synchronisation du nom BetterAuth est un effet externe : elle ne peut pas
+ * entrer dans la transaction SQLite. Un échec est journalisé et rejoué à la
+ * prochaine sauvegarde, jamais avalé.
+ */
+async function syncIdentityName(playerId: string): Promise<void> {
+	const row = findPlayer(playerId);
+	if (!row) return;
+	try {
+		await identity().updateName(playerId, `${row.firstName} ${row.lastName}`);
+	} catch (error) {
+		logger.error('players.name_sync_failed', { userId: playerId, error });
+	}
+}
+
 export async function invitePlayer(
 	actor: Actor,
 	input: InvitePlayerInput
 ): Promise<{ userId: string; inviteQueued: boolean }> {
 	requirePermission(actor, 'managePlayers');
+
+	// Refus précoce avant de créer un compte : la réservation réelle reste
+	// l'insertion transactionnelle ci-dessous.
+	if (!hasFreeAvatarForPosition(input.position)) {
+		throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
+	}
+	if (
+		input.jerseyNumber !== null &&
+		input.jerseyNumber !== undefined &&
+		isJerseyNumberTaken(input.jerseyNumber)
+	) {
+		throw new AppError('CONFLICT', { key: 'error.jerseyTaken' });
+	}
 
 	let created: { id: string };
 	try {
@@ -226,19 +268,30 @@ export async function invitePlayer(
 
 	try {
 		const now = clock.nowMs();
-		insertPlayer({
-			userId: created.id,
-			firstName: input.firstName,
-			lastName: input.lastName,
-			position: input.position,
-			age: input.age,
-			jerseyNumber: input.jerseyNumber ?? null,
-			avatarId: nextFreeAvatarId(),
-			isSubstitute: input.isSubstitute,
-			active: true,
-			createdAt: now,
-			updatedAt: now
-		});
+		const inserted = insertPlayerWithNextAvatar(
+			{
+				userId: created.id,
+				firstName: input.firstName,
+				lastName: input.lastName,
+				position: input.position,
+				age: input.age,
+				jerseyNumber: input.jerseyNumber ?? null,
+				isSubstitute: input.isSubstitute,
+				active: true,
+				createdAt: now,
+				updatedAt: now
+			},
+			input.position
+		);
+		if (inserted.status === 'no-identity') {
+			throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
+		}
+		if (inserted.status === 'avatar-taken') {
+			throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+		}
+		if (inserted.status === 'jersey-taken') {
+			throw new AppError('CONFLICT', { key: 'error.jerseyTaken' });
+		}
 	} catch (cause) {
 		try {
 			await identity().deleteUser(created.id);
@@ -252,6 +305,7 @@ export async function invitePlayer(
 				cause
 			});
 		}
+		if (isAppError(cause)) throw cause;
 		throw new AppError('CONFLICT', {
 			key: 'admin.playerCreateFailed',
 			cause
@@ -314,21 +368,27 @@ export async function updateOwnProfile(
 		firstName: input.firstName,
 		lastName: input.lastName,
 		age: input.age,
-		position: input.position,
 		jerseyNumber: input.jerseyNumber
 	};
-	if (input.avatarId !== undefined && input.avatarId !== row.avatarId) {
-		assertAvatarAvailable(user.userId, input.avatarId);
+	if (input.avatarId !== undefined) {
 		patch.avatarId = input.avatarId;
 	}
-	const cleared = updatePlayer(user.userId, patch);
-	await identity().updateName(user.userId, `${input.firstName} ${input.lastName}`);
-	recordAudit(actor, {
-		action: 'player.self_update',
-		entityType: 'player',
-		entityId: user.userId,
-		metadata: cleared.length > 0 ? { positionRatingsCleared: cleared } : undefined
+	db.transaction((tx) => {
+		const result = applyPlayerUpdate(updatePlayer(user.userId, patch, {}, tx));
+		recordAudit(
+			actor,
+			{
+				action: 'player.self_update',
+				entityType: 'player',
+				entityId: user.userId,
+				metadata:
+					result.length > 0 ? { positionRatingsCleared: result } : undefined
+			},
+			tx
+		);
+		return result;
 	});
+	await syncIdentityName(user.userId);
 	regenerateUpcomingGeneratedGames();
 	return getOwnProfile(actor);
 }
@@ -344,6 +404,16 @@ export async function adminUpdatePlayer(
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 
+	if (input.active === false) {
+		if (actor.kind === 'user' && actor.userId === playerId) {
+			throw new AppError('FORBIDDEN', { key: 'admin.deactivateSelf' });
+		}
+		const role = row.role && isRole(row.role) ? row.role : DEFAULT_ROLE;
+		if (role === ADMIN_ROLE && countActiveAdmins() <= 1) {
+			throw new AppError('FORBIDDEN', { key: 'admin.deactivateLastAdmin' });
+		}
+	}
+
 	const patch: Parameters<typeof updatePlayer>[1] = {};
 	if (input.firstName !== undefined) patch.firstName = input.firstName;
 	if (input.lastName !== undefined) patch.lastName = input.lastName;
@@ -351,28 +421,89 @@ export async function adminUpdatePlayer(
 	if (input.position !== undefined) patch.position = input.position;
 	if (input.jerseyNumber !== undefined) patch.jerseyNumber = input.jerseyNumber;
 	if (input.avatarId !== undefined && input.avatarId !== row.avatarId) {
-		assertAvatarAvailable(playerId, input.avatarId);
 		patch.avatarId = input.avatarId;
 	}
 	if (input.isSubstitute !== undefined) patch.isSubstitute = input.isSubstitute;
 	if (input.active !== undefined) patch.active = input.active;
 
-	const cleared = updatePlayer(playerId, patch);
-	if (input.firstName !== undefined || input.lastName !== undefined) {
-		const updated = findPlayerWithEmail(playerId);
-		if (updated) {
-			await identity().updateName(playerId, `${updated.firstName} ${updated.lastName}`);
+	const now = clock.nowMs();
+	db.transaction((tx) => {
+		const result = applyPlayerUpdate(
+			updatePlayer(
+				playerId,
+				patch,
+				input.active === false
+					? {
+							deactivate: {
+								today: todayInZone(branding.timezone, now),
+								nowTime: timeInZone(branding.timezone, now)
+							}
+						}
+					: {},
+				tx
+			)
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'player.admin_update',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: {
+					fields: Object.keys(patch),
+					...(input.active !== undefined ? { active: input.active } : {}),
+					...(result.length > 0 ? { positionRatingsCleared: result } : {})
+				}
+			},
+			tx
+		);
+		return result;
+	});
+	if (input.active === false) {
+		// Fermer l'état et retirer les sessions sont deux gestes distincts du
+		// fournisseur : l'échec de l'un ne doit pas laisser l'autre en place.
+		// Les deux sont tentés, chaque échec est journalisé, puis l'action
+		// échoue pour que l'opérateur voie l'état partiel.
+		let failure: unknown;
+		try {
+			await identity().setAccountState(playerId, 'inactive');
+		} catch (cause) {
+			failure = cause;
+			logger.error('players.account_state_failed', {
+				userId: playerId,
+				error: cause
+			});
+		}
+		try {
+			await identity().revokeSessions(playerId);
+		} catch (cause) {
+			failure ??= cause;
+			logger.error('players.session_revoke_failed', {
+				userId: playerId,
+				error: cause
+			});
+		}
+		if (failure) {
+			throw new AppError('INTERNAL', {
+				key: 'admin.playerAccessFailed',
+				cause: failure
+			});
+		}
+	} else if (input.active === true) {
+		try {
+			await identity().setAccountState(playerId, 'active');
+		} catch (cause) {
+			logger.error('players.account_reactivate_failed', {
+				userId: playerId,
+				error: cause
+			});
+			throw new AppError('INTERNAL', {
+				key: 'admin.playerAccessFailed',
+				cause
+			});
 		}
 	}
-	recordAudit(actor, {
-		action: 'player.admin_update',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: {
-			fields: Object.keys(patch),
-			...(cleared.length > 0 ? { positionRatingsCleared: cleared } : {})
-		}
-	});
+	await syncIdentityName(playerId);
 	regenerateUpcomingGeneratedGames();
 
 	return toAdmin(findPlayerWithEmail(playerId));
@@ -391,43 +522,62 @@ export async function setPlayerRole(
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
-	await identity().setRole(playerId, role);
-	recordAudit(actor, {
-		action: 'player.role_update',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { role }
-	});
+	// Un rôle se change sur un compte actif : réactiver d'abord évite qu'une
+	// fiche inactive devienne admin et se reconnecte.
+	if (!row.active) {
+		throw new AppError('FORBIDDEN', { key: 'admin.roleInactive' });
+	}
+	setUserRole(
+		playerId,
+		role,
+		auditEntry(actor, {
+			action: 'player.role_update',
+			entityType: 'player',
+			entityId: playerId,
+			metadata: { role }
+		})
+	);
 	return toAdmin(findPlayerWithEmail(playerId));
 }
 
 export async function deletePlayer(actor: Actor, playerId: string): Promise<void> {
-	requirePermission(actor, 'managePlayers');
-	if (actor.kind === 'user' && actor.userId === playerId) {
-		throw new AppError('FORBIDDEN', { key: 'admin.deleteSelf' });
-	}
 	const row = findPlayerWithEmail(playerId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 	const role = row.role && isRole(row.role) ? row.role : DEFAULT_ROLE;
-	if (role === 'admin') {
+	const verdict = playerDeletion(actor, { userId: playerId, role });
+	if (verdict === 'forbidden') {
+		throw new AppError('FORBIDDEN');
+	}
+	if (verdict === 'self') {
+		throw new AppError('FORBIDDEN', { key: 'admin.deleteSelf' });
+	}
+	if (verdict === 'admin') {
 		throw new AppError('FORBIDDEN', { key: 'admin.deleteAdmin' });
 	}
 	const now = clock.nowMs();
-	deletePlayerAccount(
-		playerId,
-		todayInZone(branding.timezone, now),
-		timeInZone(branding.timezone, now)
-	);
-	if (findPlayer(playerId)) {
+	db.transaction((tx) => {
+		deletePlayerAccount(
+			playerId,
+			todayInZone(branding.timezone, now),
+			timeInZone(branding.timezone, now),
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'player.delete',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { role, retention: 'anonymized', ratings: 'purged' }
+			},
+			tx
+		);
+	});
+	const deleted = findPlayer(playerId);
+	if (!deleted || deleted.deletedAt === null) {
 		throw new AppError('INTERNAL', { key: 'admin.playerDeleteFailed' });
 	}
-	recordAudit(actor, {
-		action: 'player.delete',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { role }
-	});
 	regenerateUpcomingGeneratedGames();
 }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Actor } from '../auth/types.ts';
 import { resolveAvatarId } from './identity.ts';
+import type { InsertPlayerResult, PlayerUpdateResult } from './queries.ts';
 
 const row = {
 	userId: 'me',
@@ -20,12 +21,13 @@ const row = {
 
 let usage: { userId: string; avatarId: string | null }[] = [];
 
-const updatePlayer = vi.fn((...args: unknown[]) => {
+const updatePlayer = vi.fn((...args: unknown[]): PlayerUpdateResult => {
 	void args;
-	return [] as string[];
+	return { status: 'updated', cleared: [] };
 });
-const insertPlayer = vi.fn((...args: unknown[]) => {
+const insertPlayerWithNextAvatar = vi.fn((...args: unknown[]): InsertPlayerResult => {
 	void args;
+	return { status: 'inserted', avatarId: 'barbe-de-brique' };
 });
 const findPlayerWithEmail = vi.fn((...args: unknown[]) => {
 	void args;
@@ -34,6 +36,9 @@ const findPlayerWithEmail = vi.fn((...args: unknown[]) => {
 const createUser = vi.fn(async (...args: unknown[]) => {
 	void args;
 	return { id: 'new-player' };
+});
+const deleteUser = vi.fn(async (...args: unknown[]) => {
+	void args;
 });
 const requestPasswordReset = vi.fn(async (...args: unknown[]) => {
 	void args;
@@ -46,10 +51,12 @@ vi.mock('./queries.ts', () => ({
 	findPlayer: () => row,
 	findPlayerWithEmail: () => findPlayerWithEmail(),
 	findPlayersByIds: () => [],
-	insertPlayer: (...args: unknown[]) => insertPlayer(...args),
+	hasFreeAvatarForPosition: () => true,
+	insertPlayerWithNextAvatar: (...args: unknown[]) => insertPlayerWithNextAvatar(...args),
+	countActiveAdmins: () => 1,
 	listActivePlayers: () => [],
 	listAllPlayersWithEmail: () => [row],
-	listActiveAvatarAssignments: () => usage,
+	listAvatarAssignments: () => usage,
 	updatePlayer: (...args: unknown[]) => updatePlayer(...args),
 	deletePlayerAccount: vi.fn()
 }));
@@ -73,9 +80,10 @@ vi.mock('../auth/identity.ts', async (importOriginal) => {
 		...original,
 		identity: () => ({
 			createUser,
-			deleteUser: vi.fn(),
+			deleteUser,
 			updateName: vi.fn(async () => undefined),
 			setRole: vi.fn(),
+			revokeSessions: vi.fn(async () => undefined),
 			requestPasswordReset
 		})
 	};
@@ -89,76 +97,76 @@ const profileInput = {
 	jerseyNumber: 9
 };
 
-const player: Actor = { kind: 'user', userId: 'me', name: 'Alex Tremblay', role: 'player' };
-const admin: Actor = { kind: 'user', userId: 'admin', name: 'Admin', role: 'admin' };
+const player: Actor = {
+	kind: 'user',
+	active: true,
+	userId: 'me',
+	name: 'Alex Tremblay',
+	role: 'player'
+};
+const admin: Actor = {
+	kind: 'user',
+	active: true,
+	userId: 'admin',
+	name: 'Admin',
+	role: 'admin'
+};
 
-describe('unicité des avatars', () => {
+describe('service des identités', () => {
 	beforeEach(() => {
 		usage = [];
-		updatePlayer.mockClear();
-		insertPlayer.mockClear();
+		updatePlayer.mockReset();
+		updatePlayer.mockReturnValue({ status: 'updated', cleared: [] });
+		insertPlayerWithNextAvatar.mockClear();
 		findPlayerWithEmail.mockClear();
+		findPlayerWithEmail.mockReturnValue(row);
 		createUser.mockClear();
+		deleteUser.mockClear();
 		requestPasswordReset.mockClear();
 		regenerateUpcomingGeneratedGames.mockClear();
 	});
 
-	it('refuse un avatar porté par un autre joueur actif', async () => {
+	it('transmet le choix d’identité à la transaction de réservation', async () => {
 		const { updateOwnProfile } = await import('./service.ts');
-		usage = [
-			{ userId: 'me', avatarId: null },
-			{ userId: 'other', avatarId: 'tuque-rouge' }
-		];
+
+		await updateOwnProfile(player, { ...profileInput, avatarId: 'tuque-rouge' });
+
+		expect(updatePlayer).toHaveBeenCalledWith(
+			'me',
+			expect.objectContaining({ avatarId: 'tuque-rouge' }),
+			{},
+			expect.anything()
+		);
+	});
+
+	it('traduit une réservation perdue en conflit explicite', async () => {
+		const { updateOwnProfile } = await import('./service.ts');
+		updatePlayer.mockReturnValueOnce({ status: 'avatar-taken' });
 
 		await expect(
 			updateOwnProfile(player, { ...profileInput, avatarId: 'tuque-rouge' })
 		).rejects.toMatchObject({ code: 'CONFLICT', key: 'error.avatarTaken' });
-		expect(updatePlayer).not.toHaveBeenCalled();
 	});
 
-	it('laisse un joueur garder son propre avatar', async () => {
+	it('traduit une identité incompatible avec le poste', async () => {
 		const { updateOwnProfile } = await import('./service.ts');
-		usage = [
-			{ userId: 'me', avatarId: 'capitaine-navy' },
-			{ userId: 'other', avatarId: 'tuque-rouge' }
-		];
-
-		await updateOwnProfile(player, { ...profileInput, avatarId: 'capitaine-navy' });
-		expect(updatePlayer).toHaveBeenCalledWith(
-			'me',
-			expect.objectContaining({ avatarId: 'capitaine-navy' })
-		);
-	});
-
-	it('refuse un avatar dérivé déjà occupé par une autre fiche sans avatar', async () => {
-		const { updateOwnProfile } = await import('./service.ts');
-		const taken = resolveAvatarId('other-without-avatar', null);
-		usage = [
-			{ userId: 'me', avatarId: null },
-			{ userId: 'other-without-avatar', avatarId: null }
-		];
+		updatePlayer.mockReturnValueOnce({ status: 'identity-position' });
 
 		await expect(
-			updateOwnProfile(player, { ...profileInput, avatarId: taken })
-		).rejects.toMatchObject({ code: 'CONFLICT', key: 'error.avatarTaken' });
-		expect(updatePlayer).not.toHaveBeenCalled();
+			updateOwnProfile(player, { ...profileInput, avatarId: 'legende-lafleur' })
+		).rejects.toMatchObject({ code: 'VALIDATION', key: 'error.identityWrongPosition' });
 	});
 
-	it('applique la même règle à la modification par un admin', async () => {
-		const { adminUpdatePlayer } = await import('./service.ts');
-		usage = [
-			{ userId: 'target', avatarId: null },
-			{ userId: 'other', avatarId: 'masque-final' }
-		];
-		findPlayerWithEmail.mockReturnValue({ ...row, userId: 'target' });
+	it('traduit un catalogue épuisé sans écrire de valeur nulle', async () => {
+		const { updateOwnProfile } = await import('./service.ts');
+		updatePlayer.mockReturnValueOnce({ status: 'no-identity' });
 
 		await expect(
-			adminUpdatePlayer(admin, 'target', { avatarId: 'masque-final' })
-		).rejects.toMatchObject({ code: 'CONFLICT', key: 'error.avatarTaken' });
-		expect(updatePlayer).not.toHaveBeenCalled();
+			updateOwnProfile(player, { ...profileInput })
+		).rejects.toMatchObject({ code: 'CONFLICT', key: 'error.noIdentityAvailable' });
 	});
 
-	it('donne le premier avatar libre à une nouvelle fiche', async () => {
+	it('réserve la première identité libre du poste à la création', async () => {
 		const { invitePlayer } = await import('./service.ts');
 		usage = [{ userId: 'other', avatarId: 'capitaine-navy' }];
 
@@ -172,9 +180,28 @@ describe('unicité des avatars', () => {
 			isSubstitute: false
 		});
 
-		expect(insertPlayer).toHaveBeenCalledWith(
-			expect.objectContaining({ avatarId: 'barbe-de-brique' })
+		expect(insertPlayerWithNextAvatar).toHaveBeenCalledWith(
+			expect.objectContaining({ position: 'defense' }),
+			'defense'
 		);
+	});
+
+	it('nettoie le compte si la réservation échoue après sa création', async () => {
+		const { invitePlayer } = await import('./service.ts');
+		insertPlayerWithNextAvatar.mockReturnValueOnce({ status: 'no-identity' });
+
+		await expect(
+			invitePlayer(admin, {
+				firstName: 'Nouvelle',
+				lastName: 'Joueuse',
+				email: 'nouvelle@example.test',
+				position: 'forward',
+				age: 28,
+				jerseyNumber: null,
+				isSubstitute: false
+			})
+		).rejects.toMatchObject({ key: 'error.noIdentityAvailable' });
+		expect(deleteUser).toHaveBeenCalledWith('new-player');
 	});
 
 	it('expose l’avatar courant et les avatars pris dans la fiche', async () => {

@@ -25,7 +25,7 @@
 <svelte:element
 	this={href ? 'a' : 'div'}
 	{href}
-	class="group flex min-h-11 min-w-0 items-center gap-3 no-underline"
+	class="group flex min-h-11 min-w-0 max-w-full items-center gap-3 no-underline"
 >
 	<span aria-hidden="true" class="{barHeight} w-[3px] shrink-0 bg-accent"></span>
 	<span class="min-w-0">
@@ -39,7 +39,7 @@
 		</span>
 		{#if caption}
 			<span
-				class="mt-0.5 block truncate font-mono text-stamp font-medium uppercase leading-tight tracking-[0.08em] {tone ===
+				class="mt-0.5 hidden max-w-full font-mono text-stamp font-medium uppercase leading-tight tracking-[0.08em] sm:block {tone ===
 				'dark'
 					? 'text-paper/80'
 					: 'text-muted'}"

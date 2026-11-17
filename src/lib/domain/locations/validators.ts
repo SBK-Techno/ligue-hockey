@@ -1,12 +1,5 @@
 import { z } from 'zod';
-import { settingBound } from '#config/settings-registry.ts';
-
-export const LOCATION_LIMITS = {
-	nameMax: settingBound('games.defaultLocation', 'max'),
-	addressMax: 200,
-	mapUrlMax: 500,
-	notesMax: 2000
-} as const;
+import { LOCATION_LIMITS } from '#config/games.ts';
 
 const optionalText = (max: number) =>
 	z.preprocess(

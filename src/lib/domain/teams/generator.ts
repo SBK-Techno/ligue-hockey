@@ -1,5 +1,6 @@
 import { POSITIONS, type Position } from '#config/positions.ts';
 import type { RosterTemplate, SlotDefinition } from '#config/roster.ts';
+import { candidateKey } from '#config/slot.ts';
 import { TEAM_GENERATION, TEAMS, type Team } from '#config/teams.ts';
 import { gameWarningsInOrder, type GameWarning } from '#config/game-warnings.ts';
 import type { PairRuleKind } from '#config/rule-modes.ts';
@@ -347,18 +348,7 @@ export function generateTeams(input: GeneratorInput): GeneratorResult {
 		// des deux équipes, pas leur moyenne, pour que la profondeur du banc
 		// compte aussi.
 		const ageDiff = Math.abs(candidate.age[TEAM_A] - candidate.age[TEAM_B]);
-		const key = [...candidate.assignments]
-			.sort(
-				(a, b) =>
-					a.team.localeCompare(b.team) ||
-					a.position.localeCompare(b.position) ||
-					a.slotIndex - b.slotIndex
-			)
-			.map(
-				(assignment) =>
-					`${assignment.team}:${assignment.position}:${assignment.slotIndex}:${assignment.playerId}`
-			)
-			.join('|');
+		const key = candidateKey(candidate.assignments);
 
 		const hard = candidate.violations.filter((violation) => violation.strict).length;
 		return {

@@ -71,6 +71,41 @@
       "when": 1794875543519,
       "tag": "0009_abandoned_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794877466649,
+      "tag": "0010_hesitant_lila_cheney",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1794883394171,
+      "tag": "0011_groovy_doomsday",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1794894433927,
+      "tag": "0012_retention_deleted_player",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1794894514178,
+      "tag": "0013_sub_request_cancelled_filler",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1794897595981,
+      "tag": "0014_vengeful_lord_tyger",
+      "breakpoints": true
     }
   ]
 }

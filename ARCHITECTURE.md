@@ -41,18 +41,18 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Recent-form window | `config/ratings.ts` | ratings service | rating tests |
 | Penalty infractions and default minutes | `config/infractions.ts` | schema checks, game sheet form, totals | migration test |
 | Periods and overtime label | `config/periods.ts` | game sheet, game detail | typecheck |
-| Rink geometry and the six presentation roles | `config/rink.ts` | rink lineup, future admin board | rink test |
+| Rink geometry and the six presentation roles | `config/rink.ts` | lineup board, match page, admin game views | rink test |
 | Game sheet goals, penalties and totals | `src/lib/domain/gamesheet/` | match sheet, game detail | service tests + migration test |
 | Manual lineup marker and CAS token | `games.lineup_manual_at`, `games.generated_at` | regeneration policy, lineup editor | lineup tests |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Application version | `package.json` | `package-lock.json` root, `.env.example` image suffix, Docker OCI label, GHCR tags, GitHub release | `verify:release` + release workflow |
 | Release bump policy | `config/release.ts` | release planner, auto-release workflow | release tests + `verify:architecture` |
-| Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
+| Deployment configuration (names, bounds, defaults) | `config/env-schema.ts` → `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
-| Player avatar catalogue (identity, colours, appearance) | `config/avatars.ts` | profile picker, lineups, admin lists | catalogue test + no-raw-colour scan |
+| Player identity catalogue (league faces, tribute legends, colours, appearance) | `config/avatars.ts` and `config/legends.ts` → `config/identities.ts` | profile picker, lineups, admin lists | catalogue tests + no-raw-colour scan |
 | Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | `migrations.spec.ts` drift guard |
 
 Static literals for these facts are prohibited. A repeated value gets an owner and a derived consumer; it is never copied.
@@ -64,6 +64,8 @@ Static literals for these facts are prohibited. A repeated value gets an owner a
 - `src/lib/server/`: infrastructure only: database client, migrations, adapters.
 - `src/routes/`: transport. Load functions produce view models; form actions parse input with the module's schema, call one service, map `AppError` to a message. No business rules.
 - `src/lib/ui/`: presentational components. They receive props, emit events, and read only i18n + tokens.
+
+One write-boundary exception is explicit: a query module may import another module's `queries.ts` when a multi-table write must share the caller's transaction. `scripts/lib/architecture.ts` owns the allowlist, each entry carrying its reason; `npm run verify:architecture` rejects any undeclared cross-module query import. The audit queries are the transaction log and are allowed everywhere. Today the declared exceptions are the availability write in `availability/queries.ts`, the lineup purge in `games/queries.ts`, the role write in `players/service.ts` and the notification audience in `subs/service.ts`. Schema imports are table vocabulary, not calls; they stay readable across modules.
 
 ## Visual system
 
@@ -89,15 +91,19 @@ The anonymous auth shell uses one generated photograph as its only visual: a dre
 
 ## Player identity
 
-Every player shows one of 28 curated vector avatars from `config/avatars.ts`: skin tone, hair, background, hairstyle, facial hair and glasses. The catalogue owns the appearance; `src/lib/ui/avatar-art.ts` renders it as an SVG built only from that fixed data and from CSS custom properties, never from a player string, an image model or a raw colour. `src/lib/ui/Avatar.svelte` owns sizing and accessibility, and the lineup, profile and admin surfaces consume it without their own colour map.
+Every player shows one of 58 curated vector identities. `config/avatars.ts` owns the 28 league faces; `config/legends.ts` owns the 30 tribute legends, distributed 15 forwards, 11 defense and 4 goalies to follow the league roster ratio. Both satisfy the same drawing contract, and `config/identities.ts` is the one catalogue that composes them, indexes them and colours them. `src/lib/ui/avatar-art.ts` renders either family as an SVG built only from that fixed data and from CSS custom properties, never from a player string, an image model or a raw colour. `src/lib/ui/Avatar.svelte` owns sizing and accessibility, and the lineup, profile and admin surfaces consume it without their own colour map.
 
-`players.avatar_id` stores the chosen id and may be null. A null or retired id resolves through FNV-1a from the account id in `src/lib/domain/players/identity.ts`, so an existing profile keeps a stable appearance without a migration write. The service reserves an avatar against the resolved identity of every active player, so two active players cannot share one; a new profile takes the first free catalogue entry. The service validates every choice against `AVATAR_IDS`.
+A legend is an identity, not a decoration: its name, jersey number, position and era are historical facts about a Montréal Canadiens alumnus, its portrait is an original stylised vector, and no photograph, logo or official mark is used. The picker offers only the legends that played the position currently selected in the form, so the list always matches the player; a saved legend from another position stays visible and flagged rather than silently disappearing. The server enforces the same rule through `identityAllowedForPosition`: a new choice, a position change or an activation cannot persist a legend outside the player's position. The disclaimer next to the list is the single notice for the whole family.
+
+`players.avatar_id` stores the chosen id. Every active player has exactly one stored identity: `players_active_avatar_unique` is a partial unique index over `active = 1 and avatar_id is not null`, and the migration that introduces it assigns a deterministic free catalogue entry to every active row before creating the index. A new profile, an activation and a profile write reserve their identity inside the same transaction as the row write, so availability cannot be read and then stolen before the write. An inactive row may keep an identity that an active player now holds; reactivation revalidates it rather than duplicating it. A missing or retired id still resolves through FNV-1a from the account id in `src/lib/domain/players/identity.ts`, but that is a legacy read path, not a write path. Automatic assignment takes the first free catalogue entry for the player's position, league faces before legends, and refuses with `error.noIdentityAvailable` instead of storing null.
+
+`players.jersey_number` follows the same reservation rule: `players_active_jersey_unique` is a partial unique index over `active = 1 and jersey_number is not null`. A profile write, an admin save and an activation revalidate the number inside the write transaction; two concurrent claims leave one winner and the loser gets `error.jerseyTaken`, never a read-then-write race. Deactivation keeps the stored number but releases it from the index, and an inactive row may keep a number an active player now holds until reactivation revalidates it. Migration `0014` creates the index and therefore fails loudly when existing active rows already share a number, instead of silently choosing a winner; the operator resolves the duplicates before deploying. The index and its reservation are the single owner of jersey uniqueness, exactly like the avatar index.
 
 ## Configuration
 
 Three explicit layers, each with one owner:
 
-1. **Branding** (build time, checked in): `config/branding.json` with the palette owned by `src/lib/ui/tokens.css`. Generates `src/app.html`, `static/manifest.webmanifest`, `static/robots.txt`, `static/offline.html`, `static/icons/*`, `static/social/apercu.jpg`, and `src/lib/generated/branding.ts`.
+1. **Branding** (build time, checked in): `config/branding.json` with the palette owned by `src/lib/ui/tokens.css`. Generates `src/app.html`, `src/lib/generated/branding.ts`, `src/lib/generated/critical-style.ts`, `static/manifest.webmanifest`, `static/robots.txt`, `static/offline.html`, `static/generated-assets.json`, and every content-named file under `static/icons/`, `static/auth/`, `static/textures/`, `static/identities/` and `static/social/`. `scripts/lib/generated-surfaces.ts` is the declared list: the generator refuses an undeclared path and `docs:check` refuses a surface missing from this section.
 2. **League settings** (database): typed registry with a Zod schema, default, French label, and optional min/max. `settings.get()` validates on read and fails loudly on drift. The admin form is generated from the registry. Services ask the settings service; they never read the table.
 3. **Deployment** (environment): `src/lib/shared/config/env.ts` parses once at boot, reports every invalid key, and exports a frozen object. Secrets never enter logs or the client bundle.
 
@@ -112,6 +118,12 @@ Navigation is derived the same way. `config/surfaces.ts` declares each destinati
 Services call policy before every read/write; routes call the same functions only to hide controls. The `/admin` layout calls `requireAdmin` once, but services still enforce it, so an API call cannot bypass the UI. `requireUser` is not enough when the action changes league data.
 
 Ratings and other players' balances are removed from view models in the service, not hidden in the template. Player-facing DTOs carry no rating fields and no other player's money fields. Profile presence (`hasPlayerProfile`, `isSubstitute`) is resolved once in the root layout load and consumed by pages; a page must never infer "player" from a role.
+
+Better Auth's HTTP router is a read-only plane for this app: `hooks.server.ts` refuses every non-GET `/api/auth/*` request with the shared `{ok, key, message}` envelope, so the admin plugin and `/update-user` cannot become a second mutation owner, while the reset-password GET link stays available. Every auth use case goes through `auth.api` in a domain service, including the invitation. The provider rate limiter is disabled; `consumeAttempt` in `src/lib/domain/auth/service.ts` is the only sign-in limiter. Member writes share one limit in `src/lib/server/security/member-action.ts`, applied once in the hook with the declared auth and health exemptions.
+
+Deactivation writes four things in one transaction: the player row becomes inactive, future `game_slots` are emptied, future attendance rows are deleted and future substitute claims are reopened. The account loses every capability immediately, not at commit: `hooks.server.ts` reads the player's active flag on each page, data or API request and builds an anonymous actor for an inactive account, so an old cookie cannot keep a capability; public immutable assets skip both lookups. Two independent provider attempts follow the committed transaction: `setAccountState` closes the account and `revokeSessions` removes its sessions, and each is attempted even when the other fails. Their failures are logged as `players.account_state_failed` and `players.session_revoke_failed`; reactivation uses its own attempt and logs `players.account_reactivate_failed`. Any of those failures returns `admin.playerAccessFailed`, so the partial state is observable instead of being retried inside the transaction. Self-deactivation and deactivation of the last active administrator are refused.
+
+Deletion follows a retention rule owned by `src/lib/domain/players/queries.ts` and stated here: the player row is never removed. Its name becomes the neutral `player.deletedName` copy, its email, password, sessions and substitute profile are erased, and `deleted_at` marks it as unrecoverable. Payments, payment plans, past `game_slots`, goals and past substitute requests keep their foreign keys, so the ledger and the historical sheets remain readable; the public and admin reads resolve the row to the neutral name and never print the raw id. The same transaction rewrites every stored goal, assist and penalty name snapshot that references the deleted player, and deletes the season and per-game rating rows: evaluations are not a played fact and do not survive the account. Future slots, future attendance and future substitute requests are released in the same transaction, exactly like deactivation. A deleted row is excluded from the admin lists, cannot be reactivated, and its identity is free for another visible row.
 
 ## Evaluations
 
@@ -132,7 +144,7 @@ Map links come from `config/maps.ts`: an explicit location map URL wins, otherwi
 
 ## Game sheet
 
-A game is completed only when `games.completed_at` is set; the `completed` status alone is not the record. Goals and penalties live in `game_goals` and `game_penalties`, written with a manager capability once the game has started. Each row keeps the player name and jersey as a snapshot, so renaming or deleting an account never rewrites a played sheet. An own goal is recorded with the team credited with the goal and the last attacking player as scorer; it counts for that team in the score. Player totals are derived on read from the dressed slots: one row per dressed player, zeros included.
+A game is completed only when `games.completed_at` is set; the `completed` status alone is not the record. Goals and penalties live in `game_goals` and `game_penalties`, written with a manager capability once the game has started. Each row keeps the player name and jersey as a snapshot, so renaming an account never rewrites a played sheet; deleting an account rewrites those names to the neutral name and purges its ratings in the delete transaction, as stated above. An own goal is recorded with the team credited with the goal and the last attacking player as scorer; it counts for that team in the score. Player totals are derived on read from the dressed slots: one row per dressed player, zeros included.
 
 ## Manual lineup
 
@@ -170,39 +182,23 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 
 ## Mechanical gates
 
-`npm run verify` runs, in order:
+`npm run verify` is the local gate; `npm run gate` adds the production build. The script list, order and checks belong to `package.json`. The architecture and publication contract live in `scripts/verify-architecture.ts`, `scripts/lib/ci-contract.ts` and `config/release.ts`; this document does not restate their contents, so run the gate or read those owners.
 
-1. `svelte-check`: types and Svelte diagnostics.
-2. `eslint`: import boundaries and restricted syntax.
-3. `vitest run`: unit, table-driven, integration and contract tests. The suite declares its runtime environment once in the committed `.env.test`, which Vite loads in test mode; it never reads a developer `.env`, so a clean machine, a worktree and CI run the same gate.
-4. `verify:language`: rejects vouvoiement, second-person plural imperatives, em dashes and malformed placeholders in the French dictionary.
-5. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
-6. `verify:release`: refuses any disagreement between `package.json`, the two root versions in `package-lock.json`, and the `LIGUE_IMAGE` suffix in `.env.example`.
-7. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link that resolves to an existing route.
-8. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
-9. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
+The gate refuses forbidden direct access in source (environment, console, ambient clock, Drizzle outside its layer, raw colours, provider imports, database access from routes), a missing or weakened publication contract, a version surface disagreement, a stale generated asset, an unparsable smoke script and a broken documentation site. Each rule is implemented and tested in its owner.
 
-CI runs `npm run gate`, which is the same verify plus `npm run build`. The `required` job aggregates `verify` and `container`, and branch protection on `main` requires that check and refuses direct pushes. A red gate blocks the merge. The check runs on the pull request head, not on a merge commit.
+CI runs `npm run gate` through `.github/workflows/ci.yml`; the workflow files are the only owner of triggers, jobs and required status. A red gate blocks the merge.
 
 ## Release automation
 
-`package.json` owns the application version. Every other version surface is derived or checked:
-
-- `scripts/release/plan.ts` reads the latest `v*` tag and the commits since it, then applies the bump policy from `config/release.ts`. Breaking changes win, `feat` bumps the minor, everything else falls back to the configured default, and ignored types produce no release.
-- `scripts/release/apply.ts` is the only writer of the version surfaces. It applies the exact version to `package.json` and the lockfile, then synchronises the `LIGUE_IMAGE` suffix in `.env.example`.
-- `.github/workflows/auto-release.yml` runs on every push to `main`. It prepares or updates one `release/next` branch and release pull request, and dispatches `ci.yml` on that branch so the protected `required` check exists. Merging that pull request is the human release approval.
-- The next push to `main` creates the annotated `v<version>` tag and calls `.github/workflows/release.yml` through `workflow_call`. Tagging and publication therefore have one owner; a tag pushed with `GITHUB_TOKEN` cannot trigger a second workflow.
-- `release.yml` also remains callable by a manual `v*` tag for recovery. It verifies the tag against `package.json` before building, pushing the version, revision and `latest` image tags, and creating the GitHub release.
-
-No module writes a version literal outside these owners. The release planner and version surfaces are pure functions with table-driven tests; the CI contract refuses a workflow that skips the gate, the release pull request, or the shared publisher.
+`package.json` owns the application version. `scripts/release/plan.ts` applies `config/release.ts`; `scripts/release/apply.ts` is the only writer of the version surfaces. The workflows in `.github/workflows/` own the triggers, the release pull request, tagging and publication; read them instead of copying their steps. No module writes a version literal outside these owners.
 
 ## Web delivery
 
 - Every route is server-rendered and reads its data per request; there is no shared client cache of league data.
-- Content-hashed assets are served immutable. The service worker precaches only public static assets and `offline.html`; authenticated HTML, `__data.json`, and API responses are never written to the shared cache. Offline navigation falls back to the static page.
+- Assets under `/_app/immutable` and every content-named generated asset declared in `static/generated-assets.json` (icons, auth photos, textures, identity sprite, social image) are served with a one-year immutable cache. The policy is installed by `serve.js` before the adapter listens; `serve.js` is the only supported entrypoint for the container and the preview, while `node build` and `vite preview` bypass the policy. The manifest, offline page, robots file and service worker use a short or no-cache policy; the superseded unhashed social path keeps a short cache. On a host that served the previous build, the generator retains replaced hashed assets already on disk for `GENERATED_ASSET_RETENTION_DAYS` (`scripts/lib/asset-retention.ts`) before cleanup. A fresh checkout or a new image starts with only the current names, so a longer window requires keeping `static/` across deployments; the build cannot reconstruct an asset that is not on disk. The service worker precaches only public static assets and `offline.html`; authenticated HTML, `__data.json`, and API responses are never written to the shared cache. Offline navigation falls back to the static page.
 - The manifest and icon URLs are generated with content hashes and regenerated by `npm run generate`; the HTML never hardcodes them.
-- The documentation site is rendered from the canonical Markdown at the repository root by `scripts/docs/` and published by GitHub Pages. There is no second copy of the documentation.
-- Container images carry OCI version, revision and source labels, and are published to GHCR by the release workflow. `package.json` is the version owner; a release tag must match it.
+- The documentation site is rendered from the canonical Markdown at the repository root by `scripts/docs/`; publication is owned by `.github/workflows/pages.yml`. There is no second copy of the documentation.
+- Container images carry OCI version, revision and source labels. `package.json` is the version owner; a release tag must match it.
 
 ## Data and migrations
 

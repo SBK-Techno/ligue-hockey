@@ -7,8 +7,8 @@
 	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { capabilityDefinition } from '#config/capabilities.ts';
 	import { ROLES, roleDefinition, type Role } from '#config/roles.ts';
-	import { POSITIONS, positionDefinition } from '#config/positions.ts';
-	import { SETTINGS } from '#config/settings-registry.ts';
+	import { POSITIONS, positionDefinition, type Position } from '#config/positions.ts';
+	import { FINANCE_LIMITS } from '#config/finance.ts';
 	import {
 		currencySymbol,
 		formatAge,
@@ -31,6 +31,9 @@
 	let { data, form }: PageProps = $props();
 	const player = $derived(data.player);
 	let selectedRole = $state<Role | null>(null);
+	// Le poste pilote la liste de légendes offerte, sans attendre l’enregistrement.
+	// svelte-ignore state_referenced_locally
+	let position = $state<Position | null>(player?.position ?? null);
 	const activeRole = $derived(selectedRole ?? player?.role ?? 'player');
 	const selectedRoleDefinition = $derived(roleDefinition(activeRole));
 	const isSelf = $derived(
@@ -67,7 +70,7 @@
 		back={{ href: '/admin/joueurs', label: t('admin.backToPlayers') }}
 	>
 		{#snippet leading()}
-			<Avatar player={player} size={48} decorative={false} />
+			<Avatar player={player} size={48} />
 		{/snippet}
 		{#snippet actions()}
 			{#if player.role !== 'player'}
@@ -145,7 +148,7 @@
 				</div>
 			</div>
 
-			{#if !isSelf && player.role !== 'admin'}
+			{#if data.canDelete}
 				<div class="mt-5 border-t border-line pt-4">
 					<h3 class="text-subhead font-semibold text-alert">{t('admin.deletePlayer')}</h3>
 					<p class="hint mt-1">{t('admin.deletePlayerHelp')}</p>
@@ -188,11 +191,9 @@
 					</div>
 					<div>
 						<label class="label" for="position">{t('profile.position')}</label>
-						<select class="input" id="position" name="position">
-							{#each POSITIONS as position (position.key)}
-								<option value={position.key} selected={position.key === player.position}>
-									{t(position.labelKey)}
-								</option>
+						<select class="input" id="position" name="position" bind:value={position}>
+							{#each POSITIONS as entry (entry.key)}
+								<option value={entry.key}>{t(entry.labelKey)}</option>
 							{/each}
 						</select>
 					</div>
@@ -217,6 +218,9 @@
 								selected={data.avatarPicker.selected}
 								taken={data.avatarPicker.taken}
 								help={t('admin.avatarHelp')}
+								position={position}
+								legendsTitle={t('admin.legendsTitle')}
+								legendsHelp={t('admin.legendsHelp')}
 							/>
 						{/if}
 					</div>
@@ -275,7 +279,7 @@
 			</SectionCard>
 		</div>
 
-		<div id="solde" class="scroll-mt-[var(--anchor-offset)]">
+		<div id="solde">
 			<SectionCard title={t('balance.title')}>
 				<div class="mb-3 flex flex-wrap justify-end">
 					<form method="POST" action="?/applyDefaults" use:progressiveForm>
@@ -328,8 +332,8 @@
 									name="firstPercent"
 									type="number"
 									inputmode="numeric"
-									min={SETTINGS['finance.firstInstallmentPercent'].min}
-									max={SETTINGS['finance.firstInstallmentPercent'].max}
+									min={FINANCE_LIMITS.firstInstallmentPercent.min}
+									max={FINANCE_LIMITS.firstInstallmentPercent.max}
 									value={data.plan?.firstPercent}
 									required
 								/>

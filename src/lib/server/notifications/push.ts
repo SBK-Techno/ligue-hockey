@@ -10,6 +10,13 @@ import { logger } from '#lib/shared/logging/logger.ts';
 
 type WebPush = typeof import('web-push');
 
+export type PushDeliveryResult = {
+	delivered: number;
+	failed: number;
+	/** La dernière erreur d'abonnement, conservée pour le travail en échec. */
+	lastError: unknown;
+};
+
 let configured: WebPush | null = null;
 
 async function client(): Promise<WebPush> {
@@ -31,12 +38,19 @@ function subscription(row: PushSubscriptionRow) {
 	};
 }
 
+/**
+ * Envoie à chaque abonnement et rapporte les deux issues. Un abonnement
+ * disparu (404/410) est retiré et n'est ni un succès ni un échec : il ne
+ * reviendra pas. Un succès partiel n'est jamais silencieux.
+ */
 export async function sendPush(
 	userId: string,
 	message: RenderedNotification
-): Promise<number> {
+): Promise<PushDeliveryResult> {
 	const subscriptions = listPushSubscriptionsForUser(userId);
-	if (subscriptions.length === 0) return 0;
+	if (subscriptions.length === 0) {
+		return { delivered: 0, failed: 0, lastError: null };
+	}
 
 	const webpush = await client();
 	const payload = JSON.stringify({
@@ -47,6 +61,7 @@ export async function sendPush(
 	});
 
 	let delivered = 0;
+	let failed = 0;
 	let lastError: unknown = null;
 
 	for (const row of subscriptions) {
@@ -68,13 +83,20 @@ export async function sendPush(
 				continue;
 			}
 			lastError = error;
+			failed += 1;
 		}
 	}
 
-	if (delivered === 0 && lastError) {
-		throw lastError;
+	if (failed > 0) {
+		logger.warn(delivered > 0 ? 'push.partial_failure' : 'push.failed', {
+			userId,
+			delivered,
+			failed,
+			error: lastError
+		});
+	} else {
+		logger.info('push.sent', { userId, delivered });
 	}
 
-	logger.info('push.sent', { userId, delivered });
-	return delivered;
+	return { delivered, failed, lastError };
 }

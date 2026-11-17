@@ -1,4 +1,5 @@
 import { CURRENCY, type Currency } from '#config/currency.ts';
+import type { Position } from '#config/positions.ts';
 import { branding } from '#lib/generated/branding.ts';
 import {
 	canViewBalance,
@@ -10,13 +11,18 @@ import { recordAudit } from '#lib/domain/audit/service.ts';
 import {
 	findOwnProfile,
 	getPlayer,
+	listActivePlayerIds,
 	listAdminPlayers
 } from '#lib/domain/players/service.ts';
+import { notify } from '#lib/domain/notifications/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
+import { db } from '#lib/server/db/index.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
+import { overdueNotices } from './overdue.ts';
+
 import { applyDiscount, splitPlan } from './plan.ts';
 import { computeBalance, planIsActive, type Balance, type Payment, type PaymentPlan } from './policy.ts';
 import {
@@ -217,40 +223,99 @@ export function listBalances(actor: Actor): AdminBalanceRow[] {
 	});
 }
 
+/**
+ * Signale une seule fois chaque versement en retard. Le balayage est appelé
+ * par la tâche planifiée des notifications; la clé de dédoublonnage est
+ * `balance_overdue:<joueur>:<versement>:<échéance>`, donc un tick suivant ne
+ * crée aucun doublon et un nouveau plan produit un nouvel avis.
+ */
+export function notifyOverdueBalances(): number {
+	const active = new Set(listActivePlayerIds());
+	const payments = new Map<string, PaymentRow[]>();
+	for (const payment of listAllPayments()) {
+		const rows = payments.get(payment.playerId) ?? [];
+		rows.push(payment);
+		payments.set(payment.playerId, rows);
+	}
+
+	const candidates = listPlans()
+		.filter((plan) => active.has(plan.playerId))
+		.map((plan) => ({
+			playerId: plan.playerId,
+			plan: planFromRow(plan),
+			payments: paymentsFromRows(payments.get(plan.playerId) ?? [])
+		}));
+
+	let created = 0;
+	for (const notice of overdueNotices(candidates, today(), graceDays())) {
+		created += notify(
+			'balance_overdue',
+			[{ userId: notice.playerId }],
+			{
+				amountCents: notice.amountCents,
+				currency: CURRENCY,
+				dueDate: notice.dueDate
+			},
+			{
+				dedupeKey: `balance_overdue:${notice.playerId}:${notice.installment}:${notice.dueDate}`
+			}
+		);
+	}
+	return created;
+}
+
+/**
+ * Le plan par défaut d'un poste : la seule dérivation du total, de la remise
+ * de gardien et du fractionnement. L'écran d'administration affiche cette
+ * suggestion; le cas d'usage l'écrit. Aucun appelant ne refait le calcul.
+ */
+export function defaultPlanFor(position: Position) {
+	const settings = getSettings();
+	const total = applyDiscount(
+		settings['finance.totalCents'],
+		position === 'goalie' ? settings['finance.goalieDiscountPercent'] : 0
+	);
+	return splitPlan(total, settings['finance.firstInstallmentPercent']);
+}
+
 export function applyDefaultPlan(actor: Actor, playerId: string): BalanceView | null {
 	requirePermission(actor, 'recordPayments');
 	const player = getPlayer(actor, playerId);
 	if (!('age' in player)) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
-	const settings = getSettings();
-	const total = applyDiscount(
-		settings['finance.totalCents'],
-		player.position === 'goalie' ? settings['finance.goalieDiscountPercent'] : 0
-	);
-	if (total <= 0) {
+	const amounts = defaultPlanFor(player.position);
+	if (amounts.totalCents <= 0) {
 		throw new AppError('VALIDATION', { key: 'balance.feeNotSet' });
 	}
-	const amounts = splitPlan(total, settings['finance.firstInstallmentPercent']);
+	const settings = getSettings();
 	const now = clock.nowMs();
 
-	upsertPlan({
-		id: findPlan(playerId)?.id ?? newId('plan'),
-		playerId,
-		totalCents: amounts.totalCents,
-		firstCents: amounts.firstCents,
-		secondCents: amounts.secondCents,
-		firstDueDate: settings['finance.installment1Due'],
-		secondDueDate: settings['finance.installment2Due'],
-		createdAt: now,
-		updatedAt: now
-	});
-
-	recordAudit(actor, {
-		action: 'finance.plan_default',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { totalCents: amounts.totalCents }
+	db.transaction((tx) => {
+		upsertPlan(
+			{
+				id: findPlan(playerId)?.id ?? newId('plan'),
+				playerId,
+				totalCents: amounts.totalCents,
+				firstCents: amounts.firstCents,
+				secondCents: amounts.secondCents,
+				firstDueDate: settings['finance.installment1Due'],
+				secondDueDate: settings['finance.installment2Due'],
+				createdAt: now,
+				updatedAt: now
+			},
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.plan_default',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { totalCents: amounts.totalCents }
+			},
+			tx
+		);
 	});
 
 	return getPlayerBalance(actor, playerId);
@@ -268,23 +333,31 @@ export function setPlan(
 	const now = clock.nowMs();
 	const existing = findPlan(playerId);
 
-	upsertPlan({
-		id: existing?.id ?? newId('plan'),
-		playerId,
-		totalCents: amounts.totalCents,
-		firstCents: amounts.firstCents,
-		secondCents: amounts.secondCents,
-		firstDueDate: parsed.firstDueDate,
-		secondDueDate: parsed.secondDueDate,
-		createdAt: now,
-		updatedAt: now
-	});
-
-	recordAudit(actor, {
-		action: 'finance.plan_set',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { totalCents: amounts.totalCents }
+	db.transaction((tx) => {
+		upsertPlan(
+			{
+				id: existing?.id ?? newId('plan'),
+				playerId,
+				totalCents: amounts.totalCents,
+				firstCents: amounts.firstCents,
+				secondCents: amounts.secondCents,
+				firstDueDate: parsed.firstDueDate,
+				secondDueDate: parsed.secondDueDate,
+				createdAt: now,
+				updatedAt: now
+			},
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.plan_set',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { totalCents: amounts.totalCents }
+			},
+			tx
+		);
 	});
 
 	return getPlayerBalance(actor, playerId);
@@ -302,22 +375,30 @@ export function recordPayment(
 		throw new AppError('CONFLICT', { key: 'balance.noPlan' });
 	}
 
-	insertPayment({
-		id: newId('pay'),
-		playerId,
-		amountCents: parsed.amountCents,
-		paidAt: parsed.paidAt,
-		method: parsed.method,
-		note: parsed.note,
-		recordedBy: actor.kind === 'user' ? actor.userId : null,
-		createdAt: clock.nowMs()
-	});
-
-	recordAudit(actor, {
-		action: 'finance.payment',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { amountCents: parsed.amountCents, method: parsed.method }
+	db.transaction((tx) => {
+		insertPayment(
+			{
+				id: newId('pay'),
+				playerId,
+				amountCents: parsed.amountCents,
+				paidAt: parsed.paidAt,
+				method: parsed.method,
+				note: parsed.note,
+				recordedBy: actor.kind === 'user' ? actor.userId : null,
+				createdAt: clock.nowMs()
+			},
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.payment',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { amountCents: parsed.amountCents, method: parsed.method }
+			},
+			tx
+		);
 	});
 
 	return getPlayerBalance(actor, playerId);
@@ -329,11 +410,17 @@ export function removePayment(actor: Actor, playerId: string, paymentId: string)
 	if (!payment || payment.playerId !== playerId) {
 		throw new AppError('NOT_FOUND', { key: 'balance.paymentNotFound' });
 	}
-	deletePayment(paymentId);
-	recordAudit(actor, {
-		action: 'finance.payment_deleted',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { paymentId }
+	db.transaction((tx) => {
+		deletePayment(paymentId, tx);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.payment_deleted',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { paymentId }
+			},
+			tx
+		);
 	});
 }

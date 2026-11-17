@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
+import { insertAudit, type AuditEntry } from '#lib/domain/audit/queries.ts';
 import { subProfiles, subRequests, type SubRequestRow } from './schema.ts';
 
 export type NewSubRequest = typeof subRequests.$inferInsert;
@@ -16,13 +17,17 @@ export function listSubProfiles() {
 	return db.select().from(subProfiles).orderBy(asc(subProfiles.playerId)).all();
 }
 
-export function upsertSubProfile(input: {
-	playerId: string;
-	favorite: boolean;
-	positionsJson: string;
-	updatedAt: number;
-}): void {
-	db.insert(subProfiles)
+function upsertProfile(
+	executor: DbExecutor,
+	input: {
+		playerId: string;
+		favorite: boolean;
+		positionsJson: string;
+		updatedAt: number;
+	}
+): void {
+	executor
+		.insert(subProfiles)
 		.values({
 			playerId: input.playerId,
 			favorite: input.favorite,
@@ -41,15 +46,41 @@ export function upsertSubProfile(input: {
 		.run();
 }
 
+export function upsertSubProfile(input: {
+	playerId: string;
+	favorite: boolean;
+	positionsJson: string;
+	updatedAt: number;
+}): void {
+	upsertProfile(db, input);
+}
+
+/** La préférence et sa trace d'audit réussissent ou échouent ensemble. */
+export function upsertSubProfileWithAudit(
+	input: {
+		playerId: string;
+		favorite: boolean;
+		positionsJson: string;
+		updatedAt: number;
+	},
+	audit: AuditEntry
+): void {
+	db.transaction((tx) => {
+		upsertProfile(tx, input);
+		insertAudit(audit, tx);
+	});
+}
+
 export function findRequest(id: string): SubRequestRow | undefined {
 	return db.select().from(subRequests).where(eq(subRequests.id, id)).get();
 }
 
 export function findRequesterRequest(
 	gameId: string,
-	playerId: string
+	playerId: string,
+	executor: DbExecutor = db
 ): SubRequestRow | undefined {
-	return db
+	return executor
 		.select()
 		.from(subRequests)
 		.where(
@@ -62,16 +93,17 @@ export function findRequesterRequest(
 		.get();
 }
 
-export function insertRequest(row: NewSubRequest): void {
-	db.insert(subRequests).values(row).run();
+export function insertRequest(row: NewSubRequest, executor: DbExecutor = db): void {
+	executor.insert(subRequests).values(row).run();
 }
 
 export function claimRequest(
 	id: string,
 	playerId: string,
-	at: number
+	at: number,
+	executor: DbExecutor = db
 ): boolean {
-	const result = db
+	const result = executor
 		.update(subRequests)
 		.set({
 			status: 'filled',
@@ -83,8 +115,12 @@ export function claimRequest(
 	return result.changes === 1;
 }
 
-export function releaseRequest(id: string, playerId: string): boolean {
-	const result = db
+export function releaseRequest(
+	id: string,
+	playerId: string,
+	executor: DbExecutor = db
+): boolean {
+	const result = executor
 		.update(subRequests)
 		.set({
 			status: 'open',
@@ -103,8 +139,12 @@ export function releaseRequest(id: string, playerId: string): boolean {
 	return result.changes === 1;
 }
 
-export function cancelRequest(id: string, at: number): boolean {
-	const result = db
+export function cancelRequest(
+	id: string,
+	at: number,
+	executor: DbExecutor = db
+): boolean {
+	const result = executor
 		.update(subRequests)
 		.set({
 			status: 'cancelled',
@@ -119,20 +159,28 @@ export function cancelRequest(id: string, at: number): boolean {
 	return result.changes === 1;
 }
 
-export function cancelOpenRequests(gameId: string, at: number): number {
-	const result = db
+/**
+ * Ferme toutes les demandes d'un match. Une demande encore ouverte n'a pas de
+ * remplaçant et part telle quelle; une demande comblée garde son remplaçant et
+ * son heure, parce que l'historique du match doit continuer de dire qui a pris
+ * la place.
+ */
+export function cancelOpenRequests(
+	gameId: string,
+	at: number,
+	executor: DbExecutor = db
+): number {
+	const open = executor
 		.update(subRequests)
-		.set({
-			status: 'cancelled',
-			filledByPlayerId: null,
-			filledAt: null,
-			cancelledAt: at
-		})
-		.where(
-			and(eq(subRequests.gameId, gameId), inArray(subRequests.status, ['open', 'filled']))
-		)
+		.set({ status: 'cancelled', cancelledAt: at })
+		.where(and(eq(subRequests.gameId, gameId), eq(subRequests.status, 'open')))
 		.run();
-	return result.changes;
+	const filled = executor
+		.update(subRequests)
+		.set({ status: 'cancelled', cancelledAt: at })
+		.where(and(eq(subRequests.gameId, gameId), eq(subRequests.status, 'filled')))
+		.run();
+	return open.changes + filled.changes;
 }
 
 export function listRequestsForGame(gameId: string) {

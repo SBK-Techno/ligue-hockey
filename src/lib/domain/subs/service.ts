@@ -1,25 +1,20 @@
 import { isPosition, type Position } from '#config/positions.ts';
-import { branding } from '#lib/generated/branding.ts';
 import { listUserIdsWithCapability } from '#lib/domain/auth/queries.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { auditEntry } from '#lib/domain/audit/service.ts';
+import { insertAudit } from '#lib/domain/audit/queries.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
-import {
-	findOwnProfile,
-	getOwnProfile,
-	getPlayer,
-	type SelfProfile
-} from '#lib/domain/players/service.ts';
+import { findOwnProfile, getOwnProfile, getPlayer } from '#lib/domain/players/service.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import { isLineupEditable } from '#lib/domain/games/playability.ts';
+import { db } from '#lib/server/db/index.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
-import { clock, todayInZone } from '#lib/shared/time/clock.ts';
+import { clock } from '#lib/shared/time/clock.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
-import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
 	claimablePositions,
@@ -30,7 +25,6 @@ import {
 	cancelRequest,
 	claimRequest,
 	findRequest,
-	findRequesterRequest,
 	findSubProfile,
 	insertRequest,
 	listClaimedSubs,
@@ -39,7 +33,8 @@ import {
 	listRequestsForUser,
 	listSubProfiles,
 	releaseRequest,
-	upsertSubProfile
+	upsertSubProfile,
+	upsertSubProfileWithAudit
 } from './queries.ts';
 import type { SubRequestRow, SubRequestStatus } from './schema.ts';
 import { subFavoriteInputSchema, subProfileInputSchema } from './validators.ts';
@@ -164,19 +159,21 @@ export function setSubstituteFavorite(
 	}
 
 	const existing = findSubProfile(parsed.playerId);
-	upsertSubProfile({
-		playerId: parsed.playerId,
-		favorite: parsed.favorite,
-		positionsJson:
-			existing?.positionsJson ?? JSON.stringify([player.position]),
-		updatedAt: clock.nowMs()
-	});
-	recordAudit(actor, {
-		action: 'sub.favorite',
-		entityType: 'player',
-		entityId: parsed.playerId,
-		metadata: { favorite: parsed.favorite }
-	});
+	upsertSubProfileWithAudit(
+		{
+			playerId: parsed.playerId,
+			favorite: parsed.favorite,
+			positionsJson:
+				existing?.positionsJson ?? JSON.stringify([player.position]),
+			updatedAt: clock.nowMs()
+		},
+		auditEntry(actor, {
+			action: 'sub.favorite',
+			entityType: 'player',
+			entityId: parsed.playerId,
+			metadata: { favorite: parsed.favorite }
+		})
+	);
 }
 
 export function listSubstitutes(actor: Actor): SubProfileView[] {
@@ -241,7 +238,8 @@ function eligibleSubs(
 
 export function notifyRequestWaves(
 	request: SubRequestRow,
-	game: GameSummary
+	game: GameSummary,
+	occurrenceAt: number = request.createdAt
 ): WaveSchedule {
 	const settings = getSettings();
 	const now = clock.nowMs();
@@ -266,12 +264,10 @@ export function notifyRequestWaves(
 		request.requestedByPlayerId
 	);
 
-	const dedupeRoot = request.requestedByPlayerId
-		? `sub_request:${request.gameId}:${request.requestedByPlayerId}:${todayInZone(
-				branding.timezone,
-				now
-			)}`
-		: `sub_request:${request.id}`;
+	// Chaque demande et chaque réouverture portent leur propre occurrence :
+	// une place relâchée ou une demande recréée le même jour produit de
+	// nouveaux avis au lieu d'être avalée par la clé de la première vague.
+	const dedupeRoot = `sub_request:${request.id}:${occurrenceAt}`;
 
 	if (!tooLate) {
 		notify(
@@ -317,45 +313,23 @@ export function notifyRequestWaves(
 	};
 }
 
-export function createAbsenceRequest(
-	actor: Actor,
+export function notifyBumped(
+	request: SubRequestRow,
 	game: GameSummary,
-	player: SelfProfile
-): SubRequestView | null {
-	if (player.isSubstitute) return null;
-	if (isGameStarted(game)) {
-		throw new AppError('CONFLICT', { key: 'availability.gameClosed' });
-	}
-
-	const existing = findRequesterRequest(game.id, player.userId);
-	if (existing) {
-		return requestView(existing, namesFor([existing]));
-	}
-
-	const now = clock.nowMs();
-	const id = newId('sub');
-	insertRequest({
-		id,
-		gameId: game.id,
-		requestedByPlayerId: player.userId,
-		createdByUserId: actor.kind === 'user' ? actor.userId : null,
-		position: player.position,
-		reason: 'absence',
-		status: 'open',
-		createdAt: now
-	});
-	const created = findRequest(id);
-	if (!created) {
-		throw new AppError('INTERNAL');
-	}
-	notifyRequestWaves(created, game);
-	recordAudit(actor, {
-		action: 'sub.request_created',
-		entityType: 'sub_request',
-		entityId: id,
-		metadata: { gameId: game.id, position: player.position, reason: 'absence' }
-	});
-	return requestView(created, namesFor([created]));
+	bumpedPlayerId: string,
+	occurrence: 'cancelled' | 'regular-returned'
+): void {
+	notify(
+		'sub_bumped',
+		[{ userId: bumpedPlayerId }],
+		{
+			gameId: game.id,
+			position: request.position,
+			gameDate: game.gameDate,
+			startTime: game.startTime
+		},
+		{ dedupeKey: `sub_bumped:${request.id}:${occurrence}` }
+	);
 }
 
 export function createManualRequest(
@@ -370,26 +344,34 @@ export function createManualRequest(
 
 	const now = clock.nowMs();
 	const id = newId('sub');
-	insertRequest({
-		id,
-		gameId: game.id,
-		createdByUserId: actor.kind === 'user' ? actor.userId : null,
-		position,
-		reason: 'manual',
-		status: 'open',
-		createdAt: now
+	db.transaction((tx) => {
+		insertRequest(
+			{
+				id,
+				gameId: game.id,
+				createdByUserId: actor.kind === 'user' ? actor.userId : null,
+				position,
+				reason: 'manual',
+				status: 'open',
+				createdAt: now
+			},
+			tx
+		);
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.request_created',
+				entityType: 'sub_request',
+				entityId: id,
+				metadata: { gameId: game.id, position, reason: 'manual' }
+			}),
+			tx
+		);
 	});
 	const created = findRequest(id);
 	if (!created) {
 		throw new AppError('INTERNAL');
 	}
 	notifyRequestWaves(created, game);
-	recordAudit(actor, {
-		action: 'sub.request_created',
-		entityType: 'sub_request',
-		entityId: id,
-		metadata: { gameId: game.id, position, reason: 'manual' }
-	});
 	return requestView(created, namesFor([created]));
 }
 
@@ -404,9 +386,9 @@ export function claimSubstitute(
 	game: GameSummary,
 	requestId: string
 ): ClaimResult {
-	const user = requireUser(actor);
+	const user = requirePermission(actor, 'claimSubs');
 	const player = getOwnProfile(actor);
-	if (!player.isSubstitute) {
+	if (!player.isSubstitute || !player.active) {
 		throw new AppError('FORBIDDEN', { key: 'subs.notEligible' });
 	}
 
@@ -430,15 +412,35 @@ export function claimSubstitute(
 		throw new AppError('FORBIDDEN', { key: 'subs.notEligible' });
 	}
 
-	let claimed: boolean;
-	try {
-		claimed = claimRequest(requestId, user.userId, clock.nowMs());
-	} catch (cause) {
-		throw new AppError('CONFLICT', {
-			key: 'subs.alreadyPlaying',
-			cause
-		});
-	}
+	const claimedAt = clock.nowMs();
+	const claimed = db.transaction((tx) => {
+		let taken: boolean;
+		try {
+			taken = claimRequest(requestId, user.userId, claimedAt, tx);
+		} catch (cause) {
+			// Le seul conflit d'unicité de cette écriture est l'index du
+			// remplaçant : ce joueur occupe déjà une place dans ce match. Une
+			// panne d'audit ou de base remonte telle quelle et annule tout.
+			if ((cause as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
+				throw new AppError('CONFLICT', {
+					key: 'subs.alreadyPlaying',
+					cause
+				});
+			}
+			throw cause;
+		}
+		if (!taken) return false;
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.claimed',
+				entityType: 'sub_request',
+				entityId: requestId,
+				metadata: { gameId: game.id, position: request.position }
+			}),
+			tx
+		);
+		return true;
+	});
 	if (!claimed) {
 		throw new AppError('CONFLICT', { key: 'subs.claimTaken' });
 	}
@@ -458,15 +460,8 @@ export function claimSubstitute(
 			gameDate: game.gameDate,
 			startTime: game.startTime
 		},
-		{ dedupeKey: `sub_claimed:${requestId}` }
+		{ dedupeKey: `sub_claimed:${requestId}:${claimedAt}` }
 	);
-
-	recordAudit(actor, {
-		action: 'sub.claimed',
-		entityType: 'sub_request',
-		entityId: requestId,
-		metadata: { gameId: game.id, position: request.position }
-	});
 
 	return { requestId, gameId: game.id, position: request.position };
 }
@@ -486,21 +481,25 @@ export function releaseSubstitute(
 		throw new AppError('CONFLICT', { key: 'subs.gameStarted' });
 	}
 
-	if (!releaseRequest(requestId, user.userId)) {
-		throw new AppError('FORBIDDEN');
-	}
-
-	recordAudit(actor, {
-		action: 'sub.released',
-		entityType: 'sub_request',
-		entityId: requestId
+	db.transaction((tx) => {
+		if (!releaseRequest(requestId, user.userId, tx)) {
+			throw new AppError('FORBIDDEN');
+		}
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.released',
+				entityType: 'sub_request',
+				entityId: requestId
+			}),
+			tx
+		);
 	});
 
 	const reopened = findRequest(requestId);
 	if (!reopened) {
 		throw new AppError('INTERNAL');
 	}
-	return notifyRequestWaves(reopened, game);
+	return notifyRequestWaves(reopened, game, clock.nowMs());
 }
 
 export function cancelRequestByAdmin(
@@ -512,6 +511,11 @@ export function cancelRequestByAdmin(
 	const request = findRequest(requestId);
 	if (!request || request.gameId !== game.id) {
 		throw new AppError('NOT_FOUND', { key: 'subs.requestNotFound' });
+	}
+	// Une demande ne se ferme plus une fois le match commencé : la finale
+	// ferme elle-même les demandes restantes dans sa transaction.
+	if (!isLineupEditable(game)) {
+		throw new AppError('CONFLICT', { key: 'subs.requestNotActive' });
 	}
 	return cancelRequestWithEffects(actor, game, request);
 }
@@ -545,64 +549,25 @@ function cancelRequestWithEffects(
 	request: NonNullable<ReturnType<typeof findRequest>>
 ): string | null {
 	const bumpedPlayerId = request.filledByPlayerId;
-	if (!cancelRequest(request.id, clock.nowMs())) {
+	const cancelled = db.transaction((tx) => {
+		if (!cancelRequest(request.id, clock.nowMs(), tx)) return false;
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.request_cancelled',
+				entityType: 'sub_request',
+				entityId: request.id
+			}),
+			tx
+		);
+		return true;
+	});
+	if (!cancelled) {
 		throw new AppError('CONFLICT', { key: 'subs.requestNotActive' });
 	}
 
 	if (bumpedPlayerId) {
-		notify(
-			'sub_bumped',
-			[{ userId: bumpedPlayerId }],
-			{
-				gameId: game.id,
-				position: request.position,
-				gameDate: game.gameDate,
-				startTime: game.startTime
-			},
-			{ dedupeKey: `sub_bumped:${request.id}:cancelled` }
-		);
+		notifyBumped(request, game, bumpedPlayerId, 'cancelled');
 	}
-
-	recordAudit(actor, {
-		action: 'sub.request_cancelled',
-		entityType: 'sub_request',
-		entityId: request.id
-	});
-	return bumpedPlayerId;
-}
-
-export function cancelForReturn(
-	actor: Actor,
-	game: GameSummary,
-	playerId: string
-): string | null {
-	const request = findRequesterRequest(game.id, playerId);
-	if (!request) return null;
-	const bumpedPlayerId = request.filledByPlayerId;
-	if (!cancelRequest(request.id, clock.nowMs())) {
-		return null;
-	}
-
-	if (bumpedPlayerId) {
-		notify(
-			'sub_bumped',
-			[{ userId: bumpedPlayerId }],
-			{
-				gameId: game.id,
-				position: request.position,
-				gameDate: game.gameDate,
-				startTime: game.startTime
-			},
-			{ dedupeKey: `sub_bumped:${request.id}:regular-returned` }
-		);
-	}
-
-	recordAudit(actor, {
-		action: 'sub.request_cancelled',
-		entityType: 'sub_request',
-		entityId: request.id,
-		metadata: { reason: 'regular-returned', playerId }
-	});
 	return bumpedPlayerId;
 }
 
@@ -612,7 +577,9 @@ export function listGameRequests(
 ): SubRequestView[] {
 	requireUser(actor);
 	const requests = listRequestsForGame(game.id).filter(
-		(request) => request.status !== 'cancelled'
+		// Une demande fermée par la fin du match garde son remplaçant : elle
+		// reste dans l'historique au lieu de disparaître avec le statut.
+		(request) => request.status !== 'cancelled' || request.filledByPlayerId !== null
 	);
 	const names = namesFor(requests);
 	return requests.map((request) => requestView(request, names));

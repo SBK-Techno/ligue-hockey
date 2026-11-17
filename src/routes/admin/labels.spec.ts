@@ -1,0 +1,181 @@
+import { describe, expect, it } from 'vitest';
+import { render } from 'svelte/server';
+import { fr } from '#config/i18n/fr.ts';
+import type { AvailabilityView } from '#lib/domain/availability/service.ts';
+import { t } from '#lib/shared/i18n/index.ts';
+import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
+import SeasonAgenda from '#lib/ui/home/SeasonAgenda.svelte';
+import AdminPage from './+page.svelte';
+
+const availability: AvailabilityView = {
+	rows: [{ playerId: 'player-1', fullName: 'Karim Haddad', status: 'present' }],
+	pending: [{ playerId: 'player-2', fullName: 'Alex Tremblay' }],
+	present: 1,
+	absent: 0,
+	unknown: 1,
+	summary: '1 présent · 1 sans réponse',
+	own: null,
+	locked: false,
+	canRespond: true,
+	canWithdraw: false,
+	substitute: false,
+	closesAtLabel: '15 novembre'
+};
+
+const agendaGame = {
+	id: 'game-1',
+	gameDate: '2026-11-15',
+	startTime: '08:30',
+	location: 'Complexe sportif de Sainte-Foy',
+	status: 'scheduled' as const,
+	availability: null,
+	requestOpen: false,
+	score: null
+};
+
+function adminData() {
+	return {
+		actor: { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' },
+		unread: 0,
+		hasPlayerProfile: true,
+		isSubstitute: false,
+		avatarId: null,
+		peekScope: 'ratings',
+		nav: {
+			primary: [],
+			mobile: [],
+			account: null,
+			roleLabelKey: 'admin.role.admin',
+			unreadCap: 9 as const
+		},
+		counts: {
+			active: 1,
+			subs: 0,
+			unpaid: 0,
+			overdue: 0,
+			noPlan: 0,
+			openRequests: 0,
+			unanswered: 1
+		},
+		currency: 'CAD',
+		nextAvailability: null,
+		nextGame: null,
+		notifications: null,
+		outstandingCents: 0,
+		permissions: { players: true, balances: false, games: true, subs: false },
+		players: [],
+		balances: [],
+		requests: [],
+		unpaid: [],
+		upcoming: [],
+		withoutPlan: []
+	};
+}
+
+function renderAdmin(overrides: Record<string, unknown> = {}) {
+	return render(AdminPage, {
+		props: {
+			data: { ...adminData(), ...overrides },
+			form: null,
+			params: {}
+		} as never
+	});
+}
+
+function keysWithCopy(dictionary: Record<string, string>, copy: string): string[] {
+	return Object.entries(dictionary)
+		.filter(([, value]) => value === copy)
+		.map(([key]) => key);
+}
+
+describe('libellé unique de l’absence de réponse', () => {
+	it('garde une seule clé pour l’état sans réponse', () => {
+		expect(keysWithCopy(fr, fr['availability.noAnswer'])).toEqual(['availability.noAnswer']);
+	});
+
+	it('échoue dès qu’une seconde clé recopie le même libellé', () => {
+		const duplicate = {
+			...fr,
+			'games.duplicateNoAnswer': fr['availability.noAnswer']
+		};
+
+		expect(keysWithCopy(duplicate, duplicate['availability.noAnswer'])).toEqual([
+			'availability.noAnswer',
+			'games.duplicateNoAnswer'
+		]);
+		expect(keysWithCopy(fr, fr['availability.noAnswer'])).toHaveLength(1);
+	});
+
+	it('affiche les mêmes mots dans la feuille de présence, l’agenda et l’administration', () => {
+		const roster = render(AvailabilityRoster, {
+			props: { availability, viewerId: 'player-1' }
+		});
+		const agenda = render(SeasonAgenda, {
+			props: { upcoming: [agendaGame], past: [{ ...agendaGame, status: 'completed' }] }
+		});
+		const admin = renderAdmin();
+
+		expect(roster.body).toContain(t('availability.noAnswer'));
+		expect(agenda.body).toContain(t('availability.noAnswer'));
+		expect(admin.body).toContain(t('availability.noAnswer'));
+	});
+});
+
+describe('ordre mobile du tableau de bord', () => {
+	it('place le prochain match avant la liste à faire', () => {
+		const admin = renderAdmin({
+			nextGame: {
+				id: agendaGame.id,
+				gameDate: agendaGame.gameDate,
+				startTime: agendaGame.startTime,
+				locationId: 'loc-1',
+				location: agendaGame.location,
+				status: 'scheduled',
+				notes: null,
+				locationAddress: null,
+				locationMapUrl: null,
+				slots: [],
+				generation: null,
+				completedAt: null,
+				lineupManualAt: null,
+				openSlots: 0,
+				openSlotsLabel: '',
+				lineupComplete: false,
+				generated: false,
+				updatedAt: 1
+			},
+			nextAvailability: availability,
+			requests: [
+				{
+					id: 'request-1',
+					gameId: agendaGame.id,
+					position: 'forward',
+					reason: 'manual',
+					status: 'open',
+					requestedByPlayerId: 'player-1',
+					requestedByName: 'Alex Tremblay',
+					filledByPlayerId: null,
+					filledByName: null,
+					createdAt: 1,
+					filledAt: null,
+					cancelledAt: null,
+					game: {
+						id: agendaGame.id,
+						gameDate: agendaGame.gameDate,
+						startTime: agendaGame.startTime,
+						locationId: 'loc-1',
+						location: agendaGame.location,
+						status: 'scheduled'
+					}
+				}
+			],
+			permissions: { players: true, balances: false, games: true, subs: true }
+		});
+
+		const next = admin.body.indexOf(t('home.nextGame'));
+		const todo = admin.body.indexOf(t('admin.todo'));
+
+		expect(next).toBeGreaterThanOrEqual(0);
+		expect(todo).toBeGreaterThan(next);
+	});
+});

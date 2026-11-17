@@ -1,13 +1,35 @@
 import { describe, expect, it } from 'vitest';
+import { ALL_CAPABILITIES } from '#config/capabilities.ts';
 import { mobileSurfaces, primarySurfaces } from './surfaces.ts';
-import { can, capabilitiesOf } from './policy.ts';
-import type { Actor, UserActor } from './types.ts';
+import {
+	can,
+	canAny,
+	canCreatePoll,
+	canDeletePlayer,
+	canEditProfile,
+	canManageGame,
+	canModerateChat,
+	canViewBalance,
+	capabilitiesOf,
+	requireAdmin,
+	requirePermission,
+	requireUser
+} from './policy.ts';
+import { actorFromUser, type Actor, type UserActor } from './types.ts';
 
 function actor(role: UserActor['role']): UserActor {
-	return { kind: 'user', userId: 'user-1', name: 'Test', role };
+	return { kind: 'user', active: true, userId: 'user-1', name: 'Test', role };
 }
 
 const anonymous: Actor = { kind: 'anonymous' };
+
+const forgedInactive: UserActor = {
+	kind: 'user',
+	userId: 'user-1',
+	name: 'Test',
+	role: 'admin',
+	active: false
+};
 
 describe('capability policy', () => {
 	it('gives every member the base capabilities', () => {
@@ -28,6 +50,15 @@ describe('capability policy', () => {
 		expect(can(actor('admin'), 'manageSettings')).toBe(true);
 	});
 
+	it('owns player deletion in one policy rule', () => {
+		const target = { userId: 'other', role: 'player' };
+		expect(canDeletePlayer(actor('admin'), target)).toBe(true);
+		expect(canDeletePlayer(actor('manager'), target)).toBe(false);
+		expect(canDeletePlayer(actor('player'), target)).toBe(false);
+		expect(canDeletePlayer(actor('admin'), { userId: 'user-1', role: 'player' })).toBe(false);
+		expect(canDeletePlayer(actor('admin'), { userId: 'other', role: 'admin' })).toBe(false);
+	});
+
 	it('lets a manager run the league without owning accounts', () => {
 		expect(can(actor('manager'), 'manageGames')).toBe(true);
 		expect(can(actor('manager'), 'manageSubs')).toBe(true);
@@ -41,6 +72,43 @@ describe('capability policy', () => {
 		expect(capabilitiesOf(anonymous)).toEqual([]);
 		expect(can(anonymous, 'member')).toBe(false);
 		expect(can(anonymous, 'manageGames')).toBe(false);
+	});
+
+	it('turns a deactivated account into an anonymous actor', () => {
+		const inactive = actorFromUser({
+			id: 'user-1',
+			name: 'Test',
+			role: 'manager',
+			active: false
+		});
+
+		expect(inactive.kind).toBe('anonymous');
+		expect(capabilitiesOf(inactive)).toEqual([]);
+		expect(can(inactive, 'manageGames')).toBe(false);
+		expect(() => requireUser(inactive)).toThrow();
+	});
+
+	it('refuses a forged inactive user actor even when it keeps its role', () => {
+		expect(capabilitiesOf(forgedInactive)).toEqual([]);
+		expect(can(forgedInactive, 'managePlayers')).toBe(false);
+		expect(() => requireUser(forgedInactive)).toThrow();
+	});
+
+	it.each(ALL_CAPABILITIES)('refuses %s to a forged inactive actor', (capability) => {
+		expect(can(forgedInactive, capability)).toBe(false);
+		expect(() => requirePermission(forgedInactive, capability)).toThrow();
+	});
+
+	it('refuses every helper and requirement to a forged inactive actor', () => {
+		expect(capabilitiesOf(forgedInactive)).toEqual([]);
+		expect(canAny(forgedInactive, ALL_CAPABILITIES)).toBe(false);
+		expect(canViewBalance(forgedInactive, forgedInactive.userId)).toBe(false);
+		expect(canEditProfile(forgedInactive, forgedInactive.userId)).toBe(false);
+		expect(canCreatePoll(forgedInactive, true)).toBe(false);
+		expect(canManageGame(forgedInactive)).toBe(false);
+		expect(canModerateChat(forgedInactive)).toBe(false);
+		expect(() => requirePermission(forgedInactive, 'manageGames')).toThrow();
+		expect(() => requireAdmin(forgedInactive)).toThrow();
 	});
 
 	it('declares a manager role with its own label', () => {

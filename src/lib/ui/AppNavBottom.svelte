@@ -1,15 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { mobileSurfaces } from '#lib/domain/auth/surfaces.ts';
-	import type { UserActor } from '#lib/domain/auth/types.ts';
+	import type { Surface } from '#config/surfaces.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import NavIcon from '#lib/ui/NavIcon.svelte';
-	import { isActiveHref } from '#lib/ui/nav.ts';
+	import { isActiveHref, mobileNavLabelKey } from '#lib/ui/nav.ts';
 
-	let { actor }: { actor: UserActor } = $props();
+	let { items }: { items: readonly Surface[] } = $props();
 
 	const path = $derived(page.url.pathname);
-	const items = $derived(mobileSurfaces(actor));
 </script>
 
 {#if !path.startsWith('/admin')}
@@ -33,7 +31,7 @@
 						{/if}
 						<NavIcon icon={item.icon} class="h-5 w-5" />
 						<span class="max-w-full truncate text-caption font-semibold leading-tight">
-							{t(item.shortLabelKey ?? item.labelKey)}
+							{t(mobileNavLabelKey(item))}
 						</span>
 					</a>
 				</li>

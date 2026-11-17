@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { generateBranding, checksumOf } from './lib/branding.ts';
+import { isRetainedHashedAsset } from './lib/asset-retention.ts';
 
 const GENERATED_TEXT_EXTENSIONS = new Set([
 	'.html',
@@ -84,9 +85,12 @@ generatedStatic.add('static/generated-assets.json');
 for (const file of await listFiles(path.join(root, 'static'))) {
 	const relative = `static/${file}`;
 	if (!GENERATED_TEXT_EXTENSIONS.has(path.extname(file))) continue;
-	if (!generatedStatic.has(relative)) {
-		failures.push(`hand-maintained static text asset: ${relative}`);
-	}
+	if (generatedStatic.has(relative)) continue;
+	// Un actif daté remplacé reste servi pendant la fenêtre de cache. Son nom
+	// porte le préfixe de son propre contenu, donc il reste vérifié.
+	const contents = await readFile(path.join(root, 'static', file));
+	if (isRetainedHashedAsset(relative, checksumOf(contents))) continue;
+	failures.push(`hand-maintained static text asset: ${relative}`);
 }
 
 if (failures.length > 0) {

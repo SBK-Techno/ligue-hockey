@@ -51,6 +51,7 @@ export const SURFACES = [
     key: 'chat',
     href: '/discussion',
     labelKey: 'nav.chat',
+    shortLabelKey: 'nav.chatShort',
     icon: 'chat',
     capabilities: ['member'],
     placement: 'primary',

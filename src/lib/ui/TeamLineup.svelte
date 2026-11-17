@@ -4,6 +4,7 @@
 	import type { GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 
 	let {
 		slots,
@@ -68,9 +69,11 @@
 											}}
 											size={24}
 										/>
-										<span class="min-w-0 truncate text-body {isMe ? 'font-semibold' : ''}">
-											{slot.player.fullName}
-										</span>
+										<PlayerName
+											playerId={slot.player.playerId}
+											name={slot.player.fullName}
+											class="min-w-0 truncate text-body {isMe ? 'font-semibold' : ''}"
+										/>
 									</span>
 									{#if isMe}
 										<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>

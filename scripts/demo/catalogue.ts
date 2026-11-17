@@ -4,7 +4,34 @@
  * Les noms, les adresses et les messages sont fictifs.
  */
 
-import type { DemoChatLine, DemoLocation, DemoPlayer, DemoPoll, DemoRules } from './types.ts';
+import type {
+	DemoChatLine,
+	DemoLocation,
+	DemoPlayer,
+	DemoPoll,
+	DemoRules,
+	DemoScore
+} from './types.ts';
+
+/**
+ * Le résultat de chaque match joué, dans l'ordre chronologique. Le générateur
+ * de démonstration en tire les buts et les aides; aucun score n'est inventé
+ * par le script.
+ */
+export const SCORES: DemoScore[] = [
+	{ white: 4, black: 2 },
+	{ white: 1, black: 3 },
+	{ white: 5, black: 5 },
+	{ white: 2, black: 1 },
+	{ white: 3, black: 4 },
+	{ white: 6, black: 3 },
+	{ white: 2, black: 2 },
+	{ white: 4, black: 5 },
+	{ white: 3, black: 1 },
+	{ white: 5, black: 4 },
+	{ white: 1, black: 2 },
+	{ white: 4, black: 3 }
+];
 
 export const PLAYERS: DemoPlayer[] = [
 	{ firstName: 'Vincent', lastName: 'Ouellet', position: 'goalie', age: 35, jersey: 31, substitute: false, login: true },

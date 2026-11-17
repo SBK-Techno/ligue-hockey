@@ -7,7 +7,5 @@ export const ACCOUNT_LIMITS = {
 
 export const AUTH_POLICY = {
 	sessionRefreshHours: 24,
-	rateLimitWindowSeconds: 10,
-	rateLimitMax: 100,
 	passwordWindowSeconds: 3600
 } as const;

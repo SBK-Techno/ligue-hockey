@@ -69,8 +69,8 @@
 />
 
 <div class="page-stack">
-	<div class="flex flex-wrap items-center justify-between gap-2">
-		<p class="text-meta text-muted">
+	<div class="flex min-w-0 flex-wrap items-center justify-between gap-2">
+		<p class="min-w-0 text-meta text-muted">
 			{formatCount(
 				assessment.ratedPlayers,
 				'rating.ratedPlayers.one',
@@ -78,7 +78,7 @@
 				{ total: assessment.totalPlayers }
 			)}
 		</p>
-		<p class="text-meta text-muted">{t('rating.gameHelp')}</p>
+		<p class="min-w-0 text-meta text-muted">{t('rating.gameHelp')}</p>
 	</div>
 
 	<FormFeedback {form} />

@@ -1,6 +1,11 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fr } from '../config/i18n/fr.ts';
+import {
+	QUERY_BOUNDARY_ALLOWANCES,
+	queryBoundaryFindings,
+	routeBoundaryFindings
+} from './lib/architecture.ts';
 import { checkCiContract } from './lib/ci-contract.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -126,6 +131,15 @@ for (const file of sourceFiles) {
 			[],
 			'Return actionError(cause) so SvelteKit receives the failure.'
 		);
+		// Le seau de membre appartient au hook : une route qui le réserve
+		// elle-même compte deux fois la même requête.
+		check(
+			file,
+			'no-route-member-throttle',
+			/\bthrottleMemberAction\b/,
+			[],
+			'Member throttling belongs to hooks.server.ts; a route must not reserve a second bucket.'
+		);
 	}
 
 	if (file.startsWith(join(ROOT, 'src/lib/domain/'))) {
@@ -138,6 +152,31 @@ for (const file of sourceFiles) {
 		);
 	}
 }
+
+findings.push(
+	...queryBoundaryFindings(
+		sourceFiles
+			.filter(
+				(file) =>
+					file.startsWith(join(ROOT, 'src/lib/domain/')) ||
+					file.startsWith(join(ROOT, 'src/lib/server/'))
+			)
+			.map((file) => ({
+				path: relative(ROOT, file).split('\\').join('/'),
+				content: readFileSync(file, 'utf8')
+			})),
+		QUERY_BOUNDARY_ALLOWANCES
+	)
+);
+
+findings.push(
+	...routeBoundaryFindings(
+		sourceFiles.map((file) => ({
+			path: relative(ROOT, file).split('\\').join('/'),
+			content: readFileSync(file, 'utf8')
+		}))
+	)
+);
 
 const scriptFiles = walk(join(ROOT, 'scripts'));
 

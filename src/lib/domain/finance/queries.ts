@@ -1,5 +1,5 @@
 import { asc, eq } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { paymentPlans, payments, type PaymentPlanRow, type PaymentRow } from './schema.ts';
 
 export function findPlan(playerId: string): PaymentPlanRow | undefined {
@@ -14,8 +14,11 @@ export function listPlans(): PaymentPlanRow[] {
 	return db.select().from(paymentPlans).all();
 }
 
-export function upsertPlan(row: typeof paymentPlans.$inferInsert): void {
-	db.insert(paymentPlans)
+export function upsertPlan(
+	row: typeof paymentPlans.$inferInsert,
+	executor: DbExecutor = db
+): void {
+	executor.insert(paymentPlans)
 		.values(row)
 		.onConflictDoUpdate({
 			target: paymentPlans.playerId,
@@ -48,10 +51,13 @@ export function findPayment(id: string): PaymentRow | undefined {
 	return db.select().from(payments).where(eq(payments.id, id)).get();
 }
 
-export function insertPayment(row: typeof payments.$inferInsert): void {
-	db.insert(payments).values(row).run();
+export function insertPayment(
+	row: typeof payments.$inferInsert,
+	executor: DbExecutor = db
+): void {
+	executor.insert(payments).values(row).run();
 }
 
-export function deletePayment(id: string): void {
-	db.delete(payments).where(eq(payments.id, id)).run();
+export function deletePayment(id: string, executor: DbExecutor = db): void {
+	executor.delete(payments).where(eq(payments.id, id)).run();
 }

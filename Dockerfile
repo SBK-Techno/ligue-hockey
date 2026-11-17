@@ -45,6 +45,8 @@ COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts/backup.mjs ./scripts/backup.mjs
+COPY --from=build /app/scripts/lib/static-cache.js ./scripts/lib/static-cache.js
+COPY --from=build /app/serve.js ./serve.js
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY package.json ./
 
@@ -59,4 +61,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["node", "build"]
+CMD ["node", "serve.js"]

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { AvailabilityView } from '#lib/domain/availability/service.ts';
 	import { formatCount, t } from '#lib/shared/i18n/index.ts';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 	import StatStrip from '#lib/ui/StatStrip.svelte';
 
 	let { availability, viewerId }: { availability: AvailabilityView; viewerId: string } = $props();
@@ -24,7 +25,7 @@
 	cells={[
 		{ value: availability.present, label: t('home.present') },
 		{ value: availability.absent, label: t('home.absent') },
-		{ value: availability.unknown, label: t('availability.unknown') }
+		{ value: availability.unknown, label: t('availability.noAnswer') }
 	]}
 />
 
@@ -33,18 +34,22 @@
 		{#each absent as row (row.playerId)}
 			<li class="flex min-h-11 items-center gap-2 px-1 py-1.5">
 				<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ink"></span>
-				<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
-					{row.fullName}
-				</span>
+				<PlayerName
+					playerId={row.playerId}
+					name={row.fullName}
+					class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}"
+				/>
 				<span class="stamp shrink-0 border-line text-muted">{t('availability.absent')}</span>
 			</li>
 		{/each}
 		{#each pending as row (row.playerId)}
 			<li class="flex min-h-11 items-center gap-2 px-1 py-1.5 text-muted">
 				<span aria-hidden="true" class="h-2 w-2 shrink-0 border border-line-strong"></span>
-				<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold text-ink' : ''}">
-					{row.fullName}
-				</span>
+				<PlayerName
+					playerId={row.playerId}
+					name={row.fullName}
+					class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold text-ink' : ''}"
+				/>
 				<span class="stamp shrink-0 border-line text-muted">{t('availability.noAnswer')}</span>
 			</li>
 		{/each}
@@ -70,9 +75,11 @@
 			{#each present as row (row.playerId)}
 				<li class="flex min-h-9 items-center gap-2 border-b border-line py-1">
 					<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ice"></span>
-					<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
-						{row.fullName}
-					</span>
+					<PlayerName
+						playerId={row.playerId}
+						name={row.fullName}
+						class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}"
+					/>
 					{#if row.playerId === viewerId}
 						<span class="stamp shrink-0 border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>
 					{/if}

@@ -19,11 +19,26 @@ export type AvatarStyle =
 
 export type AvatarFacialHair = 'none' | 'stubble' | 'moustache' | 'beard';
 export type AvatarMouth = 'smile' | 'flat' | 'grin';
-export type AvatarSkin = 1 | 2 | 3 | 4 | 5 | 6;
-export type AvatarHair = 1 | 2 | 3 | 4 | 5 | 6;
-export type AvatarBackground = 1 | 2 | 3 | 4 | 5 | 6;
 
-type AvatarVariantShape = {
+/**
+ * Les nuances valides sont aussi la liste des jetons de `tokens.css`. Une
+ * teinte ajoutée ici doit exister comme jeton; le test de catalogue le refuse
+ * sinon.
+ */
+export const AVATAR_SKIN_TONES = [1, 2, 3, 4, 5, 6] as const;
+export const AVATAR_HAIR_SHADES = [1, 2, 3, 4, 5, 6] as const;
+export const AVATAR_BACKGROUND_SHADES = [1, 2, 3, 4, 5, 6] as const;
+
+export type AvatarSkin = (typeof AVATAR_SKIN_TONES)[number];
+export type AvatarHair = (typeof AVATAR_HAIR_SHADES)[number];
+export type AvatarBackground = (typeof AVATAR_BACKGROUND_SHADES)[number];
+
+/**
+ * The drawing contract shared by every identity family. The base league
+ * avatars and the tribute legends both satisfy it, so the renderer has one
+ * input shape and no knowledge of where an identity comes from.
+ */
+export type AvatarArt = {
   id: string;
   color: number;
   skin: AvatarSkin;
@@ -64,19 +79,11 @@ export const AVATARS = [
   { id: 'casque-ardent', color: 26, skin: 1, hair: 3, bg: 4, style: 'helmet', facial: 'none', glasses: true, mouth: 'flat' },
   { id: 'masque-final', color: 27, skin: 6, hair: 3, bg: 5, style: 'mask', facial: 'none', glasses: false, mouth: 'grin' },
   { id: 'chignon-de-nuit', color: 28, skin: 4, hair: 6, bg: 2, style: 'bun', facial: 'none', glasses: false, mouth: 'smile' }
-] as const satisfies readonly AvatarVariantShape[];
+] as const satisfies readonly AvatarArt[];
 
 export type AvatarVariant = (typeof AVATARS)[number];
 export type AvatarId = AvatarVariant['id'];
 
 export const AVATAR_IDS = AVATARS.map((avatar) => avatar.id) as [AvatarId, ...AvatarId[]];
 
-export const avatarById = Object.fromEntries(
-  AVATARS.map((avatar) => [avatar.id, avatar])
-) as Readonly<Record<AvatarId, AvatarVariant>>;
-
 export const DEFAULT_AVATAR_ID: AvatarId = AVATARS[0].id;
-
-export function isAvatarId(value: string | null | undefined): value is AvatarId {
-  return typeof value === 'string' && Object.hasOwn(avatarById, value);
-}

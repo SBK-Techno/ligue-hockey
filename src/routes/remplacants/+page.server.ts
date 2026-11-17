@@ -4,8 +4,7 @@ import { POSITION_KEYS } from '#config/positions.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import {
 	adminUpdatePlayer,
-	invitePlayer,
-	isSubstitutePlayer
+	invitePlayer
 } from '#lib/domain/players/service.ts';
 import { invitePlayerSchema, playerIdInputSchema } from '#lib/domain/players/validators.ts';
 import {
@@ -37,8 +36,9 @@ const requestSchema = z.object({
 	position: z.enum(POSITION_KEYS)
 });
 
-export const load: ServerLoad = ({ locals }) => {
+export const load: ServerLoad = async ({ locals, parent }) => {
 	const actor = locals.actor;
+	const { isSubstitute } = await parent();
 	if (actor.kind !== 'user') {
 		return {
 			requests: [],
@@ -57,7 +57,7 @@ export const load: ServerLoad = ({ locals }) => {
 		pool: listSubstitutePool(actor),
 		positions: getMySubProfile(actor).positions,
 		games: canManageRequests ? listRequestableGames(actor) : [],
-		isSubstitute: isSubstitutePlayer(actor),
+		isSubstitute,
 		canManageRequests,
 		canManagePool: can(actor, 'managePlayers'),
 		canManageGames: can(actor, 'manageGames')

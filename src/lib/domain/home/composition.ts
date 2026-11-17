@@ -225,7 +225,9 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 		if (actions.length > 0) add('actions', 12);
 
 		if (teamPanel) {
-			add('team', 5);
+			// Sans match suivant à côté, l'équipe occupe la ligne : une
+			// demi-largeur seule laisserait cinq colonnes vides.
+			add('team', upcomingPanel ? 5 : 12);
 			if (upcomingPanel) add('upcoming', 7);
 		} else if (upcomingPanel) {
 			add('upcoming', 12);
@@ -251,19 +253,17 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 	if (mode === 'lineup') {
 		if (teamPanel) add('team', 5);
 		if (actions.length > 0) add('actions', teamPanel ? 7 : 12);
-		if (agendaPanel) add('agenda', 7);
+		// L'agenda partage sa ligne avec les présences; sans présences, il
+		// prend la ligne complète plutôt que de laisser une moitié vide.
+		if (agendaPanel) add('agenda', attendancePanel ? 7 : 12);
 
-		if (attendancePanel && pollPanel) {
-			add('attendance', 5);
-			add('poll', 7);
-		} else if (attendancePanel) {
-			add('attendance', actions.length > 0 ? 5 : 12);
-		} else if (pollPanel) {
-			add('poll', 12);
-		}
+		if (attendancePanel) add('attendance', actions.length > 0 ? 5 : 12);
+		// Le sondage suit toujours une ligne déjà pleine (équipe + agenda +
+		// présences), donc il occupe la ligne entière.
+		if (pollPanel) add('poll', 12);
 	} else {
 		if (actions.length > 0) add('actions', 12);
-		if (agendaPanel) add('agenda', 7);
+		if (agendaPanel) add('agenda', attendancePanel ? 7 : 12);
 		if (attendancePanel) add('attendance', 5);
 
 		if (pollPanel && substitutesPanel) {

@@ -20,10 +20,35 @@ export const branding = {
     "muted": "#5e6a6a",
     "brand": "#b4432f"
   },
-  "socialImage": "/social/apercu.jpg",
-  "authImage": "/auth/dressing-room-0397f5db9c38.webp",
+  "socialImage": "/social/apercu-9166f43c7711.jpg",
+  "auth": {
+    "src": "/auth/dressing-room-1200-3012b5b41fdc.webp",
+    "srcset": "/auth/dressing-room-640-ef36f1188f7d.webp 640w, /auth/dressing-room-960-430e80cf4704.webp 960w, /auth/dressing-room-1200-3012b5b41fdc.webp 1200w",
+    "width": 1200,
+    "height": 800
+  },
+  "identitySprite": "/identities/identities-edd83902f68c.svg",
   "manifestPath": "/manifest.webmanifest",
   "offlinePath": "/offline.html",
+  "publicPaths": [
+    "/manifest.webmanifest",
+    "/offline.html",
+    "/robots.txt",
+    "/service-worker.js",
+    "/generated-assets.json",
+    "/social/apercu-9166f43c7711.jpg",
+    "/auth/dressing-room-640-ef36f1188f7d.webp",
+    "/auth/dressing-room-960-430e80cf4704.webp",
+    "/auth/dressing-room-1200-3012b5b41fdc.webp",
+    "/identities/identities-edd83902f68c.svg",
+    "/icons/favicon-32.4c6787c2333a.png",
+    "/icons/apple-touch-180.aff87536bf7c.png",
+    "/icons/icon-192-192.073945cb4e02.png",
+    "/icons/icon-512-512.904ac52376ea.png",
+    "/icons/maskable-512-512.5c023d038900.png",
+    "/textures/paper-fc4ef8d7aad2.webp",
+    "/textures/ice-e5f5845016e5.webp"
+  ],
   "cachePrefix": "lhdm",
   "icons": {
     "favicon": "/icons/favicon-32.4c6787c2333a.png",
@@ -33,8 +58,8 @@ export const branding = {
     "maskable": "/icons/maskable-512-512.5c023d038900.png"
   },
   "textures": {
-    "paper": "/textures/paper-b0f353d27755.webp",
-    "ice": "/textures/ice-91bfe133b755.webp"
+    "paper": "/textures/paper-fc4ef8d7aad2.webp",
+    "ice": "/textures/ice-e5f5845016e5.webp"
   }
 } as const;
 

@@ -1,5 +1,7 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
+import { mapUrlFor } from '#config/maps.ts';
+import { teamDefinition } from '#config/teams.ts';
 import { branding } from '#lib/generated/branding.ts';
 import {
 	availabilityForGame,
@@ -9,9 +11,7 @@ import {
 import { can } from '#lib/domain/auth/policy.ts';
 import {
 	castPollVote,
-	listChat,
-	type ChatMessageView,
-	type ChatPollView
+	listChatSummary
 } from '#lib/domain/chat/service.ts';
 import { voteInputSchema } from '#lib/domain/chat/validators.ts';
 import { getMyBalance } from '#lib/domain/finance/service.ts';
@@ -47,12 +47,6 @@ const availabilitySchema = z.object({
 	status: z.enum(['present', 'absent'])
 });
 
-type OpenPollView = {
-	messageId: string;
-	poll: ChatPollView;
-	unvoted: boolean;
-};
-
 type ManagerSummary = {
 	openSlots: number;
 	present: number;
@@ -60,21 +54,6 @@ type ManagerSummary = {
 	unknown: number;
 	generated: boolean;
 };
-
-function openPollIn(messages: readonly ChatMessageView[]): OpenPollView | null {
-	let fallback: OpenPollView | null = null;
-	for (const message of messages) {
-		if (!message.poll || message.poll.closed) continue;
-		const view = {
-			messageId: message.id,
-			poll: message.poll,
-			unvoted: message.poll.options.every((option) => !option.myVote)
-		};
-		if (view.unvoted) return view;
-		fallback ??= view;
-	}
-	return fallback;
-}
 
 function ownRequestIn(
 	requests: readonly SubRequestWithGame[],
@@ -101,6 +80,8 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 			game: null,
 			agenda: { upcoming: [], past: [] },
 			nextGames: [],
+			gameMapUrl: null,
+			ownTeamLabel: null,
 			availability: null,
 			balance: null,
 			ownSlot: null,
@@ -149,6 +130,10 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 		hasPlayerProfile && game
 			? (game.generation?.bench.find((entry) => entry.playerId === actor.userId) ?? null)
 			: null;
+	// Le héros ne connaît ni la table des matières ni celle des équipes : les
+	// libellés sont résolus une fois, côté serveur, avec les autres surfaces.
+	const gameMapUrl = game ? mapUrlFor(game.locationAddress, game.locationMapUrl) : null;
+	const ownTeamLabel = ownSlot ? t(teamDefinition(ownSlot.team).labelKey) : null;
 
 	const myRequests = hasPlayerProfile
 		? listMyRequests(actor, schedule).filter(
@@ -177,9 +162,10 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 				)
 			: [];
 
-	const chat = hasPlayerProfile ? listChat(actor) : [];
-	const openPoll = openPollIn(chat);
-	const latestMessage = chat.find((message) => !message.deleted) ?? null;
+	const chat = hasPlayerProfile
+		? listChatSummary(actor)
+		: { openPoll: null, latestMessage: null };
+	const { openPoll, latestMessage } = chat;
 
 	const evaluations =
 		canEditRatings && hasPlayerProfile ? playedGamesForAssessment(actor) : [];
@@ -191,14 +177,15 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 	// L'agenda de saison : les matchs qui suivent la tête, puis les derniers
 	// résultats. Le match de la tête n'est jamais répété dans la liste.
 	const agendaUpcoming = upcoming.filter((entry) => entry.id !== game?.id).slice(0, 4);
-	const agendaPast = past.slice(-3).reverse();
+	const agendaPast = past.slice(0, 3);
 	const agendaIds = [...agendaUpcoming, ...agendaPast].map((entry) => entry.id);
 	const myAvailability = hasPlayerProfile
 		? myAvailabilityByGame(actor, agendaIds)
 		: new Map();
-	const pastScores = hasPlayerProfile
-		? listGameScores(actor, agendaPast.map((entry) => entry.id))
-		: new Map();
+	// Le score est un fait public du match : même un compte sans fiche joueur
+	// (administration, responsable) le voit. Seule la réponse personnelle
+	// dépend de la fiche.
+	const pastScores = listGameScores(actor, agendaPast.map((entry) => entry.id));
 	const agenda = {
 		upcoming: agendaUpcoming.map((entry) => ({
 			...entry,
@@ -257,6 +244,8 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 		game,
 		agenda,
 		nextGames,
+		gameMapUrl,
+		ownTeamLabel,
 		availability,
 		balance,
 		ownSlot,

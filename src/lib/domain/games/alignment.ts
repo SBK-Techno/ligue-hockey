@@ -1,11 +1,11 @@
 import type { Position } from '#config/positions.ts';
 import { gameWarningsInOrder, type GameWarning } from '#config/game-warnings.ts';
+import { candidateKey, slotKey } from '#config/slot.ts';
 import { TEAMS, type Team } from '#config/teams.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
 import { playerCandidatesByIds } from '#lib/domain/players/candidates.ts';
-import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
 import { overallsForPlayers } from '#lib/domain/ratings/overall.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
@@ -20,6 +20,7 @@ import {
 } from '#lib/domain/teams/balance.ts';
 import type { GeneratorPlayer, GeneratorViolation } from '#lib/domain/teams/generator.ts';
 import type { BenchPlayer } from './selection.ts';
+import { ratingsRemovedAudit } from './audit.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { findGame, listSlotAssignments, saveAssignments, type SlotAssignment } from './queries.ts';
@@ -127,7 +128,9 @@ function intelligenceFrom(pool: LineupPool): LineupIntelligence {
 	});
 
 	return {
-		complete: view.complete,
+		// Un alignement n'est complet que si chaque place du modèle est remplie;
+		// une équipe vide ou une place ouverte garde l'état incomplet.
+		complete: pool.openSlots.length === 0,
 		openSlots: pool.openSlots.length,
 		placed: pool.placed.length,
 		skillDiff: view.skillDiff,
@@ -196,27 +199,46 @@ function placementsOf(assignments: readonly SlotAssignment[]): Placement[] {
 	}));
 }
 
-function candidateKey(assignments: readonly SlotAssignment[]): string {
-	return [...assignments]
-		.sort(
-			(a, b) =>
-				a.team.localeCompare(b.team) ||
-				a.position.localeCompare(b.position) ||
-				a.slotIndex - b.slotIndex
-		)
-		.map(
-			(assignment) =>
-				`${assignment.team}:${assignment.position}:${assignment.slotIndex}:${assignment.playerId}`
-		)
-		.join('|');
-}
-
-function slotKey(slot: {
+export type KnownSlot = {
 	team: Team;
 	position: Position;
 	slotIndex: number;
-}): string {
-	return `${slot.team}:${slot.position}:${slot.slotIndex}`;
+};
+
+export type AssignmentToValidate = KnownSlot & { playerId: string | null };
+
+/**
+ * La seule validation d'un alignement, pour l'enregistrement manuel comme
+ * pour les gestes internes : place inconnue, place écrite deux fois, joueur
+ * deux fois. Les deux chemins refusent donc avec les mêmes codes; `names`
+ * alimente le message de doublon.
+ */
+export function validateAssignments(
+	knownSlots: readonly KnownSlot[],
+	assignments: readonly AssignmentToValidate[],
+	names: ReadonlyMap<string, string>
+): Set<string> {
+	const known = new Set(knownSlots.map((slot) => slotKey(slot)));
+	const written = new Set<string>();
+	const players = new Set<string>();
+
+	for (const assignment of assignments) {
+		const key = slotKey(assignment);
+		if (!known.has(key) || written.has(key)) {
+			throw new AppError('VALIDATION', { key: 'games.lineupSlotUnknown' });
+		}
+		written.add(key);
+		if (assignment.playerId === null) continue;
+		if (players.has(assignment.playerId)) {
+			throw new AppError('VALIDATION', {
+				key: 'games.lineupPlayerDuplicate',
+				params: { name: names.get(assignment.playerId) ?? assignment.playerId }
+			});
+		}
+		players.add(assignment.playerId);
+	}
+
+	return written;
 }
 
 function validatedOpenSlots(
@@ -224,31 +246,13 @@ function validatedOpenSlots(
 	assignments: readonly SlotAssignment[]
 ): number {
 	const slots = listSlotAssignments(gameId);
-	const known = new Set(
-		slots.map((slot) =>
-			slotKey({ team: slot.team, position: slot.position, slotIndex: slot.slotIndex })
+	const names = new Map(
+		playerCandidatesByIds(assignments.map((assignment) => assignment.playerId)).map(
+			(player) => [player.userId, player.fullName]
 		)
 	);
-	const written = new Set<string>();
-	const players = new Set<string>();
-
-	for (const assignment of assignments) {
-		const key = slotKey(assignment);
-		if (!known.has(key) || written.has(key)) {
-			throw new AppError('INTERNAL', {
-				message: `Invalid alignment slot: ${key}`
-			});
-		}
-		if (players.has(assignment.playerId)) {
-			throw new AppError('INTERNAL', {
-				message: `Duplicate player in alignment: ${assignment.playerId}`
-			});
-		}
-		written.add(key);
-		players.add(assignment.playerId);
-	}
-
-	return known.size - written.size;
+	const written = validateAssignments(slots, assignments, names);
+	return slots.length - written.size;
 }
 
 function limitExceeded(view: BalanceView, settings: SettingsValues): boolean {
@@ -349,11 +353,6 @@ function saveAlignment(
 	metadata: Record<string, unknown>
 ): void {
 	const openSlots = validatedOpenSlots(gameId, assignments);
-	const ids = assignments.map((assignment) => assignment.playerId);
-	const dressed = new Set(ids);
-	const removedRatedPlayerIds = listGameRatingPlayerIds(gameId).filter(
-		(playerId) => !dressed.has(playerId)
-	);
 	const built = buildGenerationSnapshot({ assignments, bench, openSlots });
 
 	saveAssignments(
@@ -366,24 +365,15 @@ function saveAlignment(
 			// Un échange ou un comblement est un geste de gestion : il fige
 			// l'alignement contre le recalcul automatique.
 			manualAt: built.generatedAt,
-			removedRatedPlayerIds,
+			ratingsAudit: (playerIds) =>
+				ratingsRemovedAudit(actor, gameId, playerIds),
 			audits: [
 				auditEntry(actor, {
 					action,
 					entityType: 'game',
 					entityId: gameId,
 					metadata
-				}),
-				...(removedRatedPlayerIds.length > 0
-					? [
-							auditEntry(actor, {
-								action: 'ratings.game_removed',
-								entityType: 'game',
-								entityId: gameId,
-								metadata: { playerIds: removedRatedPlayerIds }
-							})
-						]
-					: [])
+				})
 			]
 		}
 	);

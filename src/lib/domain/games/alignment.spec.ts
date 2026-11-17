@@ -52,24 +52,26 @@ const { saveGameAssessment } = await import('#lib/domain/ratings/service.ts');
 const { findGame } = await import('./queries.ts');
 const { getGame, regenerateAsAdmin } = await import('./service.ts');
 const { markAvailability } = await import('#lib/domain/availability/service.ts');
-const { applyBestSwap, fillOpenSlots, lineupIntelligence } = await import('./alignment.ts');
+const { applyBestSwap, fillOpenSlots, lineupIntelligence, validateAssignments } = await import(
+	'./alignment.ts'
+);
 
 const admin: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'admin'
 };
 
 const manager: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'manager'
 };
 
 const playerActor: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'member',
 	name: 'Member',
 	role: 'player'
@@ -356,7 +358,7 @@ describe('presence recalibration', () => {
 		expect(before.slots.some((slot) => slot.player?.playerId === 'a')).toBe(true);
 		expect(before.slots.filter((slot) => slot.player !== null)).toHaveLength(4);
 
-		const actorA: Actor = { kind: 'user', userId: 'a', name: 'a', role: 'player' };
+		const actorA: Actor = { kind: 'user', active: true, userId: 'a', name: 'a', role: 'player' };
 		const result = markAvailability(actorA, gameId, 'absent');
 
 		expect(result.regenerated).toBe(true);
@@ -583,6 +585,18 @@ describe('lineup intelligence states', () => {
 	});
 });
 
+describe('état de publication de l’alignement', () => {
+	it('ne dit jamais complet un alignement généré sans joueur', () => {
+		const gameId = addGame();
+		const game = getGame(manager, gameId);
+
+		expect(game.generated).toBe(true);
+		expect(game.openSlots).toBeGreaterThan(0);
+		expect(game.lineupComplete).toBe(false);
+		expect(lineupIntelligence(manager, game).complete).toBe(false);
+	});
+});
+
 describe('applyBestSwap through the service', () => {
 	it('never introduces a strict violation while repairing a preference', () => {
 		for (const [id, overall] of [
@@ -685,5 +699,70 @@ describe('lineup rating purge', () => {
 		expect(kept).toHaveLength(4);
 		expect(kept.every((row) => row.value === 5)).toBe(true);
 		expect(gameRatingRows(gameId, 'c').every((row) => row.value === 2)).toBe(true);
+	});
+});
+
+describe('validation partagée des alignements', () => {
+	const known = [
+		{ team: 'white' as const, position: 'forward' as const, slotIndex: 0 },
+		{ team: 'white' as const, position: 'forward' as const, slotIndex: 1 }
+	];
+	const names = new Map([['a', 'Alice'], ['b', 'Bob']]);
+
+	it('refuse une place inconnue et une place écrite deux fois', () => {
+		expect(
+			captureError(() =>
+				validateAssignments(
+					known,
+					[{ team: 'white', position: 'forward', slotIndex: 2, playerId: 'a' }],
+					names
+				)
+			)
+		).toMatchObject({ code: 'VALIDATION', key: 'games.lineupSlotUnknown' });
+
+		expect(
+			captureError(() =>
+				validateAssignments(
+					known,
+					[
+						{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
+						{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'b' }
+					],
+					names
+				)
+			)
+		).toMatchObject({ code: 'VALIDATION', key: 'games.lineupSlotUnknown' });
+	});
+
+	it('refuse un joueur deux fois avec son nom, comme le chemin manuel', () => {
+		expect(
+			captureError(() =>
+				validateAssignments(
+					known,
+					[
+						{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
+						{ team: 'white', position: 'forward', slotIndex: 1, playerId: 'a' }
+					],
+					names
+				)
+			)
+		).toMatchObject({
+			code: 'VALIDATION',
+			key: 'games.lineupPlayerDuplicate',
+			params: { name: 'Alice' }
+		});
+	});
+
+	it('retourne les places écrites quand tout est valide', () => {
+		expect(
+			validateAssignments(
+				known,
+				[
+					{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
+					{ team: 'white', position: 'forward', slotIndex: 1, playerId: 'b' }
+				],
+				names
+			)
+		).toEqual(new Set(['white:forward:0', 'white:forward:1']));
 	});
 });

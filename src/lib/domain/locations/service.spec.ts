@@ -50,7 +50,7 @@ const {
 } = await import('./service.ts');
 
 const actor: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'admin'
@@ -183,7 +183,8 @@ describe('game location assignment', () => {
 			gameDate: game.gameDate,
 			startTime: game.startTime,
 			locationId: second.id,
-			notes: null
+			notes: null,
+			expectedUpdatedAt: getGame(actor, game.id).updatedAt
 		});
 
 		expect(updated).toMatchObject({
@@ -208,7 +209,8 @@ describe('game location assignment', () => {
 			gameDate: game.gameDate,
 			startTime: '10:30',
 			locationId: location.id,
-			notes: 'Apporter les chandails'
+			notes: 'Apporter les chandails',
+			expectedUpdatedAt: getGame(actor, game.id).updatedAt
 		});
 
 		expect(updated).toMatchObject({

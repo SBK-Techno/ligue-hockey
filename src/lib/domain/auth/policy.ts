@@ -1,5 +1,5 @@
 import type { Capability } from '#config/capabilities.ts';
-import { roleCapabilities, roleHasCapability } from '#config/roles.ts';
+import { ADMIN_ROLE, roleCapabilities, roleHasCapability } from '#config/roles.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import type { Actor, UserActor } from './types.ts';
 
@@ -9,12 +9,23 @@ import type { Actor, UserActor } from './types.ts';
  */
 export type Permission = Capability;
 
+/**
+ * La seule porte de l'activité : un acteur inactif n'est jamais un
+ * utilisateur, même forgé avec un rôle. Toutes les questions de capacité
+ * passent par ici, y compris l'accès à son propre profil ou à son solde.
+ */
+function activeUser(actor: Actor): UserActor | null {
+  return actor.kind === 'user' && actor.active ? actor : null;
+}
+
 export function capabilitiesOf(actor: Actor): readonly Capability[] {
-  return actor.kind === 'user' ? roleCapabilities(actor.role) : [];
+  const user = activeUser(actor);
+  return user ? roleCapabilities(user.role) : [];
 }
 
 export function can(actor: Actor, permission: Permission): boolean {
-  return actor.kind === 'user' && roleHasCapability(actor.role, permission);
+  const user = activeUser(actor);
+  return user !== null && roleHasCapability(user.role, permission);
 }
 
 export function canAny(actor: Actor, permissions: readonly Permission[]): boolean {
@@ -22,18 +33,42 @@ export function canAny(actor: Actor, permissions: readonly Permission[]): boolea
 }
 
 export function canViewBalance(actor: Actor, playerId: string): boolean {
-  if (actor.kind !== 'user') return false;
-  return can(actor, 'viewAllBalances') || actor.userId === playerId;
+  const user = activeUser(actor);
+  return user !== null && (can(user, 'viewAllBalances') || user.userId === playerId);
 }
 
 export function canEditProfile(actor: Actor, playerId: string): boolean {
-  if (actor.kind !== 'user') return false;
-  return can(actor, 'managePlayers') || actor.userId === playerId;
+  const user = activeUser(actor);
+  return user !== null && (can(user, 'managePlayers') || user.userId === playerId);
+}
+
+export type PlayerDeletionVerdict = 'allowed' | 'self' | 'admin' | 'forbidden';
+
+/**
+ * La seule règle de suppression d'un joueur. La page et le service lisent ce
+ * verdict; ni l'un ni l'autre ne compare un rôle.
+ */
+export function playerDeletion(
+  actor: Actor,
+  target: { userId: string; role: string | null }
+): PlayerDeletionVerdict {
+  const user = activeUser(actor);
+  if (!user || !roleHasCapability(user.role, 'deletePlayer')) return 'forbidden';
+  if (user.userId === target.userId) return 'self';
+  if (target.role === ADMIN_ROLE) return 'admin';
+  return 'allowed';
+}
+
+export function canDeletePlayer(
+  actor: Actor,
+  target: { userId: string; role: string | null }
+): boolean {
+  return playerDeletion(actor, target) === 'allowed';
 }
 
 export function canCreatePoll(actor: Actor, allowPlayerPolls: boolean): boolean {
-  if (actor.kind !== 'user') return false;
-  return can(actor, 'moderateChat') || allowPlayerPolls;
+  const user = activeUser(actor);
+  return user !== null && (can(user, 'moderateChat') || allowPlayerPolls);
 }
 
 export function canManageGame(actor: Actor): boolean {
@@ -45,10 +80,11 @@ export function canModerateChat(actor: Actor): boolean {
 }
 
 export function requireUser(actor: Actor): UserActor {
-  if (actor.kind !== 'user') {
+  const user = activeUser(actor);
+  if (!user) {
     throw new AppError('UNAUTHORIZED');
   }
-  return actor;
+  return user;
 }
 
 export function requirePermission(actor: Actor, permission: Permission): UserActor {

@@ -2,9 +2,15 @@ import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { actorFromUser } from '#lib/domain/auth/types.ts';
+import { isAccountActive } from '#lib/domain/players/account-status.ts';
+import { actorContextRequired } from '#lib/server/actor-context.ts';
+import { apiError, memberThrottleResponse } from '#lib/server/action.ts';
+import { cacheControlFor } from '#lib/server/cache-policy.ts';
+import { compressResponse } from '#lib/server/compression.ts';
 import { auth } from '#lib/server/auth.ts';
+import { isMemberWrite, throttleMemberAction } from '#lib/server/security/member-action.ts';
 import { startup } from '#lib/server/startup.ts';
-import { isAppError } from '#lib/shared/errors.ts';
+import { AppError, isAppError } from '#lib/shared/errors.ts';
 import { errorStatus } from '#lib/server/error-status.ts';
 import { t, type I18nKey } from '#lib/shared/i18n/index.ts';
 import { newId } from '#lib/shared/ids/id.ts';
@@ -30,40 +36,95 @@ export const handle: Handle = async ({ event, resolve }) => {
 	await startup();
 
 	const startedAt = clock.nowMs();
-	const session = await auth.api.getSession({ headers: event.request.headers });
-	event.locals.actor = actorFromUser(session?.user);
+	// Assets never read the actor: skip both the session lookup and the player
+	// activity read so an immutable file costs no SQLite query.
+	const session = actorContextRequired(event.url.pathname)
+		? await auth.api.getSession({ headers: event.request.headers })
+		: null;
+	event.locals.actor = session?.user
+		? actorFromUser({
+				...session.user,
+				active: isAccountActive(session.user.id)
+			})
+		: actorFromUser(null);
 	event.locals.sessionId = session?.session?.id ?? null;
 
-	const response = await svelteKitHandler({
-		event,
-		resolve,
-		auth,
-		building
-	});
+	// Le plan HTTP de Better Auth n'est pas un second propriétaire des
+	// mutations : toute écriture brute est refusée avec l'enveloppe commune.
+	// Les lectures de réinitialisation restent disponibles, mais le plan
+	// d'administration HTTP est refusé en lecture comme en écriture : il
+	// exposerait un ancien administrateur dont la session n'a pas pu être
+	// révoquée. Les cas d'usage passent par `auth.api`, jamais par HTTP.
+	const authAdmin = event.url.pathname.startsWith('/api/auth/admin/');
+	const authMutation =
+		authAdmin ||
+		(event.request.method !== 'GET' &&
+			event.request.method !== 'HEAD' &&
+			event.url.pathname.startsWith('/api/auth/'));
+
+	let response: Response;
+	if (authMutation) {
+		response = apiError(new AppError('FORBIDDEN'));
+	} else {
+		try {
+			// Un seul limiteur pour tous les gestes de membre, réservé une fois
+			// par requête avant que la route puisse écrire. Un refus garde la
+			// forme attendue par le client : échec d'action pour un formulaire
+			// enrichi, page courte sans JavaScript, enveloppe JSON pour l'API.
+			let throttled: Response | null = null;
+			if (
+				event.locals.actor.kind === 'user' &&
+				isMemberWrite(event.request.method, event.url.pathname)
+			) {
+				try {
+					throttleMemberAction(event.locals.actor);
+				} catch (cause) {
+					if (!isAppError(cause)) throw cause;
+					throttled = memberThrottleResponse(cause, event.request);
+				}
+			}
+			response =
+				throttled ??
+				(await svelteKitHandler({
+					event,
+					resolve,
+					auth,
+					building
+				}));
+		} catch (cause) {
+			if (!isAppError(cause)) throw cause;
+			response = apiError(cause);
+		}
+	}
 
 	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
 		response.headers.set(name, value);
 	}
+	const cacheControl = cacheControlFor({
+		pathname: event.url.pathname,
+		hasSession: Boolean(session?.session),
+		declared: response.headers.get('cache-control'),
+		contentType: response.headers.get('content-type')
+	});
+	if (cacheControl) response.headers.set('Cache-Control', cacheControl);
 	if (
 		event.url.pathname === '/reinitialiser-mot-de-passe' ||
 		event.url.pathname.startsWith('/api/auth/reset-password/')
 	) {
 		response.headers.set('Referrer-Policy', 'no-referrer');
-		response.headers.set('Cache-Control', 'no-store');
 	}
-	if (session?.session) {
-		response.headers.set('Cache-Control', 'private, no-store');
-	}
+
+	const delivered = compressResponse(event.request, response);
 
 	logger.info('http.request', {
 		method: event.request.method,
 		path: event.url.pathname,
-		status: response.status,
+		status: delivered.status,
 		durationMs: clock.nowMs() - startedAt,
 		requestId: event.locals.requestId
 	});
 
-	return response;
+	return delivered;
 };
 
 export const handleError: HandleServerError = (input) => {

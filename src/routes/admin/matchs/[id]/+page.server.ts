@@ -2,7 +2,6 @@ import type { Actions, ServerLoad } from '@sveltejs/kit';
 import {
 	cancelGame,
 	getGame,
-	regenerateAsAdmin,
 	updateGame
 } from '#lib/domain/games/service.ts';
 import { can } from '#lib/domain/auth/policy.ts';
@@ -12,9 +11,9 @@ import { playersByIds } from '#lib/domain/players/candidates.ts';
 import { listLocations } from '#lib/domain/locations/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { isAppError } from '#lib/shared/errors.ts';
-import { formatCount, t } from '#lib/shared/i18n/index.ts';
+import { formatCount, formatDate, t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
-import { gameInputSchema } from '#lib/domain/games/validators.ts';
+import { updateGameInputSchema } from '#lib/domain/games/validators.ts';
 
 function missingRatingsNames(cause: unknown): { playerId: string; fullName: string }[] {
 	if (!isAppError(cause) || cause.key !== 'games.ratingsMissing') return [];
@@ -58,6 +57,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 
 	return {
 		game,
+		detailTitle: formatDate(game.gameDate),
 		canAssess: can(actor, 'editRatings') && isGamePlayable(game),
 		canManage,
 		editable: isLineupEditable(game),
@@ -70,7 +70,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 export const actions: Actions = {
 	update: async ({ request, locals, params }) => {
 		try {
-			const parsed = parseForm(gameInputSchema, await request.formData());
+			const parsed = parseForm(updateGameInputSchema, await request.formData());
 			updateGame(locals.actor, params.id!, parsed);
 			return { ok: true, message: t('admin.gameSaved') };
 		} catch (cause) {
@@ -105,14 +105,6 @@ export const actions: Actions = {
 				),
 				intelligence: result.intelligence
 			};
-		} catch (cause) {
-			return actionError(cause);
-		}
-	},
-	generate: async ({ locals, params }) => {
-		try {
-			regenerateAsAdmin(locals.actor, params.id!);
-			return { ok: true, message: t('games.generated') };
 		} catch (cause) {
 			return actionError(cause);
 		}

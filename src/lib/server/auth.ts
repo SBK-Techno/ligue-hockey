@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
@@ -11,6 +12,7 @@ import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '#config/roles.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { env } from '#lib/shared/config/env.ts';
 import { publicEnv } from '#lib/shared/config/public-env.ts';
+import { isAccountActive } from '#lib/domain/players/account-status.ts';
 import { passwordLinkPurpose } from '#lib/domain/auth/identity.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { db } from '#lib/server/db/index.ts';
@@ -38,6 +40,15 @@ export const auth = betterAuth({
 		resetPasswordTokenExpiresIn: env.security.inviteDays * 24 * 60 * 60,
 		revokeSessionsOnPasswordReset: true,
 		sendResetPassword: async ({ user, url }) => {
+			const { isAccountActive } = await import(
+				'#lib/domain/players/account-status.ts'
+			);
+			// Un compte désactivé ne reçoit aucun lien : le mot de passe ne doit
+			// pas rouvrir une porte que la désactivation a fermée.
+			if (!isAccountActive(user.id)) {
+				logger.warn('auth.password_link_inactive', { userId: user.id });
+				return;
+			}
 			const { sendAccountAccess, sendPasswordReset } = await import(
 				'#lib/domain/notifications/service.ts'
 			);
@@ -72,20 +83,18 @@ export const auth = betterAuth({
 		expiresIn: env.security.sessionDays * 24 * 60 * 60,
 		updateAge: AUTH_POLICY.sessionRefreshHours * 60 * 60
 	},
-	rateLimit: {
-		enabled: true,
-		window: AUTH_POLICY.rateLimitWindowSeconds,
-		max: AUTH_POLICY.rateLimitMax,
-		customRules: {
-			'/sign-in/email': {
-				window: env.security.loginWindowMinutes * 60,
-				max: env.security.maxLoginAttempts
-			},
-			'/request-password-reset': {
-				window: AUTH_POLICY.passwordWindowSeconds,
-				max: env.security.resetRequestsPerHour
+	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			// Une fiche déjà désactivée avant l'arrivée du bannissement ne doit
+			// pas rouvrir de session par l'API directe.
+			if (ctx.path !== '/sign-in/email') return;
+			const email = (ctx.body as { email?: unknown } | undefined)?.email;
+			if (typeof email !== 'string') return;
+			const found = await ctx.context.internalAdapter.findUserByEmail(email);
+			if (found?.user && !isAccountActive(found.user.id)) {
+				throw new APIError('FORBIDDEN', { message: 'Compte désactivé' });
 			}
-		}
+		})
 	},
 	logger: {
 		disabled: true

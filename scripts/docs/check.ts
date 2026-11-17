@@ -1,7 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { GENERATED_SURFACES } from '../lib/generated-surfaces.ts';
 import { buildDocs } from './build.ts';
-import { BRANDING, pages } from './pages.ts';
+import { BRANDING, EXCLUDED_ROOT_PAGES, pages } from './pages.ts';
+
+const ROOT = new URL('../..', import.meta.url).pathname;
 
 const result = buildDocs();
 const failures: string[] = [];
@@ -69,9 +72,26 @@ for (const file of htmlFiles) {
 	}
 }
 
+const published = new Set(pages.map((page) => page.source));
+const excluded = new Set(EXCLUDED_ROOT_PAGES.map((page) => page.source));
+for (const file of readdirSync(ROOT)) {
+	if (!file.endsWith('.md')) continue;
+	if (published.has(file) || excluded.has(file)) continue;
+	failures.push(`${file}: Markdown racine sans page ni exclusion déclarée`);
+}
+
 for (const page of pages) {
 	if (!htmlFiles.includes(`${page.slug}.html`)) {
 		failures.push(`${page.source}: page ${page.slug}.html absente`);
+	}
+}
+
+const architecture = readFileSync(join(ROOT, 'ARCHITECTURE.md'), 'utf8');
+for (const surface of GENERATED_SURFACES) {
+	if (!architecture.includes(surface.docs)) {
+		failures.push(
+			`ARCHITECTURE.md: surface générée ${surface.docs} (${surface.label}) absente`
+		);
 	}
 }
 

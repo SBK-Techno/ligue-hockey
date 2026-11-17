@@ -35,7 +35,7 @@ npm run docs:check   # génère et valide liens, ancres et métadonnées
 
 - `main` est protégée. Toute modification passe par une demande de fusion.
 - Une branche par changement: `feat/...`, `fix/...`, `docs/...`, `chore/...`.
-- La vérification `required` doit être verte avant la fusion.
+- La porte de la demande de fusion doit être verte avant la fusion.
 - `CODEOWNERS` demande une revue des propriétaires du dépôt.
 - Ne poussez jamais directement sur `main` et n'approuvez jamais votre propre changement.
 
@@ -49,15 +49,15 @@ Les tests doivent rester déterministes, isolés et bornés. Une porte rouge est
 
 Les sources canoniques sont `README.md`, `ARCHITECTURE.md`, `OPERATIONS.md`, `CONTRIBUTING.md` et `SECURITY.md`. `scripts/docs/build.ts` les rend dans `site/`, avec la palette de `config/branding.json`, les polices du projet, les liens internes réécrits et un sommaire par page. `scripts/docs/check.ts` refuse un lien mort, une ancre absente, une métadonnée manquante ou un tiret cadratin.
 
-Le site est publié par GitHub Pages à `https://sbk-techno.github.io/ligue-hockey/`. La source n'est jamais dupliquée dans un second dossier de documentation.
+Le site est publié par le workflow [`pages.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/pages.yml) à `https://sbk-techno.github.io/ligue-hockey/`. La source n'est jamais dupliquée dans un second dossier de documentation.
 
 ## Publication
 
 La version de `package.json` est l'unique source. Ne créez pas d'étiquette à la main.
 
-`auto-release.yml` calcule la prochaine version à chaque poussée vers `main`, prépare ou met à jour la branche `release/next` avec `package.json`, `package-lock.json` et `.env.example`, ouvre la demande de fusion et lance la porte dessus. La fusion de cette demande approuve la version; `auto-release.yml` crée alors l'étiquette `v<version>` et appelle `release.yml`, qui publie l'image et la version GitHub.
+Les workflows de `.github/workflows/` sont l'unique propriétaire des déclencheurs, des tâches et des appels de publication. Le contrat est vérifié par `npm run verify:architecture` à partir de `scripts/lib/ci-contract.ts`; les règles de montée appartiennent à `config/release.ts`.
 
-Les règles de montée vivent dans `config/release.ts`; `npm run release:plan` les applique et `npm run verify:release` contrôle les trois surfaces de version.
+Le seul geste humain est de fusionner la demande `release/next` après une porte verte. Cette fusion approuve la version et déclenche la publication de l'image et de la version GitHub.
 
 Le déploiement, la sauvegarde et le retour arrière sont décrits dans [OPERATIONS.md](OPERATIONS.md).
 

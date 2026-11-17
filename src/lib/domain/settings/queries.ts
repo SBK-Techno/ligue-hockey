@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { leagueSettings } from './schema.ts';
 
 export type SettingEntry = {
@@ -21,22 +21,28 @@ export function readSetting(key: string) {
 		.get();
 }
 
-export function saveSettings(entries: readonly SettingEntry[]): void {
+export function saveSettings(
+	entries: readonly SettingEntry[],
+	executor: DbExecutor = db
+): void {
 	if (entries.length === 0) return;
 
-	db.transaction((tx) => {
-		for (const entry of entries) {
-			tx.insert(leagueSettings)
-				.values(entry)
-				.onConflictDoUpdate({
-					target: leagueSettings.key,
-					set: {
-						valueJson: entry.valueJson,
-						updatedAt: entry.updatedAt,
-						updatedBy: entry.updatedBy
-					}
-				})
-				.run();
-		}
-	});
+	if (executor === db) {
+		db.transaction((tx) => saveSettings(entries, tx));
+		return;
+	}
+	for (const entry of entries) {
+		executor
+			.insert(leagueSettings)
+			.values(entry)
+			.onConflictDoUpdate({
+				target: leagueSettings.key,
+				set: {
+					valueJson: entry.valueJson,
+					updatedAt: entry.updatedAt,
+					updatedBy: entry.updatedBy
+				}
+			})
+			.run();
+	}
 }

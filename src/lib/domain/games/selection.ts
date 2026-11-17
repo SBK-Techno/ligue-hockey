@@ -1,4 +1,4 @@
-import { POSITIONS, type Position } from '#config/positions.ts';
+import { POSITIONS, comparePositionThenKind, positionRank, type Position } from '#config/positions.ts';
 import { slotCounts, type RosterTemplate } from '#config/roster.ts';
 import { TEAMS } from '#config/teams.ts';
 
@@ -28,10 +28,6 @@ export type GenerationSelection<T extends SelectionCandidate> = {
 	selected: SelectedCandidate<T>[];
 	bench: T[];
 };
-
-const POSITION_INDEX = new Map<Position, number>(
-	POSITIONS.map((position, index) => [position.key, index])
-);
 
 /**
  * Choisit au plus la capacité de chaque poste dans les membres vivants. Les
@@ -80,17 +76,14 @@ export function selectGenerationPlayers<T extends SelectionCandidate>(
 		.filter((member) => !seen.has(member.playerId))
 		.sort(
 			(a, b) =>
-				(POSITION_INDEX.get(a.position) ?? 0) -
-					(POSITION_INDEX.get(b.position) ?? 0) ||
-				a.kind.localeCompare(b.kind) ||
+				comparePositionThenKind(a, b) ||
 				a.order - b.order ||
 				a.playerId.localeCompare(b.playerId)
 		);
 
 	selected.sort(
 		(a, b) =>
-			(POSITION_INDEX.get(a.selectionPosition) ?? 0) -
-				(POSITION_INDEX.get(b.selectionPosition) ?? 0) ||
+			positionRank(a.selectionPosition) - positionRank(b.selectionPosition) ||
 			a.playerId.localeCompare(b.playerId)
 	);
 

@@ -65,6 +65,12 @@ export function formatDate(
 	return formatter.format(dateOnlyToDate(date));
 }
 
+/** Une date qui ouvre une section : la majuscule vient du formateur, pas de la vue. */
+export function formatDateHeading(date: string): string {
+	const label = formatDate(date, 'long');
+	return label.charAt(0).toLocaleUpperCase(branding.locale) + label.slice(1);
+}
+
 const weekdayShortFormat = new Intl.DateTimeFormat(branding.locale, {
 	weekday: 'short',
 	timeZone: branding.timezone
@@ -126,10 +132,11 @@ export function formatTimeParts(time: string): { hour: string; minute: string } 
 export function formatTime(time: string): string {
 	const { hour, minute } = formatTimeParts(time);
 	const unit = t('common.hourShort');
+	// Espace fine insécable : « 20 h 30 » ne se coupe pas à 320 px.
 	if (minute === '00') {
-		return `${hour} ${unit}`;
+		return `${hour}\u202F${unit}`;
 	}
-	return `${hour} ${unit} ${minute}`;
+	return `${hour}\u202F${unit}\u202F${minute}`;
 }
 
 export function formatDateTime(date: string, time: string): string {

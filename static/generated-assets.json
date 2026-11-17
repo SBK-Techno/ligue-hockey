@@ -8,13 +8,17 @@
     "static/icons/icon-512-512.904ac52376ea.png": "904ac52376eaeb02303f8823cbf0e045adcdf1ed3ec75f77cadbe60659c597b1",
     "static/icons/maskable-512-512.5c023d038900.png": "5c023d03890083491048c095c2200b59fa3d60a4a950031fe15158bb4a8a839e",
     "static/manifest.webmanifest": "8bc2b5af4ff652be2b15fd5d5803f40744328b9c63216dcbdf15b2ee111ae020",
-    "src/app.html": "d32b65ffe8eb25f684791b9fa6a5b20351456b078bd87dc29cfd3489670eca77",
+    "src/app.html": "0b6f322e2083314e4cca861a194a4a5b3b2adf3f963527e22ce0b9074da5d97c",
+    "src/lib/generated/critical-style.ts": "5ec80bc3a6bddca15d77c3bfeffd35685a5da8c27c765917ef549f98939f5f5c",
     "static/robots.txt": "815bcd053b51b42648ea3f8103c8c9f86eb64d2d6eaad8f3b45b673b47f959b7",
     "static/offline.html": "cfb47ac1ce31ce89d8f08a894a38e69f582bd79298dcb362dcf75f0f09a3139b",
-    "static/auth/dressing-room-0397f5db9c38.webp": "0397f5db9c3888b1f1dd67a856f0467619f13e1fc5c8413c0b9fa1ff4bac28bc",
-    "static/textures/paper-b0f353d27755.webp": "b0f353d27755856fdba753cc0bceff783b8988356df9ea56243221e40ea9331d",
-    "static/textures/ice-91bfe133b755.webp": "91bfe133b755c69db37ee90bc371e6fa402385dfeb01cee210b046903147e3a8",
-    "src/lib/generated/branding.ts": "58f26dbe897e76d4c4a5a90a0fde8beb6051e690bb97c535b1f7d735c51e8d59",
-    "static/social/apercu.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02"
+    "static/auth/dressing-room-640-ef36f1188f7d.webp": "ef36f1188f7d583a4f7404c98cf1e96f89b7bab1984d4a9a01af127e4b31df87",
+    "static/auth/dressing-room-960-430e80cf4704.webp": "430e80cf4704afb33c43287dbf1ec14b9bbbcdff23c1aa1945a50783cd7c265b",
+    "static/auth/dressing-room-1200-3012b5b41fdc.webp": "3012b5b41fdc78d18fdadf09671526d4cf261ef459f77786a18ac8e57994fc66",
+    "static/textures/paper-fc4ef8d7aad2.webp": "fc4ef8d7aad26d31e2a6c78ba0b8a9fea62dc6f18d5488327af60b8604605ca6",
+    "static/textures/ice-e5f5845016e5.webp": "e5f5845016e5bf0f8e8cf287f68d922cb3e802f05225d37488b5aefc8b909525",
+    "static/identities/identities-edd83902f68c.svg": "edd83902f68cc0708047cda1883c92060ce5d0bc017a3b8700a01209e72b305c",
+    "static/social/apercu-9166f43c7711.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02",
+    "src/lib/generated/branding.ts": "a8228aa9c762171f880455bb4f44d85b5d883ec01f03533eef3825832429ae36"
   }
 }

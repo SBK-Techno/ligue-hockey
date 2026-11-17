@@ -1,4 +1,12 @@
-import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	cpSync,
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	readdirSync,
+	rmSync,
+	writeFileSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
@@ -8,7 +16,9 @@ import { describe, expect, it } from 'vitest';
 import { NOTIFICATION_CHANNEL_KEYS } from '#config/notification-channels.ts';
 import { NOTIFICATION_EVENT_KEYS } from '#config/notification-events.ts';
 import { PAYMENT_METHOD_KEYS } from '#config/payment-methods.ts';
-import { POSITION_KEYS } from '#config/positions.ts';
+import { POSITION_KEYS, type Position } from '#config/positions.ts';
+import { IDENTITY_IDS, type IdentityId, identityAllowedForPosition } from '#config/identities.ts';
+import { identityBackfillSql } from '../../../../scripts/generate-identity-backfill.ts';
 import { INFRACTION_KEYS, PENALTY_MINUTES } from '#config/infractions.ts';
 import { PERIOD_NUMBERS } from '#config/periods.ts';
 import { GOAL_KIND_KEYS } from '#config/goal-kinds.ts';
@@ -204,6 +214,75 @@ function journalTags(): string[] {
 	return journal.entries.map((entry) => entry.tag).sort();
 }
 
+type IdentityFixturePlayer = {
+	position: Position;
+	avatarId?: string | null;
+	active?: boolean;
+};
+
+/**
+ * Applique la migration 0010 à une base créée juste avant elle, avec les
+ * joueurs fournis. Le journal tronqué vit dans un dossier temporaire : la
+ * migration commitée n'est jamais modifiée par le test.
+ */
+function migrateIdentityFixture(players: readonly IdentityFixturePlayer[]) {
+	const folder = mkdtempSync(join(tmpdir(), 'lhdm-identities-'));
+	const database = new Database(':memory:');
+	try {
+		cpSync(MIGRATIONS, folder, { recursive: true });
+		const journalPath = join(folder, 'meta/_journal.json');
+		const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
+			entries: { tag: string }[];
+		};
+		const identityIndex = journal.entries.findIndex(
+			(entry) => entry.tag === '0010_hesitant_lila_cheney'
+		);
+		if (identityIndex <= 0) throw new Error('migration identités absente');
+		writeFileSync(
+			journalPath,
+			JSON.stringify({
+				...journal,
+				entries: journal.entries.slice(0, identityIndex)
+			})
+		);
+
+		database.pragma('foreign_keys = ON');
+		migrate(drizzle(database), { migrationsFolder: folder });
+
+		const insertUser = database.prepare(
+			`insert into user (id, name, email, email_verified, created_at, updated_at, role)
+			 values (?, ?, ?, 1, ?, ?, 'player')`
+		);
+		const insertPlayer = database.prepare(
+			`insert into players
+			 (user_id, first_name, last_name, position, age, avatar_id, active, created_at, updated_at)
+			 values (?, ?, 'Test', ?, 30, ?, ?, ?, ?)`
+		);
+		for (const [index, player] of players.entries()) {
+			const id = `demo_user_${String(index + 1).padStart(2, '0')}`;
+			insertUser.run(id, id, `${id}@example.test`, NOW, NOW);
+			insertPlayer.run(
+				id,
+				id,
+				player.position,
+				player.avatarId ?? null,
+				player.active === false ? 0 : 1,
+				NOW,
+				NOW
+			);
+		}
+
+		cpSync(MIGRATIONS, folder, { recursive: true });
+		migrate(drizzle(database), { migrationsFolder: folder });
+		return database;
+	} catch (error) {
+		database.close();
+		throw error;
+	} finally {
+		rmSync(folder, { recursive: true, force: true });
+	}
+}
+
 describe('migrations vs registres', () => {
 	const sqlite = migrateInMemory();
 	const ddl = new Map(
@@ -286,6 +365,7 @@ describe('migrations vs registres', () => {
 			'age',
 			'avatar_id',
 			'created_at',
+			'deleted_at',
 			'first_name',
 			'is_substitute',
 			'jersey_number',
@@ -342,6 +422,160 @@ describe('migrations vs registres', () => {
 			rmSync(folder, { recursive: true, force: true });
 		}
 	});
+
+	it('donne à chaque actif une identité permise par son poste et répare les conflits', () => {
+		const players: IdentityFixturePlayer[] = Array.from({ length: 29 }, (_, index) => ({
+			position: index < 20 ? 'forward' : index < 26 ? 'defense' : 'goalie'
+		}));
+		// Un attaquant porte une légende de gardien, et deux attaquants se
+		// partagent la même identité : la migration doit réparer les trois.
+		players[0] = { position: 'forward', avatarId: 'legende-plante' };
+		players[1] = { position: 'forward', avatarId: 'capitaine-navy' };
+		players[2] = { position: 'forward', avatarId: 'capitaine-navy' };
+
+		const database = migrateIdentityFixture(players);
+		try {
+			const rows = database
+				.prepare('select user_id, position, avatar_id from players where active = 1')
+				.all() as { user_id: string; position: Position; avatar_id: string | null }[];
+			expect(rows).toHaveLength(players.length);
+			expect(rows.every((row) => row.avatar_id !== null)).toBe(true);
+			expect(new Set(rows.map((row) => row.avatar_id)).size).toBe(rows.length);
+			for (const row of rows) {
+				expect(
+					identityAllowedForPosition(row.avatar_id as IdentityId, row.position),
+					`${row.user_id} ${row.avatar_id} ${row.position}`
+				).toBe(true);
+			}
+
+			// L'attaquant réparé ne garde pas la légende de gardien; l'identité
+			// partagée n'a plus qu'un seul porteur actif.
+			expect(rows.find((row) => row.user_id === 'demo_user_01')?.avatar_id).not.toBe(
+				'legende-plante'
+			);
+			expect(rows.filter((row) => row.avatar_id === 'capitaine-navy')).toHaveLength(1);
+
+			const index = database
+				.prepare(
+					"select sql from sqlite_master where type = 'index' and name = 'players_active_avatar_unique'"
+				)
+				.get() as { sql: string } | undefined;
+			expect(index?.sql).toContain('WHERE "active" = 1');
+			expect(index?.sql).toContain('"avatar_id" is not null');
+
+			expect(() =>
+				database
+					.prepare("update players set avatar_id = 'capitaine-navy' where user_id = ?")
+					.run('demo_user_03')
+			).toThrow(/UNIQUE constraint failed/);
+
+			database
+				.prepare('update players set active = 0 where user_id = ?')
+				.run('demo_user_03');
+			expect(() =>
+				database
+					.prepare("update players set avatar_id = 'capitaine-navy' where user_id = ?")
+					.run('demo_user_03')
+			).not.toThrow();
+
+			expect(database.prepare('pragma foreign_key_check').all()).toEqual([]);
+		} finally {
+			database.close();
+		}
+	});
+
+	it('garde le bloc d’identités de la migration généré à l’octet près', () => {
+		const sql = readFileSync(join(MIGRATIONS, '0010_hesitant_lila_cheney.sql'), 'utf8');
+		const marker = 'CREATE UNIQUE INDEX';
+		const index = sql.indexOf(marker);
+		expect(index).toBeGreaterThan(0);
+		const block = sql.slice(0, index).replace(/\n--> statement-breakpoint\n$/, '');
+		expect(block).toBe(identityBackfillSql());
+	});
+
+	it('attribue les cinquante-huit identités quand chaque poste a ses joueurs', () => {
+		const players: IdentityFixturePlayer[] = [
+			...Array.from({ length: 43 }, () => ({ position: 'forward' as const })),
+			...Array.from({ length: 11 }, () => ({ position: 'defense' as const })),
+			...Array.from({ length: 4 }, () => ({ position: 'goalie' as const }))
+		];
+		const database = migrateIdentityFixture(players);
+		try {
+			const rows = database
+				.prepare('select position, avatar_id from players where active = 1')
+				.all() as { position: Position; avatar_id: string | null }[];
+			expect(rows).toHaveLength(IDENTITY_IDS.length);
+			expect(rows.every((row) => row.avatar_id !== null)).toBe(true);
+			expect(rows.map((row) => row.avatar_id).sort()).toEqual([...IDENTITY_IDS].sort());
+			for (const row of rows) {
+				expect(
+					identityAllowedForPosition(row.avatar_id as IdentityId, row.position)
+				).toBe(true);
+			}
+		} finally {
+			database.close();
+		}
+	});
+
+	it('refuse une base dont un poste manque d’identités', () => {
+		const players: IdentityFixturePlayer[] = [
+			...Array.from({ length: 44 }, () => ({ position: 'forward' as const })),
+			...Array.from({ length: 11 }, () => ({ position: 'defense' as const })),
+			...Array.from({ length: 4 }, () => ({ position: 'goalie' as const }))
+		];
+		// 59 joueurs : les 15 légendes d'attaque et les 28 visages ne couvrent
+		// que 43 attaquants. La garde refuse plutôt que de laisser un actif nu.
+		expect(() => migrateIdentityFixture(players)).toThrow(
+			/INSERT INTO identity_backfill_guard/
+		);
+	});
+
+	it.skipIf(!existsSync('/tmp/opencode/ligue-1.6.0-demo.db'))(
+		'migre une copie de la base de démonstration sans perdre ses identités',
+		async () => {
+			const folder = mkdtempSync(join(tmpdir(), 'lhdm-demo-migration-'));
+			const copy = join(folder, 'demo.db');
+			try {
+				const source = new Database('/tmp/opencode/ligue-1.6.0-demo.db', {
+					readonly: true
+				});
+				await source.backup(copy);
+				source.close();
+
+				const demo = new Database(copy);
+				demo.pragma('foreign_keys = ON');
+				migrate(drizzle(demo), { migrationsFolder: MIGRATIONS });
+
+				const active = demo
+					.prepare('select count(*) as count from players where active = 1')
+					.get() as { count: number };
+				const missing = demo
+					.prepare(
+						'select count(*) as count from players where active = 1 and avatar_id is null'
+					)
+					.get() as { count: number };
+				const distinct = demo
+					.prepare(
+						'select count(distinct avatar_id) as count from players where active = 1'
+					)
+					.get() as { count: number };
+				expect(active.count).toBe(28);
+				expect(missing.count).toBe(0);
+				expect(distinct.count).toBe(28);
+
+				const index = demo
+					.prepare(
+						"select sql from sqlite_master where type = 'index' and name = 'players_active_avatar_unique'"
+					)
+					.get() as { sql: string } | undefined;
+				expect(index?.sql).toContain('WHERE "active" = 1');
+				expect(demo.prepare('pragma foreign_key_check').all()).toEqual([]);
+				demo.close();
+			} finally {
+				rmSync(folder, { recursive: true, force: true });
+			}
+		}
+	);
 
 	it('convertit les libellés de matchs en lieux sans perdre les tables enfants', () => {
 		const folder = mkdtempSync(join(tmpdir(), 'lhdm-locations-'));

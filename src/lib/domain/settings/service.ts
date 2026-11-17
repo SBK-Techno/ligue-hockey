@@ -8,10 +8,12 @@ import {
 	type SettingsKey,
 	type SettingsValues
 } from '#config/settings-registry.ts';
+import { CHAT_PAGE_SIZE } from '#config/chat.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
+import { db } from '#lib/server/db/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { listSettings, saveSettings } from './queries.ts';
 
@@ -48,7 +50,13 @@ function decodeRows(rows: readonly { key: string; valueJson: string }[]) {
 
 export function getSettings(): SettingsValues {
 	if (cached) return cached;
-	cached = parseSettings(decodeRows(listSettings()));
+	const decoded = decodeRows(listSettings());
+	// Une base créée avant le plafond de pagination garde sa valeur historique :
+	// on la ramène au contrat courant avant validation, sans migration de données.
+	if (typeof decoded['chat.pageSize'] === 'number') {
+		decoded['chat.pageSize'] = Math.min(decoded['chat.pageSize'], CHAT_PAGE_SIZE);
+	}
+	cached = parseSettings(decoded);
 	return cached;
 }
 
@@ -89,21 +97,28 @@ export function updateSettings(
 	const now = clock.nowMs();
 	const changed = SETTINGS_KEYS.filter((key) => key in input);
 
-	saveSettings(
-		changed.map((key) => ({
-			key,
-			valueJson: JSON.stringify(parsed[key]),
-			updatedAt: now,
-			updatedBy: actor.kind === 'user' ? actor.userId : null
-		}))
-	);
+	db.transaction((tx) => {
+		saveSettings(
+			changed.map((key) => ({
+				key,
+				valueJson: JSON.stringify(parsed[key]),
+				updatedAt: now,
+				updatedBy: actor.kind === 'user' ? actor.userId : null
+			})),
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'settings.update',
+				entityType: 'settings',
+				metadata: { keys: changed }
+			},
+			tx
+		);
+	});
 
 	cached = parsed;
-	recordAudit(actor, {
-		action: 'settings.update',
-		entityType: 'settings',
-		metadata: { keys: changed }
-	});
 
 	return parsed;
 }
@@ -125,20 +140,29 @@ export function renameDefaultLocation(
 		...getSettings(),
 		'games.defaultLocation': nextName
 	});
-	saveSettings([
-		{
-			key: 'games.defaultLocation',
-			valueJson: JSON.stringify(parsed['games.defaultLocation']),
-			updatedAt: clock.nowMs(),
-			updatedBy: actor.kind === 'user' ? actor.userId : null
-		}
-	]);
-	cached = parsed;
-	recordAudit(actor, {
-		action: 'settings.default_location',
-		entityType: 'settings',
-		metadata: { from: previousName, to: nextName }
+	db.transaction((tx) => {
+		saveSettings(
+			[
+				{
+					key: 'games.defaultLocation',
+					valueJson: JSON.stringify(parsed['games.defaultLocation']),
+					updatedAt: clock.nowMs(),
+					updatedBy: actor.kind === 'user' ? actor.userId : null
+				}
+			],
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'settings.default_location',
+				entityType: 'settings',
+				metadata: { from: previousName, to: nextName }
+			},
+			tx
+		);
 	});
+	cached = parsed;
 }
 
 export { SETTINGS };

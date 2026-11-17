@@ -29,9 +29,9 @@
 		<span class="record-date">{date}</span>
 	{/if}
 	<span class="min-w-0 flex-1">
-		<span class="block truncate text-body font-semibold">{title}</span>
+		<span class="block break-words text-body font-semibold">{title}</span>
 		{#if meta}
-			<span class="mt-0.5 block truncate text-meta text-muted">{meta}</span>
+			<span class="mt-0.5 block break-words text-meta text-muted">{meta}</span>
 		{/if}
 	</span>
 	{#if badge}

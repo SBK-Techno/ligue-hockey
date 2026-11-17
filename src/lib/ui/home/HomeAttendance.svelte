@@ -23,7 +23,7 @@
 	cells={[
 		{ value: availability.present, label: t('home.present') },
 		{ value: availability.absent, label: t('home.absent') },
-		{ value: availability.unknown, label: t('availability.unknown') }
+		{ value: availability.unknown, label: t('availability.noAnswer') }
 	]}
 />
 
@@ -59,7 +59,7 @@
 			{/if}
 			{#if pending.length > 0}
 				<div>
-					<dt class="serial">{t('availability.unknown')}</dt>
+					<dt class="serial">{t('availability.noAnswer')}</dt>
 					<dd class="mt-0.5 break-words text-muted">{pending.join(', ')}</dd>
 				</div>
 			{/if}

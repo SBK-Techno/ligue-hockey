@@ -6,8 +6,14 @@ type Bucket = {
 };
 
 const buckets = new Map<string, Bucket>();
-const MAX_BUCKETS = 10_000;
+/** La borne dure du registre : au-delà, la plus ancienne clé cède sa place. */
+export const MAX_BUCKETS = 10_000;
 
+/**
+ * Sous la borne, rien n'est balayé : la carte reste petite et une clé expirée
+ * ne coûte qu'un remplacement quand la borne est atteinte. Au-delà, les clés
+ * expirées partent d'abord; l'éviction LRU prend le relais si elles manquent.
+ */
 function prune(now: number): void {
 	if (buckets.size < MAX_BUCKETS) return;
 	for (const [key, bucket] of buckets) {
@@ -15,27 +21,54 @@ function prune(now: number): void {
 	}
 }
 
-export function tooManyAttempts(key: string, limit: number): boolean {
+/** Une lecture ou une écriture rend la clé la plus récente du registre. */
+function touch(key: string, bucket: Bucket): void {
+	buckets.delete(key);
+	buckets.set(key, bucket);
+}
+
+function evictOldest(): void {
+	while (buckets.size >= MAX_BUCKETS) {
+		const oldest = buckets.keys().next().value;
+		if (oldest === undefined) return;
+		buckets.delete(oldest);
+	}
+}
+
+/**
+ * Réserve atomiquement une tentative : la vérification et l'incrément sont
+ * une seule opération synchrone. Deux requêtes parallèles ne peuvent donc pas
+ * lire le même compte avant que l'une des deux l'ait consommé.
+ */
+export function consumeAttempt(
+	key: string,
+	limit: number,
+	windowMs: number
+): boolean {
 	const now = clock.nowMs();
 	const bucket = buckets.get(key);
 	if (!bucket || bucket.resetAt <= now) {
 		if (bucket) buckets.delete(key);
-		return false;
-	}
-	return bucket.count >= limit;
-}
-
-export function recordAttempt(key: string, windowMs: number): void {
-	const now = clock.nowMs();
-	prune(now);
-	const bucket = buckets.get(key);
-	if (!bucket || bucket.resetAt <= now) {
+		prune(now);
+		evictOldest();
 		buckets.set(key, { count: 1, resetAt: now + windowMs });
-		return;
+		return limit >= 1;
 	}
+	touch(key, bucket);
+	if (bucket.count >= limit) return false;
 	bucket.count += 1;
+	return true;
 }
 
 export function clearAttempts(key: string): void {
 	buckets.delete(key);
+}
+
+/** Pour les tests seulement : aucun état ne survit à une remise à zéro. */
+export function resetThrottle(): void {
+	buckets.clear();
+}
+
+export function throttleSize(): number {
+	return buckets.size;
 }

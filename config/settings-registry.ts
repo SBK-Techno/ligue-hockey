@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { FINANCE_LIMITS } from './finance.ts';
+import { LOCATION_LIMITS } from './games.ts';
+import { CHAT_PAGE_SIZE } from './chat.ts';
 import type { I18nKey } from './i18n/fr';
 import { TEAMS } from './teams.ts';
 import { DATE_PATTERN, TIME_PATTERN } from './time.ts';
@@ -29,6 +32,11 @@ export type SettingOption = {
   labelKey: I18nKey;
 };
 
+export type SettingBounds = {
+  min: number;
+  max: number;
+};
+
 export type SettingDefinition<T> = {
   group: SettingGroup;
   kind: SettingKind;
@@ -38,12 +46,100 @@ export type SettingDefinition<T> = {
   descriptionKey?: I18nKey;
   min?: number;
   max?: number;
+  /** La paire unique dont dérivent le schéma, les champs et les invariants. */
+  bounds?: SettingBounds;
   step?: number;
   options?: readonly SettingOption[];
 };
 
 function defineSetting<T>(definition: SettingDefinition<T>) {
   return definition;
+}
+
+/**
+ * Un réglage numérique déclare sa borne une seule fois. Le schéma Zod et les
+ * attributs du champ d'administration en sont dérivés, donc ils ne peuvent
+ * pas diverger.
+ */
+function defineNumericSetting(definition: {
+  group: SettingGroup;
+  kind: 'number' | 'money';
+  min: number;
+  max: number;
+  step: number;
+  integer?: boolean;
+  defaultValue: number;
+  labelKey: I18nKey;
+  descriptionKey?: I18nKey;
+}): SettingDefinition<number> {
+  const { integer = false, ...rest } = definition;
+  if (definition.min > definition.max) {
+    throw new Error(`Le réglage ${definition.labelKey} a une borne inversée.`);
+  }
+  if (definition.step <= 0) {
+    throw new Error(`Le réglage ${definition.labelKey} doit avoir un pas positif.`);
+  }
+  if (
+    definition.defaultValue < definition.min ||
+    definition.defaultValue > definition.max
+  ) {
+    throw new Error(`Le réglage ${definition.labelKey} a un défaut hors bornes.`);
+  }
+  const bounds = Object.freeze({ min: definition.min, max: definition.max });
+  const bounded = z.number().min(bounds.min).max(bounds.max);
+  return {
+    ...rest,
+    min: bounds.min,
+    max: bounds.max,
+    bounds,
+    schema: integer ? bounded.int() : bounded
+  };
+}
+
+type ZodNumericCheck = {
+  _zod?: { def?: { check?: string; value?: number; inclusive?: boolean } };
+};
+
+/** Les bornes réellement portées par le schéma Zod d'un réglage numérique. */
+function schemaBounds(schema: z.ZodType<unknown>): {
+  min?: number;
+  max?: number;
+} {
+  const checks =
+    (schema as unknown as { _zod?: { def?: { checks?: unknown[] } } })._zod?.def
+      ?.checks ?? [];
+  let min: number | undefined;
+  let max: number | undefined;
+  for (const check of checks as ZodNumericCheck[]) {
+    const definition = check._zod?.def;
+    if (definition?.inclusive === false) continue;
+    if (definition?.check === 'greater_than') min = definition.value;
+    if (definition?.check === 'less_than') max = definition.value;
+  }
+  return { min, max };
+}
+
+/**
+ * Un réglage numérique ne peut pas réécrire ses bornes hors de la paire
+ * unique : le schéma, les attributs `min`/`max` du formulaire et les
+ * invariants doivent tous résoudre vers `bounds`.
+ */
+export function assertSingleBounds(
+  key: string,
+  definition: SettingDefinition<unknown>
+): void {
+  if (definition.kind !== 'number' && definition.kind !== 'money') return;
+  const bounds = definition.bounds;
+  if (!bounds) {
+    throw new Error(`Le réglage ${key} doit passer par defineNumericSetting.`);
+  }
+  if (definition.min !== bounds.min || definition.max !== bounds.max) {
+    throw new Error(`Le réglage ${key} recopie ses bornes hors de bounds.`);
+  }
+  const declared = schemaBounds(definition.schema);
+  if (declared.min !== bounds.min || declared.max !== bounds.max) {
+    throw new Error(`Le schéma du réglage ${key} ne vient pas de sa paire de bornes.`);
+  }
 }
 
 const dateString = z
@@ -65,9 +161,9 @@ export const SETTINGS = {
   'games.defaultLocation': defineSetting({
     group: 'games',
     kind: 'text',
-    schema: z.string().max(120),
+    schema: z.string().max(LOCATION_LIMITS.nameMax),
     defaultValue: '',
-    max: 120,
+    max: LOCATION_LIMITS.nameMax,
     labelKey: 'settings.defaultLocation.label',
     descriptionKey: 'settings.defaultLocation.description'
   }),
@@ -79,69 +175,69 @@ export const SETTINGS = {
     labelKey: 'settings.defaultStartTime.label',
     descriptionKey: 'settings.defaultStartTime.description'
   }),
-  'games.availabilityClosesHours': defineSetting({
+  'games.availabilityClosesHours': defineNumericSetting({
     group: 'games',
     kind: 'number',
-    schema: z.number().int().min(0).max(72),
-    defaultValue: 12,
     min: 0,
     max: 72,
     step: 1,
+    integer: true,
+    defaultValue: 12,
     labelKey: 'settings.availabilityClosesHours.label',
     descriptionKey: 'settings.availabilityClosesHours.description'
   }),
-  'roster.goaliesPerTeam': defineSetting({
+  'roster.goaliesPerTeam': defineNumericSetting({
     group: 'roster',
     kind: 'number',
-    schema: z.number().int().min(0).max(3),
-    defaultValue: 1,
     min: 0,
     max: 3,
     step: 1,
+    integer: true,
+    defaultValue: 1,
     labelKey: 'settings.goaliesPerTeam.label',
     descriptionKey: 'settings.goaliesPerTeam.description'
   }),
-  'roster.forwardsPerTeam': defineSetting({
+  'roster.forwardsPerTeam': defineNumericSetting({
     group: 'roster',
     kind: 'number',
-    schema: z.number().int().min(0).max(8),
-    defaultValue: 3,
     min: 0,
     max: 8,
     step: 1,
+    integer: true,
+    defaultValue: 3,
     labelKey: 'settings.forwardsPerTeam.label',
     descriptionKey: 'settings.forwardsPerTeam.description'
   }),
-  'roster.defensePerTeam': defineSetting({
+  'roster.defensePerTeam': defineNumericSetting({
     group: 'roster',
     kind: 'number',
-    schema: z.number().int().min(0).max(8),
-    defaultValue: 2,
     min: 0,
     max: 8,
     step: 1,
+    integer: true,
+    defaultValue: 2,
     labelKey: 'settings.defensePerTeam.label',
     descriptionKey: 'settings.defensePerTeam.description'
   }),
-  'notifications.generalLeadHours': defineSetting({
+  'notifications.generalLeadHours': defineNumericSetting({
     group: 'notifications',
     kind: 'number',
-    schema: z.number().int().min(0).max(168),
-    defaultValue: 12,
     min: 0,
     max: 168,
     step: 1,
+    integer: true,
+    defaultValue: 12,
     labelKey: 'settings.generalLeadHours.label',
     descriptionKey: 'settings.generalLeadHours.description'
   }),
-  'notifications.priorityGapHours': defineSetting({
+  'notifications.priorityGapHours': defineNumericSetting({
     group: 'notifications',
     kind: 'number',
-    schema: z.number().int().min(0).max(24),
-    defaultValue: 4,
     min: 0,
     max: 24,
     step: 1,
+    integer: true,
+    defaultValue: 4,
     labelKey: 'settings.priorityGapHours.label',
     descriptionKey: 'settings.priorityGapHours.description'
   }),
@@ -169,36 +265,36 @@ export const SETTINGS = {
     labelKey: 'settings.subRequestOnAbsence.label',
     descriptionKey: 'settings.subRequestOnAbsence.description'
   }),
-  'notifications.lastCallMinutes': defineSetting({
+  'notifications.lastCallMinutes': defineNumericSetting({
     group: 'notifications',
     kind: 'number',
-    schema: z.number().int().min(0).max(1440),
-    defaultValue: 240,
     min: 0,
     max: 1440,
     step: 15,
+    integer: true,
+    defaultValue: 240,
     labelKey: 'settings.lastCallMinutes.label',
     descriptionKey: 'settings.lastCallMinutes.description'
   }),
-  'finance.totalCents': defineSetting({
+  'finance.totalCents': defineNumericSetting({
     group: 'finance',
     kind: 'money',
-    schema: z.number().int().min(0).max(10_000_000),
-    defaultValue: 0,
     min: 0,
     max: 10_000_000,
     step: 100,
+    integer: true,
+    defaultValue: 0,
     labelKey: 'settings.totalCents.label',
     descriptionKey: 'settings.totalCents.description'
   }),
-  'finance.firstInstallmentPercent': defineSetting({
+  'finance.firstInstallmentPercent': defineNumericSetting({
     group: 'finance',
     kind: 'number',
-    schema: z.number().int().min(1).max(99),
-    defaultValue: 50,
-    min: 1,
-    max: 99,
+    min: FINANCE_LIMITS.firstInstallmentPercent.min,
+    max: FINANCE_LIMITS.firstInstallmentPercent.max,
     step: 1,
+    integer: true,
+    defaultValue: 50,
     labelKey: 'settings.firstInstallmentPercent.label',
     descriptionKey: 'settings.firstInstallmentPercent.description'
   }),
@@ -216,124 +312,122 @@ export const SETTINGS = {
     defaultValue: null,
     labelKey: 'settings.installment2Due.label'
   }),
-  'finance.goalieDiscountPercent': defineSetting({
+  'finance.goalieDiscountPercent': defineNumericSetting({
     group: 'finance',
     kind: 'number',
-    schema: z.number().int().min(0).max(100),
-    defaultValue: 0,
     min: 0,
     max: 100,
     step: 5,
+    integer: true,
+    defaultValue: 0,
     labelKey: 'settings.goalieDiscountPercent.label',
     descriptionKey: 'settings.goalieDiscountPercent.description'
   }),
-  'finance.overdueGraceDays': defineSetting({
+  'finance.overdueGraceDays': defineNumericSetting({
     group: 'finance',
     kind: 'number',
-    schema: z.number().int().min(0).max(30),
-    defaultValue: 0,
     min: 0,
     max: 30,
     step: 1,
+    integer: true,
+    defaultValue: 0,
     labelKey: 'settings.overdueGraceDays.label',
     descriptionKey: 'settings.overdueGraceDays.description'
   }),
-  'teams.skillTolerance': defineSetting({
+  'teams.skillTolerance': defineNumericSetting({
     group: 'teams',
     kind: 'number',
-    schema: z.number().min(0).max(5),
-    defaultValue: 0.25,
     min: 0,
     max: 5,
     step: 0.25,
+    defaultValue: 0.25,
     labelKey: 'settings.skillTolerance.label',
     descriptionKey: 'settings.skillTolerance.description'
   }),
-  'teams.maxPlayers': defineSetting({
+  'teams.maxPlayers': defineNumericSetting({
     group: 'teams',
     kind: 'number',
-    schema: z.number().int().min(2).max(40),
-    defaultValue: 24,
     min: 2,
     max: 40,
     step: 1,
+    integer: true,
+    defaultValue: 24,
     labelKey: 'settings.maxPlayers.label',
     descriptionKey: 'settings.maxPlayers.description'
   }),
-  'teams.maxSkillSpread': defineSetting({
+  'teams.maxSkillSpread': defineNumericSetting({
     group: 'teams',
     kind: 'number',
-    schema: z.number().min(0).max(10),
-    defaultValue: 0,
     min: 0,
     max: 10,
     step: 0.25,
+    defaultValue: 0,
     labelKey: 'settings.maxSkillSpread.label',
     descriptionKey: 'settings.maxSkillSpread.description'
   }),
-  'teams.maxAgeSpread': defineSetting({
+  'teams.maxAgeSpread': defineNumericSetting({
     group: 'teams',
     kind: 'number',
-    schema: z.number().min(0).max(60),
-    defaultValue: 0,
     min: 0,
     max: 60,
     step: 0.5,
+    defaultValue: 0,
     labelKey: 'settings.maxAgeSpread.label',
     descriptionKey: 'settings.maxAgeSpread.description'
   }),
-  'teams.maxSizeSpread': defineSetting({
+  'teams.maxSizeSpread': defineNumericSetting({
     group: 'teams',
     kind: 'number',
-    schema: z.number().int().min(0).max(10),
-    defaultValue: 0,
     min: 0,
     max: 10,
     step: 1,
+    integer: true,
+    defaultValue: 0,
     labelKey: 'settings.maxSizeSpread.label',
     descriptionKey: 'settings.maxSizeSpread.description'
   }),
-  'chat.maxMessageLength': defineSetting({
+  'chat.maxMessageLength': defineNumericSetting({
     group: 'chat',
     kind: 'number',
-    schema: z.number().int().min(10).max(10_000),
-    defaultValue: 2000,
     min: 10,
     max: 10_000,
     step: 10,
+    integer: true,
+    defaultValue: 2000,
     labelKey: 'settings.maxMessageLength.label',
     descriptionKey: 'settings.maxMessageLength.description'
   }),
-  'chat.maxPollOptions': defineSetting({
+  'chat.maxPollOptions': defineNumericSetting({
     group: 'chat',
     kind: 'number',
-    schema: z.number().int().min(2).max(12),
-    defaultValue: 6,
     min: 2,
     max: 12,
     step: 1,
+    integer: true,
+    defaultValue: 6,
     labelKey: 'settings.maxPollOptions.label',
     descriptionKey: 'settings.maxPollOptions.description'
   }),
-  'chat.pollMinOptions': defineSetting({
+  'chat.pollMinOptions': defineNumericSetting({
     group: 'chat',
     kind: 'number',
-    schema: z.number().int().min(2).max(6),
-    defaultValue: 2,
     min: 2,
     max: 6,
     step: 1,
+    integer: true,
+    defaultValue: 2,
     labelKey: 'settings.pollMinOptions.label',
     descriptionKey: 'settings.pollMinOptions.description'
   }),
-  'chat.pageSize': defineSetting({
+  'chat.pageSize': defineNumericSetting({
     group: 'chat',
     kind: 'number',
-    schema: z.number().int().min(10).max(200),
-    defaultValue: 50,
+    // Le service plafonne à CHAT_PAGE_SIZE; le réglage ne peut donc que réduire.
     min: 10,
-    max: 200,
+    max: CHAT_PAGE_SIZE,
     step: 10,
+    integer: true,
+    defaultValue: CHAT_PAGE_SIZE,
     labelKey: 'settings.chatPageSize.label',
     descriptionKey: 'settings.chatPageSize.description'
   }),
@@ -346,6 +440,10 @@ export const SETTINGS = {
     descriptionKey: 'settings.allowPlayerPolls.description'
   })
 } as const;
+
+for (const [key, definition] of Object.entries(SETTINGS)) {
+  assertSingleBounds(key, definition as SettingDefinition<unknown>);
+}
 
 export type SettingsKey = keyof typeof SETTINGS;
 export type SettingValue<K extends SettingsKey> = z.infer<
@@ -382,10 +480,12 @@ export const SETTINGS_INVARIANTS: readonly SettingInvariant[] = [
       'notifications.generalLeadHours',
       'notifications.priorityGapHours'
     ],
+    // La fenêtre totale ne peut pas dépasser l'avance maximale déclarée par
+    // le réglage lui-même : le nombre 168 n'existe qu'à un seul endroit.
     check: (values) =>
       values['notifications.generalLeadHours'] +
         values['notifications.priorityGapHours'] <=
-      168,
+      settingBound('notifications.generalLeadHours', 'max'),
     messageKey: 'settings.invariant.notificationWindow'
   },
   {

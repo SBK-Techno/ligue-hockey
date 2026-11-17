@@ -15,15 +15,15 @@ vi.mock('#lib/server/db/index.ts', async () => {
 const { sqlite } = await import('#lib/server/db/index.ts');
 const { actions, load } = await import('./+page.server.ts');
 
-const admin: Actor = { kind: 'user', userId: 'admin', name: 'Admin', role: 'admin' };
-const player: Actor = { kind: 'user', userId: 'player', name: 'Joueur', role: 'player' };
+const admin: Actor = { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' };
+const player: Actor = { kind: 'user', active: true, userId: 'player', name: 'Joueur', role: 'player' };
 const substitute: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'substitute',
 	name: 'Remplaçant',
 	role: 'player'
 };
-const other2: Actor = { kind: 'user', userId: 'other2', name: 'Autre', role: 'player' };
+const other2: Actor = { kind: 'user', active: true, userId: 'other2', name: 'Autre', role: 'player' };
 
 function insertUser(id: string, role: string) {
 	sqlite
@@ -233,6 +233,31 @@ describe('chargement de l’accueil', () => {
 			absent: 1,
 			unknown: 2,
 			generated: false
+		});
+	});
+
+	it('donne le score des matchs passés à un compte sans fiche joueur', async () => {
+		sqlite
+			.prepare(
+				`insert into games (id, game_date, start_time, location_id, location, status, roster_template_json, generated_at, generation_json, completed_at, created_at, updated_at)
+				 values ('past', '2020-01-05', '09:00', 'arena', 'Aréna', 'completed', '{}', 0, '{}', 0, 0, 0)`
+			)
+			.run();
+		sqlite
+			.prepare(
+				`insert into game_goals (id, game_id, team, period, clock, kind, scorer_player_id, scorer_name, scorer_number, created_at, updated_at)
+				 values ('past-goal', 'past', 'white', 1, '10:00', 'even', 'player', 'Prénom player', 9, 0, 0)`
+			)
+			.run();
+
+		const data = (await load({
+			locals: { actor: admin },
+			parent: async () => ({ hasPlayerProfile: false, isSubstitute: false })
+		} as never)) as { agenda: { past: { id: string; score: unknown }[] } };
+
+		expect(data.agenda.past.find((entry) => entry.id === 'past')?.score).toEqual({
+			white: 1,
+			black: 0
 		});
 	});
 

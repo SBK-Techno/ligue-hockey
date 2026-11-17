@@ -1,18 +1,20 @@
 import type { Position } from '#config/positions.ts';
 import { buildSlotDefinitions, rosterTemplateFromSettings } from '#config/roster.ts';
+import { slotRowId } from '#config/slot.ts';
 import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
 import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
-import { isGameStarted, isLineupEditable } from './playability.ts';
+import { isGameStarted, isLineupEditable, visibleParticipants } from './playability.ts';
+import { isPublished } from './published.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
 import { gameWarningsInOrder } from '#config/game-warnings.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
-import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
+import { neutralPlayerName } from '#lib/domain/players/public.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import { cancelAllForGame } from '#lib/domain/subs/generation.ts';
+import { closeRequestsForGame } from '#lib/domain/subs/generation.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
@@ -21,6 +23,7 @@ import { newId } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
+import type { DbExecutor } from '#lib/server/db/index.ts';
 
 import {
 	cancelGame as cancelGameRow,
@@ -29,21 +32,31 @@ import {
 	insertGameWithSlots,
 	listAvailability,
 	listAvailabilityForPlayer,
+	listGameListRows,
 	listGames,
+	releasePlayerSlot,
 	listSlotAssignments,
 	saveAssignments,
 	updateGame as updateGameRow,
 	upsertAvailability,
 	type SlotAssignment
 } from './queries.ts';
-import { generationPlan, lineupPool, type PoolSlot } from './pool.ts';
+import { generationPlan, lineupPool, type LineupPool, type PoolSlot } from './pool.ts';
+import { ratingsRemovedAudit } from './audit.ts';
 import type { GameRow } from './schema.ts';
-import type { GameBenchView, GameGenerationView, GameSlotView, GameSummary } from './types.ts';
+import type {
+	GameGenerationView,
+	GamePlayer,
+	GameSlotView,
+	GameSummary
+} from './types.ts';
 import {
 	gameInputSchema,
 	generationSnapshotSchema,
+	updateGameInputSchema,
 	type GameInput,
-	type GenerationSnapshot
+	type GenerationSnapshot,
+	type UpdateGameInput
 } from './validators.ts';
 
 export type GameView = GameSummary & {
@@ -56,7 +69,11 @@ export type GameView = GameSummary & {
 	lineupManualAt: number | null;
 	openSlots: number;
 	openSlotsLabel: string;
+	/** Toutes les places du modèle sont remplies : l'alignement est complet. */
+	lineupComplete: boolean;
 	generated: boolean;
+	/** Jeton de concurrence de la fiche : le formulaire le renvoie tel quel. */
+	updatedAt: number;
 };
 
 export type GenerationResult = GameGenerationView & {
@@ -87,21 +104,39 @@ function snapshotFrom(row: GameRow): GenerationSnapshot | null {
 	}
 }
 
+type NamedPlayer = {
+	fullName: string;
+	position: Position;
+	jerseyNumber: number | null;
+	avatarId: string | null;
+	active: boolean;
+};
+
+/** La seule projection nommée des joueurs d'un match, partagée par les vues. */
+function namedPlayers(playerIds: Iterable<string>): Map<string, NamedPlayer> {
+	return new Map(
+		playersByIds([...new Set(playerIds)]).map((player) => [
+			player.userId,
+			{
+				fullName: player.fullName,
+				position: player.position,
+				jerseyNumber: player.jerseyNumber,
+				avatarId: player.avatarId,
+				active: player.active
+			}
+		])
+	);
+}
+
 function generationView(
 	row: GameRow,
-	names: Map<
-		string,
-		{
-			fullName: string;
-			position: Position;
-			jerseyNumber: number | null;
-			avatarId: string | null;
-		}
-	>,
-	includeMetrics: boolean
+	names: Map<string, NamedPlayer>,
+	includeMetrics: boolean,
+	live: LineupPool | null
 ): GameGenerationView | null {
 	const snapshot = snapshotFrom(row);
 	if (!snapshot) return null;
+	const members = new Map(live?.members.map((member) => [member.playerId, member]) ?? []);
 	return {
 		skillDiff: includeMetrics ? snapshot.skillDiff : null,
 		ageDiff: includeMetrics ? snapshot.ageDiff : null,
@@ -119,18 +154,34 @@ function generationView(
 			strict: violation.strict,
 			playerIds: violation.playerIds,
 					names: [
-						names.get(violation.playerIds[0])?.fullName ?? violation.playerIds[0],
-						names.get(violation.playerIds[1])?.fullName ?? violation.playerIds[1]
+						names.get(violation.playerIds[0])?.fullName ?? neutralPlayerName(),
+						names.get(violation.playerIds[1])?.fullName ?? neutralPlayerName()
 					]
 				}))
 			: [],
-		bench: snapshot.bench.map((entry) => ({
-			playerId: entry.playerId,
-			fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
-			position: entry.position,
-			jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
-			kind: entry.kind
-		})),
+		// Le banc publié suit le bassin vivant quand l'alignement est encore
+		// modifiable; un match commencé ou terminé garde ses participants.
+		bench: live
+			? live.bench.map((entry) => ({
+					playerId: entry.playerId,
+					fullName: live.names.get(entry.playerId) ?? neutralPlayerName(),
+					position: entry.position,
+					jerseyNumber: members.get(entry.playerId)?.jerseyNumber ?? null,
+					avatarId: members.get(entry.playerId)?.avatarId ?? null,
+					kind: entry.kind
+				}))
+			: visibleParticipants(
+					row,
+					snapshot.bench,
+					(playerId) => names.get(playerId)?.active !== false
+				).map((entry) => ({
+					playerId: entry.playerId,
+					fullName: names.get(entry.playerId)?.fullName ?? neutralPlayerName(),
+					position: entry.position,
+					jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
+					avatarId: names.get(entry.playerId)?.avatarId ?? null,
+					kind: entry.kind
+				})),
 		generatedAt: snapshot.generatedAt
 	};
 }
@@ -138,6 +189,44 @@ function generationView(
 export function listSchedule(actor: Actor): GameSummary[] {
 	requireUser(actor);
 	return listGames().map(summary);
+}
+
+export type GameListEntry = GameSummary & {
+	generated: boolean;
+	openSlots: number;
+	openSlotsLabel: string;
+};
+
+/**
+ * Les lignes d'une liste de matchs, sans charger une fiche par match. Le
+ * nombre de places vient du même alignement que la fiche; seul le libellé est
+ * composé ici, à partir du seul propriétaire du format de compte.
+ */
+export function listGameListEntries(
+	actor: Actor,
+	gameIds: readonly string[]
+): Map<string, GameListEntry> {
+	requireUser(actor);
+	return new Map(
+		listGameListRows(gameIds).map((row) => [
+			row.id,
+			{
+				id: row.id,
+				gameDate: row.gameDate,
+				startTime: row.startTime,
+				locationId: row.locationId,
+				location: row.location,
+				status: row.status,
+				generated: row.generated,
+				openSlots: row.openSlots,
+				openSlotsLabel: formatCount(
+					row.openSlots,
+					'games.openSlots.one',
+					'games.openSlots.many'
+				)
+			}
+		])
+	);
 }
 
 export function getGame(actor: Actor, gameId: string): GameView {
@@ -156,34 +245,36 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		...(snapshot?.bench.map((entry) => entry.playerId) ?? []),
 		...(snapshot?.ruleViolations.flatMap((violation) => violation.playerIds) ?? [])
 	];
-	const players = playersByIds([...new Set(playerIds)]);
-	const names = new Map(
-		players.map((player) => [
-			player.userId,
-			{
-				fullName: player.fullName,
-				position: player.position,
-				jerseyNumber: player.jerseyNumber,
-				avatarId: player.avatarId
-			}
-		])
-	);
-
-	const slots: GameSlotView[] = assignments.map((assignment) => ({
+	const names = namedPlayers(playerIds);
+	const poolSlots: PoolSlot[] = assignments.map((assignment) => ({
 		team: assignment.team,
 		position: assignment.position,
 		slotIndex: assignment.slotIndex,
 		player:
 			assignment.playerId && assignment.assignmentKind
-				? {
-						playerId: assignment.playerId,
-						fullName: names.get(assignment.playerId)?.fullName ?? assignment.playerId,
-						position: assignment.position,
-						jerseyNumber: names.get(assignment.playerId)?.jerseyNumber ?? null,
-						avatarId: names.get(assignment.playerId)?.avatarId ?? null,
-						kind: assignment.assignmentKind
-					}
+				? { playerId: assignment.playerId, kind: assignment.assignmentKind }
 				: null
+	}));
+	// La seule projection des places et des comptes : le bassin vivant décide
+	// de ce qui est publié, avant le début du match. Le gestionnaire, la
+	// feuille et la page publique lisent donc le même alignement.
+	const live = snapshot && isLineupEditable(row) ? lineupPool(row, poolSlots) : null;
+	const published = live?.slots ?? poolSlots;
+
+	const slots: GameSlotView[] = published.map((slot) => ({
+		team: slot.team,
+		position: slot.position,
+		slotIndex: slot.slotIndex,
+		player: slot.player
+			? {
+					playerId: slot.player.playerId,
+					fullName: names.get(slot.player.playerId)?.fullName ?? neutralPlayerName(),
+					position: slot.position,
+					jerseyNumber: names.get(slot.player.playerId)?.jerseyNumber ?? null,
+					avatarId: names.get(slot.player.playerId)?.avatarId ?? null,
+					kind: slot.player.kind
+				}
+			: null
 	}));
 
 	const openSlots = slots.filter((slot) => !slot.player).length;
@@ -195,12 +286,14 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		locationAddress: location.address,
 		locationMapUrl: location.mapUrl,
 		slots,
-		generation: generationView(row, names, can(actor, 'manageGames')),
+		generation: generationView(row, names, can(actor, 'manageGames'), live),
 		completedAt: row.completedAt,
 		lineupManualAt: row.lineupManualAt,
 		openSlots,
 		openSlotsLabel: formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many'),
-		generated: snapshot !== null
+		lineupComplete: openSlots === 0,
+		generated: snapshot !== null,
+		updatedAt: row.updatedAt
 	};
 }
 
@@ -214,7 +307,11 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 	const now = clock.nowMs();
 	const gameId = newId('game');
 	const slots = buildSlotDefinitions(rosterTemplate).map((slot) => ({
-		id: `${gameId}:${slot.team}:${slot.position}:${slot.index}`,
+		id: slotRowId(gameId, {
+			team: slot.team,
+			position: slot.position,
+			slotIndex: slot.index
+		}),
 		gameId,
 		team: slot.team,
 		position: slot.position,
@@ -264,7 +361,11 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 	};
 }
 
-export function updateGame(actor: Actor, gameId: string, input: GameInput): GameSummary {
+export function updateGame(
+	actor: Actor,
+	gameId: string,
+	input: UpdateGameInput
+): GameSummary {
 	requirePermission(actor, 'manageGames');
 	const row = findGame(gameId);
 	if (!row) {
@@ -273,7 +374,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 	if (!isLineupEditable(row)) {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
-	const parsed = parseSchema(gameInputSchema, input);
+	const parsed = parseSchema(updateGameInputSchema, input);
 	const location = getLocation(actor, parsed.locationId);
 	const locationChanged = parsed.locationId !== row.locationId;
 
@@ -290,7 +391,12 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 				notes: parsed.notes
 			},
 			clock.nowMs(),
-			row.updatedAt
+			parsed.expectedUpdatedAt,
+			auditEntry(actor, {
+				action: 'game.update',
+				entityType: 'game',
+				entityId: gameId
+			})
 		);
 		if (!saved) {
 			throw new AppError('CONFLICT', { key: 'games.lineupChanged' });
@@ -301,12 +407,6 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 		}
 		throw cause;
 	}
-
-	recordAudit(actor, {
-		action: 'game.update',
-		entityType: 'game',
-		entityId: gameId
-	});
 
 	return summary({
 		...row,
@@ -332,10 +432,19 @@ export function cancelGame(actor: Actor, gameId: string): void {
 	}
 
 	const updatedAt = clock.nowMs();
-	if (!cancelGameRow(gameId, updatedAt)) {
+	const cancelled = cancelGameRow(
+		gameId,
+		updatedAt,
+		auditEntry(actor, {
+			action: 'game.cancel',
+			entityType: 'game',
+			entityId: gameId
+		}),
+		(tx) => closeRequestsForGame(actor, gameId, updatedAt, tx, 'cancelled')
+	);
+	if (!cancelled) {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
-	cancelAllForGame(actor, summary(row));
 
 	const recipients = generationCandidates().map((player) => ({
 		userId: player.userId
@@ -351,12 +460,6 @@ export function cancelGame(actor: Actor, gameId: string): void {
 		},
 		{ dedupeKey: `game_cancelled:${gameId}` }
 	);
-
-	recordAudit(actor, {
-		action: 'game.cancel',
-		entityType: 'game',
-		entityId: gameId
-	});
 }
 
 export function regenerateGame(
@@ -380,7 +483,6 @@ export function regenerateGame(
 		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
 	}
 
-	const previousRatedPlayerIds = listGameRatingPlayerIds(gameId);
 	const slotRows: PoolSlot[] = listSlotAssignments(gameId).map((slot) => ({
 		team: slot.team,
 		position: slot.position,
@@ -416,10 +518,6 @@ export function regenerateGame(
 	}));
 
 	const generatedAt = clock.nowMs();
-	const dressed = new Set(assignments.map((assignment) => assignment.playerId));
-	const removedRatedPlayerIds = previousRatedPlayerIds.filter(
-		(playerId) => !dressed.has(playerId)
-	);
 	const snapshot: GenerationSnapshot = {
 		skillDiff: result.skillDiff,
 		ageDiff: result.ageDiff,
@@ -442,18 +540,9 @@ export function regenerateGame(
 		{
 			expectedGeneratedAt: row.generatedAt ?? null,
 			manualAt: null,
-			removedRatedPlayerIds,
+			ratingsAudit: (playerIds) =>
+				ratingsRemovedAudit(actor, gameId, playerIds),
 			audits: [
-				...(removedRatedPlayerIds.length > 0
-					? [
-							auditEntry(actor, {
-								action: 'ratings.game_removed',
-								entityType: 'game',
-								entityId: gameId,
-								metadata: { playerIds: removedRatedPlayerIds }
-							})
-						]
-					: []),
 				auditEntry(actor, {
 					action: 'game.generate',
 					entityType: 'game',
@@ -475,22 +564,13 @@ export function regenerateGame(
 		...plan.bench.map((entry) => entry.playerId),
 		...result.violations.flatMap((violation) => violation.playerIds)
 	];
-	const names = new Map(
-		playersByIds([...new Set(namedIds)]).map((player) => [
-			player.userId,
-			{
-				fullName: player.fullName,
-				position: player.position,
-				jerseyNumber: player.jerseyNumber,
-				avatarId: player.avatarId
-			}
-		])
-	);
-	const benchViews: GameBenchView[] = plan.bench.map((entry) => ({
+	const names = namedPlayers(namedIds);
+	const benchViews: GamePlayer[] = plan.bench.map((entry) => ({
 		playerId: entry.playerId,
-		fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
+		fullName: names.get(entry.playerId)?.fullName ?? neutralPlayerName(),
 		position: entry.position,
 		jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
+		avatarId: names.get(entry.playerId)?.avatarId ?? null,
 		kind: entry.kind
 	}));
 
@@ -508,8 +588,8 @@ export function regenerateGame(
 			strict: violation.strict,
 			playerIds: violation.playerIds,
 			names: [
-				names.get(violation.playerIds[0])?.fullName ?? violation.playerIds[0],
-				names.get(violation.playerIds[1])?.fullName ?? violation.playerIds[1]
+				names.get(violation.playerIds[0])?.fullName ?? neutralPlayerName(),
+				names.get(violation.playerIds[1])?.fullName ?? neutralPlayerName()
 			]
 		})),
 		bench: benchViews,
@@ -560,20 +640,64 @@ export function completeGame(actor: Actor, gameId: string): void {
 			action: 'game.finalized',
 			entityType: 'game',
 			entityId: gameId
-		})
+		}),
+		(tx) => closeRequestsForGame(actor, gameId, at, tx, 'finalized')
 	);
 	if (!finalized) {
 		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
 	}
 }
 
-export function setGamePresence(
+/**
+ * Les deux écritures de présence et de place qu'un autre service peut joindre
+ * à sa propre transaction. L'exécuteur vient de l'appelant; les tables et
+ * leurs invariants restent dans ce module.
+ */
+export function writePresenceIn(
+	executor: DbExecutor,
 	gameId: string,
 	playerId: string,
 	status: 'present' | 'absent',
 	at: number
 ): void {
-	upsertAvailability(gameId, playerId, status, at);
+	upsertAvailability(gameId, playerId, status, at, executor);
+}
+
+export function releaseSlotIn(
+	executor: DbExecutor,
+	gameId: string,
+	playerId: string,
+	at: number,
+	audit: ReturnType<typeof auditEntry>
+): void {
+	releasePlayerSlot(gameId, playerId, at, audit, executor);
+}
+
+/**
+ * Retire un joueur d'un alignement encore modifiable. Une sortie ne laisse
+ * jamais sa place ni son banc derrière elle : la prochaine lecture, y compris
+ * la feuille de match, ne le voit plus. Le match commencé ou terminé garde ses
+ * participants.
+ */
+export function releaseFromLineup(
+	actor: Actor,
+	gameId: string,
+	playerId: string,
+	reason: 'absence' | 'bumped' | 'released'
+): boolean {
+	const row = findGame(gameId);
+	if (!row || !isLineupEditable(row)) return false;
+	return releasePlayerSlot(
+		gameId,
+		playerId,
+		clock.nowMs(),
+		auditEntry(actor, {
+			action: 'game.lineup_release',
+			entityType: 'game',
+			entityId: gameId,
+			metadata: { playerId, reason }
+		})
+	);
 }
 
 export function regenerateIfGenerated(gameId: string): {
@@ -581,7 +705,7 @@ export function regenerateIfGenerated(gameId: string): {
 	warning?: I18nKey;
 } {
 	const row = findGame(gameId);
-	if (!row?.generatedAt) return { regenerated: false };
+	if (!row || !isPublished(row)) return { regenerated: false };
 	// Un alignement enregistré à la main reste intact tant qu'un gestionnaire
 	// ne demande pas explicitement de le refaire.
 	if (row.lineupManualAt !== null) return { regenerated: false };

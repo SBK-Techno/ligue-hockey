@@ -3,36 +3,98 @@
 	import { browser } from '$app/env';
 	import { page } from '$app/state';
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
-	import { PLAYER_LIMITS } from '#config/players.ts';
-	import { POSITIONS, positionDefinition } from '#config/positions.ts';
-	import { roleDefinition } from '#config/roles.ts';
-	import { formatCount, formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import { positionDefinition, type Position } from '#config/positions.ts';
+	import {
+		formatCount,
+		formatDecimal,
+		formatMonthYear,
+		formatMoney,
+		formatTimestamp,
+		t
+	} from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
-	import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
-	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
-	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
-	import PasswordField from '#lib/ui/PasswordField.svelte';
-	import PositionChips from '#lib/ui/PositionChips.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
-	import { managementTabs } from '#lib/domain/auth/destinations.ts';
-	import { can } from '#lib/domain/auth/policy.ts';
+	import { monogram } from '#lib/ui/identity-display.ts';
+	import { pushPreferenceState } from './push-preference.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
 	const account = $derived(data.account);
 	const profile = $derived(data.profile);
-	const isManager = $derived(actor !== null && can(actor, 'viewAdmin'));
-	const canSeeRatings = $derived(actor !== null && can(actor, 'editRatings'));
-	const managementLinks = $derived(actor ? managementTabs(actor) : []);
-	const roleLabel = $derived(
-		account ? t(roleDefinition(account.role)?.labelKey ?? 'admin.role.player') : ''
+	const legend = $derived(data.legend);
+
+	// Comme sur l'accueil, chaque îlot est importé au niveau du module : le
+	// serveur le rend, le navigateur ne le demande qu'après la peinture.
+	// svelte-ignore state_referenced_locally
+	const initial = data;
+	const hasOtherSessions = initial.sessions.some(
+		(session) => session.id !== initial.currentSessionId
 	);
+	const [
+		IdentityDisclosure,
+		PositionChips,
+		StatStrip,
+		PasswordField,
+		ConfirmSubmit,
+		InstallPrompt
+	] = await Promise.all([
+		initial.avatarPicker
+			? import('#lib/ui/IdentityDisclosure.svelte').then((module) => module.default)
+			: null,
+		initial.isSubstitute
+			? import('#lib/ui/PositionChips.svelte').then((module) => module.default)
+			: null,
+		initial.stats && initial.stats.games > 0
+			? import('#lib/ui/StatStrip.svelte').then((module) => module.default)
+			: null,
+		import('#lib/ui/PasswordField.svelte').then((module) => module.default),
+		hasOtherSessions
+			? import('#lib/ui/ConfirmSubmit.svelte').then((module) => module.default)
+			: null,
+		import('#lib/ui/InstallPrompt.svelte').then((module) => module.default)
+	]);
+	// Le poste suit le formulaire : la liste de légendes se filtre tout de suite.
+	// svelte-ignore state_referenced_locally
+	let position = $state<Position | null>(profile?.position ?? null);
+
+	type IdentityDraft = {
+		firstName: string;
+		lastName: string;
+		age: number | undefined;
+		jerseyNumber: number | undefined;
+	};
+
+	function identityDraft(current: typeof profile): IdentityDraft {
+		return {
+			firstName: current?.firstName ?? '',
+			lastName: current?.lastName ?? '',
+			age: current?.age,
+			jerseyNumber: current?.jerseyNumber ?? undefined
+		};
+	}
+
+	// Un brouillon local garde les champs de la fiche pendant qu'une autre
+	// section est enregistrée; seul le succès de la fiche le resynchronise.
+	// svelte-ignore state_referenced_locally
+	let identity = $state<IdentityDraft>(identityDraft(profile));
+	// Le nom affiché garde sa saisie pendant l'enregistrement d'une autre
+	// section; seul le succès de sa propre fiche le resynchronise.
+	// svelte-ignore state_referenced_locally
+	let displayName = $state(account?.name ?? '');
+
+	function syncIdentityDraft() {
+		identity = identityDraft(profile);
+		if (!profile) displayName = account?.name ?? '';
+	}
+	const isManager = $derived(data.nav.canViewAdmin);
+	const canSeeRatings = $derived(data.nav.canSeeRatings);
+	const managementLinks = $derived(data.nav.managementLinks);
+	const roleLabel = $derived(account ? t(data.nav.roleLabelKey) : '');
 	const initials = $derived(account ? monogram(account.name) : '');
 	const otherSessions = $derived(
 		data.sessions.filter((session) => session.id !== data.currentSessionId)
@@ -46,15 +108,10 @@
 		'checking' | 'off' | 'on' | 'denied' | 'unsupported' | 'unconfigured'
 	>('checking');
 	let pushError = $state<string | null>(null);
+	const pushPreference = $derived(
+		pushPreferenceState(pushStatus, data.notifications.pushEnabled)
+	);
 
-	function monogram(name: string): string {
-		return name
-			.trim()
-			.split(/\s+/)
-			.slice(0, 2)
-			.map((part) => part[0]?.toUpperCase() ?? '')
-			.join('');
-	}
 
 	function deviceLabel(userAgent: string | null): string {
 		if (!userAgent) return t('profile.unknownDevice');
@@ -180,9 +237,22 @@
 		void tick().then(() => control?.focus());
 	});
 
+	const statsCells = $derived(
+		data.stats
+			? [
+					{ label: t('stats.games'), value: data.stats.games },
+					{ label: t('stats.goals'), value: data.stats.goals },
+					{ label: t('stats.assists'), value: data.stats.assists },
+					{ label: t('stats.points'), value: data.stats.points },
+					{ label: t('stats.penaltyMinutes'), value: data.stats.penaltyMinutes }
+				]
+			: []
+	);
+
 	const sections = $derived([
 		{ id: 'compte', label: t('profile.tab.account') },
 		...(profile ? [{ id: 'joueur', label: t('profile.tab.player') }] : []),
+		...(data.stats ? [{ id: 'stats', label: t('profile.tab.stats') }] : []),
 		{ id: 'notifications', label: t('profile.tab.notifications') },
 		{ id: 'securite', label: t('profile.tab.security') },
 		...(isManager ? [{ id: 'administration', label: t('profile.tab.admin') }] : [])
@@ -201,7 +271,7 @@
 			<section class="scoreboard p-5">
 				<div class="flex items-start gap-4">
 					{#if profile}
-						<Avatar player={profile} size={64} decorative={false} />
+						<Avatar player={profile} size={64} />
 					{:else}
 						<span
 							class="grid h-16 w-16 shrink-0 place-items-center rounded-pill border border-paper/25 bg-paper/10 text-section font-semibold tracking-tight"
@@ -225,6 +295,15 @@
 							{#if profile.jerseyNumber}
 								· #{profile.jerseyNumber}
 							{/if}
+						</span>
+					{/if}
+					{#if legend}
+						<span class="stamp border-paper/25 text-paper/80">
+							{t('profile.legendIdentity', {
+								name: legend.name,
+								number: legend.number,
+								era: legend.era
+							})}
 						</span>
 					{/if}
 				</div>
@@ -273,7 +352,7 @@
 
 		<div class="grid gap-4 lg:items-start xl:grid-cols-[minmax(0,1fr)_20rem]">
 			<div class="page-stack min-w-0">
-				<div id="compte" class="scroll-mt-[var(--anchor-offset)]">
+				<div id="compte">
 					<SectionCard title={t('profile.account')}>
 						<p class="hint">{t('profile.accountHelp')}</p>
 						<FormFeedback {form} section="compte" class="mt-3" />
@@ -291,14 +370,19 @@
 							</dl>
 							<p class="hint mt-2">{t('profile.playerNameManaged')}</p>
 						{:else}
-							<form method="POST" action="?/identity" use:progressiveForm class="mt-3 space-y-3">
+							<form
+								method="POST"
+								action="?/identity"
+								use:progressiveForm={{ onSuccess: syncIdentityDraft }}
+								class="mt-3 space-y-3"
+							>
 								<div>
 									<label class="label" for="displayName">{t('profile.displayName')}</label>
 									<input
 										class="input"
 										id="displayName"
 										name="displayName"
-										value={account.name}
+										bind:value={displayName}
 										maxlength={ACCOUNT_LIMITS.displayNameMax}
 										autocomplete="name"
 										required
@@ -317,14 +401,14 @@
 				</div>
 
 				{#if profile}
-					<div id="joueur" class="scroll-mt-[var(--anchor-offset)]">
+					<div id="joueur">
 						<SectionCard title={t('profile.playerSection')}>
 							<p class="hint">{t('profile.playerSectionHelp')}</p>
 							<FormFeedback {form} section="joueur" class="mt-3" />
 							<form
 								method="POST"
 								action="?/profile"
-								use:progressiveForm
+								use:progressiveForm={{ onSuccess: syncIdentityDraft }}
 								class="mt-4 grid gap-4 sm:grid-cols-2"
 							>
 								<div>
@@ -333,9 +417,9 @@
 										class="input"
 										id="firstName"
 										name="firstName"
-										value={profile.firstName}
+										bind:value={identity.firstName}
 										required
-										maxlength={PLAYER_LIMITS.nameMax}
+										maxlength={data.limits.nameMax}
 										autocomplete="given-name"
 									/>
 								</div>
@@ -345,9 +429,9 @@
 										class="input"
 										id="lastName"
 										name="lastName"
-										value={profile.lastName}
+										bind:value={identity.lastName}
 										required
-										maxlength={PLAYER_LIMITS.nameMax}
+										maxlength={data.limits.nameMax}
 										autocomplete="family-name"
 									/>
 								</div>
@@ -359,24 +443,18 @@
 										name="age"
 										type="number"
 										inputmode="numeric"
-										min={PLAYER_LIMITS.ageMin}
-										max={PLAYER_LIMITS.ageMax}
-										value={profile.age}
+										min={data.limits.ageMin}
+										max={data.limits.ageMax}
+										bind:value={identity.age}
 										required
 									/>
 									<p class="hint">{t('profile.ageHelp')}</p>
 								</div>
-								<div>
-									<label class="label" for="position">{t('position.label')}</label>
-									<select class="input" id="position" name="position" required>
-										{#each POSITIONS as position (position.key)}
-											<option value={position.key} selected={profile.position === position.key}>
-												{t(position.labelKey)}
-											</option>
-										{/each}
-									</select>
-									<p class="hint">{t('profile.positionHelp')}</p>
-								</div>
+								<dl class="fact">
+									<dt>{t('position.label')}</dt>
+									<dd>{t(positionDefinition(profile.position).labelKey)}</dd>
+								</dl>
+								<p class="hint">{t('profile.positionManaged')}</p>
 								<div>
 									<label class="label" for="jerseyNumber">{t('profile.jersey')}</label>
 									<input
@@ -385,24 +463,26 @@
 										name="jerseyNumber"
 										type="number"
 										inputmode="numeric"
-										min={PLAYER_LIMITS.jerseyMin}
-										max={PLAYER_LIMITS.jerseyMax}
-										value={profile.jerseyNumber ?? ''}
-										placeholder={String(PLAYER_LIMITS.jerseyExample)}
+										min={data.limits.jerseyMin}
+										max={data.limits.jerseyMax}
+										bind:value={identity.jerseyNumber}
+										placeholder={String(data.limits.jerseyExample)}
 									/>
 									<p class="hint">
 										{t('profile.jerseyHelp', {
-											min: PLAYER_LIMITS.jerseyMin,
-											max: PLAYER_LIMITS.jerseyMax
+											min: data.limits.jerseyMin,
+											max: data.limits.jerseyMax
 										})}
 									</p>
 								</div>
 								<div class="sm:col-span-2">
-									{#if data.avatarPicker}
-										<AvatarPicker
-											name="avatarId"
+									{#if data.avatarPicker && IdentityDisclosure && profile}
+										<IdentityDisclosure
 											selected={data.avatarPicker.selected}
 											taken={data.avatarPicker.taken}
+											position={position}
+											player={profile}
+											legendName={data.legend?.name ?? null}
 										/>
 									{/if}
 								</div>
@@ -417,16 +497,18 @@
 					</div>
 
 					{#if data.isSubstitute}
-						<div id="positions" class="scroll-mt-[var(--anchor-offset)]">
+						<div id="positions">
 							<SectionCard title={t('subs.positions')}>
 								<p class="hint">{t('subs.positionsHelp')}</p>
 								<FormFeedback {form} section="positions" class="mt-3" />
 								<form method="POST" action="?/positions" use:progressiveForm class="mt-4 space-y-4">
-									<PositionChips
-										name="positions"
-										selected={data.positions}
-										legend={t('subs.positions')}
-									/>
+									{#if PositionChips}
+										<PositionChips
+											name="positions"
+											selected={data.positions}
+											legend={t('subs.positions')}
+										/>
+									{/if}
 									<button class="btn-primary" type="submit">{t('common.save')}</button>
 								</form>
 							</SectionCard>
@@ -437,7 +519,7 @@
 				{#if !profile && isManager}
 					<SectionCard title={t('profile.playerSection')}>
 						<p class="text-body text-muted">{t('profile.noPlayerSheetAdmin')}</p>
-						{#if actor && can(actor, 'managePlayers')}
+						{#if data.nav.canManagePlayers}
 							<a class="btn-secondary btn-sm mt-3" href="/admin/joueurs">
 								{t('profile.createPlayerSheet')}
 							</a>
@@ -447,7 +529,27 @@
 			</div>
 
 			<div class="page-stack min-w-0">
-				<div id="notifications" class="scroll-mt-[var(--anchor-offset)]">
+				{#if data.stats}
+					<div id="stats">
+						<SectionCard title={t('stats.title')}>
+							{#if data.stats.games === 0}
+								<p class="text-body text-muted">{t('stats.empty')}</p>
+							{:else}
+								{#if StatStrip}
+									<StatStrip cells={statsCells} />
+								{/if}
+								<p class="mt-3 text-body">
+									{t('stats.perGame', {
+										value: formatDecimal(data.stats.pointsPerGame, 2)
+									})}
+								</p>
+							{/if}
+							<p class="hint mt-3">{t('stats.help')}</p>
+						</SectionCard>
+					</div>
+				{/if}
+
+				<div id="notifications">
 					<SectionCard title={t('profile.notifications')}>
 						<p class="hint">{t('profile.notificationsHelp')}</p>
 						<FormFeedback {form} section="notifications" class="mt-3" />
@@ -464,12 +566,24 @@
 							<label class="flex min-h-11 items-center gap-3 text-body font-medium">
 								<input
 									type="checkbox"
-									name="pushEnabled"
-									checked={data.notifications.pushEnabled}
+									name={pushPreference.disabled ? undefined : 'pushEnabled'}
+									checked={pushPreference.checked}
+									disabled={pushPreference.disabled}
+									aria-describedby={pushPreference.hint ? 'push-preference-help' : undefined}
 									class="h-4 w-4"
 								/>
 								{t('profile.pushNotifications')}
 							</label>
+							{#if pushPreference.disabled}
+								<input
+									type="hidden"
+									name="pushEnabled"
+									value={data.notifications.pushEnabled ? 'on' : ''}
+								/>
+								<p id="push-preference-help" class="hint">
+									{t('profile.pushPreferenceHelp')}
+								</p>
+							{/if}
 							<button class="btn-primary" type="submit">{t('common.save')}</button>
 						</form>
 
@@ -510,7 +624,7 @@
 					</SectionCard>
 				</div>
 
-				<div id="securite" class="scroll-mt-[var(--anchor-offset)]">
+				<div id="securite">
 					<SectionCard title={t('profile.security')}>
 						<p class="hint">{t('profile.securityHelp')}</p>
 						<FormFeedback {form} section="securite" class="mt-3" />
@@ -522,29 +636,31 @@
 								{t('profile.changePassword')}
 							</summary>
 							<form method="POST" action="?/password" use:progressiveForm class="mt-1 space-y-4">
-								<PasswordField
-									id="currentPassword"
-									name="currentPassword"
-									label={t('profile.currentPassword')}
-									autocomplete="current-password"
-									error={passwordError}
-								/>
-								<PasswordField
-									id="newPassword"
-									name="newPassword"
-									label={t('profile.newPassword')}
-									autocomplete="new-password"
-									minlength={data.minLength}
-									hint={t('invite.tooShort', { count: data.minLength })}
-									error={fieldErrorFor(form, 'securite', 'newPassword')}
-								/>
-								<PasswordField
-									id="confirmPassword"
-									name="confirm"
-									label={t('invite.confirm')}
-									autocomplete="new-password"
-									error={fieldErrorFor(form, 'securite', 'confirmPassword')}
-								/>
+								{#if PasswordField}
+									<PasswordField
+										id="currentPassword"
+										name="currentPassword"
+										label={t('profile.currentPassword')}
+										autocomplete="current-password"
+										error={passwordError}
+									/>
+									<PasswordField
+										id="newPassword"
+										name="newPassword"
+										label={t('profile.newPassword')}
+										autocomplete="new-password"
+										minlength={data.minLength}
+										hint={t('invite.tooShort', { count: data.minLength })}
+										error={fieldErrorFor(form, 'securite', 'newPassword')}
+									/>
+									<PasswordField
+										id="confirmPassword"
+										name="confirm"
+										label={t('invite.confirm')}
+										autocomplete="new-password"
+										error={fieldErrorFor(form, 'securite', 'confirmPassword')}
+									/>
+								{/if}
 								<button class="btn-primary" type="submit">{t('common.save')}</button>
 							</form>
 						</details>
@@ -608,10 +724,12 @@
 
 							{#if otherSessions.length > 0}
 								<form method="POST" action="?/sessions" use:progressiveForm class="mt-3">
-									<ConfirmSubmit
-										label={t('profile.revokeOthers')}
-										question={t('profile.revokeOthersConfirm')}
-									/>
+									{#if ConfirmSubmit}
+										<ConfirmSubmit
+											label={t('profile.revokeOthers')}
+											question={t('profile.revokeOthersConfirm')}
+										/>
+									{/if}
 								</form>
 							{:else}
 								<p class="hint mt-3">{t('profile.noOtherSessions')}</p>
@@ -628,11 +746,13 @@
 				</div>
 
 				<div class="lg:hidden">
-					<InstallPrompt variant="full" />
+					{#if InstallPrompt}
+						<InstallPrompt variant="full" />
+					{/if}
 				</div>
 
 				{#if isManager}
-					<div id="administration" class="scroll-mt-[var(--anchor-offset)]">
+					<div id="administration">
 						<SectionCard title={t('profile.adminSection')}>
 							<p class="hint">{t('profile.adminHelp')}</p>
 							<div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">

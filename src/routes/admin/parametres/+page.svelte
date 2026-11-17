@@ -44,7 +44,7 @@
 	{#each data.groups as group, index (group.key)}
 		<details
 			id="groupe-{group.key}"
-			class="group scroll-mt-[var(--anchor-offset)] border-t border-line"
+			class="group border-t border-line"
 			open={index === 0}
 		>
 			<summary

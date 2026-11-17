@@ -7,11 +7,12 @@ export type FormResult = {
 
 /**
  * Une rétroaction appartient à une section : six formulaires sur une page ne
- * doivent pas afficher leur message au même endroit.
+ * doivent pas afficher leur message au même endroit. Sans section demandée,
+ * seul un résultat global est rendu; un message de section reste chez elle.
  */
 export function feedbackFor(form: FormResult, section?: string): FormResult {
 	if (!form) return null;
-	if (!section) return form;
+	if (!section) return form.section ? null : form;
 	return form.section === section ? form : null;
 }
 

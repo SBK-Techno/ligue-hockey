@@ -1,7 +1,7 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
 import { POSITION_KEYS } from '#config/positions.ts';
-import { getAvailability, markAvailability } from '#lib/domain/availability/service.ts';
+import { availabilityForGame, markAvailability } from '#lib/domain/availability/service.ts';
 import {
 	cancelRequest,
 	claimSubstitute,
@@ -10,9 +10,10 @@ import {
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
-import { isGameStarted, isLineupEditable } from '#lib/domain/games/playability.ts';
+import { saveManualLineup } from '#lib/domain/games/lineup.ts';
+import { manualLineupInputSchema } from '#lib/domain/games/validators.ts';
+import { isGamePlayable, isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
-import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
 import type { Position } from '#config/positions.ts';
 import { getMySubProfile } from '#lib/domain/subs/service.ts';
 import {
@@ -28,8 +29,9 @@ import {
 	penaltyFormInputSchema
 } from '#lib/domain/gamesheet/validators.ts';
 import { actionError } from '#lib/server/action.ts';
-import { t } from '#lib/shared/i18n/index.ts';
-import { parseForm } from '#lib/shared/validation.ts';
+import { formatDate, t } from '#lib/shared/i18n/index.ts';
+import { parseForm, parseSchema } from '#lib/shared/validation.ts';
+import { AppError } from '#lib/shared/errors.ts';
 
 const availabilitySchema = z.object({
 	status: z.enum(['present', 'absent'])
@@ -46,48 +48,48 @@ const manualRequestSchema = z.object({
 const goalIdSchema = z.object({ goalId: z.string().min(1) });
 const penaltyIdSchema = z.object({ penaltyId: z.string().min(1) });
 
-export const load: ServerLoad = ({ locals, params }) => {
+/** La vue vide d'un match absent ou refusé, écrite une seule fois. */
+function emptyMatchView(positions: Position[]) {
+	return {
+		game: null,
+		availability: null,
+		requests: [],
+		isSubstitute: false,
+		positions,
+		canManage: false,
+		editable: false,
+		playable: false,
+		sheet: null
+	};
+}
+
+export const load: ServerLoad = async ({ locals, params, parent }) => {
 	const actor = locals.actor;
+	const { isSubstitute } = await parent();
 	const positions: Position[] =
 		actor.kind === 'user' ? getMySubProfile(actor).positions : [];
 	if (actor.kind !== 'user') {
-		return {
-			game: null,
-			availability: null,
-			requests: [],
-			isSubstitute: false,
-			positions,
-			canManage: false,
-			editable: false,
-			started: false,
-			sheet: null
-		};
+		return emptyMatchView(positions);
 	}
 	const gameId = params.id;
 	if (!gameId) {
-		return {
-			game: null,
-			availability: null,
-			requests: [],
-			isSubstitute: false,
-			positions,
-			canManage: false,
-			editable: false,
-			started: false,
-			sheet: null
-		};
+		return emptyMatchView(positions);
 	}
 
-	const game = getGame(actor, gameId);
-	const started = isGameStarted(game);
+	const loaded = getGame(actor, gameId);
+	const editable = isLineupEditable(loaded);
+	// La vue publiée porte déjà le bassin vivant : aucun second filtre ici.
+	const game = loaded;
+	const playable = isGamePlayable(game);
 	return {
 		game,
-		editable: isLineupEditable(game),
-		started,
-		sheet: started ? getGameSheet(actor, gameId) : null,
-		availability: getAvailability(actor, gameId),
-		requests: listRequestsForGame(actor, gameId),
-		isSubstitute: isSubstitutePlayer(actor),
+		editable,
+		detailTitle: formatDate(game.gameDate),
+		playable,
+		sheet: playable ? getGameSheet(actor, game) : null,
+		availability: availabilityForGame(actor, game),
+		requests: listRequestsForGame(actor, game),
+		isSubstitute,
 		positions,
 		canManage: can(actor, 'manageGames')
 	};
@@ -192,6 +194,27 @@ export const actions: Actions = {
 			return { ok: true, message: t('gamesheet.finalized') };
 		} catch (cause) {
 			return actionError(cause);
+		}
+	},
+	lineup: async ({ request, locals, params }) => {
+		try {
+			const form = await request.formData();
+			const rawToken = String(form.get('expectedGeneratedAt') ?? '');
+			const token = rawToken === '' ? null : Number(rawToken);
+			let assignments: unknown;
+			try {
+				assignments = JSON.parse(String(form.get('lineup') ?? ''));
+			} catch {
+				throw new AppError('VALIDATION', { key: 'rink.invalid' });
+			}
+			const parsed = parseSchema(manualLineupInputSchema, {
+				expectedGeneratedAt: token,
+				assignments
+			});
+			saveManualLineup(locals.actor, params.id!, parsed);
+			return { ok: true, section: 'lineup', message: t('rink.saved') };
+		} catch (cause) {
+			return actionError(cause, { section: 'lineup' });
 		}
 	},
 	requestSub: async ({ request, locals, params }) => {

@@ -10,16 +10,12 @@
 	let { data, form }: PageProps = $props();
 
 	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'viewAdmin'));
-	const unreadIds = $derived(data.items.filter((item) => item.readAt === null).map((item) => item.id));
 </script>
 
 <PageHeader title={t('notifications.title')}>
 	{#snippet actions()}
-		{#if unreadIds.length > 0}
+		{#if data.unread > 0}
 			<form method="POST" action="?/read" use:progressiveForm>
-				{#each unreadIds as id (id)}
-					<input type="hidden" name="ids" value={id} />
-				{/each}
 				<button class="btn-primary btn-sm" type="submit">{t('notifications.markAll')}</button>
 			</form>
 		{/if}
@@ -73,6 +69,20 @@
 							</li>
 						{/each}
 					</ul>
+				</div>
+			{/if}
+
+			{#if data.nextCursor}
+				<div class="mt-3 flex justify-center">
+					<a class="btn-secondary btn-sm" href="?before={data.nextCursor}">
+						{t('notifications.older')}
+					</a>
+				</div>
+			{:else if data.before}
+				<div class="mt-3 flex justify-center">
+					<a class="btn-secondary btn-sm" href="/notifications">
+						{t('notifications.latest')}
+					</a>
 				</div>
 			{/if}
 		</div>

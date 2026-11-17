@@ -1,25 +1,72 @@
 <script lang="ts">
-	import { gameStatus } from '#config/game-status.ts';
-	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import { t } from '#lib/shared/i18n/index.ts';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
-	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
-	import RecordRow from '#lib/ui/RecordRow.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
-	import ActionsPanel from '#lib/ui/home/ActionsPanel.svelte';
-	import HomeAttendance from '#lib/ui/home/HomeAttendance.svelte';
 	import HomeHero from '#lib/ui/home/HomeHero.svelte';
-	import LeaguePanel from '#lib/ui/home/LeaguePanel.svelte';
-	import ManagerPanel from '#lib/ui/home/ManagerPanel.svelte';
-	import SeasonAgenda from '#lib/ui/home/SeasonAgenda.svelte';
-	import PollPanel from '#lib/ui/home/PollPanel.svelte';
-	import SubstitutesPanel from '#lib/ui/home/SubstitutesPanel.svelte';
-	import TeamPanel from '#lib/ui/home/TeamPanel.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
+
+	// Les îlots sont importés au niveau du module : le serveur les rend, le
+	// navigateur ne demande que ceux dont la page a réellement besoin, après
+	// la peinture initiale. Aucun panneau ne figure donc dans le graphe de
+	// départ, mais aucun contenu n'est perdu au rendu serveur.
+	// svelte-ignore state_referenced_locally
+	const initial = data;
+	const panels = new Set(initial.board?.panels.map((panel) => panel.kind) ?? []);
+	const hasManager =
+		panels.has('manager') && initial.managerSummary !== null && initial.game !== null;
+	const hasTeam = panels.has('team') && initial.game !== null;
+	const hasAttendance =
+		panels.has('attendance') && initial.availability !== null && initial.game !== null;
+	const hasPoll = panels.has('poll') && initial.openPoll !== null;
+	const hasSubstitutes =
+		panels.has('substitutes') &&
+		(initial.panelClaims.length > 0 || initial.panelOwnRequest !== null);
+	const hasLeague = panels.has('league') && initial.latestMessage !== null;
+
+	const [
+		ManagerPanel,
+		ActionsPanel,
+		TeamPanel,
+		SeasonAgenda,
+		UpcomingPanel,
+		HomeAttendance,
+		PollPanel,
+		SubstitutesPanel,
+		LeaguePanel,
+		InstallPrompt
+	] = await Promise.all([
+		hasManager
+			? import('#lib/ui/home/ManagerPanel.svelte').then((module) => module.default)
+			: null,
+		panels.has('actions')
+			? import('#lib/ui/home/ActionsPanel.svelte').then((module) => module.default)
+			: null,
+		hasTeam ? import('#lib/ui/home/TeamPanel.svelte').then((module) => module.default) : null,
+		panels.has('agenda')
+			? import('#lib/ui/home/SeasonAgenda.svelte').then((module) => module.default)
+			: null,
+		panels.has('upcoming')
+			? import('#lib/ui/home/UpcomingPanel.svelte').then((module) => module.default)
+			: null,
+		hasAttendance
+			? import('#lib/ui/home/HomeAttendance.svelte').then((module) => module.default)
+			: null,
+		hasPoll ? import('#lib/ui/home/PollPanel.svelte').then((module) => module.default) : null,
+		hasSubstitutes
+			? import('#lib/ui/home/SubstitutesPanel.svelte').then((module) => module.default)
+			: null,
+		hasLeague
+			? import('#lib/ui/home/LeaguePanel.svelte').then((module) => module.default)
+			: null,
+		panels.has('install')
+			? import('#lib/ui/InstallPrompt.svelte').then((module) => module.default)
+			: null
+	]);
 </script>
 
 <FormFeedback {form} class="mb-4" />
@@ -35,6 +82,8 @@
 		<HomeHero
 			variant={data.board.hero}
 			game={data.game}
+			mapUrl={data.gameMapUrl}
+			teamLabel={data.ownTeamLabel}
 			availability={data.availability}
 			ownSlot={data.ownSlot}
 			ownBench={data.ownBench}
@@ -48,7 +97,7 @@
 		{#each data.board.panels as panel, index (panel.kind)}
 			<div class="reveal" style="--span: {panel.span}; --i: {index}">
 				{#if panel.kind === 'manager'}
-					{#if data.managerSummary && data.game}
+					{#if hasManager && ManagerPanel && data.managerSummary && data.game}
 						<ManagerPanel
 							summary={data.managerSummary}
 							gameId={data.game.id}
@@ -56,20 +105,21 @@
 							startTime={data.game.startTime}
 							location={data.game.location}
 							showGameMeta={!data.hasPlayerProfile}
-							showAttendance={!data.hasPlayerProfile}
 						/>
 					{/if}
 				{:else if panel.kind === 'actions'}
-					<ActionsPanel
-						actions={data.board.actions}
-						balance={data.balance}
-						evaluationGame={data.evaluationGame}
-						ownRequest={data.ownRequest}
-						claimable={data.claimable}
-						openPoll={data.openPoll}
-					/>
+					{#if ActionsPanel}
+						<ActionsPanel
+							actions={data.board.actions}
+							balance={data.balance}
+							evaluationGame={data.evaluationGame}
+							ownRequest={data.ownRequest}
+							claimable={data.claimable}
+							openPoll={data.openPoll}
+						/>
+					{/if}
 				{:else if panel.kind === 'team'}
-					{#if data.game}
+					{#if hasTeam && TeamPanel && data.game}
 						<TeamPanel
 							game={data.game}
 							ownSlot={data.ownSlot}
@@ -78,52 +128,38 @@
 						/>
 					{/if}
 				{:else if panel.kind === 'agenda'}
-					<SeasonAgenda upcoming={data.agenda.upcoming} past={data.agenda.past} />
+					{#if SeasonAgenda}
+						<SeasonAgenda upcoming={data.agenda.upcoming} past={data.agenda.past} />
+					{/if}
 				{:else if panel.kind === 'upcoming'}
-					<SectionCard
-						title={t('home.upcoming')}
-						href="/matchs"
-						linkLabel={t('home.allGames')}
-						flush
-					>
-						<ul role="list" class="divide-y divide-line">
-							{#each data.nextGames as next (next.id)}
-								{@const status = gameStatus(next.status)}
-								<li>
-									<RecordRow
-										href="/matchs/{next.id}"
-										date={formatDate(next.gameDate, 'short')}
-										title="{formatTime(next.startTime)} · {next.location}"
-										badge={next.status === 'scheduled' ? undefined : t(status.labelKey)}
-										badgeTone={status.tone}
-									/>
-								</li>
-							{/each}
-						</ul>
-					</SectionCard>
+					{#if UpcomingPanel}
+						<UpcomingPanel games={data.nextGames} />
+					{/if}
 				{:else if panel.kind === 'attendance'}
-					{#if data.availability && data.game}
+					{#if hasAttendance && HomeAttendance && data.availability && data.game}
 						<SectionCard title={t('home.attendance')}>
 							<HomeAttendance availability={data.availability} />
 						</SectionCard>
 					{/if}
 				{:else if panel.kind === 'poll'}
-					{#if data.openPoll}
+					{#if hasPoll && PollPanel && data.openPoll}
 						<PollPanel messageId={data.openPoll.messageId} poll={data.openPoll.poll} />
 					{/if}
 				{:else if panel.kind === 'substitutes'}
-					{#if data.panelClaims.length > 0 || data.panelOwnRequest}
+					{#if hasSubstitutes && SubstitutesPanel}
 						<SubstitutesPanel
 							requests={data.panelClaims}
 							ownRequest={data.panelOwnRequest}
 						/>
 					{/if}
 				{:else if panel.kind === 'league'}
-					{#if data.latestMessage}
+					{#if hasLeague && LeaguePanel && data.latestMessage}
 						<LeaguePanel message={data.latestMessage} />
 					{/if}
 				{:else if panel.kind === 'install'}
-					<InstallPrompt />
+					{#if InstallPrompt}
+						<InstallPrompt />
+					{/if}
 				{/if}
 			</div>
 		{/each}

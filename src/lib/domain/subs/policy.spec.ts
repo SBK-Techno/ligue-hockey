@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	claimablePositions,
+	compareOpenRequests,
 	computeSubRequestWaves,
 	isTooLateForSubRequest
 } from './policy.ts';
@@ -96,5 +97,26 @@ describe('claimable positions', () => {
 
 	it('returns nothing when the account has no player sheet', () => {
 		expect(claimablePositions([], null)).toEqual([]);
+	});
+});
+
+describe('ordre du bassin ouvert', () => {
+	it('place le match le plus proche avant la demande la plus récente', () => {
+		const later = { game: { gameDate: '2026-12-06', startTime: '19:00' }, createdAt: 1 };
+		const soonerNew = { game: { gameDate: '2026-11-22', startTime: '19:00' }, createdAt: 50 };
+		const soonerOld = { game: { gameDate: '2026-11-22', startTime: '19:00' }, createdAt: 10 };
+
+		expect([later, soonerNew, soonerOld].sort(compareOpenRequests)).toEqual([
+			soonerOld,
+			soonerNew,
+			later
+		]);
+	});
+
+	it('compare l’heure du match, pas seulement sa date', () => {
+		const evening = { game: { gameDate: '2026-11-22', startTime: '20:00' }, createdAt: 0 };
+		const morning = { game: { gameDate: '2026-11-22', startTime: '09:00' }, createdAt: 99 };
+
+		expect([evening, morning].sort(compareOpenRequests)).toEqual([morning, evening]);
 	});
 });

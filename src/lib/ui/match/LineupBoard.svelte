@@ -1,0 +1,267 @@
+<script lang="ts">
+	import { rinkGeometryStyle } from '#config/rink.ts';
+	import { TEAMS, teamDefinition } from '#config/teams.ts';
+	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
+	import { t } from '#lib/shared/i18n/index.ts';
+	import {
+		assignmentsForSave,
+		benchKey,
+		benchPlayerId,
+		boardPlacements,
+		clearSelectedPlace,
+		initialAssignments,
+		rinkPlayerLastName,
+		selectBenchPlayer,
+		selectPlace,
+		slotAriaLabel,
+		type LineupAssignmentMap,
+		type LineupPlacement
+	} from './lineup-board.ts';
+	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+
+	type BoardPlayer = {
+		playerId: string;
+		fullName: string;
+		jerseyNumber: number | null;
+	};
+
+	let {
+		slots,
+		bench,
+		canEdit,
+		expectedGeneratedAt
+	}: {
+		slots: readonly GameSlotView[];
+		bench: readonly GamePlayer[];
+		canEdit: boolean;
+		expectedGeneratedAt: number | null;
+	} = $props();
+
+	const placements = $derived.by<LineupPlacement[]>(() => boardPlacements(slots));
+
+	// La carte est remontée quand la génération change; l'état initial est stable.
+	// svelte-ignore state_referenced_locally
+	let assignments = $state<LineupAssignmentMap>(initialAssignments(slots));
+	let selected = $state<string | null>(null);
+	// svelte-ignore state_referenced_locally
+	const initialJson = JSON.stringify(initialAssignments(slots));
+	const dirty = $derived(JSON.stringify(assignments) !== initialJson);
+
+	const players = $derived.by<BoardPlayer[]>(() => {
+		const list: BoardPlayer[] = [];
+		for (const slot of slots) {
+			if (!slot.player || list.some((entry) => entry.playerId === slot.player?.playerId)) continue;
+			list.push({
+				playerId: slot.player.playerId,
+				fullName: slot.player.fullName,
+				jerseyNumber: slot.player.jerseyNumber
+			});
+		}
+		for (const entry of bench) {
+			if (list.some((player) => player.playerId === entry.playerId)) continue;
+			list.push({
+				playerId: entry.playerId,
+				fullName: entry.fullName,
+				jerseyNumber: entry.jerseyNumber
+			});
+		}
+		return list;
+	});
+
+	const placedIds = $derived(
+		Object.values(assignments).filter((value): value is string => value !== null)
+	);
+	const benchPlayers = $derived(
+		players.filter((player) => !placedIds.includes(player.playerId))
+	);
+
+	const assignmentsJson = $derived(JSON.stringify(assignmentsForSave(slots, assignments)));
+	const geometryStyle = rinkGeometryStyle();
+
+	function playerAt(key: string): BoardPlayer | null {
+		const playerId = assignments[key];
+		return playerId ? (players.find((player) => player.playerId === playerId) ?? null) : null;
+	}
+
+	function selectSlot(key: string) {
+		if (!canEdit) return;
+		const next = selectPlace({ selected, assignments }, key);
+		selected = next.selected;
+		assignments = next.assignments;
+	}
+
+	function selectBench(playerId: string) {
+		if (!canEdit) return;
+		selected = selectBenchPlayer({ selected, assignments }, playerId).selected;
+	}
+
+	function removeSelected() {
+		const next = clearSelectedPlace({ selected, assignments });
+		selected = next.selected;
+		assignments = next.assignments;
+	}
+
+	function reset() {
+		assignments = initialAssignments(slots);
+		selected = null;
+	}
+</script>
+
+<section class="mt-4 space-y-4">
+	<p class="text-meta text-muted">
+		{canEdit ? t('rink.helpManager') : t('rink.helpPlayer')}
+	</p>
+
+	<div class="grid gap-4 lg:grid-cols-2">
+		{#each TEAMS as team (team.key)}
+			<div class="min-w-0">
+				<div class="mb-2 flex items-baseline justify-between gap-2">
+					<h3 class="text-subhead font-semibold">{t(teamDefinition(team.key).labelKey)}</h3>
+					<span class="text-caption text-muted">
+						{team.key === 'black' ? t('rink.attackLeft') : t('rink.attackRight')}
+					</span>
+				</div>
+				<div
+					class="rink"
+					style={geometryStyle}
+				>
+					{#each placements.filter((placement) => placement.team === team.key) as placement (placement.key)}
+						{#if placement.role}
+							{@const player = playerAt(placement.key)}
+							<button
+								type="button"
+								class="rink-token"
+								style="--x: {team.key === 'black' ? placement.role.y : 100 - placement.role.y}%; --y: {placement.role.x}%"
+								data-team={team.key}
+								data-player-id={player?.playerId}
+								data-filled={player !== null}
+								data-selected={selected === placement.key}
+								disabled={!canEdit && player === null}
+								data-player-peek={!canEdit && player ? 'click' : undefined}
+								onclick={() => selectSlot(placement.key)}
+								aria-label={slotAriaLabel(team.key, placement, player)}
+								aria-haspopup={!canEdit && player ? 'dialog' : undefined}
+								aria-expanded={!canEdit && player ? 'false' : undefined}
+								aria-pressed={canEdit ? selected === placement.key : undefined}
+							>
+								{#if player}
+									<span class="rink-number">{player.jerseyNumber ?? '?'}</span>
+									<span class="rink-name">{rinkPlayerLastName(player.fullName)}</span>
+								{:else}
+									<span class="rink-empty">+</span>
+								{/if}
+							</button>
+						{/if}
+					{/each}
+				</div>
+
+				{#if placements.some((placement) => placement.team === team.key && !placement.role)}
+					<ul role="list" class="mt-2 flex flex-wrap gap-1.5">
+						{#each placements.filter((placement) => placement.team === team.key && !placement.role) as placement (placement.key)}
+							{@const player = playerAt(placement.key)}
+							<li>
+								<button
+									type="button"
+									class="bench-chip"
+									data-player-id={player?.playerId}
+									data-filled={player !== null}
+									data-selected={selected === placement.key}
+									disabled={!canEdit && player === null}
+									data-player-peek={!canEdit && player ? 'click' : undefined}
+									onclick={() => selectSlot(placement.key)}
+									aria-label={slotAriaLabel(team.key, placement, player)}
+									aria-haspopup={!canEdit && player ? 'dialog' : undefined}
+									aria-expanded={!canEdit && player ? 'false' : undefined}
+									aria-pressed={canEdit ? selected === placement.key : undefined}
+								>
+									{#if player}
+										<span class="font-mono text-caption text-muted"
+											>{player.jerseyNumber ?? '?'}</span
+										>
+										{player.fullName}
+									{:else}
+										<span class="text-muted">+ {t('rink.emptySlot')}</span>
+									{/if}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+		{/each}
+	</div>
+
+	{#if benchPlayers.length > 0}
+		<div>
+			<h3 class="text-subhead font-semibold">{t('rink.bench')}</h3>
+			<ul role="list" class="mt-2 flex flex-wrap gap-1.5">
+				{#each benchPlayers as player (player.playerId)}
+					<li>
+						<button
+							type="button"
+							class="bench-chip"
+							data-player-id={player.playerId}
+							data-player-peek={!canEdit ? 'click' : undefined}
+							data-selected={selected === benchKey(player.playerId)}
+							onclick={() => selectBench(player.playerId)}
+							aria-haspopup={!canEdit ? 'dialog' : undefined}
+							aria-expanded={!canEdit ? 'false' : undefined}
+							aria-pressed={canEdit ? selected === benchKey(player.playerId) : undefined}
+						>
+							<span class="font-mono text-caption text-muted">{player.jerseyNumber ?? '?'}</span>
+							{player.fullName}
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
+
+	{#if canEdit && selected}
+		<div class="flex flex-wrap items-center gap-2 border-t border-line pt-3" role="status">
+			{#if benchPlayerId(selected)}
+				{@const selectedBench = benchPlayers.find(
+					(player) => benchKey(player.playerId) === selected
+				)}
+				{#if selectedBench}
+					<p class="text-body font-semibold">{selectedBench.fullName}</p>
+				{/if}
+				<p class="text-meta text-muted">{t('rink.choosePlace')}</p>
+			{:else}
+				{@const selectedPlayer = playerAt(selected)}
+				{#if selectedPlayer}
+					<p class="text-body font-semibold">{selectedPlayer.fullName}</p>
+				{/if}
+				<p class="text-meta text-muted">{t('rink.chooseOther')}</p>
+				<button class="btn-ghost btn-sm" type="button" onclick={removeSelected}>
+					{t('rink.remove')}
+				</button>
+			{/if}
+			<button class="btn-ghost btn-sm ml-auto" type="button" onclick={() => (selected = null)}>
+				{t('common.cancel')}
+			</button>
+		</div>
+	{/if}
+
+	{#if canEdit}
+		<form
+			method="POST"
+			action="?/lineup"
+			use:progressiveForm={{ restoreFocus: false }}
+			class="flex flex-wrap items-center gap-2"
+		>
+			<input type="hidden" name="lineup" value={assignmentsJson} />
+			<input
+				type="hidden"
+				name="expectedGeneratedAt"
+				value={expectedGeneratedAt === null ? '' : String(expectedGeneratedAt)}
+			/>
+			<button class="btn-primary" type="submit" disabled={!dirty}>{t('rink.save')}</button>
+			{#if dirty}
+				<button class="btn-ghost btn-sm" type="button" onclick={reset}>
+					{t('rink.reset')}
+				</button>
+			{/if}
+		</form>
+	{/if}
+</section>

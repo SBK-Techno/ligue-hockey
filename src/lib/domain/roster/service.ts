@@ -5,10 +5,12 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 import {
 	getGame,
 	listSchedule,
-	regenerateIfGenerated
+	regenerateIfGenerated,
+	releaseFromLineup
 } from '#lib/domain/games/service.ts';
 import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { splitSchedule } from '#lib/domain/games/schedule.ts';
+import { compareOpenRequests } from '#lib/domain/subs/policy.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import {
 	cancelRequestByAdmin as cancelSubRequest,
@@ -65,9 +67,9 @@ export function listOpenRequests(
 	requireUser(actor);
 	// Une place ouverte sur un match commencé ne se réclame plus : la demande
 	// reste en base pour l'historique, mais elle quitte le bassin visible.
-	return withGames(listOpenRequestsForMember(actor), schedule).filter(
-		(entry) => !isGameStarted(entry.game)
-	);
+	return withGames(listOpenRequestsForMember(actor), schedule)
+		.filter((entry) => !isGameStarted(entry.game))
+		.sort(compareOpenRequests);
 }
 
 export function listMyRequests(
@@ -80,9 +82,8 @@ export function listMyRequests(
 
 export function listRequestsForGame(
 	actor: Actor,
-	gameId: string
+	game: GameSummary
 ): SubRequestView[] {
-	const game = getGame(actor, gameId);
 	return listGameRequests(actor, game);
 }
 
@@ -108,6 +109,8 @@ export function releaseSubstitute(
 ): WaveSchedule & RosterActionResult {
 	const game = getGame(actor, gameId);
 	const waves = releaseSubRequest(actor, game, requestId);
+	// Le remplaçant qui libère sa place quitte aussi l'alignement publié.
+	if (actor.kind === 'user') releaseFromLineup(actor, gameId, actor.userId, 'released');
 	const regeneration = regenerateIfGenerated(gameId);
 	return {
 		...waves,
@@ -123,6 +126,7 @@ export function cancelRequest(
 ): { bumpedPlayerId: string | null } & RosterActionResult {
 	const game = getGame(actor, gameId);
 	const bumpedPlayerId = cancelSubRequest(actor, game, requestId);
+	if (bumpedPlayerId) releaseFromLineup(actor, gameId, bumpedPlayerId, 'bumped');
 	const regeneration = regenerateIfGenerated(gameId);
 	return {
 		bumpedPlayerId,

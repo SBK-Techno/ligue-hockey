@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { GOAL_KINDS, goalKindDefinition } from '#config/goal-kinds.ts';
+	import { GOAL_KINDS, goalKindDefinition, type GoalKind } from '#config/goal-kinds.ts';
 	import { INFRACTIONS, PENALTY_MINUTES, infractionDefinition } from '#config/infractions.ts';
 	import { PERIOD_NUMBERS } from '#config/periods.ts';
 	import { TEAMS, teamDefinition, type Team } from '#config/teams.ts';
 	import type { GameSlotView } from '#lib/domain/games/types.ts';
 	import type { GameSheetView } from '#lib/domain/gamesheet/service.ts';
+	import { goalEntryOptions } from '#lib/domain/gamesheet/options.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	let {
@@ -46,11 +48,18 @@
 	});
 
 	let goalTeam = $state<Team>('white');
+	let goalKind = $state<GoalKind>('even');
 	let goalScorer = $state('');
 	let penaltyTeam = $state<Team>('white');
 
+	const goalEntry = $derived(goalEntryOptions(goalTeam, goalKind));
+	const goalScorers = $derived(dressed[goalEntry.scorerTeam]);
 	const goalAssists = $derived(
-		dressed[goalTeam].filter((player) => player.playerId !== goalScorer)
+		goalEntry.assistsAllowed
+			? dressed[goalEntry.scorerTeam].filter(
+					(player) => player.playerId !== goalScorer
+				)
+			: []
 	);
 
 	function periodsOf<T extends { period: number }>(
@@ -74,7 +83,7 @@
 </script>
 
 <div class="space-y-5">
-	<div class="rounded-card border border-line bg-ink px-4 py-3 text-paper">
+	<div class="overflow-hidden rounded-card border border-line bg-ink px-4 py-3 text-paper">
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
 			{#each TEAMS as team, index (team.key)}
 				{#if index === 1}
@@ -86,9 +95,6 @@
 				</div>
 			{/each}
 		</div>
-		{#if completed}
-			<p class="mt-1 text-center text-caption text-paper/60">{t('gamesheet.finalized')}</p>
-		{/if}
 	</div>
 
 	<section>
@@ -118,7 +124,10 @@
 										<span class="font-mono text-meta text-muted"
 											>{number(goal.scorer.jerseyNumber)}</span
 										>
-										{goal.scorer.fullName}
+										<PlayerName
+											playerId={goal.scorer.playerId}
+											name={goal.scorer.fullName}
+										/>
 									{:else}
 										{t('gamesheet.noGoals')}
 									{/if}
@@ -126,9 +135,13 @@
 								{#if goal.assists.length > 0}
 									<p class="text-meta text-muted">
 										{t('gamesheet.assists')}:
-										{goal.assists
-											.map((assist) => `${number(assist.jerseyNumber)} ${assist.fullName}`)
-											.join(' · ')}
+										{#each goal.assists as assist, index (`${goal.id}:${index}`)}
+											{#if index > 0}<span aria-hidden="true"> · </span>{/if}
+											<span class="font-mono text-meta text-muted"
+												>{number(assist.jerseyNumber)}</span
+											>
+											<PlayerName playerId={assist.playerId} name={assist.fullName} />
+										{/each}
 									</p>
 								{/if}
 							</div>
@@ -189,7 +202,10 @@
 									<span class="font-mono text-meta text-muted"
 										>{number(penalty.player.jerseyNumber)}</span
 									>
-									{penalty.player.fullName}
+									<PlayerName
+										playerId={penalty.player.playerId}
+										name={penalty.player.fullName}
+									/>
 								</p>
 								<p class="text-meta text-muted">
 									{t(infractionDefinition(penalty.infraction).labelKey)} · {penalty.minutes}
@@ -248,10 +264,12 @@
 							{t(teamDefinition(team.key).labelKey)}
 						</th>
 					</tr>
-					{#each sheet.totals.filter((row) => row.team === team.key) as row (row.playerId)}
+					{#each sheet.totals.filter((row) => row.team === team.key) as row, index (row.playerId || 'deleted:' + team.key + ':' + index)}
 						<tr class="border-b border-line last:border-b-0">
 							<td class="py-1.5 font-mono text-muted">{row.jerseyNumber ?? ''}</td>
-							<td class="py-1.5 pr-2 font-medium">{row.fullName}</td>
+							<td class="py-1.5 pr-2 font-medium">
+								<PlayerName playerId={row.playerId} name={row.fullName} />
+							</td>
 							<td class="py-1.5 text-right font-mono tabular-nums">{row.goals}</td>
 							<td class="py-1.5 text-right font-mono tabular-nums">{row.assists}</td>
 							<td class="py-1.5 text-right font-mono font-semibold tabular-nums">{row.points}</td>
@@ -272,7 +290,13 @@
 				<form method="POST" action="?/goal" use:progressiveForm class="space-y-3 border-t border-line p-4">
 					<div>
 						<label class="label" for="goal-team">{t('home.team')}</label>
-						<select class="input" id="goal-team" name="team" bind:value={goalTeam}>
+						<select
+							class="input"
+							id="goal-team"
+							name="team"
+							bind:value={goalTeam}
+							onchange={() => (goalScorer = '')}
+						>
 							{#each TEAMS as team (team.key)}
 								<option value={team.key}>{t(teamDefinition(team.key).labelKey)}</option>
 							{/each}
@@ -309,38 +333,46 @@
 							bind:value={goalScorer}
 						>
 							<option value="">{t('gamesheet.selectPlayer')}</option>
-							{#each dressed[goalTeam] as player (player.playerId)}
+							{#each goalScorers as player (player.playerId)}
 								<option value={player.playerId}>
 									{number(player.jerseyNumber)} {player.fullName}
 								</option>
 							{/each}
 						</select>
 					</div>
-					<div>
-						<label class="label" for="goal-assist-1">{t('gamesheet.optionalAssist')} 1</label>
-						<select class="input" id="goal-assist-1" name="assist1PlayerId">
-							<option value="">{t('common.none')}</option>
-							{#each goalAssists as player (player.playerId)}
-								<option value={player.playerId}>
-									{number(player.jerseyNumber)} {player.fullName}
-								</option>
-							{/each}
-						</select>
-					</div>
-					<div>
-						<label class="label" for="goal-assist-2">{t('gamesheet.optionalAssist')} 2</label>
-						<select class="input" id="goal-assist-2" name="assist2PlayerId">
-							<option value="">{t('common.none')}</option>
-							{#each goalAssists as player (player.playerId)}
-								<option value={player.playerId}>
-									{number(player.jerseyNumber)} {player.fullName}
-								</option>
-							{/each}
-						</select>
-					</div>
+					{#if goalEntry.assistsAllowed}
+						<div>
+							<label class="label" for="goal-assist-1">{t('gamesheet.optionalAssist')} 1</label>
+							<select class="input" id="goal-assist-1" name="assist1PlayerId">
+								<option value="">{t('common.none')}</option>
+								{#each goalAssists as player (player.playerId)}
+									<option value={player.playerId}>
+										{number(player.jerseyNumber)} {player.fullName}
+									</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label class="label" for="goal-assist-2">{t('gamesheet.optionalAssist')} 2</label>
+							<select class="input" id="goal-assist-2" name="assist2PlayerId">
+								<option value="">{t('common.none')}</option>
+								{#each goalAssists as player (player.playerId)}
+									<option value={player.playerId}>
+										{number(player.jerseyNumber)} {player.fullName}
+									</option>
+								{/each}
+							</select>
+						</div>
+					{/if}
 					<div>
 						<label class="label" for="goal-kind">{t('gamesheet.goalType')}</label>
-						<select class="input" id="goal-kind" name="kind">
+						<select
+							class="input"
+							id="goal-kind"
+							name="kind"
+							bind:value={goalKind}
+							onchange={() => (goalScorer = '')}
+						>
 							{#each GOAL_KINDS as kind (kind.key)}
 								<option value={kind.key}>{t(kind.labelKey)}</option>
 							{/each}

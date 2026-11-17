@@ -29,6 +29,11 @@ export const CAPABILITIES = [
     descriptionKey: 'capability.managePlayersHelp'
   },
   {
+    key: 'deletePlayer',
+    labelKey: 'capability.deletePlayer',
+    descriptionKey: 'capability.deletePlayerHelp'
+  },
+  {
     key: 'editRatings',
     labelKey: 'capability.editRatings',
     descriptionKey: 'capability.editRatingsHelp'

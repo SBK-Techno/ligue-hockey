@@ -1,7 +1,6 @@
 import type { Position } from '#config/positions.ts';
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
+import { HOUR_MS, MINUTE_MS } from '#config/time.ts';
+import { gameStartsAt } from '#lib/domain/games/schedule.ts';
 
 export type SubRequestWaveInput = {
 	gameStartMs: number;
@@ -36,22 +35,22 @@ function clamp(value: number, min: number, max: number): number {
 export function computeSubRequestWaves(
 	input: SubRequestWaveInput
 ): SubRequestWaves {
-	const earliest = input.nowMs + MINUTE;
+	const earliest = input.nowMs + MINUTE_MS;
 	const latest = Math.max(
 		earliest,
-		input.gameStartMs - input.lastCallMinutes * MINUTE
+		input.gameStartMs - input.lastCallMinutes * MINUTE_MS
 	);
 
 	const favoriteTarget =
 		input.gameStartMs -
-		(input.generalLeadHours + input.priorityGapHours) * HOUR;
-	const generalTarget = input.gameStartMs - input.generalLeadHours * HOUR;
+		(input.generalLeadHours + input.priorityGapHours) * HOUR_MS;
+	const generalTarget = input.gameStartMs - input.generalLeadHours * HOUR_MS;
 
 	const favoriteAt = clamp(favoriteTarget, earliest, latest);
 	// Les favoris gardent leur avance même quand la demande arrive tard :
 	// la vague générale est repoussée, sans jamais dépasser le dernier appel.
 	const generalAt = clamp(
-		Math.max(generalTarget, favoriteAt + input.priorityGapHours * HOUR),
+		Math.max(generalTarget, favoriteAt + input.priorityGapHours * HOUR_MS),
 		favoriteAt,
 		latest
 	);
@@ -64,5 +63,21 @@ export function isTooLateForSubRequest(
 	nowMs: number,
 	lastCallMinutes: number
 ): boolean {
-	return nowMs >= gameStartMs - lastCallMinutes * MINUTE;
+	return nowMs >= gameStartMs - lastCallMinutes * MINUTE_MS;
+}
+
+export type OpenRequestOrder = {
+	game: { gameDate: string; startTime: string };
+	createdAt: number;
+};
+
+/**
+ * L'ordre du bassin ouvert : le match le plus proche d'abord, puis la demande
+ * la plus ancienne. L'ordre ne dépend donc plus de l'ordre d'insertion.
+ */
+export function compareOpenRequests(
+	a: OpenRequestOrder,
+	b: OpenRequestOrder
+): number {
+	return gameStartsAt(a.game) - gameStartsAt(b.game) || a.createdAt - b.createdAt;
 }

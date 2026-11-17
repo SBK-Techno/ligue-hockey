@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
+	import { GAME_LIMITS } from '#config/games.ts';
 	import {
 		gameWarningDefinition,
 		gameWarningLabelKey,
@@ -122,6 +122,7 @@
 		<SectionCard title={t('games.details')}>
 			{#if game.status === 'scheduled'}
 				<form method="POST" action="?/update" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
+					<input type="hidden" name="expectedUpdatedAt" value={game.updatedAt} />
 					<div>
 						<label class="label" for="gameDate">{t('games.date')}</label>
 						<input class="input" id="gameDate" name="gameDate" type="date" value={game.gameDate} required />
@@ -169,6 +170,11 @@
 
 		<SectionCard title={t('games.roster')}>
 			<div class="mb-3 flex justify-end">
+				{#if data.editable}
+					<a class="btn-secondary btn-sm mr-auto" href="/matchs/{game.id}">
+						{t('games.editLineup')}
+					</a>
+				{/if}
 				{#if game.generated}
 					<span class="badge-ice">{t('games.generated')}</span>
 				{:else}
@@ -202,25 +208,6 @@
 					<p class="text-body text-muted">
 						{t('games.sizeGap', { count: intelligence.sizeDiff })}
 					</p>
-					<div class="ml-auto flex flex-wrap gap-2">
-						{#if data.editable}
-							<form method="POST" action="?/generate" use:progressiveForm>
-								{#if game.generated}
-									<ConfirmSubmit
-										label={t('games.regenerate')}
-										title={t('games.regenerate')}
-										question={t('games.regenerateConfirm')}
-										confirmLabel={t('games.regenerate')}
-										cancelLabel={t('common.cancel')}
-										tone="neutral"
-										class="btn-secondary btn-sm"
-									/>
-								{:else}
-									<button class="btn-primary btn-sm" type="submit">{t('games.generate')}</button>
-								{/if}
-							</form>
-						{/if}
-					</div>
 				</div>
 
 				<TeamLineup
@@ -333,15 +320,10 @@
 				{/if}
 			{:else}
 				<p class="text-body text-muted">{t('games.lineupSoon')}</p>
-				{#if data.editable}
-					<form method="POST" action="?/generate" use:progressiveForm class="mt-3">
-						<button class="btn-primary" type="submit">{t('games.generate')}</button>
-					</form>
-				{/if}
 			{/if}
 		</SectionCard>
 
-		{#if game.status === 'scheduled'}
+		{#if game.status === 'scheduled' && data.editable}
 			<SectionCard title={t('admin.dangerZone')}>
 				<p class="text-body text-muted">{t('admin.cancelHelp')}</p>
 				<form method="POST" action="?/cancel" use:progressiveForm class="mt-4">

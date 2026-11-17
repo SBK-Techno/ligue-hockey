@@ -5,6 +5,7 @@ import { PAYMENT_METHOD_KEYS } from '#config/payment-methods.ts';
 import { ROLE_KEYS } from '#config/roles.ts';
 import {
 	applyDefaultPlan,
+	defaultPlanFor,
 	getPlayerBalance,
 	listPlayerPayments,
 	recordPayment,
@@ -20,10 +21,11 @@ import {
 	setPlayerRole
 } from '#lib/domain/players/service.ts';
 import { adminUpdatePlayerSchema } from '#lib/domain/players/validators.ts';
+import { canDeletePlayer } from '#lib/domain/auth/policy.ts';
 import { getRatings } from '#lib/domain/ratings/service.ts';
 import { CURRENCY } from '#config/currency.ts';
+import { FINANCE_LIMITS } from '#config/finance.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import { applyDiscount, splitPlan } from '#lib/domain/finance/plan.ts';
 import { listSubstitutes, setSubstituteFavorite } from '#lib/domain/subs/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { isAppError } from '#lib/shared/errors.ts';
@@ -39,7 +41,11 @@ const statusSchema = z.object({
 
 const planSchema = z.object({
 	total: z.string().min(1),
-	firstPercent: z.coerce.number().int().min(1).max(99),
+	firstPercent: z.coerce
+		.number()
+		.int()
+		.min(FINANCE_LIMITS.firstInstallmentPercent.min)
+		.max(FINANCE_LIMITS.firstInstallmentPercent.max),
 	firstDueDate: z.string(),
 	secondDueDate: z.string()
 });
@@ -77,7 +83,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 			payments: [],
 			plan: null,
 			isFavorite: false,
-			currency
+			currency,
+			canDelete: false
 		};
 	}
 
@@ -94,7 +101,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 				payments: [],
 				plan: null,
 				isFavorite: false,
-				currency
+				currency,
+				canDelete: false
 			};
 		}
 		throw cause;
@@ -104,11 +112,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		(substitute) => substitute.playerId === params.id
 	)?.favorite;
 
-	const suggestedTotal = applyDiscount(
-		settings['finance.totalCents'],
-		player.position === 'goalie' ? settings['finance.goalieDiscountPercent'] : 0
-	);
-	const suggested = splitPlan(suggestedTotal, settings['finance.firstInstallmentPercent']);
+	const suggested = defaultPlanFor(player.position);
 	const firstPercent =
 		balance && balance.totalCents > 0
 			? Math.round((balance.installments[0].amountCents / balance.totalCents) * 100)
@@ -116,12 +120,14 @@ export const load: ServerLoad = ({ locals, params }) => {
 
 	return {
 		player,
+		detailTitle: player.fullName,
 		avatarPicker: getAdminAvatarPicker(actor, params.id),
 		ratings: getRatings(actor, params.id),
 		balance,
 		payments: listPlayerPayments(actor, params.id),
 		isFavorite: favorite ?? false,
 		currency,
+		canDelete: canDeletePlayer(actor, { userId: player.userId, role: player.role }),
 		plan: {
 			total: centsToInput(balance?.totalCents ?? suggested.totalCents),
 			firstPercent,

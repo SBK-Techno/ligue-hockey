@@ -12,6 +12,10 @@ services:
       APP_ENV: production
       DATABASE_URL: /app/data/ligue.db
       MIGRATIONS_DIR: /app/drizzle
+      # Adresse réelle du client : le proxy doit réécrire cet en-tête, jamais
+      # le transmettre tel quel depuis le navigateur (voir OPERATIONS.md).
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: "1"
     ports:
       - "127.0.0.1:3000:3000"
     volumes:

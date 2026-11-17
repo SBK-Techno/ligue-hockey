@@ -1,5 +1,6 @@
-import { and, asc, desc, eq, inArray, isNull, lt, lte, sql } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import type { Cursor } from '#lib/shared/paging/cursor.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import {
 	notificationJobs,
@@ -54,28 +55,57 @@ export function upsertPreferences(input: {
 		.run();
 }
 
-export function upsertPushSubscription(input: {
-	id: string;
-	userId: string;
-	endpoint: string;
-	p256dh: string;
-	auth: string;
-	userAgent: string | null;
-	createdAt: number;
-}): void {
-	db.insert(pushSubscriptions)
+export function upsertPushSubscription(
+	input: {
+		id: string;
+		userId: string;
+		endpoint: string;
+		p256dh: string;
+		auth: string;
+		userAgent: string | null;
+		createdAt: number;
+	},
+	executor: DbExecutor = db
+): void {
+	executor
+		.insert(pushSubscriptions)
 		.values({ ...input, lastUsedAt: input.createdAt })
 		.onConflictDoUpdate({
 			target: pushSubscriptions.endpoint,
 			set: {
-				userId: input.userId,
 				p256dh: input.p256dh,
 				auth: input.auth,
 				userAgent: input.userAgent,
 				lastUsedAt: input.createdAt
-			}
+			},
+			// Le premier propriétaire garde le point de terminaison : une
+			// écriture directe ne peut pas réattribuer l'appareil.
+			setWhere: eq(pushSubscriptions.userId, input.userId)
 		})
 		.run();
+}
+
+export function countPushSubscriptions(
+	userId: string,
+	executor: DbExecutor = db
+): number {
+	const row = executor
+		.select({ total: sql<number>`count(*)` })
+		.from(pushSubscriptions)
+		.where(eq(pushSubscriptions.userId, userId))
+		.get();
+	return Number(row?.total ?? 0);
+}
+
+export function findPushSubscriptionByEndpoint(
+	endpoint: string,
+	executor: DbExecutor = db
+): { id: string; userId: string } | undefined {
+	return executor
+		.select({ id: pushSubscriptions.id, userId: pushSubscriptions.userId })
+		.from(pushSubscriptions)
+		.where(eq(pushSubscriptions.endpoint, endpoint))
+		.get();
 }
 
 export function deletePushSubscriptionForUser(
@@ -210,22 +240,28 @@ export function reschedule(id: string, scheduledFor: number, lastError: string):
 export function listInAppJobs(
 	userId: string,
 	limit: number,
-	before: number | null
+	before: Cursor | null
 ): NotificationJobRow[] {
 	const conditions = [
 		eq(notificationJobs.userId, userId),
 		eq(notificationJobs.channel, 'in_app'),
-		eq(notificationJobs.status, 'sent')
+		eq(notificationJobs.status, 'sent'),
+		before === null
+			? undefined
+			: or(
+					lt(notificationJobs.createdAt, before.createdAt),
+					and(
+						eq(notificationJobs.createdAt, before.createdAt),
+						lt(notificationJobs.id, before.id)
+					)
+				)
 	];
-	if (before !== null) {
-		conditions.push(lt(notificationJobs.createdAt, before));
-	}
 
 	return db
 		.select()
 		.from(notificationJobs)
 		.where(and(...conditions))
-		.orderBy(desc(notificationJobs.createdAt))
+		.orderBy(desc(notificationJobs.createdAt), desc(notificationJobs.id))
 		.limit(limit)
 		.all();
 }
@@ -281,6 +317,90 @@ export function markJobsRead(
 				isNull(notificationJobs.readAt)
 			)
 		)
+		.run();
+	return result.changes;
+}
+
+export function markAllJobsRead(userId: string, readAt: number): number {
+	const result = db
+		.update(notificationJobs)
+		.set({ readAt })
+		.where(
+			and(
+				eq(notificationJobs.userId, userId),
+				eq(notificationJobs.channel, 'in_app'),
+				eq(notificationJobs.status, 'sent'),
+				isNull(notificationJobs.readAt)
+			)
+		)
+		.run();
+	return result.changes;
+}
+
+export function countQueue(): {
+	pending: number;
+	failed: number;
+	oldestDueAt: number | null;
+} {
+	const rows = db
+		.select({
+			status: notificationJobs.status,
+			count: sql<number>`count(*)`
+		})
+		.from(notificationJobs)
+		.where(inArray(notificationJobs.status, ['pending', 'failed']))
+		.groupBy(notificationJobs.status)
+		.all();
+	const oldest = db
+		.select({ at: sql<number | null>`min(${notificationJobs.scheduledFor})` })
+		.from(notificationJobs)
+		.where(eq(notificationJobs.status, 'pending'))
+		.get();
+	const byStatus = new Map(rows.map((row) => [row.status, row.count]));
+	return {
+		pending: byStatus.get('pending') ?? 0,
+		failed: byStatus.get('failed') ?? 0,
+		oldestDueAt: oldest?.at ?? null
+	};
+}
+
+export function listFailedJobs(limit: number): NotificationJobRow[] {
+	return db
+		.select()
+		.from(notificationJobs)
+		.where(eq(notificationJobs.status, 'failed'))
+		.orderBy(asc(notificationJobs.scheduledFor))
+		.limit(limit)
+		.all();
+}
+
+export function findFailedJob(id: string): NotificationJobRow | undefined {
+	return db
+		.select()
+		.from(notificationJobs)
+		.where(and(eq(notificationJobs.id, id), eq(notificationJobs.status, 'failed')))
+		.get();
+}
+
+/**
+ * Remet un travail échoué dans la file avec un compteur d'essais neuf. Seul
+ * un travail encore `failed` est repris, donc deux opérateurs ne peuvent pas
+ * relancer le même envoi puis le dupliquer.
+ */
+export function requeueFailedJob(
+	id: string,
+	scheduledFor: number,
+	executor: DbExecutor = db
+): number {
+	const result = executor
+		.update(notificationJobs)
+		.set({
+			status: 'pending',
+			scheduledFor,
+			claimedAt: null,
+			attempts: 0
+		})
+		.where(and(eq(notificationJobs.id, id), eq(notificationJobs.status, 'failed')))
 		.run();
 	return result.changes;
 }

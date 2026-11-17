@@ -1,7 +1,7 @@
 import { redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { branding } from '#lib/generated/branding.ts';
 import { can } from '#lib/domain/auth/policy.ts';
-import { createGame, getGame, listSchedule } from '#lib/domain/games/service.ts';
+import { createGame, listGameListEntries, listSchedule } from '#lib/domain/games/service.ts';
 import {
 	defaultGameDraft,
 	nextGameId,
@@ -34,12 +34,15 @@ export const load: ServerLoad = ({ locals, url }) => {
 	});
 
 	const showArchive = url.searchParams.get('archive') === '1';
+	const pastPage = showArchive ? past : past.slice(0, PAST_LIMIT);
+	const entries = listGameListEntries(actor, [
+		...upcoming.map((game) => game.id),
+		...pastPage.map((game) => game.id)
+	]);
 
 	return {
-		upcoming: upcoming.map((game) => getGame(actor, game.id)),
-		past: (showArchive ? past : past.slice(0, PAST_LIMIT)).map((game) =>
-			getGame(actor, game.id)
-		),
+		upcoming: upcoming.map((game) => entries.get(game.id) ?? game),
+		past: pastPage.map((game) => entries.get(game.id) ?? game),
 		pastTotal: past.length,
 		nextId: nextGameId(schedule),
 		showArchive,

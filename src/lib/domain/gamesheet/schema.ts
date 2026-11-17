@@ -67,6 +67,9 @@ export const gameGoals = sqliteTable(
 	},
 	(table) => [
 		index('game_goals_game_team_idx').on(table.gameId, table.team),
+		index('game_goals_scorer_idx').on(table.scorerPlayerId),
+		index('game_goals_assist1_idx').on(table.assist1PlayerId),
+		index('game_goals_assist2_idx').on(table.assist2PlayerId),
 		check('game_goals_team_check', sql.raw(`"team" in (${TEAM_SQL})`)),
 		check('game_goals_period_check', sql.raw(`"period" in (${PERIOD_SQL})`)),
 		check(
@@ -109,6 +112,7 @@ export const gamePenalties = sqliteTable(
 	},
 	(table) => [
 		index('game_penalties_game_team_idx').on(table.gameId, table.team),
+		index('game_penalties_player_idx').on(table.playerId),
 		check('game_penalties_team_check', sql.raw(`"team" in (${TEAM_SQL})`)),
 		check('game_penalties_period_check', sql.raw(`"period" in (${PERIOD_SQL})`)),
 		check(

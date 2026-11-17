@@ -1,4 +1,5 @@
-import { POSITIONS, type Position } from '#config/positions.ts';
+import { positionRank, type Position } from '#config/positions.ts';
+import { slotKey } from '#config/slot.ts';
 import { TEAMS, type Team } from '#config/teams.ts';
 import {
 	pairViolations,
@@ -66,10 +67,6 @@ const [TEAM_A, TEAM_B] = [TEAMS[0].key, TEAMS[1].key] as const;
 
 /** Un écart plus petit que ce seuil ne vaut pas un changement d'alignement. */
 export const MIN_BALANCE_GAIN = 0.05;
-
-const POSITION_INDEX = new Map<Position, number>(
-	POSITIONS.map((position, index) => [position.key, index])
-);
 
 function zeroTotals(): Record<Team, TeamTotals> {
 	return Object.fromEntries(
@@ -143,14 +140,18 @@ function teamCounts(placements: readonly Placement[]): Record<Team, number> {
 	return counts;
 }
 
-function slotKey(slot: OpenSlot): string {
-	return `${slot.team}:${slot.position}:${slot.index}`;
+function openSlotKey(slot: OpenSlot): string {
+	return slotKey({
+		team: slot.team,
+		position: slot.position,
+		slotIndex: slot.index
+	});
 }
 
 function uniqueSlots(slots: readonly OpenSlot[]): OpenSlot[] {
 	const seen = new Set<string>();
 	return slots.filter((slot) => {
-		const key = slotKey(slot);
+		const key = openSlotKey(slot);
 		if (seen.has(key)) return false;
 		seen.add(key);
 		return true;
@@ -303,7 +304,7 @@ function slotOrder(
 ): (a: OpenSlot, b: OpenSlot) => number {
 	return (a, b) =>
 		counts[a.team] - counts[b.team] ||
-		(POSITION_INDEX.get(a.position) ?? 0) - (POSITION_INDEX.get(b.position) ?? 0) ||
+		positionRank(a.position) - positionRank(b.position) ||
 		a.index - b.index ||
 		a.team.localeCompare(b.team);
 }
@@ -382,8 +383,8 @@ export function fillSuggestions(input: {
 					view.sizeDiff - best.view.sizeDiff ||
 					skillValue(view) - skillValue(best.view) ||
 					view.ageDiff - best.view.ageDiff ||
-					(POSITION_INDEX.get(slot.position) ?? 0) -
-						(POSITION_INDEX.get(best.slot.position) ?? 0) ||
+					positionRank(slot.position) -
+						positionRank(best.slot.position) ||
 					slot.index - best.slot.index ||
 					slot.team.localeCompare(best.slot.team) ||
 					player.id.localeCompare(best.player.id);
@@ -394,7 +395,7 @@ export function fillSuggestions(input: {
 		if (!best) break;
 
 		const index = remainingSlots.findIndex(
-			(slot) => slotKey(slot) === slotKey(best!.slot)
+			(slot) => openSlotKey(slot) === openSlotKey(best!.slot)
 		);
 		if (index >= 0) remainingSlots.splice(index, 1);
 		placements = best.placements;

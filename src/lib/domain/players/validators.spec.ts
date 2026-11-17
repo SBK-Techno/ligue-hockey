@@ -49,6 +49,16 @@ describe('avatar', () => {
 		).toBe(false);
 	});
 
+	it('accepte une identité hommage', () => {
+		expect(
+			updateOwnProfileSchema.safeParse({ ...base, jerseyNumber: 9, avatarId: 'legende-lafleur' })
+				.success
+		).toBe(true);
+		expect(
+			adminUpdatePlayerSchema.safeParse({ avatarId: 'legende-roy' }).success
+		).toBe(true);
+	});
+
 	it('leaves the avatar unchanged when the admin form omits it', () => {
 		const parsed = adminUpdatePlayerSchema.safeParse({ firstName: 'Alex' });
 		expect(parsed.success).toBe(true);
