@@ -756,7 +756,12 @@
 								</button>
 							</div>
 						{:else if olderCursor}
-							<div bind:this={sentinel} class="h-1 w-full" aria-hidden="true"></div>
+							<div
+								bind:this={sentinel}
+								data-chat-older-cursor
+								class="h-1 w-full"
+								aria-hidden="true"
+							></div>
 						{/if}
 					</div>
 
