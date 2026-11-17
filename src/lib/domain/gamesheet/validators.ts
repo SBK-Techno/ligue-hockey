@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { GOAL_KIND_KEYS } from '#config/goal-kinds.ts';
 import { INFRACTION_KEYS, PENALTY_MINUTES } from '#config/infractions.ts';
-import { PERIOD_NUMBERS } from '#config/periods.ts';
+import { isPeriod } from '#config/periods.ts';
 import { TEAM_KEYS } from '#config/teams.ts';
 import { isValidGameClock } from '#config/time.ts';
 
@@ -18,7 +18,7 @@ const optionalPlayerId = z.preprocess(
 
 const goalFields = {
 	team: z.enum(TEAM_KEYS),
-	period: z.number().int().min(1).max(4),
+	period: z.number().refine(isPeriod, 'invalid-period'),
 	clock: clockSchema,
 	kind: z.enum(GOAL_KIND_KEYS),
 	scorerPlayerId: z.string().trim().min(1),
@@ -55,7 +55,7 @@ export const goalInputSchema = z
 
 export const penaltyInputSchema = z.object({
 	team: z.enum(TEAM_KEYS),
-	period: z.number().int().min(1).max(4),
+	period: z.number().refine(isPeriod, 'invalid-period'),
 	clock: clockSchema,
 	playerId: z.string().trim().min(1),
 	infraction: z.enum(INFRACTION_KEYS),
@@ -80,10 +80,7 @@ export type PenaltyInput = z.infer<typeof penaltyInputSchema>;
 const periodField = z.coerce
 	.number()
 	.int()
-	.refine(
-		(value) => (PERIOD_NUMBERS as readonly number[]).includes(value),
-		'invalid-period'
-	);
+	.refine(isPeriod, 'invalid-period');
 
 const optionalPlayerField = z
 	.string()

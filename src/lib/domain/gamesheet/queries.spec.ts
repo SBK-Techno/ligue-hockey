@@ -52,13 +52,13 @@ function insertGoal(
 		.run(id, gameId, kind, scorer, assist1, assist1, assist2, assist2);
 }
 
-function insertPenalty(id: string, gameId: string, playerId: string) {
+function insertPenalty(id: string, gameId: string, playerId: string, minutes = 2) {
 	sqlite
 		.prepare(
 			`insert into game_penalties (id, game_id, team, period, clock, player_id, player_name, infraction, minutes, coincidental, created_at, updated_at)
-			 values (?, ?, 'white', 1, '10:00', ?, 'Samuel Tremblay', 'accrochage', 2, 0, 0, 0)`
+			 values (?, ?, 'white', 1, '10:00', ?, 'Samuel Tremblay', 'accrochage', ?, 0, 0, 0)`
 		)
-		.run(id, gameId, playerId);
+		.run(id, gameId, playerId, minutes);
 }
 
 beforeEach(() => {
@@ -109,8 +109,16 @@ describe('totaux de saison du joueur', () => {
 			games: 1,
 			goals: 2,
 			assists: 2,
-			penalties: 1
+			penaltyMinutes: 2
 		});
+	});
+
+	it('additionne les minutes de pénalité, pas les infractions', () => {
+		insertGame('completed', 'completed');
+		insertPenalty('minor', 'completed', 'player', 2);
+		insertPenalty('misconduct', 'completed', 'player', 10);
+
+		expect(playerSeasonStats('player').penaltyMinutes).toBe(12);
 	});
 
 	it('ne crédite jamais un but contre son camp au joueur', () => {
@@ -135,7 +143,7 @@ describe('totaux de saison du joueur', () => {
 			games: 0,
 			goals: 0,
 			assists: 0,
-			penalties: 0
+			penaltyMinutes: 0
 		});
 	});
 });

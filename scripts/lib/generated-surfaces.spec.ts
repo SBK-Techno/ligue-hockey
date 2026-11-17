@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -6,17 +7,33 @@ import {
 	assertDeclaredSurfaces,
 	generatedSurfaceFor
 } from './generated-surfaces.ts';
+import { DOC_SOCIAL_SOURCE } from '../docs/build.ts';
 import { EXCLUDED_ROOT_PAGES, pages } from '../docs/pages.ts';
 
 const ROOT = process.cwd();
 
+function readManifest(): { files: Record<string, string> } {
+	return JSON.parse(
+		readFileSync(join(ROOT, 'static/generated-assets.json'), 'utf8')
+	) as { files: Record<string, string> };
+}
+
+function sha256(contents: Buffer): string {
+	return createHash('sha256').update(contents).digest('hex');
+}
+
 describe('surfaces générées', () => {
 	it('déclare chaque fichier du manifeste de checksums', () => {
-		const manifest = JSON.parse(
-			readFileSync(join(ROOT, 'static/generated-assets.json'), 'utf8')
-		) as { files: Record<string, string> };
+		expect(() => assertDeclaredSurfaces(Object.keys(readManifest().files))).not.toThrow();
+	});
 
-		expect(() => assertDeclaredSurfaces(Object.keys(manifest.files))).not.toThrow();
+	it('sert l’image sociale des docs depuis l’actif manifesté et identique', () => {
+		const manifest = readManifest();
+		const expected = manifest.files[DOC_SOCIAL_SOURCE];
+
+		expect(expected, DOC_SOCIAL_SOURCE).toBeDefined();
+		expect(sha256(readFileSync(join(ROOT, DOC_SOCIAL_SOURCE)))).toBe(expected);
+		expect(existsSync(join(ROOT, 'static/social/apercu.jpg'))).toBe(false);
 	});
 
 	it('refuse une sortie qui n’est pas déclarée', () => {

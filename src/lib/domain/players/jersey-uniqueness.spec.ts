@@ -159,22 +159,24 @@ describe('unicité des numéros de chandail actifs', () => {
 		expect(jerseyOf('second')).toBe(13);
 	});
 
-	it('ne laisse qu’un gagnant à deux réservations concurrentes', async () => {
+	it('tient l’unicité par l’index partiel, pas par une lecture préalable', () => {
+		const index = sqlite
+			.prepare(
+				"select sql from sqlite_master where type = 'index' and name = 'players_active_jersey_unique'"
+			)
+			.get() as { sql: string } | undefined;
+		expect(index?.sql).toMatch(/unique/i);
+		expect(index?.sql).toMatch(/"active" = 1/);
+
 		addPlayer('first', { jersey: 12 });
 		addPlayer('second', { jersey: 13 });
 
-		const results = await Promise.allSettled([
-			adminUpdatePlayer(admin, 'first', { jerseyNumber: 50 }),
-			adminUpdatePlayer(admin, 'second', { jerseyNumber: 50 })
-		]);
-
-		expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-		expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
-		expect(
-			sqlite
-				.prepare('select count(*) as count from players where active = 1 and jersey_number = 50')
-				.get()
-		).toEqual({ count: 1 });
+		// Une réservation qui aurait perdu la course de lecture ne peut pas
+		// être écrite : l'index refuse le doublon même sans pré-vérification.
+		expect(() =>
+			sqlite.prepare("update players set jersey_number = 12 where user_id = 'second'").run()
+		).toThrow(/UNIQUE constraint failed/);
+		expect(jerseyOf('second')).toBe(13);
 	});
 
 	it('libère le numéro dès la désactivation', async () => {
@@ -212,8 +214,22 @@ describe('unicité des numéros de chandail actifs', () => {
 		).toThrow(/UNIQUE constraint failed: players.jersey_number/);
 	});
 
+	it('documente l’index de chandail et la réécriture de suppression', () => {
+		const architecture = readFileSync('ARCHITECTURE.md', 'utf8');
+
+		expect(architecture).toContain('players_active_jersey_unique');
+		expect(architecture).toContain('Migration `0014`');
+		expect(architecture).toContain(
+			'rewrites every stored goal, assist and penalty name snapshot'
+		);
+	});
+
 	it('fait échouer la migration sur un doublon synthétique', () => {
-		const migration = readdirSync('drizzle').find((file) => file.startsWith('0014_'));
+		const migration = readdirSync('drizzle')
+			.filter((file) => file.endsWith('.sql'))
+			.find((file) =>
+				readFileSync(join('drizzle', file), 'utf8').includes('players_active_jersey_unique')
+			);
 		expect(migration).toBeDefined();
 		const sql = readFileSync(join('drizzle', migration!), 'utf8');
 

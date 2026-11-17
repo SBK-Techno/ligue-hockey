@@ -101,6 +101,7 @@ function renderPublic(overrides: Partial<GameView> = {}) {
 		props: {
 			data: {
 				...layout,
+				detailTitle: 'Match',
 				game: { ...game, ...overrides },
 				availability,
 				requests: [],
@@ -156,6 +157,7 @@ describe('propriétaire de la régénération d’alignement', () => {
 			props: {
 				data: {
 					...layout,
+				detailTitle: 'Match',
 					game,
 					availability,
 					requests: [],
@@ -173,6 +175,7 @@ describe('propriétaire de la régénération d’alignement', () => {
 			props: {
 				data: {
 					...layout,
+				detailTitle: 'Match',
 					game,
 					canAssess: false,
 					canManage: true,
@@ -237,6 +240,7 @@ describe('propriétaire de la régénération d’alignement', () => {
 			props: {
 				data: {
 					...layout,
+				detailTitle: 'Match',
 					game,
 					availability,
 					requests: [],

@@ -120,6 +120,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 
 	return {
 		player,
+		detailTitle: player.fullName,
 		avatarPicker: getAdminAvatarPicker(actor, params.id),
 		ratings: getRatings(actor, params.id),
 		balance,

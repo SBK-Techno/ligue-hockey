@@ -5,22 +5,22 @@ describe('dérivation des stats de saison', () => {
 	const cases = [
 		{
 			name: 'aucun match terminé',
-			totals: { games: 0, goals: 0, assists: 0, penalties: 0 },
+			totals: { games: 0, goals: 0, assists: 0, penaltyMinutes: 0 },
 			expected: { points: 0, pointsPerGame: 0 }
 		},
 		{
 			name: 'deux buts et une aide en un match',
-			totals: { games: 1, goals: 2, assists: 1, penalties: 0 },
+			totals: { games: 1, goals: 2, assists: 1, penaltyMinutes: 0 },
 			expected: { points: 3, pointsPerGame: 3 }
 		},
 		{
 			name: 'les points se répartissent sur les matchs joués',
-			totals: { games: 4, goals: 3, assists: 5, penalties: 2 },
+			totals: { games: 4, goals: 3, assists: 5, penaltyMinutes: 2 },
 			expected: { points: 8, pointsPerGame: 2 }
 		},
 		{
 			name: 'la moyenne reste une fraction exacte',
-			totals: { games: 3, goals: 1, assists: 1, penalties: 0 },
+			totals: { games: 3, goals: 1, assists: 1, penaltyMinutes: 0 },
 			expected: { points: 2, pointsPerGame: 2 / 3 }
 		}
 	] as const;
@@ -39,13 +39,13 @@ describe('dérivation des stats de saison', () => {
 			games: 2,
 			goals: 1,
 			assists: 2,
-			penalties: 1
+			penaltyMinutes: 1
 		});
 		expect(Object.keys(stats).sort()).toEqual([
 			'assists',
 			'games',
 			'goals',
-			'penalties',
+			'penaltyMinutes',
 			'points',
 			'pointsPerGame'
 		]);

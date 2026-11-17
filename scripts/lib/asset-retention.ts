@@ -1,7 +1,8 @@
 /**
  * Les actifs nommés par contenu ne sont pas supprimés dès qu'une génération
- * les remplace : un document encore en cache peut les demander. Ils restent
- * donc servis pendant la fenêtre de cache des documents actifs.
+ * les remplace : un document encore en cache peut les demander. La rétention
+ * est volontairement plus courte que leur cache immuable d'un an : c'est une
+ * fenêtre de transition, pas une seconde politique de cache.
  */
 export const GENERATED_ASSET_RETENTION_DAYS = 7;
 

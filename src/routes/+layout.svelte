@@ -11,40 +11,21 @@
 	import AppNav from '#lib/ui/AppNav.svelte';
 	import AppNavBottom from '#lib/ui/AppNavBottom.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
+	import { resolvePageTitle } from '#lib/ui/page-title.ts';
 	import type { ConfirmRequest } from '#lib/ui/confirm.svelte.ts';
 	import { CONFIRM_REQUEST_EVENT, PLAYER_PEEK_EVENT } from '#lib/ui/events.ts';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
 
-	const titles: Array<[string, Parameters<typeof t>[0]]> = [
-		['/admin/joueurs', 'admin.players'],
-		['/admin/matchs', 'admin.games'],
-		['/admin/regles', 'admin.rules'],
-		['/admin/soldes', 'admin.balances'],
-		['/admin/parametres', 'admin.settings'],
-		['/admin/lieux', 'admin.locations'],
-		['/admin/evaluations', 'admin.evaluationsSeason'],
-		['/admin', 'admin.title'],
-		['/matchs', 'games.title'],
-		['/remplacants', 'subs.title'],
-		['/discussion', 'nav.chat'],
-		['/notifications', 'notifications.title'],
-		['/solde', 'balance.title'],
-		['/profil', 'nav.profile'],
-		['/connexion', 'auth.title'],
-		['/mot-de-passe-oublie', 'auth.reset.title'],
-		['/reinitialiser-mot-de-passe', 'invite.title']
-	];
-
-	const pageTitle = $derived.by(() => {
-		const path = page.url.pathname;
-		if (path === '/') return branding.name;
-		const match = titles.find(
-			([prefix]) => path === prefix || path.startsWith(`${prefix}/`)
-		);
-		return match ? `${t(match[1])} · ${branding.shortName}` : branding.name;
-	});
+	const pageTitle = $derived(
+		resolvePageTitle({
+			pathname: page.url.pathname,
+			brandName: branding.name,
+			shortName: branding.shortName,
+			detail: page.data.detailTitle
+		})
+	);
 
 	const showBottomBar = $derived(!page.url.pathname.startsWith('/admin'));
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
@@ -156,10 +137,10 @@
 				</div>
 			</main>
 
-			<p class="auth-caption">
+			<footer class="auth-caption">
 				<span class="h-px w-10 bg-line-strong" aria-hidden="true"></span>
 				<span class="micro-label text-muted">{t('auth.afterGame')}</span>
-			</p>
+			</footer>
 		</div>
 	</div>
 {:else}

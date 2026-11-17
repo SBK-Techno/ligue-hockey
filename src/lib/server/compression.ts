@@ -6,13 +6,18 @@ import { constants, createBrotliCompress, createGzip } from 'node:zlib';
  * un client qui l'accepte sort compressée, avec `Vary: Accept-Encoding`. Les
  * actifs statiques ont déjà leurs jumeaux précompressés dans le serveur
  * d'adaptateur; ce module ne les voit donc jamais.
+ *
+ * `application/manifest+json` n'est pas listé : le manifeste est un fichier
+ * statique servi avant les hooks. L'adaptateur ne précompresse que les
+ * extensions `.html`, `.js`, `.json`, `.css`, `.svg`, `.xml`, `.wasm`, `.txt`
+ * et `.md`; un `.webmanifest` de 844 octets reste donc en identité. Le lister
+ * ici laisserait croire à une compression que ce module ne peut pas faire.
  */
 export type CompressionEncoding = 'br' | 'gzip';
 
 const COMPRESSIBLE = new Set([
 	'text/html',
 	'application/json',
-	'application/manifest+json',
 	'text/plain',
 	'text/css',
 	'application/javascript',

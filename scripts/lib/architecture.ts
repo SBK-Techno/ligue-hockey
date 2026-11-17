@@ -21,6 +21,11 @@ export type BoundaryFinding = {
 const QUERY_IMPORT =
 	/from ['"](?:#lib\/domain\/([a-z-]+)\/queries\.ts|(?:\.\.\/)+([a-z-]+)\/queries\.ts)['"]/;
 const DOMAIN_FILE = /^src\/lib\/domain\/([a-z-]+)\//;
+const SERVER_FILE = /^src\/lib\/server\/([a-z-]+)\//;
+
+function moduleOwner(path: string): string | undefined {
+	return DOMAIN_FILE.exec(path)?.[1] ?? SERVER_FILE.exec(path)?.[1];
+}
 
 /**
  * La frontière d'écriture : un module appelle le service d'un autre module,
@@ -40,7 +45,7 @@ export function queryBoundaryFindings(
 	for (const file of files) {
 		if (!file.path.endsWith('.ts')) continue;
 		if (file.path.includes('.spec.') || file.path.includes('.test.')) continue;
-		const owner = DOMAIN_FILE.exec(file.path)?.[1];
+		const owner = moduleOwner(file.path);
 		if (!owner) continue;
 
 		for (const [index, line] of file.content.split('\n').entries()) {

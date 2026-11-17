@@ -16,7 +16,8 @@ export const PERIODS = [
 
 export type Period = (typeof PERIODS)[number]['number'];
 
-export const PERIOD_NUMBERS = [1, 2, 3, 4] as const;
+/** Les numéros déclarés par `PERIODS`, sans seconde liste à maintenir. */
+export const PERIOD_NUMBERS: readonly Period[] = PERIODS.map((period) => period.number);
 
 export function isPeriod(value: number): value is Period {
 	return PERIOD_NUMBERS.includes(value as Period);

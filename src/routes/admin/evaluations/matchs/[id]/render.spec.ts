@@ -53,7 +53,8 @@ describe('feuille d’évaluation', () => {
 	it('laisse l’introduction se replier sans élargir la page', () => {
 		const { body } = render(Page, {
 			props: {
-				data: { ...layout, assessment },
+				data: { ...layout,
+				detailTitle: 'Match', assessment },
 				form: null,
 				params: { id: assessment.gameId }
 			}

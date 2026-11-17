@@ -146,8 +146,8 @@
 						<dd class="font-mono text-body font-semibold">{view.stats.points}</dd>
 					</div>
 					<div class="px-0.5 py-1.5 text-center">
-						<dt class="text-stamp text-muted">{t('peek.penalties')}</dt>
-						<dd class="font-mono text-body font-semibold">{view.stats.penalties}</dd>
+						<dt class="text-stamp text-muted">{t('peek.penaltyMinutes')}</dt>
+						<dd class="font-mono text-body font-semibold">{view.stats.penaltyMinutes}</dd>
 					</div>
 				</dl>
 				<p class="mt-1 text-stamp text-muted">{t('peek.statsHelp')}</p>

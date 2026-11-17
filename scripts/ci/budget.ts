@@ -39,6 +39,16 @@ export function inlineCssBytes(html: string): number {
 	);
 }
 
+/**
+ * Les URL JavaScript présentes dans le HTML serveur. C'est un plancher : le
+ * navigateur charge aussi les morceaux importés par les îlots asynchrones
+ * après la peinture et les imports imbriqués. Aucun artefact du build ne porte
+ * le graphe complet d'une route : le manifeste serveur ne nomme que les noeuds
+ * de coquille et de page, et le manifeste Vite du client ne porte pas les
+ * routes. L'audit navigateur (31 à 38 requêtes sur l'accueil et le détail de
+ * match) reste la référence; les plafonds déclarés sont conservateurs tant
+ * qu'une mesure navigateur ne les remplace pas.
+ */
 export function jsUrls(html: string): string[] {
 	return [
 		...new Set(
@@ -122,6 +132,11 @@ export function measuredPage(name: string): MeasuredPage {
 	return page;
 }
 
+/** Le plafond de requêtes d'une page : sa mesure propre ou le défaut déclaré. */
+export function requestsCeiling(page: MeasuredPage): number {
+	return page.maxRequests ?? PERFORMANCE_BUDGETS.jsRequestsPerPage;
+}
+
 /** Le seul contrôle de page : requêtes selon la route, octets selon le propriétaire. */
 export function assertPage(
 	label: string,
@@ -129,18 +144,20 @@ export function assertPage(
 	sizeOf: (url: string) => number
 ): void {
 	const page = measuredPage(label);
-	assertJsRequests(label, html, page.maxRequests);
+	assertJsRequests(label, html, requestsCeiling(page));
 	assertJsBytes(label, html, sizeOf);
-	assertMaxSize(label, Buffer.byteLength(html, 'utf8'), page.maxBytes);
+	if (page.maxBytes !== undefined) {
+		assertMaxSize(label, Buffer.byteLength(html, 'utf8'), page.maxBytes);
+	}
 }
 
 const [command, ...args] = process.argv.slice(2);
 
 if (command === 'pages') {
 	process.stdout.write(
-		MEASURED_PAGES.map(
-			(page) => `${page.name}\t${page.path}\t${page.audience}`
-		).join('\n') + '\n'
+		MEASURED_PAGES.filter((page) => page.preview !== true)
+			.map((page) => `${page.name}\t${page.path}\t${page.audience}`)
+			.join('\n') + '\n'
 	);
 } else if (command) {
 	try {
@@ -176,7 +193,7 @@ if (command === 'pages') {
 				throw new Error('ASSET_ROOT ou ASSET_BASE requis pour mesurer les octets.');
 			}
 			assertPage(value, html, sizeOf);
-			detail = `, ${count}/${page.maxRequests} requêtes`;
+			detail = `, ${count}/${requestsCeiling(page)} requêtes`;
 		} else {
 			throw new Error(`commande inconnue: ${command}`);
 		}

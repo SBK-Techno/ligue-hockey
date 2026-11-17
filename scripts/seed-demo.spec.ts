@@ -6,6 +6,8 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { rosterTemplateFromSettings } from '#config/roster.ts';
+import { parseSettings } from '#config/settings-registry.ts';
 
 /**
  * Le jeu de démonstration est rejouable : une deuxième exécution remplace son
@@ -127,6 +129,44 @@ describe('jeu de démonstration', () => {
 		expect(result.completed).toBe(12);
 		expect(result.scored).toBe(result.completed);
 		expect(result.goals).toBeGreaterThan(result.completed);
+	});
+
+	it('ferme chaque demande d’un match terminé en gardant le remplaçant', () => {
+		const rows = withDatabase((sqlite) =>
+			sqlite
+				.prepare(
+					`select requests.status as status, requests.filled_by_player_id as filler
+					 from sub_requests requests
+					 join games on games.id = requests.game_id
+					 where games.status = 'completed'`
+				)
+				.all() as { status: string; filler: string | null }[]
+		);
+
+		expect(rows.length).toBeGreaterThan(0);
+		expect(rows.filter((row) => row.status === 'open' || row.status === 'filled')).toEqual([]);
+		expect(rows.some((row) => row.filler !== null)).toBe(true);
+	});
+
+	it('dérive le modèle d’alignement des réglages écrits', () => {
+		const result = withDatabase((sqlite) => {
+			const stored = Object.fromEntries(
+				(
+					sqlite
+						.prepare("select key, value_json from league_settings where key like 'roster.%'")
+						.all() as { key: string; value_json: string }[]
+				).map((row) => [row.key, JSON.parse(row.value_json) as unknown])
+			);
+			const templates = (
+				sqlite
+					.prepare("select distinct roster_template_json as template from games where id like 'demo_%'")
+					.all() as { template: string }[]
+			).map((row) => row.template);
+			return { stored, templates };
+		});
+
+		const expected = JSON.stringify(rosterTemplateFromSettings(parseSettings(result.stored)));
+		expect(result.templates).toEqual([expected]);
 	});
 
 	it('remplace son propre jeu sans laisser de doublon ni d’alignement manuel périmé', () => {

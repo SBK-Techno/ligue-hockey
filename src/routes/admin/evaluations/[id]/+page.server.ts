@@ -13,6 +13,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		const player = getAdminPlayer(locals.actor, params.id!);
 		return {
 			player,
+			detailTitle: player.fullName,
 			ratings: getRatings(locals.actor, params.id!),
 			attributes: positionRatingAttributes(player.position)
 		};

@@ -60,6 +60,31 @@ describe('frontière des requêtes entre modules', () => {
 		expect(findings).toEqual([]);
 	});
 
+	it('refuse une lecture de queries.ts d’un autre module depuis src/lib/server', () => {
+		const findings = queryBoundaryFindings(
+			[
+				file(
+					'src/lib/server/notifications/email.ts',
+					"import { findPlayer } from '#lib/domain/players/queries.ts';"
+				),
+				file(
+					'src/lib/server/notifications/push.ts',
+					"import { listUserEmails } from '#lib/domain/notifications/queries.ts';"
+				)
+			],
+			[]
+		);
+
+		expect(findings).toHaveLength(1);
+		expect(findings[0]).toEqual(
+			expect.objectContaining({
+				file: 'src/lib/server/notifications/email.ts',
+				line: 1,
+				rule: 'cross-module-query'
+			})
+		);
+	});
+
 	it('ne regarde ni le même module ni les tests', () => {
 		const findings = queryBoundaryFindings(
 			[

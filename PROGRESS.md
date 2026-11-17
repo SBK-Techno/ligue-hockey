@@ -4,7 +4,8 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `feat/legends-1.6.0`, based on `v1.5.0`. Round-1 batches 1 to 7 end at `ef1f1c3`; the last round-1 batch is `b5455e7`, and round-2 block 1 starts at `86329da`.
+- Branch: `feat/legends-1.6.0`, based on `v1.5.0`. Round-1 batches 1 to 7 end at `ef1f1c3`; the last round-1 batch is `b5455e7`, and round-2 block 1 starts at `86329da`. Round-3 blocks run from `8f7f82d` to `7550e04` and fixed the 18 confirmed mediums across auth, domain atomicity, home and match UI, delivery and test truth.
+- The round-3 B4 delivery, performance, docs and tests batch is applied on top of `7550e04`: docs social image from the hashed owner, every static and parameterised route budgeted, season penalty minutes, the demo closed state, title/caption landmarks, retention and jersey documentation, and the shell-only precache. `npm run gate` is green on 1069 tests in 146 files; generated assets and the docs site are current, and the architecture check covers 383 files.
 - Target version: `1.6.0`. `package.json`, `package-lock.json` and `.env.example` still carry the published `1.5.0`; `npm run release:apply` aligns them at release time.
 - Shipped in `1.3.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
 - Verified on the round-2 block-4 tree after the nineteen fixes: `npm run gate` green (930 tests, 124 files), generated assets and documentation site current, architecture check green over 356 files, and the client bundle holds 92 chunks without zod.
@@ -32,7 +33,7 @@ Eight read-only auditors covered distinct surfaces, and one consolidator recheck
 - **Player peek.** Every avatar and player name opens one shared card from `getPlayerPeek`; season totals and position are public, ratings stay behind the ratings capability. The card is a hover popover on desktop and a sheet on mobile, and its cache policy follows the session policy.
 - **Game-day correctness.** The match page reads the live roster and presence, the sheet appears only in a phase where it can accept events, a cancelled game cannot be scored, and the sheet and the ratings share one playability rule.
 - **Security hardening.** Throttle buckets are bounded, member writes are rate-limited, lineup payloads are validated, and finance, settings and player writes are atomic with their audit entries. CSP is enabled, and response headers and cache policy have one owner.
-- **Delivery budgets.** SSR HTML and JSON are compressed, critical CSS is inlined within its budget, the measured pages stay at the JavaScript request budget, and the client graph contains no zod. Content-hashed assets are served immutable and retained for the cache window.
+- **Delivery budgets.** SSR HTML and JSON are compressed, critical CSS is inlined within its budget, the measured pages stay at the JavaScript request budget, and the client graph contains no zod. Content-hashed assets are served immutable for one year; a replaced name stays on disk for the retention window owned by `GENERATED_ASSET_RETENTION_DAYS`, so a document already in flight can finish loading it.
 - **Operator signals.** `/api/health` and `/admin` share one queue snapshot (pending, failed, oldest due, suppression reasons, last-tick push counts); a `manageSettings` operator can retry a failed job with an audit entry, and the scheduler emits one `notification.queue_snapshot` per tick.
 
 ## Remaining after 1.6.0

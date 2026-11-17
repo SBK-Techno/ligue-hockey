@@ -5,6 +5,7 @@ import {
 	SETTINGS_KEYS,
 	type SettingsValues
 } from '#config/settings-registry.ts';
+import { formatTime } from '#lib/shared/i18n/index.ts';
 import { settingDescription, settingsSummary } from './descriptions.ts';
 
 function withSettings(patch: Partial<SettingsValues>): SettingsValues {
@@ -26,7 +27,7 @@ describe('settings descriptions', () => {
 			'games.availabilityClosesHours': 12
 		});
 		expect(settingDescription('games.availabilityClosesHours', values)).toContain(
-			'la veille à 22 h'
+			`la veille à ${formatTime('22:00')}`
 		);
 	});
 
@@ -37,10 +38,10 @@ describe('settings descriptions', () => {
 			'notifications.priorityGapHours': 4
 		});
 		expect(settingDescription('notifications.generalLeadHours', values)).toContain(
-			'la veille à 22 h'
+			`la veille à ${formatTime('22:00')}`
 		);
 		expect(settingDescription('notifications.priorityGapHours', values)).toContain(
-			'la veille à 18 h'
+			`la veille à ${formatTime('18:00')}`
 		);
 	});
 

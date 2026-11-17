@@ -154,7 +154,8 @@ export type PlayerSeasonStats = {
 	games: number;
 	goals: number;
 	assists: number;
-	penalties: number;
+	/** Les minutes purgées, la même unité que la colonne PUN de la feuille. */
+	penaltyMinutes: number;
 };
 
 /**
@@ -201,7 +202,7 @@ export function playerSeasonStats(playerId: string): PlayerSeasonStats {
 		)
 		.get();
 	const penaltiesRow = db
-		.select({ total: count() })
+		.select({ total: sql<number>`coalesce(sum(${gamePenalties.minutes}), 0)` })
 		.from(gamePenalties)
 		.innerJoin(games, eq(gamePenalties.gameId, games.id))
 		.where(
@@ -216,6 +217,6 @@ export function playerSeasonStats(playerId: string): PlayerSeasonStats {
 		games: Number(gamesRow?.total ?? 0),
 		goals: Number(goalsRow?.total ?? 0),
 		assists: Number(assistsRow?.total ?? 0),
-		penalties: Number(penaltiesRow?.total ?? 0)
+		penaltyMinutes: Number(penaltiesRow?.total ?? 0)
 	};
 }

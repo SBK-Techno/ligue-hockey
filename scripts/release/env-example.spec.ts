@@ -60,7 +60,7 @@ function schemaDefault(key: string): string | undefined {
 }
 
 describe('env example contract', () => {
-	it('ne recopie jamais une valeur par défaut du schéma', () => {
+	it('aligne chaque clé sur la valeur par défaut du schéma, sauf le déploiement', () => {
 		const lines = EXAMPLE.split('\n')
 			.map((line) => line.trim())
 			.filter((line) => line.length > 0 && !line.startsWith('#'));

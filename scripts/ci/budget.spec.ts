@@ -15,7 +15,8 @@ import {
 	inlineCssBytes,
 	jsBytes,
 	jsRequests,
-	measuredPage
+	measuredPage,
+	requestsCeiling
 } from './budget.ts';
 
 const CHUNK = 10 * 1024;
@@ -29,16 +30,15 @@ function links(count: number): string {
 	).join('');
 }
 
-/** Les routes statiques du dépôt, sans paramètre ni groupe de routes. */
-function staticRoutes(directory = 'src/routes'): string[] {
+/** Toutes les routes du dépôt, statiques et paramétrées, sans groupe. */
+function pageRoutes(directory = 'src/routes'): string[] {
 	return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
 		const path = join(directory, entry.name);
-		if (entry.isDirectory()) return staticRoutes(path);
+		if (entry.isDirectory()) return pageRoutes(path);
 		if (entry.name !== '+page.svelte') return [];
 		const segments = relative('src/routes', directory)
 			.split(sep)
 			.filter((segment) => segment && !segment.startsWith('('));
-		if (segments.some((segment) => segment.startsWith('['))) return [];
 		return ['/' + segments.join('/')];
 	});
 }
@@ -93,25 +93,40 @@ describe('budgets de page', () => {
 
 	it('applique le plafond de chaque page déclarée', () => {
 		for (const page of MEASURED_PAGES) {
+			const ceiling = requestsCeiling(page);
 			expect(() =>
-				assertJsRequests(page.name, links(page.maxRequests + 1), page.maxRequests)
+				assertJsRequests(page.name, links(ceiling + 1), ceiling)
 			).toThrow(/requêtes JavaScript/);
 			expect(() =>
-				assertPage(page.name, links(page.maxRequests), sizeOf)
+				assertPage(page.name, links(ceiling), sizeOf)
 			).not.toThrow();
-			expect(() =>
-				assertMaxSize(page.name, page.maxBytes + 1, page.maxBytes)
-			).toThrow(/octets/);
+			if (page.maxBytes !== undefined) {
+				const maxBytes = page.maxBytes;
+				expect(() => assertMaxSize(page.name, maxBytes + 1, maxBytes)).toThrow(/octets/);
+			}
 		}
 	});
 
-	it('déclare chaque route statique du dépôt', () => {
+	it('applique le plafond par défaut à une route sans plafond propre', () => {
+		const page = measuredPage('match-detail');
+		expect(page.maxRequests).toBeUndefined();
+		expect(requestsCeiling(page)).toBe(PERFORMANCE_BUDGETS.jsRequestsPerPage);
+		expect(() =>
+			assertPage('match-detail', links(PERFORMANCE_BUDGETS.jsRequestsPerPage), sizeOf)
+		).not.toThrow();
+		expect(() =>
+			assertPage('match-detail', links(PERFORMANCE_BUDGETS.jsRequestsPerPage + 1), sizeOf)
+		).toThrow(/requêtes JavaScript/);
+	});
+
+	it('déclare chaque route du dépôt, y compris les routes à paramètre', () => {
 		const declared = MEASURED_PAGES.map((page) => page.path).sort();
-		expect(declared).toEqual(staticRoutes().sort());
+		expect(declared).toEqual(pageRoutes().sort());
+		expect(declared.filter((path) => path.includes('['))).toHaveLength(5);
 	});
 
 	it('garde un plafond global plus serré que le pire plafond déclaré', () => {
-		const worst = Math.max(...MEASURED_PAGES.map((page) => page.maxRequests));
+		const worst = Math.max(...MEASURED_PAGES.map((page) => requestsCeiling(page)));
 		expect(PERFORMANCE_BUDGETS.jsRequestsPerPage).toBeLessThan(worst);
 	});
 });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { centsToInput, formatCount, formatDateHeading, formatDecimal } from './index.ts';
+import {
+	centsToInput,
+	formatCount,
+	formatDateHeading,
+	formatDecimal,
+	formatTime
+} from './index.ts';
 
 describe('formatCount', () => {
 	it('uses the French singular for zero and one', () => {
@@ -21,6 +27,13 @@ describe('formatDateHeading', () => {
 
 		expect(label.startsWith('J')).toBe(true);
 		expect(label).toContain('12');
+	});
+});
+
+describe('formatTime', () => {
+	it('garde l’heure sur une seule ligne avec des espaces fines insécables', () => {
+		expect(formatTime('20:30')).toBe('20\u202Fh\u202F30');
+		expect(formatTime('09:00')).toBe('9\u202Fh');
 	});
 });
 

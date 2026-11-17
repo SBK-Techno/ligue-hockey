@@ -3,7 +3,7 @@ import { version } from '$app/env';
 import { immutable } from '$app/manifest';
 import { resolve } from '$app/paths';
 import { branding } from '#lib/generated/branding.ts';
-import { precachePaths } from './precache.ts';
+import { precachePaths, RUNTIME_CACHE_ENTRIES } from './precache.ts';
 
 const CACHE = `${branding.cachePrefix}-${version}`;
 const RUNTIME = `${CACHE}-runtime`;
@@ -20,11 +20,26 @@ const PRECACHE = precachePaths(
 );
 const PRECACHED = new Set(PRECACHE);
 
-/** Les médias nommés par contenu peuvent être resservis sans réseau. */
-const RUNTIME_PREFIXES = ['/icons/', '/textures/', '/auth/', '/identities/', '/social/'];
+/** Les médias et les morceaux de route entrent au premier usage. */
+const RUNTIME_PREFIXES = [
+	'/_app/immutable/',
+	'/icons/',
+	'/textures/',
+	'/auth/',
+	'/identities/',
+	'/social/'
+];
 
 function isRuntimeAsset(pathname: string): boolean {
 	return RUNTIME_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+/** Garde le cache d'exécution borné en nombre d'entrées. */
+async function trimRuntime(cache: Cache): Promise<void> {
+	const keys = await cache.keys();
+	for (const key of keys.slice(0, Math.max(0, keys.length - RUNTIME_CACHE_ENTRIES))) {
+		await cache.delete(key);
+	}
 }
 
 self.addEventListener('install', (event) => {
@@ -68,7 +83,10 @@ self.addEventListener('fetch', (event) => {
 				const cached = await runtime.match(url.pathname);
 				if (cached) return cached;
 				const response = await fetch(request);
-				if (response.ok) await runtime.put(url.pathname, response.clone());
+				if (response.ok) {
+					await runtime.put(url.pathname, response.clone());
+					await trimRuntime(runtime);
+				}
 				return response;
 			}
 

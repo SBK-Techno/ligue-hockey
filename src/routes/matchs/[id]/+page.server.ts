@@ -29,7 +29,7 @@ import {
 	penaltyFormInputSchema
 } from '#lib/domain/gamesheet/validators.ts';
 import { actionError } from '#lib/server/action.ts';
-import { t } from '#lib/shared/i18n/index.ts';
+import { formatDate, t } from '#lib/shared/i18n/index.ts';
 import { parseForm, parseSchema } from '#lib/shared/validation.ts';
 import { AppError } from '#lib/shared/errors.ts';
 
@@ -84,6 +84,7 @@ export const load: ServerLoad = async ({ locals, params, parent }) => {
 	return {
 		game,
 		editable,
+		detailTitle: formatDate(game.gameDate),
 		playable,
 		sheet: playable ? getGameSheet(actor, game) : null,
 		availability: availabilityForGame(actor, game),

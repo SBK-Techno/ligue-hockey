@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { marked } from 'marked';
 import { brandingSchema, type Branding } from '#config/branding-schema.ts';
+import { branding as generatedBranding } from '#lib/generated/branding.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parsePalette, type Palette } from '../lib/palette.ts';
 import { addHeadingIds, escapeHtml, rewriteLinks, type TocEntry } from './lib.ts';
@@ -22,6 +23,13 @@ const DOC_ASSETS = {
 	social: 'assets/apercu.jpg',
 	css: 'assets/site.css'
 } as const;
+
+/**
+ * L'image sociale des docs vient de la sortie générée, nommée par contenu. La
+ * copie ne peut donc pas viser un nom logique non manifesté que la passe de
+ * rétention supprimerait après la fenêtre de cache.
+ */
+export const DOC_SOCIAL_SOURCE = `static${generatedBranding.socialImage}`;
 
 const DOC_FONTS = [
 	{
@@ -289,7 +297,7 @@ function copyAssets(branding: Branding, palette: Palette): void {
 	const assets = join(OUT, 'assets');
 	mkdirSync(join(assets, 'fonts'), { recursive: true });
 	copyFileSync(join(ROOT, branding.iconSource), join(OUT, DOC_ASSETS.crest));
-	copyFileSync(join(ROOT, `static${branding.socialImage}`), join(OUT, DOC_ASSETS.social));
+	copyFileSync(join(ROOT, DOC_SOCIAL_SOURCE), join(OUT, DOC_ASSETS.social));
 	for (const font of DOC_FONTS) {
 		copyFileSync(join(ROOT, font.source), join(assets, 'fonts', font.file));
 	}

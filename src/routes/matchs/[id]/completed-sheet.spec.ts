@@ -63,6 +63,7 @@ function completedBody(): string {
 		props: {
 			data: {
 				...layout,
+				detailTitle: 'Match',
 				game,
 				availability: {
 					rows: [],

@@ -122,7 +122,7 @@ describe('données de stats du profil', () => {
 			games: 1,
 			goals: 2,
 			assists: 1,
-			penalties: 1,
+			penaltyMinutes: 2,
 			points: 3,
 			pointsPerGame: 3
 		});
@@ -135,7 +135,7 @@ describe('données de stats du profil', () => {
 			games: 0,
 			goals: 0,
 			assists: 0,
-			penalties: 0,
+			penaltyMinutes: 0,
 			points: 0,
 			pointsPerGame: 0
 		});
@@ -151,7 +151,7 @@ describe('données de stats du profil', () => {
 			'assists',
 			'games',
 			'goals',
-			'penalties',
+			'penaltyMinutes',
 			'points',
 			'pointsPerGame'
 		]);

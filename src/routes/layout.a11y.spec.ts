@@ -13,6 +13,13 @@ describe('accessibilité des identités', () => {
 		expect(layout).toContain('name="twitter:image:alt"');
 	});
 
+	it('garde la légende des routes d’authentification dans un repère', () => {
+		const authBody = layout.slice(layout.indexOf('class="auth-body"'), layout.indexOf('{:else}'));
+
+		expect(authBody).toContain('<footer class="auth-caption">');
+		expect(authBody).not.toContain('<p class="auth-caption">');
+	});
+
 	it('garde l’avatar décoratif par défaut, pour ne pas répéter le nom voisin', () => {
 		expect(avatar).toMatch(/decorative = true/);
 	});

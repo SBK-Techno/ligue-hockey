@@ -17,6 +17,8 @@ declare global {
 
 		interface PageData {
 			actor?: Actor;
+			/** Le h1 d'une page de détail, composé par le résolveur de titre. */
+			detailTitle?: string;
 		}
 	}
 }

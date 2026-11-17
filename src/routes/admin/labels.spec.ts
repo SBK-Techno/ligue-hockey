@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
+import { fr } from '#config/i18n/fr.ts';
 import type { AvailabilityView } from '#lib/domain/availability/service.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
@@ -81,7 +82,30 @@ function renderAdmin(overrides: Record<string, unknown> = {}) {
 	});
 }
 
+function keysWithCopy(dictionary: Record<string, string>, copy: string): string[] {
+	return Object.entries(dictionary)
+		.filter(([, value]) => value === copy)
+		.map(([key]) => key);
+}
+
 describe('libellé unique de l’absence de réponse', () => {
+	it('garde une seule clé pour l’état sans réponse', () => {
+		expect(keysWithCopy(fr, fr['availability.noAnswer'])).toEqual(['availability.noAnswer']);
+	});
+
+	it('échoue dès qu’une seconde clé recopie le même libellé', () => {
+		const duplicate = {
+			...fr,
+			'games.duplicateNoAnswer': fr['availability.noAnswer']
+		};
+
+		expect(keysWithCopy(duplicate, duplicate['availability.noAnswer'])).toEqual([
+			'availability.noAnswer',
+			'games.duplicateNoAnswer'
+		]);
+		expect(keysWithCopy(fr, fr['availability.noAnswer'])).toHaveLength(1);
+	});
+
 	it('affiche les mêmes mots dans la feuille de présence, l’agenda et l’administration', () => {
 		const roster = render(AvailabilityRoster, {
 			props: { availability, viewerId: 'player-1' }

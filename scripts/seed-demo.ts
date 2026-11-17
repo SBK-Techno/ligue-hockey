@@ -26,7 +26,11 @@ import {
 	overallRating
 } from '#config/rating-attributes.ts';
 import { AVATAR_IDS } from '#config/avatars.ts';
-import { buildSlotDefinitions, type RosterTemplate } from '#config/roster.ts';
+import {
+	buildSlotDefinitions,
+	rosterTemplateFromSettings,
+	type RosterTemplate
+} from '#config/roster.ts';
 import { slotKey, slotRowId } from '#config/slot.ts';
 import {
 	NOTIFICATION_EVENTS,
@@ -72,12 +76,14 @@ const DEMO_USERS = `select id from user where email like ${DEMO_EMAIL}`;
 const DEMO_PLAYERS = `select user_id from players where user_id in (${DEMO_USERS})`;
 
 /** Une ligue de garage: deux équipes de six, une glace le dimanche matin. */
-const TEMPLATE: RosterTemplate = { goaliesPerTeam: 1, forwardsPerTeam: 3, defensePerTeam: 2 };
 const GAME_TIME = '08:30';
 
 const SETTINGS: Record<string, unknown> = {
 	'league.seasonLabel': 'Saison 2026-2027',
 	'games.defaultStartTime': GAME_TIME,
+	'roster.goaliesPerTeam': 1,
+	'roster.forwardsPerTeam': 3,
+	'roster.defensePerTeam': 2,
 	'finance.totalCents': 24_000,
 	'finance.firstInstallmentPercent': 50,
 	'finance.installment1Due': '2026-09-15',
@@ -188,6 +194,8 @@ type PlannedGame = {
 };
 
 const settings = parseSettings(SETTINGS);
+// Le modèle vient des réglages, jamais d'une seconde constante recopiée.
+const TEMPLATE: RosterTemplate = rosterTemplateFromSettings(settings);
 const slotDefinitions = buildSlotDefinitions(TEMPLATE);
 
 // ---------------------------------------------------------------------------
@@ -1005,11 +1013,13 @@ for (const [index, fill] of fills.entries()) {
 			createdByUserId: fill.absentId,
 			position: fill.position,
 			reason: 'absence',
-			status: 'filled',
+			// La fin du match ferme la demande mais garde le remplaçant : le
+			// même état que `finalizeGame`, jamais `filled` sur un match terminé.
+			status: 'cancelled',
 			createdAt: gameStart(game.gameDate) - 4 * 86_400_000,
 			filledByPlayerId: fill.substitute.userId,
 			filledAt: gameStart(game.gameDate) - 3 * 86_400_000,
-			cancelledAt: null
+			cancelledAt: gameStart(game.gameDate) + 2 * 3_600_000
 		})
 		.run();
 }

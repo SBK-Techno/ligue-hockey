@@ -156,7 +156,11 @@ for (const file of sourceFiles) {
 findings.push(
 	...queryBoundaryFindings(
 		sourceFiles
-			.filter((file) => file.startsWith(join(ROOT, 'src/lib/domain/')))
+			.filter(
+				(file) =>
+					file.startsWith(join(ROOT, 'src/lib/domain/')) ||
+					file.startsWith(join(ROOT, 'src/lib/server/'))
+			)
 			.map((file) => ({
 				path: relative(ROOT, file).split('\\').join('/'),
 				content: readFileSync(file, 'utf8')

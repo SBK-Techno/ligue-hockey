@@ -244,7 +244,7 @@
 					{ label: t('stats.goals'), value: data.stats.goals },
 					{ label: t('stats.assists'), value: data.stats.assists },
 					{ label: t('stats.points'), value: data.stats.points },
-					{ label: t('stats.penalties'), value: data.stats.penalties }
+					{ label: t('stats.penaltyMinutes'), value: data.stats.penaltyMinutes }
 				]
 			: []
 	);
