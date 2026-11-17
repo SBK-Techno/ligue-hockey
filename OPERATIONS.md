@@ -99,7 +99,7 @@ La cible ci-dessous a été vérifiée le 16 novembre 2026 sur l'hôte de réfé
 - URL publique : `https://hockey.sbktechno.com`.
 - Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.6.0`, publiée sur GHCR. Digest de l'hôte : `sha256:1d07cb4223547278598a0766f9c35c39e65953d55ab8d87daa639562f70d5b07`; identifiant local : `sha256:236b44753bdc1fbf46ce6998429d29194d3fda4b5b87ed16b877465c38e858b6`. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
 - Retour vérifié : `1.5.0`, digest hôte `sha256:ea411bacef9bbfae4d259bc21eb5e628958cb18a04bd588f964e722f0b67f0b1`, identifiant local `sha256:bdea12f292290e7a4540bc7772c49acbfcb76b92a6c792e40dbe0f53af853ae6`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.5.0.bak`; la base d'avant la migration est à `/app/data/ligue.db.pre-1.6.0`.
-- Environnement : le déploiement fournit un fichier `--env-file` hors dépôt, qui contient les secrets et n'est jamais versionné. Le déploiement vérifié utilise `/tmp/ligue-compose.env`; ce chemin n'est pas durable, replacez le fichier dans le coffre de l'hôte et passez son chemin à `--env-file`.
+- Environnement : le déploiement fournit un fichier `--env-file` hors dépôt, qui contient les secrets et n'est jamais versionné. Le coffre de l'hôte est `/home/jadorais/.env.ligue-hockey`, lisible par le seul propriétaire (`0600`), et toutes les commandes ci-dessous le passent à `--env-file`.
 
 Le projet Compose de l'hôte porte le nom `jadorais` et contient d'autres services. `docker compose up -d` peut afficher un avertissement d'orphelins; ne lancez jamais `--remove-orphans`, qui supprimerait ces autres conteneurs.
 
@@ -109,8 +109,8 @@ Mise à jour. Sauvegardez la base avec la séquence de la section **Sauvegarde e
 cd /home/jadorais
 # Épingler l'étiquette publiée dans compose.ligue-hockey.yml.
 # Le compose du dépôt, lui, reçoit cette étiquette par LIGUE_IMAGE.
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env pull
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env up -d
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey pull
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey up -d
 curl -fsS https://hockey.sbktechno.com/api/health \
   | jq -e '.status == "ok" and .database == "ok" and .migrations == "applied"'
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
@@ -125,8 +125,8 @@ Retour arrière :
 ```bash
 cd /home/jadorais
 # Épingler l'étiquette ou le digest de la version précédente.
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env pull
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env up -d
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey pull
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey up -d
 # Restaurer la base sauvegardée avant la mise à jour, puis vérifier /api/health.
 ```
 
@@ -200,21 +200,21 @@ Sauvegarde à chaud, sans arrêter l'application. Les commandes utilisent le fic
 ```bash
 cd /home/jadorais
 mkdir -p backups
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env exec -T --user app ligue-hockey node scripts/backup.mjs /app/data/backup.db
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey exec -T --user app ligue-hockey node scripts/backup.mjs /app/data/backup.db
 docker cp ligue-hockey:/app/data/backup.db "backups/ligue-$(date +%Y%m%dT%H%M%S).db"
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env exec -T --user app ligue-hockey rm /app/data/backup.db
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey exec -T --user app ligue-hockey rm /app/data/backup.db
 ```
 
 Restauration :
 
 ```bash
 cd /home/jadorais
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env stop ligue-hockey
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey stop ligue-hockey
 docker cp backups/ligue-AAAAmmjjTHHMMSS.db ligue-hockey:/app/data/ligue.db
 image="$(docker inspect --format '{{.Config.Image}}' ligue-hockey)"
 docker run --rm --entrypoint sh -v /mnt/Docker/DockerApps/LigueHockey:/app/data "$image" -c \
   'rm -f /app/data/ligue.db-wal /app/data/ligue.db-shm && chown -R app:app /app/data'
-docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env start ligue-hockey
+docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey start ligue-hockey
 curl -fsS https://hockey.sbktechno.com/api/health
 ```
 
