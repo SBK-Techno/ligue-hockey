@@ -97,7 +97,8 @@ La cible ci-dessous a été vérifiée le 16 novembre 2026 sur l'hôte de réfé
 - Répertoire Compose : `/home/jadorais`; fichier `/home/jadorais/compose.ligue-hockey.yml`; service et conteneur `ligue-hockey`.
 - Données : `/mnt/Docker/DockerApps/LigueHockey` monté sur `/app/data` (SQLite WAL).
 - URL publique : `https://hockey.sbktechno.com`.
-- Image : `ghcr.io/sbk-techno/ligue-hockey:1.5.0`, publiée sur GHCR. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
+- Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.6.0`, publiée sur GHCR. Digest de l'hôte : `sha256:1d07cb4223547278598a0766f9c35c39e65953d55ab8d87daa639562f70d5b07`; identifiant local : `sha256:236b44753bdc1fbf46ce6998429d29194d3fda4b5b87ed16b877465c38e858b6`. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
+- Retour vérifié : `1.5.0`, digest hôte `sha256:ea411bacef9bbfae4d259bc21eb5e628958cb18a04bd588f964e722f0b67f0b1`, identifiant local `sha256:bdea12f292290e7a4540bc7772c49acbfcb76b92a6c792e40dbe0f53af853ae6`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.5.0.bak`; la base d'avant la migration est à `/app/data/ligue.db.pre-1.6.0`.
 - Environnement : le déploiement fournit un fichier `--env-file` hors dépôt, qui contient les secrets et n'est jamais versionné. Le déploiement vérifié utilise `/tmp/ligue-compose.env`; ce chemin n'est pas durable, replacez le fichier dans le coffre de l'hôte et passez son chemin à `--env-file`.
 
 Le projet Compose de l'hôte porte le nom `jadorais` et contient d'autres services. `docker compose up -d` peut afficher un avertissement d'orphelins; ne lancez jamais `--remove-orphans`, qui supprimerait ces autres conteneurs.
@@ -115,7 +116,7 @@ curl -fsS https://hockey.sbktechno.com/api/health \
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
 ```
 
-Le contrôle de santé est le même prédicat que celui de `scripts/ci/container-smoke.sh` : requête `curl -fsS`, puis `jq` sur `status`, `database` et `migrations`. La dernière commande doit afficher l'étiquette attendue, par exemple `1.5.0`.
+Le contrôle de santé est le même prédicat que celui de `scripts/ci/container-smoke.sh` : requête `curl -fsS`, puis `jq` sur `status`, `database` et `migrations`. La dernière commande doit afficher l'étiquette attendue, par exemple `1.6.0`.
 
 Les migrations Drizzle sont appliquées au démarrage du conteneur. Elles ne sont pas réversibles : sauvegardez la base avant chaque mise à jour, et restaurez la sauvegarde correspondante lors d'un retour arrière.
 

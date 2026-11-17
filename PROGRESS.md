@@ -2,11 +2,14 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release in progress
+## Release 1.6.0 (shipped)
 
-- Branch: `feat/legends-1.6.0`, based on `v1.5.0`. Round-1 batches 1 to 7 end at `ef1f1c3`; the last round-1 batch is `b5455e7`, and round-2 block 1 starts at `86329da`. Round-3 blocks run from `8f7f82d` to `7550e04` and fixed the 18 confirmed mediums across auth, domain atomicity, home and match UI, delivery and test truth.
-- The round-3 B4 delivery, performance, docs and tests batch is applied on top of `7550e04`: docs social image from the hashed owner, every static and parameterised route budgeted, season penalty minutes, the demo closed state, title/caption landmarks, retention and jersey documentation, and the shell-only precache. `npm run gate` is green on 1069 tests in 146 files; generated assets and the docs site are current, and the architecture check covers 383 files.
-- Target version: `1.6.0`. `package.json`, `package-lock.json` and `.env.example` still carry the published `1.5.0`; `npm run release:apply` aligns them at release time.
+- `feat/legends-1.6.0` merged into `main` at `e6aaa20` (PR #18). The auto-release version pull request #19 merged at `e34a3ac` and produced tag `v1.6.0` and the GHCR image without a manual tag.
+- Final tree: `npm run gate` exit 0, 1069 tests in 146 files, svelte-check 0/0, architecture 383 files, 93 client chunks without zod, precached shell 7,785 B. The container smoke measured all 18 static pages; the seven admin pages carry the shared `chrome-inset` request.
+- Live: image `ghcr.io/sbk-techno/ligue-hockey:1.6.0`, host digest `sha256:1d07cb4223547278598a0766f9c35c39e65953d55ab8d87daa639562f70d5b07`, healthy since 2026-11-17T08:44:01Z; public health reports `ok`/`ok`/`applied` with HSTS.
+- Migration: 29 active players, 29 unique stored identities, zero duplicates. The backfill distributed the tribute legends by position: 15 forwards, 10 defence, 4 goalies. The pre-update database copy is `/app/data/ligue.db.pre-1.6.0`; the 1.5.0 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.5.0.bak`.
+- Deliberately deferred to 1.7.0: a true browser route-graph budget (P1: the smoke counts HTML script tags and undercounts post-hydration imports), and an axe run on the auth routes (the landmark is asserted structurally). Both limitations are recorded in the 1.6.0 pull request body and `OPERATIONS.md`.
+- Round-1 batches 1 to 7 end at `ef1f1c3`; the last round-1 batch is `b5455e7`, and round-2 block 1 starts at `86329da`. Round-3 blocks run from `8f7f82d` to `f173831` and fixed the 18 confirmed mediums across auth, domain atomicity, home and match UI, delivery and test truth.
 - Shipped in `1.3.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
 - Verified on the round-2 block-4 tree after the nineteen fixes: `npm run gate` green (930 tests, 124 files), generated assets and documentation site current, architecture check green over 356 files, and the client bundle holds 92 chunks without zod.
 
