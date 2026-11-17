@@ -2,7 +2,7 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Team section (in progress)
+## Release 1.10.0 (shipped)
 
 - **One owner.** `/equipes/[id]` is the canonical team surface: next-match card, manager preparation, lineup editor, read-only teams and the last 20 past matches with their stored per-game team counts. `/equipes` redirects to the first relevant game, so every entry point owns a real game id. `/matchs/[id]` and `/admin/matchs/[id]` link to it and no longer render a lineup editor or a second team view. `TeamLineup.svelte` and the old match editor tests are removed.
 - **History.** Past teams come from the stored `game_slots` of each game, never from the current live pool. `listTeamHistory` reads the bounded list and the per-game team counts in one grouped query; counts stay attached to the match that was published even after later lineup changes.
@@ -10,7 +10,9 @@ This file tracks the current milestone, verified evidence, and the work that is 
 - **Navigation and entry points.** `Équipes` is a primary member surface; players gain it in the five-slot mobile bar and managers reach it from the home preparation panel, the admin dashboard, the match header and the admin match page. The shared `nav-icons.ts` owner now carries the shield icon that Gestion declared.
 - **Evidence.** Visual audits at 1440, 1024, 900 and 320 for player, manager, no-lineup, cancelled, cancelled-only, started, off-season and no-profile admin variants report no horizontal overflow and no console errors. The off-season home shows no next match, `/equipes` falls back to the last past game, and a started game is labelled “Match passé” without an “À venir” badge. Functional preview runs recorded a manual save (`game.lineup_manual`), regeneration (`game.generate`, manual marker cleared), one filled slot (`game.fill`) and an applied swap (`game.swap`), each with the matching confirmation copy. Players see the published teams and the read-only bench; unrated players are named on the manager panel and stay on the bench.
 - **Gate.** `npm run gate` exit 0: 1156 tests in 159 files, svelte-check 0/0, architecture 409 files, generated assets and documentation current, 94 client chunks without zod.
-- **Pending.** Pull request, automatic release, live deployment with retained rollback and live health check.
+- **Release.** PR #38 merged at `b1d599e`; release PR #39 merged at `de87a56`. The automatic workflow produced tag `v1.10.0`, the GitHub release and the GHCR image without a manual tag. GitHub Actions cannot open the release pull request, so the documented recovery was used: the operator opened #39 from the pushed `release/next` branch.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.10.0`, host digest `sha256:ee76fb5c17abac50654d61a5435fc955a0798731520f3464bf264fbd9d6bb340`, local id `sha256:dad41440fefeabdef7a4c81cb5edf86ea1db533bfa2cc5f362eb65bac98b5c2a`, healthy since 2026-11-17T18:20:18Z with zero restarts. Public health reports `ok`/`ok`/`applied` with HSTS, the container applied its migrations (15 recorded), and the startup logs carry no error. A read-only check with the live sessions confirms `/equipes` redirects to the next scheduled game, the preparation panel appears only for an account that can manage games, `/matchs/...` and `/admin/matchs/...` link to the team page without an editor, and a past game stays read-only.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261117T131955.db`; the 1.9.1 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.9.1.bak`.
 
 ## Release 1.9.1 (shipped)
 
