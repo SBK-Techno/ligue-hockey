@@ -1,4 +1,5 @@
 import { ABUSE_LIMITS } from '#config/abuse.ts';
+import { PEEK_PUBLIC_CACHE, PEEK_RATINGS_CACHE } from '#config/cache.ts';
 import { legendForIdentity } from '#config/identities.ts';
 import type { Legend } from '#config/legends.ts';
 import { can } from '#lib/domain/auth/policy.ts';
@@ -45,7 +46,7 @@ export function peekScope(actor: Actor): PeekScope {
  * restent privées et courtes.
  */
 export function peekCacheControl(actor: Actor): string {
-	return peekScope(actor) === 'ratings' ? 'no-store' : 'private, max-age=15';
+	return peekScope(actor) === 'ratings' ? PEEK_RATINGS_CACHE : PEEK_PUBLIC_CACHE;
 }
 
 /**

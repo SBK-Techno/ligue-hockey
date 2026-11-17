@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { matchSectionOrder, type MatchSectionState } from './match-layout.ts';
 
@@ -55,16 +54,4 @@ describe('ordre des sections d’un match', () => {
 			expect(matchSectionOrder(entry.state)).toEqual(entry.expected);
 		});
 	}
-});
-
-describe('une seule présentation par fait', () => {
-	const page = readFileSync('src/routes/matchs/[id]/+page.svelte', 'utf8');
-
-	it('n’affiche l’avis d’annulation qu’au niveau de la page', () => {
-		expect(page.match(/games\.cancelledNotice/g)).toHaveLength(1);
-	});
-
-	it('laisse le banc à la carte d’alignement', () => {
-		expect(page).not.toContain("t('games.bench')");
-	});
 });

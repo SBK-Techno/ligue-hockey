@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `players_active_jersey_unique` ON `players` (`jersey_number`) WHERE "active" = 1 and "jersey_number" is not null;

@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ABUSE_LIMITS } from '#config/abuse.ts';
+import {
+	PEEK_PUBLIC_CACHE,
+	PEEK_PUBLIC_MAX_AGE_SECONDS,
+	PEEK_RATINGS_CACHE
+} from '#config/cache.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { resetThrottle } from '#lib/server/security/throttle.ts';
 
@@ -32,12 +37,17 @@ afterEach(() => {
 
 describe('cache de la fiche de joueur', () => {
 	it('ne met jamais en cache une fiche qui contient les notes', () => {
-		expect(peekCacheControl(admin)).toBe('no-store');
+		expect(PEEK_RATINGS_CACHE).toBe('no-store');
+		expect(peekCacheControl(admin)).toBe(PEEK_RATINGS_CACHE);
 	});
 
 	it('garde une fiche privée et courte sans notes', () => {
-		expect(peekCacheControl(player)).toBe('private, max-age=15');
-		expect(peekCacheControl({ kind: 'anonymous' })).toBe('private, max-age=15');
+		expect(PEEK_PUBLIC_MAX_AGE_SECONDS).toBeGreaterThan(0);
+		expect(PEEK_PUBLIC_CACHE).toBe(
+			`private, max-age=${PEEK_PUBLIC_MAX_AGE_SECONDS}`
+		);
+		expect(peekCacheControl(player)).toBe(PEEK_PUBLIC_CACHE);
+		expect(peekCacheControl({ kind: 'anonymous' })).toBe(PEEK_PUBLIC_CACHE);
 	});
 
 	it('donne une portée différente au lecteur qui voit les notes', () => {

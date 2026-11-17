@@ -34,11 +34,16 @@ import {
 } from '#config/notification-events.ts';
 import { parseSettings } from '#config/settings-registry.ts';
 import type { Position } from '#config/positions.ts';
+import type { Team } from '#config/teams.ts';
 import type { GameStatus } from '#lib/domain/games/schema.ts';
 import { gameAvailability, gameSlots, games } from '#lib/domain/games/schema.ts';
 import { selectGenerationPlayers, type SelectionCandidate } from '#lib/domain/games/selection.ts';
 import { generationSnapshotSchema } from '#lib/domain/games/validators.ts';
 import { players } from '#lib/domain/players/schema.ts';
+import { goalRowFrom } from '#lib/domain/gamesheet/entry.ts';
+import { goalInputSchema } from '#lib/domain/gamesheet/validators.ts';
+import { gameGoals } from '#lib/domain/gamesheet/schema.ts';
+import { parseSchema } from '#lib/shared/validation.ts';
 import { gamePlayerRatings, playerRatings } from '#lib/domain/ratings/schema.ts';
 import { paymentPlans, payments } from '#lib/domain/finance/schema.ts';
 import { chatMessages, pollOptions, pollVotes, polls } from '#lib/domain/chat/schema.ts';
@@ -55,7 +60,7 @@ import {
 import { branding } from '#lib/generated/branding.ts';
 import { account, user } from '#lib/server/db/auth.schema.ts';
 import { addDays, clock, todayInZone, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
-import { CHAT_LINES, LOCATIONS, PLAYERS, POLLS, RULES } from './demo/catalogue.ts';
+import { CHAT_LINES, LOCATIONS, PLAYERS, POLLS, RULES, SCORES } from './demo/catalogue.ts';
 import { scriptEnv } from './lib/env.ts';
 import { migrateDatabase, openDatabase } from './lib/db.ts';
 
@@ -606,6 +611,8 @@ function writeGameRatings(gameId: string, dressed: readonly string[]): void {
 	if (rows.length > 0) db.insert(gamePlayerRatings).values(rows).run();
 }
 
+const dressedByGame = new Map<string, { team: Team; playerId: string }[]>();
+
 for (const game of planned) {
 	db.delete(gameSlots).where(eq(gameSlots.gameId, game.id)).run();
 
@@ -644,6 +651,14 @@ for (const game of planned) {
 			size: settings['teams.maxSizeSpread']
 		}
 	});
+
+	dressedByGame.set(
+		game.id,
+		result.assignments.map((assignment) => ({
+			team: assignment.team,
+			playerId: assignment.playerId
+		}))
+	);
 
 	const kinds = new Map(selection.selected.map((candidate) => [candidate.playerId, candidate.kind]));
 	const snapshot = generationSnapshotSchema.parse({
@@ -715,6 +730,88 @@ for (const game of planned) {
 			game.id,
 			selection.selected.map((candidate) => candidate.playerId)
 		);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Feuilles de match
+// ---------------------------------------------------------------------------
+
+/**
+ * Les buts viennent du catalogue et passent par le propriétaire de la feuille
+ * de match : les buteurs et les aides sont des joueurs réellement habillés, et
+ * les noms et les numéros sont résolus par la feuille. Le jeu de démonstration
+ * n'écrit pas de trace d'audit; le score affiché n'est jamais écrit à la main.
+ */
+if (completed.length !== SCORES.length) {
+	throw new Error(
+		`Catalogue: ${SCORES.length} résultats pour ${completed.length} matchs terminés.`
+	);
+}
+
+let resultIndex = 0;
+for (const game of completed) {
+	const score = SCORES[resultIndex % SCORES.length];
+	resultIndex += 1;
+	const dressed = dressedByGame.get(game.id) ?? [];
+	const byId = new Map(demoPlayers.map((player) => [player.userId, player]));
+	const entryGame = {
+		slots: dressed.map((entry) => {
+			const player = byId.get(entry.playerId);
+			return {
+				team: entry.team,
+				player: player
+					? {
+							playerId: player.userId,
+							fullName: player.fullName,
+							jerseyNumber: player.jersey
+						}
+					: null
+			};
+		})
+	};
+	const names = new Map(
+		dressed.map((entry) => [entry.playerId, byId.get(entry.playerId)?.fullName ?? ''])
+	);
+	let sequence = 0;
+
+	for (const team of ['white', 'black'] as const) {
+		const roster = [
+			...new Set(
+				dressed
+					.filter((entry) => entry.team === team)
+					.map((entry) => entry.playerId)
+			)
+		];
+		const goals = team === 'white' ? score.white : score.black;
+
+		for (let goal = 0; goal < goals; goal += 1) {
+			if (roster.length > 0) {
+				const parsed = parseSchema(goalInputSchema, {
+					team,
+					period: (sequence % 3) + 1,
+					clock: `${String(18 - (sequence % 17)).padStart(2, '0')}:${String(
+						(sequence * 13) % 60
+					).padStart(2, '0')}`,
+					kind: 'even',
+					scorerPlayerId: roster[(sequence * 2 + 1) % roster.length],
+					assist1PlayerId:
+						roster.length > 1 ? roster[(sequence * 2 + 2) % roster.length] : null,
+					assist2PlayerId:
+						roster.length > 2 ? roster[(sequence * 2 + 3) % roster.length] : null
+				});
+				const createdAt = gameStart(game.gameDate) + 3_600_000;
+				const row = goalRowFrom(entryGame, parsed, {
+					id: `${PREFIX}goal_${game.gameDate.replaceAll('-', '_')}_${team}_${goal + 1}`,
+					gameId: game.id,
+					createdAt,
+					createdBy: admin.id,
+					names
+				});
+				db.insert(gameGoals).values(row).run();
+			}
+			sequence += 1;
+		}
 	}
 }
 
@@ -1068,6 +1165,7 @@ console.log(`  joueurs:          ${count('players')} (${demoPlayers.length} de d
 console.log(`  matchs:           ${count('games')}`);
 console.log(`  présences:        ${count('game_availability')}`);
 console.log(`  places:           ${count('game_slots')}`);
+console.log(`  buts:             ${count('game_goals')}`);
 console.log(`  notes de saison:  ${count('player_ratings')}`);
 console.log(`  notes de match:   ${count('game_player_ratings')}`);
 console.log(`  paiements:        ${count('payments')}`);

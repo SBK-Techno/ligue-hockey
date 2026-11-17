@@ -4,10 +4,10 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `feat/legends-1.6.0`, based on `v1.5.0`. Batches 1 to 7 are committed from `0450ccc` to `ef1f1c3`.
+- Branch: `feat/legends-1.6.0`, based on `v1.5.0`. Round-1 batches 1 to 7 end at `ef1f1c3`; the last round-1 batch is `b5455e7`, and round-2 block 1 starts at `86329da`.
 - Target version: `1.6.0`. `package.json`, `package-lock.json` and `.env.example` still carry the published `1.5.0`; `npm run release:apply` aligns them at release time.
-- Shipped in `1.4.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
-- Verified at `ef1f1c3` plus this documentation batch: `npm run gate` green (811 tests, 95 files), generated assets and documentation site current, architecture check green over 326 files, and the client bundle holds 90 chunks without zod.
+- Shipped in `1.3.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
+- Verified on the round-2 block-4 tree after the nineteen fixes: `npm run gate` green (930 tests, 124 files), generated assets and documentation site current, architecture check green over 356 files, and the client bundle holds 92 chunks without zod.
 
 ## Triple-check round 1 (closed)
 

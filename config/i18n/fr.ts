@@ -1288,6 +1288,7 @@ export const fr = {
   'error.invalidTime': 'Heure invalide.',
   'error.playerNotFound': 'Joueur introuvable.',
   'error.avatarTaken': 'Cette identité est déjà portée par un autre joueur.',
+  'error.jerseyTaken': 'Ce numéro de chandail est déjà porté par un autre joueur.',
   'error.identityWrongPosition':
     'Cette identité hommage n’est pas celle du poste choisi.',
   'error.noIdentityAvailable':

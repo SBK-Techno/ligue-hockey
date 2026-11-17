@@ -30,6 +30,7 @@ import {
 	insertGameWithSlots,
 	listAvailability,
 	listAvailabilityForPlayer,
+	listGameListRows,
 	listGames,
 	releasePlayerSlot,
 	listSlotAssignments,
@@ -185,6 +186,44 @@ function generationView(
 export function listSchedule(actor: Actor): GameSummary[] {
 	requireUser(actor);
 	return listGames().map(summary);
+}
+
+export type GameListEntry = GameSummary & {
+	generated: boolean;
+	openSlots: number;
+	openSlotsLabel: string;
+};
+
+/**
+ * Les lignes d'une liste de matchs, sans charger une fiche par match. Le
+ * nombre de places vient du même alignement que la fiche; seul le libellé est
+ * composé ici, à partir du seul propriétaire du format de compte.
+ */
+export function listGameListEntries(
+	actor: Actor,
+	gameIds: readonly string[]
+): Map<string, GameListEntry> {
+	requireUser(actor);
+	return new Map(
+		listGameListRows(gameIds).map((row) => [
+			row.id,
+			{
+				id: row.id,
+				gameDate: row.gameDate,
+				startTime: row.startTime,
+				locationId: row.locationId,
+				location: row.location,
+				status: row.status,
+				generated: row.generated,
+				openSlots: row.openSlots,
+				openSlotsLabel: formatCount(
+					row.openSlots,
+					'games.openSlots.one',
+					'games.openSlots.many'
+				)
+			}
+		])
+	);
 }
 
 export function getGame(actor: Actor, gameId: string): GameView {

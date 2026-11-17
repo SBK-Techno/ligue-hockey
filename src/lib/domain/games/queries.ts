@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
@@ -41,6 +41,62 @@ export function listRecentGames(limit: number) {
 		.orderBy(desc(games.gameDate), desc(games.startTime))
 		.limit(limit)
 		.all();
+}
+
+export type GameListRow = {
+	id: string;
+	gameDate: string;
+	startTime: string;
+	locationId: string;
+	location: string;
+	status: 'scheduled' | 'cancelled' | 'completed';
+	generated: boolean;
+	openSlots: number;
+};
+
+/**
+ * La projection de liste : l'état de génération et le nombre de places vides
+ * de plusieurs matchs, en deux lectures bornées. Aucun appelant ne rejoue une
+ * fiche complète par ligne.
+ */
+export function listGameListRows(gameIds: readonly string[]): GameListRow[] {
+	if (gameIds.length === 0) return [];
+	const rows = db
+		.select({
+			id: games.id,
+			gameDate: games.gameDate,
+			startTime: games.startTime,
+			locationId: games.locationId,
+			location: games.location,
+			status: games.status,
+			generated: games.generationJson
+		})
+		.from(games)
+		.where(inArray(games.id, [...gameIds]))
+		.all();
+	const counts = db
+		.select({ gameId: gameSlots.gameId, open: count() })
+		.from(gameSlots)
+		.where(
+			and(
+				inArray(gameSlots.gameId, [...gameIds]),
+				isNull(gameSlots.assignedPlayerId)
+			)
+		)
+		.groupBy(gameSlots.gameId)
+		.all();
+	const open = new Map(counts.map((row) => [row.gameId, row.open]));
+
+	return rows.map((row) => ({
+		id: row.id,
+		gameDate: row.gameDate,
+		startTime: row.startTime,
+		locationId: row.locationId,
+		location: row.location,
+		status: row.status,
+		generated: row.generated !== null,
+		openSlots: open.get(row.id) ?? 0
+	}));
 }
 
 export function listSlots(gameId: string) {

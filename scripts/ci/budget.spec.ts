@@ -9,6 +9,7 @@ import {
 	assertInlineCss,
 	assertJsBytes,
 	assertJsRequests,
+	assertMaxSize,
 	assertPage,
 	assertSize,
 	inlineCssBytes,
@@ -44,13 +45,13 @@ function staticRoutes(directory = 'src/routes'): string[] {
 
 describe('budgets de page', () => {
 	it('refuse une page de 376 Ko pour le budget de discussion', () => {
-		expect(() => assertSize('discussion', 376_000, 'discussionHtmlBytes')).toThrow(
-			/376000 octets/
-		);
+		const budget = measuredPage('discussion').maxBytes;
+		expect(() => assertMaxSize('discussion', 376_000, budget)).toThrow(/376000 octets/);
 	});
 
 	it('accepte une page sous le budget', () => {
-		expect(() => assertSize('discussion', 120_000, 'discussionHtmlBytes')).not.toThrow();
+		const budget = measuredPage('discussion').maxBytes;
+		expect(() => assertMaxSize('discussion', 120_000, budget)).not.toThrow();
 	});
 
 	it('refuse un budget inconnu au lieu de le lire comme zéro', () => {
@@ -98,6 +99,9 @@ describe('budgets de page', () => {
 			expect(() =>
 				assertPage(page.name, links(page.maxRequests), sizeOf)
 			).not.toThrow();
+			expect(() =>
+				assertMaxSize(page.name, page.maxBytes + 1, page.maxBytes)
+			).toThrow(/octets/);
 		}
 	});
 

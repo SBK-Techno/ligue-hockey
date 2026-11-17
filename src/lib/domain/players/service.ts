@@ -20,6 +20,7 @@ import {
 	findPlayerWithEmail,
 	hasFreeAvatarForPosition,
 	insertPlayerWithNextAvatar,
+	isJerseyNumberTaken,
 	listActivePlayers,
 	listAllPlayersWithEmail,
 	listAvatarAssignments,
@@ -124,6 +125,8 @@ function applyPlayerUpdate(result: PlayerUpdateResult): string[] {
 			throw new AppError('VALIDATION', { key: 'error.identityWrongPosition' });
 		case 'avatar-taken':
 			throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+		case 'jersey-taken':
+			throw new AppError('CONFLICT', { key: 'error.jerseyTaken' });
 		case 'no-identity':
 			throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
 	}
@@ -240,6 +243,13 @@ export async function invitePlayer(
 	if (!hasFreeAvatarForPosition(input.position)) {
 		throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
 	}
+	if (
+		input.jerseyNumber !== null &&
+		input.jerseyNumber !== undefined &&
+		isJerseyNumberTaken(input.jerseyNumber)
+	) {
+		throw new AppError('CONFLICT', { key: 'error.jerseyTaken' });
+	}
 
 	let created: { id: string };
 	try {
@@ -278,6 +288,9 @@ export async function invitePlayer(
 		}
 		if (inserted.status === 'avatar-taken') {
 			throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+		}
+		if (inserted.status === 'jersey-taken') {
+			throw new AppError('CONFLICT', { key: 'error.jerseyTaken' });
 		}
 	} catch (cause) {
 		try {

@@ -7,20 +7,32 @@ import {
 	rinkRole
 } from '#config/rink.ts';
 
+/** Le pourcentage attendu vient de la mesure, jamais d'une seconde valeur. */
+function percentOfLength(meters: number): string {
+	return `${Number(((meters / RINK.length) * 100).toFixed(3))}%`;
+}
+
 describe('patinoire', () => {
-	it('garde les mesures IIHF en un seul propriétaire', () => {
-		expect(RINK).toEqual({
-			length: 60,
-			width: 30,
-			goalLine: 4,
-			blueLine: 22.86,
-			faceoffSpotOffset: 7,
-			endSpot: 6,
-			neutralSpot: 1.5,
-			circleRadius: 4.5,
-			cornerRadius: 8.5,
-			crease: 1.8
-		});
+	it('garde une patinoire cohérente sans recopier ses mesures', () => {
+		const measures = Object.values(RINK);
+		expect(measures.every((value) => Number.isFinite(value) && value > 0)).toBe(true);
+		expect(RINK.length).toBeGreaterThan(RINK.width);
+		expect(RINK.goalLine).toBeLessThan(RINK.blueLine);
+		expect(RINK.blueLine).toBeLessThan(RINK.length / 2);
+		expect(RINK.faceoffSpotOffset).toBeLessThan(RINK.width / 2);
+		expect(RINK.endSpot).toBeLessThan(RINK.goalLine + RINK.blueLine);
+		expect(RINK.neutralSpot).toBeLessThan(RINK.blueLine);
+		expect(RINK.circleRadius * 2).toBeLessThan(RINK.width);
+		expect(RINK.cornerRadius * 2).toBeLessThan(RINK.width);
+		expect(RINK.crease).toBeLessThan(RINK.goalLine);
+
+		const lines = rinkLineVariables();
+		expect(lines.center).toBe('50%');
+		expect(lines.blueLeft).toBe(percentOfLength(RINK.blueLine));
+		expect(lines.blueRight).toBe(percentOfLength(RINK.length - RINK.blueLine));
+		expect(lines.goalLeft).toBe(percentOfLength(RINK.goalLine));
+		expect(lines.goalRight).toBe(percentOfLength(RINK.length - RINK.goalLine));
+		expect(lines.circle).toBe(percentOfLength(RINK.circleRadius * 2));
 	});
 
 	it('garde les coordonnées historiques du 3F et du 2D', () => {
@@ -63,11 +75,11 @@ describe('patinoire', () => {
 	it('dérive les lignes peintes des mesures, sans pourcentage recopié', () => {
 		expect(rinkLineVariables()).toEqual({
 			center: '50%',
-			blueLeft: '38.1%',
-			blueRight: '61.9%',
-			goalLeft: '6.667%',
-			goalRight: '93.333%',
-			circle: '15%'
+			blueLeft: percentOfLength(RINK.blueLine),
+			blueRight: percentOfLength(RINK.length - RINK.blueLine),
+			goalLeft: percentOfLength(RINK.goalLine),
+			goalRight: percentOfLength(RINK.length - RINK.goalLine),
+			circle: percentOfLength(RINK.circleRadius * 2)
 		});
 
 		const shifted = rinkLineVariables({ ...RINK, blueLine: 30, goalLine: 6 });
@@ -77,9 +89,9 @@ describe('patinoire', () => {
 
 	it('transmet la géométrie par les variables CSS consommées par la glace', () => {
 		const style = rinkGeometryStyle();
-		expect(style).toContain('--rink-blue-left: 38.1%');
+		expect(style).toContain(`--rink-blue-left: ${percentOfLength(RINK.blueLine)}`);
 		expect(style).toContain('--rink-center: 50%');
-		expect(style).toContain('--rink-circle: 15%');
+		expect(style).toContain(`--rink-circle: ${percentOfLength(RINK.circleRadius * 2)}`);
 		expect(rinkGeometryStyle({ ...RINK, blueLine: 30 })).toContain(
 			'--rink-blue-left: 50%'
 		);

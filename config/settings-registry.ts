@@ -32,6 +32,11 @@ export type SettingOption = {
   labelKey: I18nKey;
 };
 
+export type SettingBounds = {
+  min: number;
+  max: number;
+};
+
 export type SettingDefinition<T> = {
   group: SettingGroup;
   kind: SettingKind;
@@ -41,6 +46,8 @@ export type SettingDefinition<T> = {
   descriptionKey?: I18nKey;
   min?: number;
   max?: number;
+  /** La paire unique dont dérivent le schéma, les champs et les invariants. */
+  bounds?: SettingBounds;
   step?: number;
   options?: readonly SettingOption[];
 };
@@ -78,11 +85,61 @@ function defineNumericSetting(definition: {
   ) {
     throw new Error(`Le réglage ${definition.labelKey} a un défaut hors bornes.`);
   }
-  const bounded = z.number().min(definition.min).max(definition.max);
+  const bounds = Object.freeze({ min: definition.min, max: definition.max });
+  const bounded = z.number().min(bounds.min).max(bounds.max);
   return {
     ...rest,
+    min: bounds.min,
+    max: bounds.max,
+    bounds,
     schema: integer ? bounded.int() : bounded
   };
+}
+
+type ZodNumericCheck = {
+  _zod?: { def?: { check?: string; value?: number; inclusive?: boolean } };
+};
+
+/** Les bornes réellement portées par le schéma Zod d'un réglage numérique. */
+function schemaBounds(schema: z.ZodType<unknown>): {
+  min?: number;
+  max?: number;
+} {
+  const checks =
+    (schema as unknown as { _zod?: { def?: { checks?: unknown[] } } })._zod?.def
+      ?.checks ?? [];
+  let min: number | undefined;
+  let max: number | undefined;
+  for (const check of checks as ZodNumericCheck[]) {
+    const definition = check._zod?.def;
+    if (definition?.inclusive === false) continue;
+    if (definition?.check === 'greater_than') min = definition.value;
+    if (definition?.check === 'less_than') max = definition.value;
+  }
+  return { min, max };
+}
+
+/**
+ * Un réglage numérique ne peut pas réécrire ses bornes hors de la paire
+ * unique : le schéma, les attributs `min`/`max` du formulaire et les
+ * invariants doivent tous résoudre vers `bounds`.
+ */
+export function assertSingleBounds(
+  key: string,
+  definition: SettingDefinition<unknown>
+): void {
+  if (definition.kind !== 'number' && definition.kind !== 'money') return;
+  const bounds = definition.bounds;
+  if (!bounds) {
+    throw new Error(`Le réglage ${key} doit passer par defineNumericSetting.`);
+  }
+  if (definition.min !== bounds.min || definition.max !== bounds.max) {
+    throw new Error(`Le réglage ${key} recopie ses bornes hors de bounds.`);
+  }
+  const declared = schemaBounds(definition.schema);
+  if (declared.min !== bounds.min || declared.max !== bounds.max) {
+    throw new Error(`Le schéma du réglage ${key} ne vient pas de sa paire de bornes.`);
+  }
 }
 
 const dateString = z
@@ -383,6 +440,10 @@ export const SETTINGS = {
     descriptionKey: 'settings.allowPlayerPolls.description'
   })
 } as const;
+
+for (const [key, definition] of Object.entries(SETTINGS)) {
+  assertSingleBounds(key, definition as SettingDefinition<unknown>);
+}
 
 export type SettingsKey = keyof typeof SETTINGS;
 export type SettingValue<K extends SettingsKey> = z.infer<

@@ -110,7 +110,8 @@ export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 export type InsertPlayerResult =
 	| { status: 'inserted'; avatarId: IdentityId }
 	| { status: 'no-identity' }
-	| { status: 'avatar-taken' };
+	| { status: 'avatar-taken' }
+	| { status: 'jersey-taken' };
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type ReadExecutor = Transaction | typeof db;
@@ -133,6 +134,44 @@ function isUniqueConstraint(error: unknown): boolean {
 	);
 }
 
+function uniqueViolation(error: unknown): 'avatar' | 'jersey' | null {
+	if (!isUniqueConstraint(error)) return null;
+	const message = error instanceof Error ? error.message : '';
+	if (message.includes('players.jersey_number')) return 'jersey';
+	if (message.includes('players.avatar_id')) return 'avatar';
+	return null;
+}
+
+/**
+ * Un numéro de chandail actif ne peut pas être réservé deux fois. La lecture
+ * et l'écriture partagent la transaction de l'appelant; l'index partiel reste
+ * le juge final quand deux écritures se croisent.
+ */
+function jerseyTaken(
+	executor: ReadExecutor,
+	jerseyNumber: number,
+	excludeUserId: string
+): boolean {
+	return (
+		executor
+			.select({ userId: players.userId })
+			.from(players)
+			.where(
+				and(
+					eq(players.jerseyNumber, jerseyNumber),
+					eq(players.active, true),
+					ne(players.userId, excludeUserId)
+				)
+			)
+			.get() !== undefined
+	);
+}
+
+/** Réservation précoce, avant de créer un compte d'authentification. */
+export function isJerseyNumberTaken(jerseyNumber: number): boolean {
+	return jerseyTaken(db, jerseyNumber, '');
+}
+
 /**
  * Choisit la première identité libre pour le poste et l'écrit dans la même
  * transaction. Le catalogue épuisé est une erreur explicite : une fiche active
@@ -144,12 +183,18 @@ export function insertPlayerWithNextAvatar(
 ): InsertPlayerResult {
 	try {
 		return db.transaction((tx) => {
+			if (row.jerseyNumber != null && jerseyTaken(tx, row.jerseyNumber, row.userId)) {
+				return { status: 'jersey-taken' as const };
+			}
 			const avatarId = firstFreeAvatarId(takenAvatarIds(tx), position);
 			if (!avatarId) return { status: 'no-identity' as const };
 			tx.insert(players).values({ ...row, avatarId }).run();
 			return { status: 'inserted' as const, avatarId };
 		});
 	} catch (error) {
+		const violation = uniqueViolation(error);
+		if (violation === 'jersey') return { status: 'jersey-taken' };
+		if (violation === 'avatar') return { status: 'avatar-taken' };
 		if (isUniqueConstraint(error)) return { status: 'avatar-taken' };
 		throw error;
 	}
@@ -195,6 +240,7 @@ export type PlayerUpdateResult =
 	| { status: 'not-found' }
 	| { status: 'identity-position' }
 	| { status: 'avatar-taken' }
+	| { status: 'jersey-taken' }
 	| { status: 'no-identity' };
 
 /**
@@ -239,6 +285,19 @@ function applyUpdate(
 		const free = firstFreeAvatarId(takenAvatarIds(tx), effectivePosition);
 		if (!free) return { status: 'no-identity' };
 		next.avatarId = free;
+	}
+
+	// Le numéro suit le même invariant que l'identité : un joueur actif en
+	// réserve un seul, et une activation revalide le numéro hérité.
+	const effectiveJersey =
+		next.jerseyNumber !== undefined ? next.jerseyNumber : current.jerseyNumber;
+	const effectiveActive = next.active !== undefined ? next.active : current.active;
+	if (
+		effectiveActive &&
+		effectiveJersey !== null &&
+		jerseyTaken(tx, effectiveJersey, playerId)
+	) {
+		return { status: 'jersey-taken' };
 	}
 
 	const claimedAvatar =
@@ -308,6 +367,9 @@ export function updatePlayer(
 		}
 		return applyUpdate(executor, playerId, patch, options);
 	} catch (error) {
+		const violation = uniqueViolation(error);
+		if (violation === 'jersey') return { status: 'jersey-taken' };
+		if (violation === 'avatar') return { status: 'avatar-taken' };
 		if (isUniqueConstraint(error)) return { status: 'avatar-taken' };
 		throw error;
 	}

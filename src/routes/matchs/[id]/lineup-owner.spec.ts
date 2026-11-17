@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
+import { t } from '#lib/shared/i18n/index.ts';
 import type { GameView } from '#lib/domain/games/service.ts';
 import type { LineupIntelligence } from '#lib/domain/games/alignment.ts';
 import type { AvailabilityView } from '#lib/domain/availability/service.ts';
@@ -95,6 +96,26 @@ function generateControls(body: string): number {
 	return body.match(/action="\?\/generate"/g)?.length ?? 0;
 }
 
+function renderPublic(overrides: Partial<GameView> = {}) {
+	return render(MatchPage, {
+		props: {
+			data: {
+				...layout,
+				game: { ...game, ...overrides },
+				availability,
+				requests: [],
+				positions: [],
+				canManage: true,
+				editable: true,
+				playable: false,
+				sheet: null
+			},
+			form: null,
+			params: { id: game.id }
+		}
+	});
+}
+
 describe('propriétaire de la régénération d’alignement', () => {
 	it('garde une seule commande de régénération pour un gérant', () => {
 		const publicPage = render(MatchPage, {
@@ -133,5 +154,30 @@ describe('propriétaire de la régénération d’alignement', () => {
 
 		expect(generateControls(publicPage.body)).toBe(1);
 		expect(generateControls(adminPage.body)).toBe(0);
+	});
+
+	it('affiche l’avis d’annulation une seule fois, et seulement pour un match annulé', () => {
+		const cancelled = renderPublic({ status: 'cancelled' });
+		const scheduled = renderPublic({ status: 'scheduled' });
+
+		expect(cancelled.body.split(t('games.cancelledNotice'))).toHaveLength(2);
+		expect(scheduled.body).not.toContain(t('games.cancelledNotice'));
+	});
+
+	it('garde le banc dans la carte d’alignement, sans le répéter', () => {
+		const benchPlayer = {
+			playerId: 'bench-1',
+			fullName: 'Remplaçant Test',
+			position: 'forward' as const,
+			jerseyNumber: 15,
+			avatarId: null,
+			kind: 'regular' as const
+		};
+		const page = renderPublic({
+			generation: { ...game.generation!, bench: [benchPlayer] }
+		});
+
+		expect(page.body.split(t('rink.bench'))).toHaveLength(2);
+		expect(page.body.split(benchPlayer.fullName)).toHaveLength(2);
 	});
 });

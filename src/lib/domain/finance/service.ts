@@ -1,4 +1,5 @@
 import { CURRENCY, type Currency } from '#config/currency.ts';
+import type { Position } from '#config/positions.ts';
 import { branding } from '#lib/generated/branding.ts';
 import {
 	canViewBalance,
@@ -263,21 +264,31 @@ export function notifyOverdueBalances(): number {
 	return created;
 }
 
+/**
+ * Le plan par défaut d'un poste : la seule dérivation du total, de la remise
+ * de gardien et du fractionnement. L'écran d'administration affiche cette
+ * suggestion; le cas d'usage l'écrit. Aucun appelant ne refait le calcul.
+ */
+export function defaultPlanFor(position: Position) {
+	const settings = getSettings();
+	const total = applyDiscount(
+		settings['finance.totalCents'],
+		position === 'goalie' ? settings['finance.goalieDiscountPercent'] : 0
+	);
+	return splitPlan(total, settings['finance.firstInstallmentPercent']);
+}
+
 export function applyDefaultPlan(actor: Actor, playerId: string): BalanceView | null {
 	requirePermission(actor, 'recordPayments');
 	const player = getPlayer(actor, playerId);
 	if (!('age' in player)) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
-	const settings = getSettings();
-	const total = applyDiscount(
-		settings['finance.totalCents'],
-		player.position === 'goalie' ? settings['finance.goalieDiscountPercent'] : 0
-	);
-	if (total <= 0) {
+	const amounts = defaultPlanFor(player.position);
+	if (amounts.totalCents <= 0) {
 		throw new AppError('VALIDATION', { key: 'balance.feeNotSet' });
 	}
-	const amounts = splitPlan(total, settings['finance.firstInstallmentPercent']);
+	const settings = getSettings();
 	const now = clock.nowMs();
 
 	db.transaction((tx) => {

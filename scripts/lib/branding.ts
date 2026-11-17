@@ -14,6 +14,7 @@ import {
 } from '#config/branding-schema.ts';
 import { avatarSymbol } from '../../src/lib/ui/avatar-art.ts';
 import { retainedForCache } from './asset-retention.ts';
+import { assertDeclaredSurfaces } from './generated-surfaces.ts';
 import { emailPaletteFrom, parsePalette, type EmailPalette, type Palette } from './palette.ts';
 
 export type GeneratedFile = {
@@ -591,6 +592,7 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 		contents: `${JSON.stringify(checksums, null, 2)}\n`
 	});
 
+	assertDeclaredSurfaces(files.map((file) => file.path));
 	return files;
 }
 

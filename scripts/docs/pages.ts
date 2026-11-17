@@ -26,6 +26,22 @@ function pagesUrl(repositoryUrl: string): string {
 
 export const DEFAULT_SITE_URL = pagesUrl(REPOSITORY_URL);
 
+/**
+ * Les Markdown de la racine qui ne sont pas publiés. Toute autre page racine
+ * doit devenir une source de `pages` : `docs:check` refuse un fichier qui
+ * n'est ni l'un ni l'autre.
+ */
+export const EXCLUDED_ROOT_PAGES: readonly { source: string; reason: string }[] = [
+	{
+		source: 'AGENTS.md',
+		reason: 'Consignes de l’agent, pas une page destinée aux lecteurs.'
+	},
+	{
+		source: 'PROGRESS.md',
+		reason: 'Suivi interne des lots et des vérifications, hors du site.'
+	}
+];
+
 export type DocPage = {
 	slug: string;
 	title: string;

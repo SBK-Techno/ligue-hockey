@@ -1,10 +1,12 @@
+import { createServer, type Server } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import {
 	IMMUTABLE_CACHE,
 	NO_CACHE,
 	SHORT_CACHE,
 	cachePolicyFor,
-	generatedAssetPaths
+	generatedAssetPaths,
+	installStaticCachePolicy
 } from './static-cache.js';
 
 const manifest = {
@@ -22,6 +24,24 @@ const manifest = {
 
 const immutable = generatedAssetPaths(manifest);
 
+function listening(server: Server): Promise<string> {
+	return new Promise((resolve) => {
+		server.listen(0, '127.0.0.1', () => {
+			const address = server.address();
+			if (!address || typeof address === 'string') {
+				throw new Error('Adresse de test inattendue.');
+			}
+			resolve(`http://127.0.0.1:${address.port}`);
+		});
+	});
+}
+
+function closed(server: Server): Promise<void> {
+	return new Promise((resolve, reject) => {
+		server.close((error) => (error ? reject(error) : resolve()));
+	});
+}
+
 describe('cache des actifs générés', () => {
 	it('classe seulement les médias nommés par contenu', () => {
 		expect([...immutable].sort()).toEqual([
@@ -31,6 +51,33 @@ describe('cache des actifs générés', () => {
 			'/social/apercu-abcdef123456.jpg',
 			'/textures/paper-abcdef123456.webp'
 		]);
+	});
+
+	it('pose la politique sur le serveur de l’entrée de production', async () => {
+		const server = createServer((_request, response) => {
+			response.writeHead(200, { 'content-type': 'image/png' });
+			response.end('ok');
+		});
+		installStaticCachePolicy(server, manifest);
+		const base = await listening(server);
+		try {
+			const requests: [string, string | null][] = [];
+			for (const pathname of [
+				'/icons/favicon-32.abcdef123456.png',
+				'/manifest.webmanifest',
+				'/service-worker.js'
+			]) {
+				const response = await fetch(`${base}${pathname}`);
+				requests.push([pathname, response.headers.get('cache-control')]);
+			}
+			expect(requests).toEqual([
+				['/icons/favicon-32.abcdef123456.png', IMMUTABLE_CACHE],
+				['/manifest.webmanifest', SHORT_CACHE],
+				['/service-worker.js', NO_CACHE]
+			]);
+		} finally {
+			await closed(server);
+		}
 	});
 
 	it.each([

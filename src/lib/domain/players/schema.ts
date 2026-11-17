@@ -40,6 +40,10 @@ export const players = sqliteTable(
 		uniqueIndex('players_active_avatar_unique')
 			.on(table.avatarId)
 			.where(sql`"active" = 1 and "avatar_id" is not null`),
+		/** Un numéro de chandail appartient à un seul joueur actif. */
+		uniqueIndex('players_active_jersey_unique')
+			.on(table.jerseyNumber)
+			.where(sql`"active" = 1 and "jersey_number" is not null`),
 		check('players_position_check', sql.raw(`"position" in (${POSITION_SQL})`)),
 		check(
 			'players_age_check',

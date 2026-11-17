@@ -1,6 +1,10 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fr } from '../config/i18n/fr.ts';
+import {
+	QUERY_BOUNDARY_ALLOWANCES,
+	queryBoundaryFindings
+} from './lib/architecture.ts';
 import { checkCiContract } from './lib/ci-contract.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -138,6 +142,18 @@ for (const file of sourceFiles) {
 		);
 	}
 }
+
+findings.push(
+	...queryBoundaryFindings(
+		sourceFiles
+			.filter((file) => file.startsWith(join(ROOT, 'src/lib/domain/')))
+			.map((file) => ({
+				path: relative(ROOT, file).split('\\').join('/'),
+				content: readFileSync(file, 'utf8')
+			})),
+		QUERY_BOUNDARY_ALLOWANCES
+	)
+);
 
 const scriptFiles = walk(join(ROOT, 'scripts'));
 

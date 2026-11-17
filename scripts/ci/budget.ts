@@ -18,15 +18,18 @@ function maximumFor(budget: string): number {
 	return PERFORMANCE_BUDGETS[budget as PerformanceBudget];
 }
 
+export function assertMaxSize(label: string, bytes: number, maximum: number): void {
+	if (bytes > maximum) {
+		throw new Error(`${label}: ${bytes} octets pour un budget de ${maximum}.`);
+	}
+}
+
 export function assertSize(
 	label: string,
 	bytes: number,
 	budget: PerformanceBudget
 ): void {
-	const maximum = maximumFor(budget);
-	if (bytes > maximum) {
-		throw new Error(`${label}: ${bytes} octets pour un budget de ${maximum}.`);
-	}
+	assertMaxSize(label, bytes, maximumFor(budget));
 }
 
 export function inlineCssBytes(html: string): number {
@@ -128,6 +131,7 @@ export function assertPage(
 	const page = measuredPage(label);
 	assertJsRequests(label, html, page.maxRequests);
 	assertJsBytes(label, html, sizeOf);
+	assertMaxSize(label, Buffer.byteLength(html, 'utf8'), page.maxBytes);
 }
 
 const [command, ...args] = process.argv.slice(2);
@@ -135,7 +139,7 @@ const [command, ...args] = process.argv.slice(2);
 if (command === 'pages') {
 	process.stdout.write(
 		MEASURED_PAGES.map(
-			(page) => `${page.name}\t${page.path}\t${page.anonymous ? 'anon' : 'session'}`
+			(page) => `${page.name}\t${page.path}\t${page.audience}`
 		).join('\n') + '\n'
 	);
 } else if (command) {

@@ -27,7 +27,9 @@ import { AppError } from '#lib/shared/errors.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
+	listAssessmentGames,
 	listGameRatings,
+	listGameRatingsForGames,
 	listPlayerGameRatings,
 	listRatings,
 	listRatingsForPlayers,
@@ -448,11 +450,42 @@ export function playedGamesForAssessment(
 	limit = 8
 ): PlayedGameAssessment[] {
 	requirePermission(actor, 'editRatings');
+	const schedule = [...listSchedule(actor)].reverse();
+	const gameIds = schedule.map((summary) => summary.id);
+	const gamesById = new Map<string, AssessmentGame>();
+	for (const row of listAssessmentGames(gameIds)) {
+		const game = gamesById.get(row.gameId) ?? {
+			id: row.gameId,
+			gameDate: row.gameDate,
+			startTime: row.startTime,
+			location: row.location,
+			status: row.status,
+			generated: row.generated,
+			slots: []
+		};
+		game.slots.push({
+			player: {
+				playerId: row.playerId,
+				fullName: `${row.firstName} ${row.lastName}`,
+				position: row.position,
+				jerseyNumber: row.jerseyNumber
+			}
+		});
+		gamesById.set(row.gameId, game);
+	}
+
+	const ratingsByGame = new Map<string, GameRatingRow[]>();
+	for (const row of listGameRatingsForGames(gameIds)) {
+		const rows = ratingsByGame.get(row.gameId) ?? [];
+		rows.push(row);
+		ratingsByGame.set(row.gameId, rows);
+	}
+
 	const games: PlayedGameAssessment[] = [];
-	for (const summary of [...listSchedule(actor)].reverse()) {
-		const game = getGame(actor, summary.id);
-		if (!isGamePlayable(game)) continue;
-		const players = buildAssessmentPlayers(game, listGameRatings(game.id));
+	for (const summary of schedule) {
+		const game = gamesById.get(summary.id);
+		if (!game || !isGamePlayable(game)) continue;
+		const players = buildAssessmentPlayers(game, ratingsByGame.get(game.id) ?? []);
 		if (players.length === 0) continue;
 		const rated = players.filter((player) => player.complete).length;
 		games.push({

@@ -9,7 +9,16 @@ type StoredRating = {
 	updatedAt: number;
 };
 
-const { getGame, listSchedule, replaceGameRatings, listGameRatings, recordAudit, store } =
+const {
+	getGame,
+	listSchedule,
+	replaceGameRatings,
+	listGameRatings,
+	listAssessmentGames,
+	listGameRatingsForGames,
+	recordAudit,
+	store
+} =
 	vi.hoisted(() => {
 		const store = new Map<string, StoredRating[]>();
 		const listGameRatings = vi.fn(() => [...store.values()].flat());
@@ -37,6 +46,8 @@ const { getGame, listSchedule, replaceGameRatings, listGameRatings, recordAudit,
 			listSchedule: vi.fn(),
 			replaceGameRatings,
 			listGameRatings,
+			listAssessmentGames: vi.fn((): unknown[] => []),
+			listGameRatingsForGames: vi.fn((): unknown[] => []),
 			recordAudit: vi.fn(),
 			store
 		};
@@ -45,6 +56,8 @@ const { getGame, listSchedule, replaceGameRatings, listGameRatings, recordAudit,
 vi.mock('#lib/domain/games/service.ts', () => ({ getGame, listSchedule }));
 vi.mock('./queries.ts', () => ({
 	listGameRatings,
+	listAssessmentGames,
+	listGameRatingsForGames,
 	replaceGameRatings,
 	listPlayerGameRatings: vi.fn(() => []),
 	listRatings: vi.fn(() => []),
@@ -292,7 +305,8 @@ describe('playedGamesForAssessment', () => {
 		getGame.mockClear();
 		listSchedule.mockClear();
 		listGameRatings.mockClear();
-		getGame.mockReturnValue(game());
+		listAssessmentGames.mockClear();
+		listGameRatingsForGames.mockClear();
 	});
 
 	it('keeps generated playable games with at least one dressed player', async () => {
@@ -302,11 +316,38 @@ describe('playedGamesForAssessment', () => {
 			{ id: 'cancelled', gameDate: '2026-11-15', startTime: '09:00', location: 'B', status: 'cancelled' },
 			{ id: 'ready', gameDate: '2026-11-16', startTime: '09:00', location: 'C', status: 'completed' }
 		]);
-		getGame.mockImplementation((_actor: Actor, id: string) => {
-			if (id === 'empty') return { ...game({ id }), slots: [] };
-			if (id === 'cancelled') return game({ id, status: 'cancelled' });
-			return game({ id: 'ready' });
-		});
+		listAssessmentGames.mockReturnValue([
+			{
+				gameId: 'cancelled',
+				gameDate: '2026-11-15',
+				startTime: '09:00',
+				location: 'B',
+				status: 'cancelled',
+				generated: true,
+				team: 'white',
+				position: 'forward',
+				slotIndex: 0,
+				playerId: 'p1',
+				firstName: 'Alex',
+				lastName: 'Tremblay',
+				jerseyNumber: 9
+			},
+			{
+				gameId: 'ready',
+				gameDate: '2026-11-16',
+				startTime: '09:00',
+				location: 'C',
+				status: 'completed',
+				generated: true,
+				team: 'white',
+				position: 'forward',
+				slotIndex: 0,
+				playerId: 'p1',
+				firstName: 'Alex',
+				lastName: 'Tremblay',
+				jerseyNumber: 9
+			}
+		]);
 
 		const games = playedGamesForAssessment(admin);
 

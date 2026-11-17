@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
+	assertSingleBounds,
 	defaultSettings,
 	parseSettings,
 	SETTINGS,
@@ -55,6 +57,10 @@ describe('bornes des réglages numériques', () => {
 		expect(numeric.length).toBeGreaterThan(0);
 		for (const key of numeric) {
 			const definition = SETTINGS[key];
+			expect(definition.bounds, key).toBeDefined();
+			expect(definition.min, key).toBe(definition.bounds?.min);
+			expect(definition.max, key).toBe(definition.bounds?.max);
+			expect(() => assertSingleBounds(key, definition)).not.toThrow();
 			expect(definition.min, key).toBeTypeOf('number');
 			expect(definition.max, key).toBeTypeOf('number');
 			expect(definition.step, key).toBeGreaterThan(0);
@@ -70,6 +76,31 @@ describe('bornes des réglages numériques', () => {
 				false
 			);
 		}
+	});
+
+	it('refuse une seconde déclaration de borne dans le schéma', () => {
+		const definition = SETTINGS['finance.totalCents'];
+
+		expect(() =>
+			assertSingleBounds('finance.totalCents', {
+				...definition,
+				bounds: undefined
+			})
+		).toThrow(/defineNumericSetting/);
+
+		expect(() =>
+			assertSingleBounds('finance.totalCents', {
+				...definition,
+				schema: z.number().min(1).max(999)
+			})
+		).toThrow(/paire de bornes/);
+
+		expect(() =>
+			assertSingleBounds('finance.totalCents', {
+				...definition,
+				min: 1
+			})
+		).toThrow(/hors de bounds/);
 	});
 
 	it('dérive la fenêtre de notification de la borne déclarée', () => {

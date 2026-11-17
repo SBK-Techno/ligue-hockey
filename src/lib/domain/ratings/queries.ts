@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { games, gameSlots } from '#lib/domain/games/schema.ts';
+import { players } from '#lib/domain/players/schema.ts';
 import { playerRatings, gamePlayerRatings, type PlayerRatingRow } from './schema.ts';
 
 export function listRatings(playerId: string): PlayerRatingRow[] {
@@ -62,6 +63,99 @@ export function replaceSeasonRatings(
 				.run();
 		}
 	});
+}
+
+export type AssessmentGameRow = {
+	gameId: string;
+	gameDate: string;
+	startTime: string;
+	location: string;
+	status: 'scheduled' | 'cancelled' | 'completed';
+	generated: boolean;
+	team: 'white' | 'black';
+	position: 'forward' | 'defense' | 'goalie';
+	slotIndex: number;
+	playerId: string;
+	firstName: string;
+	lastName: string;
+	jerseyNumber: number | null;
+};
+
+/**
+ * Les matchs et leur alignement habillé, en une lecture. La feuille
+ * d'évaluation lit cette projection groupée au lieu d'une fiche par match.
+ */
+export function listAssessmentGames(
+	gameIds: readonly string[]
+): AssessmentGameRow[] {
+	if (gameIds.length === 0) return [];
+	return db
+		.select({
+			gameId: games.id,
+			gameDate: games.gameDate,
+			startTime: games.startTime,
+			location: games.location,
+			status: games.status,
+			generatedAt: games.generatedAt,
+			generationJson: games.generationJson,
+			team: gameSlots.team,
+			position: gameSlots.position,
+			slotIndex: gameSlots.slotIndex,
+			playerId: players.userId,
+			firstName: players.firstName,
+			lastName: players.lastName,
+			jerseyNumber: players.jerseyNumber
+		})
+		.from(games)
+		.innerJoin(gameSlots, eq(gameSlots.gameId, games.id))
+		.innerJoin(players, eq(players.userId, gameSlots.assignedPlayerId))
+		.where(
+			and(
+				inArray(games.id, [...gameIds]),
+				isNotNull(gameSlots.assignedPlayerId)
+			)
+		)
+		.orderBy(
+			asc(games.gameDate),
+			asc(games.startTime),
+			asc(gameSlots.team),
+			asc(gameSlots.position),
+			asc(gameSlots.slotIndex)
+		)
+		.all()
+		.map((row) => ({
+			gameId: row.gameId,
+			gameDate: row.gameDate,
+			startTime: row.startTime,
+			location: row.location,
+			status: row.status,
+			generated: row.generationJson !== null && row.generatedAt !== null,
+			team: row.team,
+			position: row.position,
+			slotIndex: row.slotIndex,
+			playerId: row.playerId,
+			firstName: row.firstName,
+			lastName: row.lastName,
+			jerseyNumber: row.jerseyNumber
+		}));
+}
+
+/** Toutes les notes de match des matchs demandés, en une lecture. */
+export function listGameRatingsForGames(
+	gameIds: readonly string[]
+): GameRatingRow[] {
+	if (gameIds.length === 0) return [];
+	return db
+		.select({
+			gameId: gamePlayerRatings.gameId,
+			playerId: gamePlayerRatings.playerId,
+			attribute: gamePlayerRatings.attribute,
+			value: gamePlayerRatings.value,
+			updatedAt: gamePlayerRatings.updatedAt
+		})
+		.from(gamePlayerRatings)
+		.where(inArray(gamePlayerRatings.gameId, [...gameIds]))
+		.all();
 }
 
 export type GameRatingRow = {
