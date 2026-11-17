@@ -375,14 +375,13 @@ function buildBrandingModule(
 		auth,
 		identitySheet,
 		/**
-		 * L'index compact des identités : les identifiants, la couleur de
-		 * joueur de chacun et le nombre de visages de la ligue. Le catalogue
-		 * complet reste la source; cet index évite de livrer les noms, les
-		 * époques et les descriptions à chaque page.
+		 * L'index compact des identités : les identifiants et le nombre de
+		 * visages de la ligue. Le catalogue complet reste la source; cet index
+		 * évite de livrer les noms, les époques et les descriptions à chaque
+		 * page.
 		 */
 		identities: {
 			ids: IDENTITY_IDS,
-			colors: IDENTITIES.map((identity) => identity.color),
 			leagueFaces: AVATAR_IDS.length
 		},
 		manifestPath: MANIFEST_PATH,

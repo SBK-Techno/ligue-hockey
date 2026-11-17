@@ -9,10 +9,8 @@ import {
 	isRetainedHashedAsset
 } from './asset-retention.ts';
 import { contentHashedPath, writeGeneratedFiles } from './branding.ts';
-import { IDENTITIES } from '#config/identities.ts';
 import {
-	allColourKeys,
-	colourFamilies,
+	PALETTE_KEYS,
 	parseColourTokens,
 	parsePalette
 } from './palette.ts';
@@ -28,21 +26,10 @@ describe('generated app shell', () => {
 describe('catalogue des couleurs', () => {
 	const css = readFileSync('src/lib/ui/tokens.css', 'utf8');
 
-	it('déclare exactement les jetons des deux familles', () => {
+	it('déclare exactement la palette sémantique', () => {
 		const declared = [...parseColourTokens(css).keys()].sort();
-		const families = colourFamilies(IDENTITIES.length);
 
-		expect(declared).toEqual(allColourKeys(IDENTITIES.length).sort());
-		expect(families.palette).toHaveLength(21);
-		expect(families.player).toHaveLength(IDENTITIES.length);
-	});
-
-	it('donne une couleur distincte à chaque identité', () => {
-		const tokens = parseColourTokens(css);
-		const values = IDENTITIES.map((identity) => tokens.get(`player-${identity.color}`));
-
-		for (const value of values) expect(value).toBeDefined();
-		expect(new Set(values).size).toBe(IDENTITIES.length);
+		expect(declared).toEqual([...PALETTE_KEYS].sort());
 	});
 
 	it('extrait toute la palette sémantique pour les surfaces générées', () => {

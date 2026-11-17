@@ -17,7 +17,6 @@ import { branding } from '#lib/generated/branding.ts';
 export type { IdentityId };
 
 const identityIds = branding.identities.ids as readonly IdentityId[];
-const identityColors = branding.identities.colors;
 const indexById = new Map<string, number>(
 	identityIds.map((identityId, index) => [identityId, index])
 );
@@ -45,10 +44,4 @@ export function resolveAvatarId(
 ): IdentityId {
 	if (isIdentityId(avatarId)) return avatarId;
 	return leagueIds[stableHash(userId) % leagueIds.length] ?? identityIds[0]!;
-}
-
-/** The CSS property name, never a raw colour. */
-export function avatarColor(avatarId: IdentityId): string {
-	const index = indexById.get(avatarId);
-	return `--color-player-${identityColors[index ?? 0]}`;
 }

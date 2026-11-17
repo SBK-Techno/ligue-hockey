@@ -16,6 +16,7 @@ describe('état de la préférence de notification', () => {
 		{ device: 'denied', saved: true, checked: false, disabled: true, hint: true },
 		{ device: 'unsupported', saved: true, checked: false, disabled: true, hint: true },
 		{ device: 'unconfigured', saved: true, checked: false, disabled: true, hint: true },
+		{ device: 'unavailable', saved: true, checked: false, disabled: true, hint: true },
 		{ device: 'checking', saved: true, checked: false, disabled: true, hint: true }
 	];
 

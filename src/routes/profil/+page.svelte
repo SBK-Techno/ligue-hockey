@@ -20,6 +20,10 @@
 	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
 	import { monogram } from '#lib/ui/identity-display.ts';
 	import { pushPreferenceState } from './push-preference.ts';
+	import {
+		PushDeviceTimeout,
+		serviceWorkerRegistration
+	} from './push-device.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -104,7 +108,13 @@
 	);
 
 	let pushStatus = $state<
-		'checking' | 'off' | 'on' | 'denied' | 'unsupported' | 'unconfigured'
+		| 'checking'
+		| 'off'
+		| 'on'
+		| 'denied'
+		| 'unsupported'
+		| 'unconfigured'
+		| 'unavailable'
 	>('checking');
 	let pushError = $state<string | null>(null);
 	const pushPreference = $derived(
@@ -162,9 +172,13 @@
 			pushStatus = 'denied';
 			return;
 		}
-		const registration = await navigator.serviceWorker.ready;
-		const subscription = await registration.pushManager.getSubscription();
-		pushStatus = subscription ? 'on' : 'off';
+		try {
+			const registration = await serviceWorkerRegistration();
+			const subscription = await registration.pushManager.getSubscription();
+			pushStatus = subscription ? 'on' : 'off';
+		} catch {
+			pushStatus = 'unavailable';
+		}
 	});
 
 	async function enablePush() {
@@ -179,7 +193,7 @@
 				pushStatus = 'denied';
 				return;
 			}
-			const registration = await navigator.serviceWorker.ready;
+			const registration = await serviceWorkerRegistration();
 			const key = data.vapidPublicKey;
 			if (!key) return;
 			const subscription =
@@ -195,15 +209,16 @@
 			});
 			if (!response.ok) throw new Error('subscribe failed');
 			pushStatus = 'on';
-		} catch {
-			pushError = t('profile.pushFailed');
+		} catch (error) {
+			if (error instanceof PushDeviceTimeout) pushStatus = 'unavailable';
+			else pushError = t('profile.pushFailed');
 		}
 	}
 
 	async function disablePush() {
 		pushError = null;
 		try {
-			const registration = await navigator.serviceWorker.ready;
+			const registration = await serviceWorkerRegistration();
 			const subscription = await registration.pushManager.getSubscription();
 			if (subscription) {
 				await fetch('/api/push/abonnement', {
@@ -214,8 +229,9 @@
 				await subscription.unsubscribe();
 			}
 			pushStatus = 'off';
-		} catch {
-			pushError = t('error.generic');
+		} catch (error) {
+			if (error instanceof PushDeviceTimeout) pushStatus = 'unavailable';
+			else pushError = t('error.generic');
 		}
 	}
 
@@ -621,6 +637,8 @@
 								<p class="hint">{t('profile.pushIosInstall')}</p>
 							{:else if pushStatus === 'denied'}
 								<p class="notice">{t('profile.pushDenied')}</p>
+							{:else if pushStatus === 'unavailable'}
+								<p class="hint">{t('profile.pushUnavailable')}</p>
 							{:else if pushStatus === 'on'}
 								<div class="flex flex-wrap items-center gap-2">
 									<span class="badge-ok">{t('profile.pushEnabled')}</span>

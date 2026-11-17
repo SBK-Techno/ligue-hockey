@@ -133,7 +133,12 @@
 						<div class="px-4 pb-3">
 							<div class="flex flex-wrap items-center gap-3">
 								{#if href}
-									<a class="link text-body" href={href} target="_blank" rel="noreferrer">
+									<a
+										class="link inline-flex min-h-11 items-center text-body"
+										href={href}
+										target="_blank"
+										rel="noreferrer"
+									>
 										{t('games.openMap')}
 									</a>
 								{/if}

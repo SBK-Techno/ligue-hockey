@@ -46,6 +46,15 @@ describe('composition de la coquille', () => {
 	});
 });
 
+describe('cibles tactiles', () => {
+	it('donne au lien d’évitement une cible de 44 px', () => {
+		const skip = css.slice(css.indexOf('.skip-link {'), css.indexOf('dialog::backdrop'));
+
+		expect(skip).toContain('min-h-11');
+		expect(skip).toContain('inline-flex');
+	});
+});
+
 describe('chrome fixe', () => {
 	it('compose le décalage de base avec l’appoint déclaré de la surface', () => {
 		const root = css.slice(css.indexOf('html {'), css.indexOf('body {'));

@@ -859,6 +859,8 @@ export const fr = {
     'Les notifications sont bloquées dans les réglages du navigateur.',
   'profile.pushUnconfigured':
     'Les notifications sur l’appareil ne sont pas activées pour la ligue.',
+  'profile.pushUnavailable':
+    'Impossible de vérifier les notifications sur cet appareil. Recharge la page.',
   'profile.pushFailed': 'Impossible d’activer les notifications. Réessaie.',
   'profile.pushPreferenceHelp':
     'Active cet appareil ci-dessous pour recevoir les notifications. La préférence reste enregistrée.',

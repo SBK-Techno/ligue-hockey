@@ -159,7 +159,11 @@
 												/>
 											</form>
 										{/if}
-										<a class="link text-body" href="/matchs/{request.gameId}">{t('subs.viewGame')}</a>
+										<a
+											class="link inline-flex min-h-11 items-center text-body"
+											href="/matchs/{request.gameId}"
+											>{t('subs.viewGame')}</a
+										>
 									</div>
 								</div>
 							</li>

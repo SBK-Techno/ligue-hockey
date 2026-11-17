@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { avatarColor, isIdentityId, resolveAvatarId } from '#lib/domain/players/identity.ts';
+	import { isIdentityId, resolveAvatarId } from '#lib/domain/players/identity.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import IdentityPortrait from './IdentityPortrait.svelte';
 	import { monogram } from './identity-display.ts';
 
-	type AvatarSize = 24 | 32 | 40 | 48 | 64 | 96;
+	type AvatarSize = 24 | 32 | 40 | 44 | 48 | 64 | 96;
 
 	let {
 		player,
@@ -23,7 +23,7 @@
 
 	const avatarId = $derived(resolveAvatarId(player.userId, player.avatarId));
 	const boxStyle = $derived(
-		`--player-color: var(${avatarColor(avatarId)}); width: ${fill ? '100%' : `${size}px`}; height: ${fill ? '100%' : `${size}px`}; font-size: ${fill ? '0.85rem' : `${Math.round(size * 0.34)}px`};`
+		`width: ${fill ? '100%' : `${size}px`}; height: ${fill ? '100%' : `${size}px`}; font-size: ${fill ? '0.85rem' : `${Math.round(size * 0.34)}px`};`
 	);
 	const initials = $derived(monogram(player.fullName));
 

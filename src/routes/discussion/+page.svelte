@@ -253,7 +253,7 @@
 											userId: message.authorUserId,
 											avatarId: message.authorAvatarId
 										}}
-										size={40}
+										size={44}
 										decorative={false}
 									/>
 								</div>

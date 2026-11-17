@@ -9,7 +9,8 @@ export type PushDeviceStatus =
 	| 'on'
 	| 'denied'
 	| 'unsupported'
-	| 'unconfigured';
+	| 'unconfigured'
+	| 'unavailable';
 
 export type PushPreferenceState = {
 	checked: boolean;
