@@ -14,6 +14,8 @@ vi.mock('#lib/server/db/index.ts', async () => {
 
 const h = vi.hoisted(() => ({
 	revokeSessions: vi.fn(async () => undefined),
+	setAccountState: vi.fn(async () => undefined),
+	setRole: vi.fn(async () => undefined),
 	updateName: vi.fn(async () => undefined),
 	regenerate: vi.fn(),
 	logError: vi.fn()
@@ -27,7 +29,8 @@ vi.mock('../auth/identity.ts', async (importOriginal) => {
 			createUser: vi.fn(),
 			deleteUser: vi.fn(),
 			updateName: h.updateName,
-			setRole: vi.fn(),
+			setRole: h.setRole,
+			setAccountState: h.setAccountState,
 			revokeSessions: h.revokeSessions,
 			requestPasswordReset: vi.fn()
 		})
@@ -48,7 +51,7 @@ vi.mock('#lib/shared/logging/logger.ts', () => ({
 }));
 
 const { sqlite } = await import('#lib/server/db/index.ts');
-const { adminUpdatePlayer, updateOwnProfile } = await import('./service.ts');
+const { adminUpdatePlayer, setPlayerRole, updateOwnProfile } = await import('./service.ts');
 const { updateOwnProfileSchema } = await import('./validators.ts');
 const { actorFromUser, anonymousActor } = await import('#lib/domain/auth/types.ts');
 const { can } = await import('#lib/domain/auth/policy.ts');
@@ -56,6 +59,11 @@ const { claimSubstitute } = await import('#lib/domain/subs/service.ts');
 const { getGame } = await import('#lib/domain/games/service.ts');
 
 const NOW = 1_700_000_000_000;
+const VALID_TEMPLATE = JSON.stringify({
+	goaliesPerTeam: 0,
+	forwardsPerTeam: 2,
+	defensePerTeam: 0
+});
 const SNAPSHOT = JSON.stringify({
 	skillDiff: null,
 	ageDiff: 0,
@@ -126,13 +134,14 @@ function addGame(
 			`insert into games
 			 (id, game_date, start_time, location_id, location, status, completed_at,
 			  roster_template_json, generated_at, generation_json, created_at, updated_at)
-			 values (?, ?, '09:00', 'arena', 'Aréna', ?, ?, '{}', ?, ?, ?, ?)`
+			 values (?, ?, '09:00', 'arena', 'Aréna', ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			id,
 			date,
 			status,
 			status === 'completed' ? 1 : null,
+			VALID_TEMPLATE,
 			snapshot ? 1 : null,
 			snapshot,
 			NOW,
@@ -170,6 +179,8 @@ beforeEach(() => {
 		.prepare(`insert into locations (id, name, created_at, updated_at) values ('arena', 'Aréna', 0, 0)`)
 		.run();
 	h.revokeSessions.mockClear();
+	h.setAccountState.mockClear();
+	h.setRole.mockClear();
 	h.updateName.mockClear();
 	h.regenerate.mockClear();
 	h.logError.mockClear();
@@ -193,6 +204,12 @@ describe('désactivation d’un joueur', () => {
 			.run(NOW);
 		sqlite
 			.prepare(
+				`insert into game_availability (game_id, player_id, status, updated_at)
+				 values ('future', 'other', 'present', ?)`
+			)
+			.run(NOW);
+		sqlite
+			.prepare(
 				`insert into sub_requests
 				 (id, game_id, requested_by_player_id, position, reason, status, created_at, filled_by_player_id, filled_at)
 				 values ('request', 'future', 'other', 'forward', 'absence', 'filled', ?, 'manager', ?)`
@@ -201,6 +218,7 @@ describe('désactivation d’un joueur', () => {
 
 		await adminUpdatePlayer(admin, 'manager', { active: false });
 
+		expect(h.setAccountState).toHaveBeenCalledWith('manager', 'inactive');
 		expect(h.revokeSessions).toHaveBeenCalledWith('manager');
 		expect(h.regenerate).toHaveBeenCalledTimes(1);
 
@@ -252,6 +270,27 @@ describe('désactivation d’un joueur', () => {
 			key: 'admin.deactivateSelf'
 		});
 		expect(h.revokeSessions).not.toHaveBeenCalled();
+	});
+
+	it('rouvre l’authentification à la réactivation', async () => {
+		addPlayer('admin', { role: 'admin' });
+		addPlayer('manager', { role: 'manager', active: false });
+
+		await adminUpdatePlayer(admin, 'manager', { active: true });
+
+		expect(h.setAccountState).toHaveBeenCalledWith('manager', 'active');
+		expect(h.revokeSessions).not.toHaveBeenCalled();
+	});
+
+	it('refuse de changer le rôle d’un compte inactif', async () => {
+		addPlayer('admin', { role: 'admin' });
+		addPlayer('manager', { role: 'manager', active: false });
+
+		await expect(setPlayerRole(admin, 'manager', 'admin')).rejects.toMatchObject({
+			code: 'FORBIDDEN',
+			key: 'admin.roleInactive'
+		});
+		expect(h.setRole).not.toHaveBeenCalled();
 	});
 
 	it('refuse de désactiver le dernier administrateur actif', async () => {

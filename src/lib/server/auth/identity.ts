@@ -32,6 +32,16 @@ export const betterAuthIdentity: IdentityProvider = {
 		await context.internalAdapter.updateUser(userId, { role });
 	},
 
+	async setAccountState(userId, state) {
+		const context = await auth.$context;
+		await context.internalAdapter.updateUser(
+			userId,
+			state === 'inactive'
+				? { banned: true, banReason: 'Compte désactivé' }
+				: { banned: false, banReason: null, banExpires: null }
+		);
+	},
+
 	async revokeSessions(userId) {
 		// Better Auth's admin plugin revokes every session of a user through
 		// this same adapter call (`dist/plugins/admin/routes.mjs`,

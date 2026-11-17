@@ -30,13 +30,14 @@ import {
 	listAvailability,
 	listAvailabilityForPlayer,
 	listGames,
+	releasePlayerSlot,
 	listSlotAssignments,
 	saveAssignments,
 	updateGame as updateGameRow,
 	upsertAvailability,
 	type SlotAssignment
 } from './queries.ts';
-import { generationPlan, lineupPool, type PoolSlot } from './pool.ts';
+import { generationPlan, lineupPool, type LineupPool, type PoolSlot } from './pool.ts';
 import type { GameRow } from './schema.ts';
 import type {
 	GameGenerationView,
@@ -121,10 +122,12 @@ function namedPlayers(playerIds: Iterable<string>): Map<string, NamedPlayer> {
 function generationView(
 	row: GameRow,
 	names: Map<string, NamedPlayer>,
-	includeMetrics: boolean
+	includeMetrics: boolean,
+	live: LineupPool | null
 ): GameGenerationView | null {
 	const snapshot = snapshotFrom(row);
 	if (!snapshot) return null;
+	const members = new Map(live?.members.map((member) => [member.playerId, member]) ?? []);
 	return {
 		skillDiff: includeMetrics ? snapshot.skillDiff : null,
 		ageDiff: includeMetrics ? snapshot.ageDiff : null,
@@ -147,20 +150,29 @@ function generationView(
 					]
 				}))
 			: [],
-		// Un joueur désactivé ne reste pas sur le banc d'un match à venir, mais
-		// un match commencé ou terminé garde les participants qui ont joué.
-		bench: visibleParticipants(
-			row,
-			snapshot.bench,
-			(playerId) => names.get(playerId)?.active !== false
-		).map((entry) => ({
-			playerId: entry.playerId,
-			fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
-			position: entry.position,
-			jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
-			avatarId: names.get(entry.playerId)?.avatarId ?? null,
-			kind: entry.kind
-		})),
+		// Le banc publié suit le bassin vivant quand l'alignement est encore
+		// modifiable; un match commencé ou terminé garde ses participants.
+		bench: live
+			? live.bench.map((entry) => ({
+					playerId: entry.playerId,
+					fullName: live.names.get(entry.playerId) ?? entry.playerId,
+					position: entry.position,
+					jerseyNumber: members.get(entry.playerId)?.jerseyNumber ?? null,
+					avatarId: members.get(entry.playerId)?.avatarId ?? null,
+					kind: entry.kind
+				}))
+			: visibleParticipants(
+					row,
+					snapshot.bench,
+					(playerId) => names.get(playerId)?.active !== false
+				).map((entry) => ({
+					playerId: entry.playerId,
+					fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
+					position: entry.position,
+					jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
+					avatarId: names.get(entry.playerId)?.avatarId ?? null,
+					kind: entry.kind
+				})),
 		generatedAt: snapshot.generatedAt
 	};
 }
@@ -187,22 +199,35 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		...(snapshot?.ruleViolations.flatMap((violation) => violation.playerIds) ?? [])
 	];
 	const names = namedPlayers(playerIds);
-
-	const slots: GameSlotView[] = assignments.map((assignment) => ({
+	const poolSlots: PoolSlot[] = assignments.map((assignment) => ({
 		team: assignment.team,
 		position: assignment.position,
 		slotIndex: assignment.slotIndex,
 		player:
 			assignment.playerId && assignment.assignmentKind
-				? {
-						playerId: assignment.playerId,
-						fullName: names.get(assignment.playerId)?.fullName ?? assignment.playerId,
-						position: assignment.position,
-						jerseyNumber: names.get(assignment.playerId)?.jerseyNumber ?? null,
-						avatarId: names.get(assignment.playerId)?.avatarId ?? null,
-						kind: assignment.assignmentKind
-					}
+				? { playerId: assignment.playerId, kind: assignment.assignmentKind }
 				: null
+	}));
+	// La seule projection des places et des comptes : le bassin vivant décide
+	// de ce qui est publié, avant le début du match. Le gestionnaire, la
+	// feuille et la page publique lisent donc le même alignement.
+	const live = snapshot && isLineupEditable(row) ? lineupPool(row, poolSlots) : null;
+	const published = live?.slots ?? poolSlots;
+
+	const slots: GameSlotView[] = published.map((slot) => ({
+		team: slot.team,
+		position: slot.position,
+		slotIndex: slot.slotIndex,
+		player: slot.player
+			? {
+					playerId: slot.player.playerId,
+					fullName: names.get(slot.player.playerId)?.fullName ?? slot.player.playerId,
+					position: slot.position,
+					jerseyNumber: names.get(slot.player.playerId)?.jerseyNumber ?? null,
+					avatarId: names.get(slot.player.playerId)?.avatarId ?? null,
+					kind: slot.player.kind
+				}
+			: null
 	}));
 
 	const openSlots = slots.filter((slot) => !slot.player).length;
@@ -214,7 +239,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		locationAddress: location.address,
 		locationMapUrl: location.mapUrl,
 		slots,
-		generation: generationView(row, names, can(actor, 'manageGames')),
+		generation: generationView(row, names, can(actor, 'manageGames'), live),
 		completedAt: row.completedAt,
 		lineupManualAt: row.lineupManualAt,
 		openSlots,
@@ -581,6 +606,33 @@ export function setGamePresence(
 	at: number
 ): void {
 	upsertAvailability(gameId, playerId, status, at);
+}
+
+/**
+ * Retire un joueur d'un alignement encore modifiable. Une sortie ne laisse
+ * jamais sa place ni son banc derrière elle : la prochaine lecture, y compris
+ * la feuille de match, ne le voit plus. Le match commencé ou terminé garde ses
+ * participants.
+ */
+export function releaseFromLineup(
+	actor: Actor,
+	gameId: string,
+	playerId: string,
+	reason: 'absence' | 'bumped' | 'released'
+): boolean {
+	const row = findGame(gameId);
+	if (!row || !isLineupEditable(row)) return false;
+	return releasePlayerSlot(
+		gameId,
+		playerId,
+		clock.nowMs(),
+		auditEntry(actor, {
+			action: 'game.lineup_release',
+			entityType: 'game',
+			entityId: gameId,
+			metadata: { playerId, reason }
+		})
+	);
 }
 
 export function regenerateIfGenerated(gameId: string): {

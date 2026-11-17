@@ -10,6 +10,7 @@ import type { OpenSlot, Placement } from '#lib/domain/teams/balance.ts';
 import type { GeneratorPlayer } from '#lib/domain/teams/generator.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { listAvailability } from './queries.ts';
+import { isLineupEditable } from './playability.ts';
 import type { GameRow } from './schema.ts';
 import {
 	selectGenerationPlayers,
@@ -49,6 +50,8 @@ export type LineupPool = {
 	available: EligiblePlayer[];
 	/** Membres vivants sans place, pour l'affichage et le snapshot. */
 	bench: BenchPlayer[];
+	/** Les places publiées : un joueur hors du bassin vivant n'y figure plus. */
+	slots: PoolSlot[];
 	/** Noms des joueurs sans note complète, jamais remplacés par 0. */
 	unrated: string[];
 	names: Map<string, string>;
@@ -122,9 +125,9 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 	const active = new Map(
 		generationCandidates().map((player) => [player.userId, player])
 	);
-	const availability = listAvailability(gameId).filter(
-		(entry) => entry.status === 'present'
-	);
+	const presenceRows = listAvailability(gameId);
+	const presence = new Map(presenceRows.map((entry) => [entry.playerId, entry.status]));
+	const availability = presenceRows.filter((entry) => entry.status === 'present');
 	const presenceOrder = new Map(
 		availability.map((entry) => [entry.playerId, entry.updatedAt])
 	);
@@ -146,15 +149,6 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		);
 	}
 
-	const placedSlots = slots.filter((slot) => slot.player !== null);
-	const placedIds = new Set(placedSlots.map((slot) => slot.player!.playerId));
-	const placedPosition = new Map(
-		placedSlots.map((slot) => [slot.player!.playerId, slot.position])
-	);
-	const placedKind = new Map(
-		placedSlots.map((slot) => [slot.player!.playerId, slot.player!.kind])
-	);
-
 	const memberIds = new Set<string>();
 	for (const entry of availability) {
 		const player = active.get(entry.playerId);
@@ -164,13 +158,36 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		if (active.has(playerId)) memberIds.add(playerId);
 	}
 
-	const missingPlacedIds = [...placedIds].filter((playerId) => !active.has(playerId));
+	// La place publiée suit le bassin vivant : un retrait explicite, une
+	// réclamation libérée ou un compte désactivé ne laisse jamais un joueur
+	// sur la glace. Un match commencé ou terminé garde ses participants.
+	const stillLive = (slot: PoolSlot): boolean => {
+		if (!slot.player) return true;
+		if (!active.has(slot.player.playerId)) return false;
+		if (slot.player.kind === 'sub') return claimsByPlayer.has(slot.player.playerId);
+		return presence.get(slot.player.playerId) !== 'absent';
+	};
+	const publishedSlots =
+		row.status === 'scheduled' &&
+		isLineupEditable({ status: row.status, gameDate: row.gameDate, startTime: row.startTime })
+			? slots.map((slot) => (stillLive(slot) ? slot : { ...slot, player: null }))
+			: [...slots];
+	const dressedSlots = publishedSlots.filter((slot) => slot.player !== null);
+	const dressedIds = new Set(dressedSlots.map((slot) => slot.player!.playerId));
+	const dressedPosition = new Map(
+		dressedSlots.map((slot) => [slot.player!.playerId, slot.position])
+	);
+	const dressedKind = new Map(
+		dressedSlots.map((slot) => [slot.player!.playerId, slot.player!.kind])
+	);
+
+	const missingPlacedIds = [...dressedIds].filter((playerId) => !active.has(playerId));
 	const placedOnly = new Map(
 		playerCandidatesByIds(missingPlacedIds).map((player) => [player.userId, player])
 	);
 	const detailOf = (playerId: string) => active.get(playerId) ?? placedOnly.get(playerId);
 
-	const allIds = new Set<string>([...memberIds, ...placedIds]);
+	const allIds = new Set<string>([...memberIds, ...dressedIds]);
 	const names = new Map<string, string>();
 	for (const playerId of allIds) {
 		names.set(playerId, detailOf(playerId)?.fullName ?? playerId);
@@ -205,7 +222,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 			jerseyNumber: detail.jerseyNumber,
 			avatarId: detail.avatarId,
 			overall: overalls.get(playerId) ?? null,
-			placed: placedIds.has(playerId)
+			placed: dressedIds.has(playerId)
 		});
 	}
 
@@ -221,16 +238,16 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		if (member.overall === null) continue;
 		players.set(member.playerId, member as EligiblePlayer);
 	}
-	for (const playerId of placedIds) {
+	for (const playerId of dressedIds) {
 		if (!kindOf.has(playerId)) {
-			kindOf.set(playerId, placedKind.get(playerId) ?? 'regular');
+			kindOf.set(playerId, dressedKind.get(playerId) ?? 'regular');
 		}
 		if (players.has(playerId)) continue;
 		const overall = overalls.get(playerId);
 		const detail = detailOf(playerId);
 		if (overall === undefined || !detail) continue;
 		const claims = claimsByPlayer.get(playerId) ?? [];
-		const kind = placedKind.get(playerId) ?? 'regular';
+		const kind = dressedKind.get(playerId) ?? 'regular';
 		const member: EligiblePlayer = {
 			playerId,
 			name: detail.fullName,
@@ -238,7 +255,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 			eligiblePositions:
 				claims.length > 0
 					? [...new Set(claims.map((claim) => claim.position))]
-					: [placedPosition.get(playerId) ?? detail.position],
+					: [dressedPosition.get(playerId) ?? detail.position],
 			kind,
 			order: 0,
 			age: detail.age,
@@ -260,17 +277,17 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		.map((member) => member as EligiblePlayer)
 		.sort((a, b) => a.order - b.order || a.playerId.localeCompare(b.playerId));
 
-	const bench = benchFromMembers(members, placedIds);
+	const bench = benchFromMembers(members, dressedIds);
 
 	return {
 		template,
 		settings,
-		placed: placedSlots.map((slot) => ({
+		placed: dressedSlots.map((slot) => ({
 			playerId: slot.player!.playerId,
 			team: slot.team,
 			position: slot.position
 		})),
-		openSlots: slots
+		openSlots: publishedSlots
 			.filter((slot) => slot.player === null)
 			.map((slot) => ({
 				team: slot.team,
@@ -281,6 +298,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		members,
 		available,
 		bench,
+		slots: publishedSlots,
 		unrated,
 		names,
 		kindOf

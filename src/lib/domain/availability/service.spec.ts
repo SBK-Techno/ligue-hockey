@@ -16,6 +16,7 @@ const h = vi.hoisted(() => ({
 	setGamePresence: vi.fn(),
 	createAbsenceRequest: vi.fn(),
 	cancelForReturn: vi.fn(),
+	releaseFromLineup: vi.fn(),
 	regenerate: vi.fn()
 }));
 
@@ -60,6 +61,7 @@ vi.mock('#lib/domain/games/service.ts', () => ({
 	listGamePresence: () =>
 		h.previous === null ? [] : [{ playerId: 'me', status: h.previous }],
 	setGamePresence: h.setGamePresence,
+	releaseFromLineup: h.releaseFromLineup,
 	regenerateIfGenerated: h.regenerate
 }));
 
@@ -99,6 +101,7 @@ beforeEach(() => {
 	h.createAbsenceRequest.mockReturnValue({ id: 'sub_1' });
 	h.cancelForReturn.mockReset();
 	h.cancelForReturn.mockReturnValue(null);
+	h.releaseFromLineup.mockReset();
 	h.regenerate.mockReset();
 	h.regenerate.mockReturnValue({ regenerated: false });
 	h.previous = null;

@@ -46,10 +46,11 @@ vi.mock('#lib/server/db/index.ts', async () => {
 
 const { sqlite } = await import('#lib/server/db/index.ts');
 const { saveManualLineup } = await import('./lineup.ts');
-const { lineupBoardView } = await import('./lineup.ts');
 const { getGame, regenerateAsAdmin } = await import('./service.ts');
 const { regenerateIfGenerated } = await import('./service.ts');
 const { markAvailability } = await import('#lib/domain/availability/service.ts');
+const { fillOpenSlots } = await import('./alignment.ts');
+const { addGoal } = await import('#lib/domain/gamesheet/service.ts');
 
 const manager: Actor = {
 	kind: 'user', active: true,
@@ -476,7 +477,7 @@ describe('alignement manuel', () => {
 			.run();
 		addSubstitute('s', 'forward', ['forward']);
 
-		const view = lineupBoardView(getGame(manager, 'game'));
+		const view = getGame(manager, 'game');
 		const onIce = view.slots.flatMap((slot) =>
 			slot.player ? [slot.player.playerId] : []
 		);
@@ -484,6 +485,68 @@ describe('alignement manuel', () => {
 		expect(onIce).not.toContain('b');
 		expect(view.generation?.bench.map((entry) => entry.playerId)).toContain('s');
 		expect(view.generation?.bench.map((entry) => entry.playerId)).not.toContain('b');
+	});
+
+	it('retire un joueur désisté de la glace, du banc et de la feuille', () => {
+		saveManualLineup(manager, 'game', fullLineup());
+
+		const result = markAvailability(playerActor, 'game', 'absent');
+
+		expect(result.regenerated).toBe(false);
+		let view = getGame(manager, 'game');
+		expect(view.slots.flatMap((slot) => (slot.player ? [slot.player.playerId] : []))).not.toContain(
+			'a'
+		);
+		expect(view.generation?.bench.map((entry) => entry.playerId)).not.toContain('a');
+		expect(view.openSlots).toBe(1);
+		expect(view.lineupComplete).toBe(false);
+
+		// Au coup d'envoi, la vue figée garde ce qui a été publié : le joueur
+		// retiré ne réapparaît pas et ne peut pas être crédité d'un but.
+		sqlite.prepare("update games set game_date = '2020-01-05' where id = 'game'").run();
+		view = getGame(manager, 'game');
+		expect(view.slots.flatMap((slot) => (slot.player ? [slot.player.playerId] : []))).not.toContain(
+			'a'
+		);
+		expect(
+			captureError(() =>
+				addGoal(manager, 'game', {
+					team: 'white',
+					period: 1,
+					clock: '10:00',
+					kind: 'even',
+					scorerPlayerId: 'a',
+					assist1PlayerId: null,
+					assist2PlayerId: null
+				})
+			)
+		).toMatchObject({ key: 'gamesheet.scorerNotDressed' });
+	});
+
+	it('ne republie jamais une place absente lors d’un comblement', () => {
+		saveManualLineup(manager, 'game', fullLineup());
+		addPlayer('f', 'forward');
+		setPresent('game', 'f');
+		// Une écriture ancienne peut avoir laissé le joueur sur la place : la
+		// lecture du bassin vivant ne le republie pas et le comblement voit la
+		// place ouverte.
+		sqlite
+			.prepare(
+				"update game_availability set status = 'absent' where game_id = 'game' and player_id = 'a'"
+			)
+			.run();
+
+		const before = getGame(manager, 'game');
+		expect(before.slots.some((slot) => slot.player?.playerId === 'a')).toBe(false);
+		expect(before.openSlots).toBe(1);
+
+		const filled = fillOpenSlots(admin, 'game');
+
+		expect(filled.filled).toBe(1);
+		const after = getGame(manager, 'game');
+		expect(after.slots.some((slot) => slot.player?.playerId === 'a')).toBe(false);
+		expect(after.openSlots).toBe(0);
+		expect(after.lineupComplete).toBe(true);
 	});
 
 	it('refuse une règle stricte en nommant la paire', () => {

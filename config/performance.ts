@@ -11,7 +11,14 @@ export const PERFORMANCE_BUDGETS = {
 	/** Une page de discussion avec 20 messages et une seule boîte de dialogue. */
 	discussionHtmlBytes: 150 * 1024,
 	profileHtmlBytes: 120 * 1024,
-	/** Requêtes JavaScript du graphe initial d'une page. */
+	/**
+	 * Le vrai coût d'un graphe initial : les octets JavaScript non compressés.
+	 * Mesuré au maximum 263 Kio sur /matchs/[id] au HEAD 1.6.0; les requêtes
+	 * varient de 20 à 32 pour un poids presque identique (212 à 263 Kio), donc
+	 * ce plafond mesure la charge, pas la fragmentation des morceaux.
+	 */
+	jsBytesPerPage: 320 * 1024,
+	/** Le plafond par défaut d'une route qui n'a pas de budget déclaré. */
 	jsRequestsPerPage: 20,
 	/** Une tuile de texture tuilée à l'échelle 1:1. */
 	textureBytes: 5 * 1024,
@@ -24,13 +31,48 @@ export const PERFORMANCE_BUDGETS = {
 
 export type PerformanceBudget = keyof typeof PERFORMANCE_BUDGETS;
 
+export type MeasuredPage = {
+	name: string;
+	path: string;
+	/**
+	 * Plafond de fragmentation observé à la livraison 1.6.0. Il ne remplace
+	 * pas le budget d'octets : il empêche une page de gagner des requêtes
+	 * sans gagner de code. La liste couvre chaque route statique; une nouvelle
+	 * route échoue au contrat tant que son budget n'est pas déclaré.
+	 */
+	maxRequests: number;
+	/** La page vit avant la connexion : le smoke la mesure sans session. */
+	anonymous?: boolean;
+};
+
 /**
- * Les pages dont le graphe JavaScript initial est mesuré. Cette liste est le
- * seul propriétaire des routes vérifiées : le smoke l'itère, il n'en recopie
- * aucune, et une page ajoutée ici est contrôlée comme les autres.
+ * Les pages statiques dont le graphe JavaScript initial est mesuré. Les trois
+ * surfaces à paramètre (/matchs/[id], /admin/matchs/[id], /admin/joueurs/[id])
+ * ne sont pas mesurables dans un conteneur vide; leur mesure appartient au
+ * contrôle de préversion avec les données de démonstration.
  */
-export const MEASURED_PAGES = [
-	{ name: 'home', path: '/', budget: 'jsRequestsPerPage' },
-	{ name: 'profil', path: '/profil', budget: 'jsRequestsPerPage' },
-	{ name: 'discussion', path: '/discussion', budget: 'jsRequestsPerPage' }
-] as const satisfies readonly { name: string; path: string; budget: PerformanceBudget }[];
+export const MEASURED_PAGES: readonly MeasuredPage[] = [
+	{ name: 'connexion', path: '/connexion', maxRequests: 20, anonymous: true },
+	{ name: 'mot-de-passe-oublie', path: '/mot-de-passe-oublie', maxRequests: 17, anonymous: true },
+	{
+		name: 'reinitialiser-mot-de-passe',
+		path: '/reinitialiser-mot-de-passe',
+		maxRequests: 20,
+		anonymous: true
+	},
+	{ name: 'home', path: '/', maxRequests: 20 },
+	{ name: 'profil', path: '/profil', maxRequests: 20 },
+	{ name: 'discussion', path: '/discussion', maxRequests: 20 },
+	{ name: 'matchs', path: '/matchs', maxRequests: 26 },
+	{ name: 'remplacants', path: '/remplacants', maxRequests: 27 },
+	{ name: 'solde', path: '/solde', maxRequests: 25 },
+	{ name: 'notifications', path: '/notifications', maxRequests: 22 },
+	{ name: 'admin', path: '/admin', maxRequests: 28 },
+	{ name: 'admin-matchs', path: '/admin/matchs', maxRequests: 30 },
+	{ name: 'admin-joueurs', path: '/admin/joueurs', maxRequests: 29 },
+	{ name: 'admin-lieux', path: '/admin/lieux', maxRequests: 29 },
+	{ name: 'admin-regles', path: '/admin/regles', maxRequests: 27 },
+	{ name: 'admin-soldes', path: '/admin/soldes', maxRequests: 27 },
+	{ name: 'admin-evaluations', path: '/admin/evaluations', maxRequests: 25 },
+	{ name: 'admin-parametres', path: '/admin/parametres', maxRequests: 23 }
+];

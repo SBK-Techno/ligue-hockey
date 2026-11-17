@@ -24,6 +24,12 @@ export type IdentityProvider = {
 	updateName(userId: string, name: string): Promise<void>;
 	deleteUser(userId: string): Promise<void>;
 	setRole(userId: string, role: IdentityUserInput['role']): Promise<void>;
+	/**
+	 * Refuse ou rouvre l'authentification d'un compte. Un compte inactif ne
+	 * peut ni ouvrir de session, ni réinitialiser son mot de passe : l'état
+	 * vit chez le fournisseur d'identité, pas seulement dans la fiche joueur.
+	 */
+	setAccountState(userId: string, state: 'active' | 'inactive'): Promise<void>;
 	/** Ferme toutes les sessions d'un compte, sans supprimer le compte. */
 	revokeSessions(userId: string): Promise<void>;
 	requestPasswordReset(email: string, purpose: PasswordLinkPurpose): Promise<void>;

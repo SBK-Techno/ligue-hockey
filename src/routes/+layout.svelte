@@ -11,7 +11,6 @@
 	import AppNav from '#lib/ui/AppNav.svelte';
 	import AppNavBottom from '#lib/ui/AppNavBottom.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
-	import ConfirmDialog from '#lib/ui/ConfirmDialog.svelte';
 	import type { ConfirmRequest } from '#lib/ui/confirm.svelte.ts';
 	import { CONFIRM_REQUEST_EVENT, PLAYER_PEEK_EVENT } from '#lib/ui/events.ts';
 	import type { LayoutProps } from './$types';
@@ -198,4 +197,8 @@
 	</div>
 {/if}
 
-<ConfirmDialog request={confirmRequest} onSettle={settleConfirm} />
+{#if confirmRequest}
+	{#await import('#lib/ui/ConfirmDialog.svelte') then { default: ConfirmDialog }}
+		<ConfirmDialog request={confirmRequest} onSettle={settleConfirm} />
+	{/await}
+{/if}

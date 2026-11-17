@@ -10,6 +10,7 @@ import {
 	listGamePresence,
 	listPlayerAvailability,
 	regenerateIfGenerated,
+	releaseFromLineup,
 	setGamePresence
 } from '#lib/domain/games/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
@@ -202,6 +203,9 @@ export function markAvailability(
 	let bumpedPlayerId: string | null = null;
 	let requestCreated = false;
 	if (status === 'absent') {
+		// La place libérée l'est avant la demande : la lecture suivante ne
+		// contient plus le joueur, même si l'alignement était manuel.
+		releaseFromLineup(actor, gameId, user.userId, 'absence');
 		// Une place ne s'ouvre que si le joueur était réellement attendu.
 		if (previous === 'present' && getSettings()['notifications.subRequestOnAbsence']) {
 			const request = createAbsenceRequest(actor, game, player);
@@ -209,6 +213,7 @@ export function markAvailability(
 		}
 	} else {
 		bumpedPlayerId = cancelForReturn(actor, game, user.userId);
+		if (bumpedPlayerId) releaseFromLineup(actor, gameId, bumpedPlayerId, 'bumped');
 	}
 
 	recordAudit(actor, {

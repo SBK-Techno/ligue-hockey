@@ -1046,14 +1046,15 @@ export const fr = {
   'admin.deletePlayerHelp':
     'Pour garder l’historique, désactive le joueur au lieu de le supprimer.',
   'admin.roleSelf': 'Tu ne peux pas changer ton propre rôle.',
+  'admin.roleInactive': 'Réactive le compte avant de changer son rôle.',
   'admin.deleteSelf': 'Tu ne peux pas supprimer ton propre compte.',
   'admin.deactivateSelf': 'Tu ne peux pas désactiver ton propre compte.',
   'admin.deactivateLastAdmin':
     'Garde au moins un administrateur actif avant de désactiver ce compte.',
   'admin.deleteAdmin': 'Retire le rôle d’admin avant de supprimer ce compte.',
   'admin.playerDeleteFailed': 'Le joueur n’a pas pu être supprimé.',
-  'admin.playerDeactivateFailed':
-    'Le joueur est désactivé, mais ses sessions n’ont pas pu être fermées. Réessaie.',
+  'admin.playerAccessFailed':
+    'Le joueur est enregistré, mais son accès n’a pas pu être mis à jour. Réessaie.',
   'admin.jerseyNumber': 'Numéro de chandail',
 
   'admin.dashboard': 'Cette semaine',

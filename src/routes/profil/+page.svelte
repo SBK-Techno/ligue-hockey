@@ -415,10 +415,10 @@
 									/>
 									<p class="hint">{t('profile.ageHelp')}</p>
 								</div>
-								<div class="fact">
+								<dl class="fact">
 									<dt>{t('position.label')}</dt>
 									<dd>{t(positionDefinition(profile.position).labelKey)}</dd>
-								</div>
+								</dl>
 								<p class="hint">{t('profile.positionManaged')}</p>
 								<div>
 									<label class="label" for="jerseyNumber">{t('profile.jersey')}</label>

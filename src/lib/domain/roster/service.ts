@@ -5,7 +5,8 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 import {
 	getGame,
 	listSchedule,
-	regenerateIfGenerated
+	regenerateIfGenerated,
+	releaseFromLineup
 } from '#lib/domain/games/service.ts';
 import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { splitSchedule } from '#lib/domain/games/schedule.ts';
@@ -109,6 +110,8 @@ export function releaseSubstitute(
 ): WaveSchedule & RosterActionResult {
 	const game = getGame(actor, gameId);
 	const waves = releaseSubRequest(actor, game, requestId);
+	// Le remplaçant qui libère sa place quitte aussi l'alignement publié.
+	if (actor.kind === 'user') releaseFromLineup(actor, gameId, actor.userId, 'released');
 	const regeneration = regenerateIfGenerated(gameId);
 	return {
 		...waves,
@@ -124,6 +127,7 @@ export function cancelRequest(
 ): { bumpedPlayerId: string | null } & RosterActionResult {
 	const game = getGame(actor, gameId);
 	const bumpedPlayerId = cancelSubRequest(actor, game, requestId);
+	if (bumpedPlayerId) releaseFromLineup(actor, gameId, bumpedPlayerId, 'bumped');
 	const regeneration = regenerateIfGenerated(gameId);
 	return {
 		bumpedPlayerId,

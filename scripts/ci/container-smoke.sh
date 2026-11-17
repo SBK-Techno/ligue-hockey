@@ -152,13 +152,19 @@ for index in $(seq 1 21); do
 	fi
 done
 
-# P10 : chaque page déclarée par le propriétaire des budgets est mesurée.
-# La liste des routes vit dans config/performance.ts; le shell ne la recopie pas.
+# P10 : chaque page déclarée par le propriétaire des budgets est mesurée,
+# en requêtes selon sa route et en octets JavaScript selon le propriétaire.
+# La liste des routes et leurs plafonds vivent dans config/performance.ts;
+# le shell ne recopie ni route, ni seuil.
 pages="$(budget pages)"
-while IFS=$'\t' read -r page_name page_path page_budget; do
+while IFS=$'\t' read -r page_name page_path page_mode; do
 	[ -n "$page_name" ] || continue
-	fetch_session "$page_path" "$page_name"
-	budget js-requests "$TMP/$page_name.body" "$page_budget"
+	if [ "$page_mode" = 'anon' ]; then
+		fetch "$page_path" "$page_name"
+	else
+		fetch_session "$page_path" "$page_name"
+	fi
+	ASSET_BASE="$BASE" budget page "$TMP/$page_name.body" "$page_name"
 done <<< "$pages"
 
 expect_header "$TMP/discussion.headers" 'content-encoding' '\(gzip\|br\)' 'discussion compressée'

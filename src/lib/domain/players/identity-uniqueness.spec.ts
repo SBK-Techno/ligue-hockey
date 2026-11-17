@@ -32,6 +32,7 @@ vi.mock('../auth/identity.ts', async (importOriginal) => {
 			deleteUser: h.deleteUser,
 			updateName: h.updateName,
 			setRole: vi.fn(),
+			setAccountState: vi.fn(),
 			revokeSessions: vi.fn(),
 			requestPasswordReset: h.requestPasswordReset
 		})

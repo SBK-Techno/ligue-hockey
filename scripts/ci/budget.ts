@@ -1,7 +1,9 @@
 import { readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import {
 	MEASURED_PAGES,
 	PERFORMANCE_BUDGETS,
+	type MeasuredPage,
 	type PerformanceBudget
 } from '#config/performance.ts';
 
@@ -9,12 +11,19 @@ import {
  * Les contrôles de budget de la CI. Le smoke télécharge une page puis délègue
  * ici la mesure; les tests de contrat peuvent appeler les mêmes fonctions.
  */
+function maximumFor(budget: string): number {
+	if (!(budget in PERFORMANCE_BUDGETS)) {
+		throw new Error(`budget inconnu: ${budget}`);
+	}
+	return PERFORMANCE_BUDGETS[budget as PerformanceBudget];
+}
+
 export function assertSize(
 	label: string,
 	bytes: number,
 	budget: PerformanceBudget
 ): void {
-	const maximum = PERFORMANCE_BUDGETS[budget];
+	const maximum = maximumFor(budget);
 	if (bytes > maximum) {
 		throw new Error(`${label}: ${bytes} octets pour un budget de ${maximum}.`);
 	}
@@ -27,10 +36,49 @@ export function inlineCssBytes(html: string): number {
 	);
 }
 
+export function jsUrls(html: string): string[] {
+	return [
+		...new Set(
+			[...html.matchAll(/\/_app\/immutable\/[^"'\s>]+\.js/g)].map((match) => match[0])
+		)
+	];
+}
+
 export function jsRequests(html: string): number {
-	return new Set(
-		[...html.matchAll(/\/_app\/immutable\/[^"'\s>]+\.js/g)].map((match) => match[0])
-	).size;
+	return jsUrls(html).length;
+}
+
+/** Somme des morceaux JavaScript du graphe initial, sans double compte. */
+export function jsBytes(html: string, sizeOf: (url: string) => number): number {
+	return jsUrls(html).reduce((total, url) => total + sizeOf(url), 0);
+}
+
+export function fileSizeOf(assetRoot: string): (url: string) => number {
+	return (url) => statSync(join(assetRoot, url.replace(/^\//, ''))).size;
+}
+
+/** Les mêmes octets, lus sur le serveur mesuré quand le build local manque. */
+export async function remoteSizeOf(
+	html: string,
+	base: string
+): Promise<(url: string) => number> {
+	const entries = await Promise.all(
+		jsUrls(html).map(async (url) => {
+			const response = await fetch(new URL(url, base), {
+				headers: { 'accept-encoding': 'identity' }
+			});
+			if (!response.ok) {
+				throw new Error(`${url}: ${response.status} pour la mesure des octets.`);
+			}
+			return [url, (await response.arrayBuffer()).byteLength] as const;
+		})
+	);
+	const sizes = new Map(entries);
+	return (url) => {
+		const size = sizes.get(url);
+		if (size === undefined) throw new Error(`${url}: morceau absent de la page.`);
+		return size;
+	};
 }
 
 export function assertInlineCss(
@@ -44,41 +92,91 @@ export function assertInlineCss(
 export function assertJsRequests(
 	label: string,
 	html: string,
-	budget: PerformanceBudget
+	maxRequests: number
 ): void {
 	const count = jsRequests(html);
-	const maximum = PERFORMANCE_BUDGETS[budget];
-	if (count > maximum) {
-		throw new Error(`${label}: ${count} requêtes JavaScript pour un budget de ${maximum}.`);
+	if (count > maxRequests) {
+		throw new Error(`${label}: ${count} requêtes JavaScript pour un budget de ${maxRequests}.`);
 	}
 }
 
-const [command, path, budget] = process.argv.slice(2);
+export function assertJsBytes(
+	label: string,
+	html: string,
+	sizeOf: (url: string) => number
+): void {
+	const bytes = jsBytes(html, sizeOf);
+	if (bytes > PERFORMANCE_BUDGETS.jsBytesPerPage) {
+		throw new Error(
+			`${label}: ${bytes} octets JavaScript pour un budget de ${PERFORMANCE_BUDGETS.jsBytesPerPage}.`
+		);
+	}
+}
+
+export function measuredPage(name: string): MeasuredPage {
+	const page = MEASURED_PAGES.find((entry) => entry.name === name);
+	if (!page) throw new Error(`page non déclarée: ${name}`);
+	return page;
+}
+
+/** Le seul contrôle de page : requêtes selon la route, octets selon le propriétaire. */
+export function assertPage(
+	label: string,
+	html: string,
+	sizeOf: (url: string) => number
+): void {
+	const page = measuredPage(label);
+	assertJsRequests(label, html, page.maxRequests);
+	assertJsBytes(label, html, sizeOf);
+}
+
+const [command, ...args] = process.argv.slice(2);
 
 if (command === 'pages') {
 	process.stdout.write(
-		MEASURED_PAGES.map((page) => `${page.name}\t${page.path}\t${page.budget}`).join('\n') + '\n'
+		MEASURED_PAGES.map(
+			(page) => `${page.name}\t${page.path}\t${page.anonymous ? 'anon' : 'session'}`
+		).join('\n') + '\n'
 	);
 } else if (command) {
 	try {
-		if (!path || !budget) {
-			throw new Error('usage: budget.ts <size|inline-css|js-requests> <fichier> <budget>');
+		const [path, value] = args;
+		if (!path || !value) {
+			throw new Error(
+				'usage: budget.ts <size|inline-css|js-requests> <fichier> <budget> | page <fichier> <page> | pages'
+			);
 		}
 		const content = readFileSync(path);
 		let detail = '';
 		if (command === 'size') {
-			assertSize(path, statSync(path).size, budget as PerformanceBudget);
+			assertSize(path, statSync(path).size, value as PerformanceBudget);
 		} else if (command === 'inline-css') {
-			assertInlineCss(path, content.toString('utf8'), budget as PerformanceBudget);
+			assertInlineCss(path, content.toString('utf8'), value as PerformanceBudget);
 		} else if (command === 'js-requests') {
+			const maximum = maximumFor(value);
+			const count = jsRequests(content.toString('utf8'));
+			assertJsRequests(path, content.toString('utf8'), maximum);
+			detail = `, ${count} requêtes`;
+		} else if (command === 'page') {
+			const page = measuredPage(value);
 			const html = content.toString('utf8');
 			const count = jsRequests(html);
-			assertJsRequests(path, html, budget as PerformanceBudget);
-			detail = `, ${count} requêtes`;
+			const assetRoot = process.env.ASSET_ROOT;
+			const assetBase = process.env.ASSET_BASE;
+			const sizeOf = assetRoot
+				? fileSizeOf(assetRoot)
+				: assetBase
+					? await remoteSizeOf(html, assetBase)
+					: null;
+			if (!sizeOf) {
+				throw new Error('ASSET_ROOT ou ASSET_BASE requis pour mesurer les octets.');
+			}
+			assertPage(value, html, sizeOf);
+			detail = `, ${count}/${page.maxRequests} requêtes`;
 		} else {
 			throw new Error(`commande inconnue: ${command}`);
 		}
-		process.stdout.write(`${command} ${path}: conforme (${budget}${detail})\n`);
+		process.stdout.write(`${command} ${path}: conforme (${value}${detail})\n`);
 	} catch (error) {
 		process.stderr.write(`${(error as Error).message}\n`);
 		process.exit(1);

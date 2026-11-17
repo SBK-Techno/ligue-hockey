@@ -1,6 +1,8 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import { json } from '@sveltejs/kit';
 import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { ADMIN_ROLE } from '#config/roles.ts';
 import { actorFromUser } from '#lib/domain/auth/types.ts';
 import { isAccountActive } from '#lib/domain/players/account-status.ts';
 import { actorContextRequired } from '#lib/server/actor-context.ts';
@@ -47,12 +49,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 		: actorFromUser(null);
 	event.locals.sessionId = session?.session?.id ?? null;
 
-	const response = await svelteKitHandler({
-		event,
-		resolve,
-		auth,
-		building
-	});
+	const response =
+		event.url.pathname.startsWith('/api/auth/admin/') &&
+		!(event.locals.actor.kind === 'user' && event.locals.actor.role === ADMIN_ROLE)
+			? // Le plan d'administration de Better Auth vit sous /api/auth : il
+				// n'hérite pas des gardes de page. Un compte inactif ou non-admin
+				// n'y entre jamais, même avec un ancien cookie.
+				json({ message: t('error.forbidden') }, { status: 403 })
+			: await svelteKitHandler({
+					event,
+					resolve,
+					auth,
+					building
+				});
 
 	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
 		response.headers.set(name, value);

@@ -450,6 +450,7 @@ export async function adminUpdatePlayer(
 	});
 	if (input.active === false) {
 		try {
+			await identity().setAccountState(playerId, 'inactive');
 			await identity().revokeSessions(playerId);
 		} catch (cause) {
 			logger.error('players.session_revoke_failed', {
@@ -457,7 +458,20 @@ export async function adminUpdatePlayer(
 				error: cause
 			});
 			throw new AppError('INTERNAL', {
-				key: 'admin.playerDeactivateFailed',
+				key: 'admin.playerAccessFailed',
+				cause
+			});
+		}
+	} else if (input.active === true) {
+		try {
+			await identity().setAccountState(playerId, 'active');
+		} catch (cause) {
+			logger.error('players.account_reactivate_failed', {
+				userId: playerId,
+				error: cause
+			});
+			throw new AppError('INTERNAL', {
+				key: 'admin.playerAccessFailed',
 				cause
 			});
 		}
@@ -480,6 +494,11 @@ export async function setPlayerRole(
 	const row = findPlayerWithEmail(playerId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+	}
+	// Un rôle se change sur un compte actif : réactiver d'abord évite qu'une
+	// fiche inactive devienne admin et se reconnecte.
+	if (!row.active) {
+		throw new AppError('FORBIDDEN', { key: 'admin.roleInactive' });
 	}
 	await identity().setRole(playerId, role);
 	recordAudit(actor, {

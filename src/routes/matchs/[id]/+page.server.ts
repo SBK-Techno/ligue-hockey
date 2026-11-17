@@ -10,7 +10,7 @@ import {
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
-import { saveManualLineup, lineupBoardView } from '#lib/domain/games/lineup.ts';
+import { saveManualLineup } from '#lib/domain/games/lineup.ts';
 import { manualLineupInputSchema } from '#lib/domain/games/validators.ts';
 import { isGamePlayable, isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
@@ -79,8 +79,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 
 	const loaded = getGame(actor, gameId);
 	const editable = isLineupEditable(loaded);
-	// L'éditeur lit le bassin vivant, jamais le banc figé de l'instantané.
-	const game = editable && loaded.generated ? lineupBoardView(loaded) : loaded;
+	// La vue publiée porte déjà le bassin vivant : aucun second filtre ici.
+	const game = loaded;
 	const playable = isGamePlayable(game);
 	return {
 		game,

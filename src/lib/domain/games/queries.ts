@@ -199,6 +199,72 @@ export function saveAssignments(
 }
 
 /**
+ * Retire un joueur du bassin publié d'un match à venir : sa place redevient
+ * vide et il quitte le banc de l'instantané. La place, le banc, la purge de
+ * ses notes de match et l'audit tiennent dans une seule transaction.
+ */
+export function releasePlayerSlot(
+	gameId: string,
+	playerId: string,
+	releasedAt: number,
+	audit: AuditEntry
+): boolean {
+	return db.transaction((tx) => {
+		const row = tx.select().from(games).where(eq(games.id, gameId)).get();
+		if (!row) return false;
+		const slot = tx
+			.select({ id: gameSlots.id })
+			.from(gameSlots)
+			.where(
+				and(
+					eq(gameSlots.gameId, gameId),
+					eq(gameSlots.assignedPlayerId, playerId)
+				)
+			)
+			.get();
+
+		let generationJson = row.generationJson;
+		let onBench = false;
+		if (generationJson) {
+			try {
+				const snapshot = JSON.parse(generationJson) as {
+					bench?: { playerId?: unknown }[];
+				};
+				onBench =
+					Array.isArray(snapshot.bench) &&
+					snapshot.bench.some((entry) => entry.playerId === playerId);
+				if (onBench) {
+					generationJson = JSON.stringify({
+						...snapshot,
+						bench: snapshot.bench!.filter((entry) => entry.playerId !== playerId)
+					});
+				}
+			} catch {
+				generationJson = row.generationJson;
+			}
+		}
+
+		if (!slot && !onBench) return false;
+
+		if (slot) {
+			tx.update(gameSlots)
+				.set({ assignedPlayerId: null, assignmentKind: null, updatedAt: releasedAt })
+				.where(eq(gameSlots.id, slot.id))
+				.run();
+			deleteGameRatingsForPlayers(gameId, [playerId], tx);
+		}
+		if (generationJson !== row.generationJson) {
+			tx.update(games)
+				.set({ generationJson, updatedAt: releasedAt })
+				.where(eq(games.id, gameId))
+				.run();
+		}
+		insertAudit(audit, tx);
+		return true;
+	});
+}
+
+/**
  * Termine un match encore programmé. La condition sur le statut rend l'action
  * atomique : deux finalisations concurrentes ne peuvent pas réussir toutes les
  * deux, et l'audit entre dans la même transaction.

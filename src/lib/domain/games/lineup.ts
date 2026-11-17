@@ -7,12 +7,7 @@ import { parseSchema } from '#lib/shared/validation.ts';
 import { buildGenerationSnapshot, validateAssignments } from './alignment.ts';
 import { isLineupEditable } from './playability.ts';
 import { benchFromMembers, lineupPool, type PoolSlot } from './pool.ts';
-import {
-	findGame,
-	listSlotAssignments,
-	saveAssignments,
-	type SlotAssignment
-} from './queries.ts';
+import { findGame, saveAssignments, type SlotAssignment } from './queries.ts';
 import { getGame, type GameView } from './service.ts';
 import type { GameSlotView } from './types.ts';
 import {
@@ -30,43 +25,6 @@ function poolSlotsOf(slots: readonly GameSlotView[]): PoolSlot[] {
 			? { playerId: slot.player.playerId, kind: slot.player.kind }
 			: null
 	}));
-}
-
-/**
- * La vue de l'éditeur : places et banc lus sur le bassin vivant, le même que
- * celui de l'enregistrement. Après un alignement manuel, la régénération est
- * bloquée; un joueur retiré quitte donc la glace et un remplaçant réclamé
- * apparaît au banc sans attendre un recalcul.
- */
-export function lineupBoardView(game: GameView): GameView {
-	if (!game.generation) return game;
-	const row = findGame(game.id);
-	if (!row) {
-		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
-	}
-	const pool = lineupPool(row, poolSlotsOf(game.slots));
-	const live = new Set(pool.members.map((member) => member.playerId));
-	const members = new Map(pool.members.map((member) => [member.playerId, member]));
-
-	return {
-		...game,
-		slots: game.slots.map((slot) =>
-			slot.player && !live.has(slot.player.playerId)
-				? { ...slot, player: null }
-				: slot
-		),
-		generation: {
-			...game.generation,
-			bench: pool.bench.map((entry) => ({
-				playerId: entry.playerId,
-				fullName: pool.names.get(entry.playerId) ?? entry.playerId,
-				position: entry.position,
-				jerseyNumber: members.get(entry.playerId)?.jerseyNumber ?? null,
-				avatarId: members.get(entry.playerId)?.avatarId ?? null,
-				kind: entry.kind
-			}))
-		}
-	};
 }
 
 /**
@@ -92,7 +50,15 @@ export function saveManualLineup(
 		throw new AppError('CONFLICT', { key: 'rating.gameNotGenerated' });
 	}
 
-	const currentSlots = listSlotAssignments(gameId);
+	// L'univers des places et la présence viennent de la vue publiée : le
+	// même bassin vivant décide de ce que l'éditeur montre et accepte.
+	const currentSlots = poolSlotsOf(getGame(actor, gameId).slots);
+	const declared = currentSlots.map((slot) => ({
+		team: slot.team,
+		position: slot.position,
+		slotIndex: slot.slotIndex,
+		playerId: slot.player?.playerId ?? null
+	}));
 	const chosen = parsed.assignments.filter(
 		(assignment): assignment is ManualLineupAssignment & { playerId: string } =>
 			assignment.playerId !== null
@@ -106,8 +72,8 @@ export function saveManualLineup(
 	// Une formation partielle ne doit jamais ressembler à une mise à blanc :
 	// chaque place du match est présente, vide comprise. La validation et
 	// l'univers des places sont ceux des gestes internes.
-	const writtenSlots = validateAssignments(currentSlots, parsed.assignments, names);
-	if (writtenSlots.size !== currentSlots.length) {
+	const writtenSlots = validateAssignments(declared, parsed.assignments, names);
+	if (writtenSlots.size !== declared.length) {
 		throw new AppError('VALIDATION', { key: 'games.lineupIncomplete' });
 	}
 	const assignedPlayers = new Set(chosen.map((assignment) => assignment.playerId));
@@ -115,18 +81,7 @@ export function saveManualLineup(
 	// La présence et les réclamations viennent du même bassin vivant que la
 	// vue de l'éditeur : une lecture ne peut pas accepter un joueur que
 	// l'autre n'a jamais montré.
-	const pool = lineupPool(
-		row,
-		currentSlots.map((slot) => ({
-			team: slot.team,
-			position: slot.position,
-			slotIndex: slot.slotIndex,
-			player:
-				slot.playerId && slot.assignmentKind
-					? { playerId: slot.playerId, kind: slot.assignmentKind }
-					: null
-		}))
-	);
+	const pool = lineupPool(row, currentSlots);
 	const members = new Map(pool.members.map((member) => [member.playerId, member]));
 
 	const assignments: SlotAssignment[] = chosen.map((assignment) => {
@@ -169,7 +124,7 @@ export function saveManualLineup(
 	const built = buildGenerationSnapshot({
 		assignments,
 		bench,
-		openSlots: currentSlots.length - assignments.length
+		openSlots: declared.length - assignments.length
 	});
 
 	const blocked = built.violations.find((violation) => violation.strict);
