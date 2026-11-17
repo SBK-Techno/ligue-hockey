@@ -2,14 +2,16 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release 1.9.0 (in progress)
+## Release 1.9.0 (shipped)
 
 - **Desktop Accueil.** At 1024 px and up, the home is a two-column situation board: the next match and the season in a 2fr main column, presence, poll and discussion in a 1fr rail. The scoreboard and presence now start on the same row instead of stacking, and the rail keeps the status surfaces together.
 - **Phone unchanged.** The composition owns each panel's column (`zone`): main for the match, manager preparation, team, actions, season and next games; rail for presence, poll, substitutes, discussion and install. Below 1024 px the two containers use `display: contents`, so the phone keeps the composition order and the 900 to 1023 px board keeps its 12-column spans exactly. A test asserts that flattening the columns reproduces the composition order.
 - **Wide season.** When no rail content exists beside the main column (an account without a player profile), the season splits upcoming and recent results into two columns through a container query instead of stretching one wide list.
 - **Evidence.** At 1440 px the player home drops from 1671 to 1437 px and the scoreboard and presence share the first row; at 1024 px it drops from 1668 to 1477. The 900 px layout is unchanged (1724 px), the 320 px home has no horizontal overflow (scroll width 320) and no audited width reports a console error. The manager home at 1440 px reads as a 2fr/1fr board with the manager panel, team and actions in the main column. The no-profile admin home at 1440 px uses the full width with the season split into upcoming and results.
 - **Gate.** `npm run gate` exit 0: 1129 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
-- **Next.** PR, release 1.9.0, deploy and record the live image.
+- **Release.** PR #32 merged at `d6c5fac`; release PR #33 merged at `5497835`. The automatic workflow produced tag `v1.9.0`, the GitHub release and the GHCR image without a manual tag.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.9.0`, host digest `sha256:cb975fc72e1e8740b94209f4c8ab532bb6ec3699364999e54dec323fd87ba1b4`, local id `sha256:e155d7e725a60181ce9aef578e7da6a3f46a8655814f7d34ccf000df103f3fe9`, healthy since 2026-11-17T15:34:08Z with zero restarts. Public health reports `ok`/`ok`/`applied`, and the first three minutes of logs carry no error. At 1440 px the live home renders an 818 px main column and a 409 px rail, with the scoreboard and presence on the same row; the live 900 px home keeps the 1.8.2 paired board (team 352, actions 500, season 500, presence 352, poll 426, discussion 426) with no overflow and no console error.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261117T103333.db`; the 1.8.2 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.8.2.bak`.
 
 ## Release 1.8.2 (shipped)
 
