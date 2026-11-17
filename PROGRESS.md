@@ -2,14 +2,16 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release 1.8.1 (in progress)
+## Release 1.8.1 (shipped)
 
 - **Desktop threshold.** The desktop composition started at 1024 px, so a 900 to 1023 px desktop window still received the phone column even though the shell is a desktop. The `lg` breakpoint in `tokens.css` is now 900 px and the authored media queries in `layout.css` and `critical.css` follow it. The shell, navigation, page grids, chat rows and rink labels compose from 900 px.
 - **Dense grids.** The two-column ledger and the collapsed assessment cards keep a 1024 px threshold; below it their rows keep the full width, so a name no longer breaks into syllables. The dashboard right rail and the four rating criteria use one column until 1280 px.
 - **Service worker.** A page that was already controlled reloads once when a new worker takes over. The old page kept its route manifest after a deploy and the hashed chunks it referenced were gone; the first install still does not reload. The decision is covered by a unit test.
 - **Evidence.** Every authenticated and public route rendered at 900 px with no horizontal overflow and no console errors. The manager navigation keeps all six items on one line, the admin ledger and assessment rows are single-column, and the admin dashboard stacks its rail. The 900 px home drops from 2773 to 1925 px. The densest routes were rechecked at 1024 and 1440 px, where the ledger, assessment cards, dashboard and rating criteria return to their two-column compositions.
 - **Gate.** `npm run gate` exit 0: 1125 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
-- **Next.** Merge, release `1.8.1` and deploy.
+- **Release.** PR #26 merged at `36d8a37`; release PR #27 merged at `5a4567e`. The automatic workflow produced tag `v1.8.1`, the GitHub release and the GHCR image without a manual tag.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.8.1`, host digest `sha256:abf141ebd7284c136f9f20c648a0c8b88fcf226e59a552b9ad5b3e648749db10`, local id `sha256:61b6c92e66af7e9e0b554f2eb7bbf4c61cf7676bd04c0fccec5ece6bac60a2a6`, healthy since 2026-11-17T14:21:08Z with zero restarts. Public health reports `ok`/`ok`/`applied` with HSTS, the database serves 29 active players across 15 migrations, and the first three minutes of logs carry no error. At 900 px the live manager home shows the six-item navigation, the two-column season panel and no horizontal overflow.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261117T092041.db`; the 1.8.0 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.8.0.bak`.
 
 ## Release 1.8.0 (shipped)
 
