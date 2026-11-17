@@ -171,6 +171,9 @@
 	/* Le rythme vertical d'une page : un seul empilement. */
 	.page-stack {
 		display: grid;
+		/* La colonne unique ne prend jamais la largeur min-content d'un enfant :
+		   une phrase longue ne peut donc pas élargir la page sous 320 px. */
+		grid-template-columns: minmax(0, 1fr);
 		gap: 1rem;
 	}
 	/* Une surface de lecture étroite garde son en-tête aligné. */
@@ -267,13 +270,6 @@
 		color: var(--color-on-brand);
 		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-on-brand) 8%, transparent);
 	}
-	/* La ligne de centre appartient au score à deux colonnes, jamais à une
-	   surface qui ne montre qu'une identité ou un prochain match. */
-	.scoreboard-split {
-		position: relative;
-		overflow: hidden;
-	}
-
 	/* Chiffres de feuille de match : une seule famille, alignée, stable. */
 	.numeric {
 		font-family: var(--font-mono);
@@ -643,8 +639,11 @@
 	}
 	.rink-token {
 		position: absolute;
-		top: var(--y);
-		left: var(--x);
+		/* Le gardien et les défenseurs frôlent les bandes : sous 400 px, le
+		   jeton et son anneau de focus sortiraient de la glace. L'inset garde
+		   le centre du jeton à une demi-largeur mesurée de la bande. */
+		top: clamp(2.25rem, var(--y), calc(100% - 2.25rem));
+		left: clamp(2.25rem, var(--x), calc(100% - 2.25rem));
 		z-index: 2;
 		display: grid;
 		place-items: center;
@@ -692,13 +691,17 @@
 		line-height: 1;
 	}
 	.rink-name {
+		width: 100%;
 		max-width: 100%;
+		overflow: hidden;
 		font-size: clamp(0.5rem, 1.7vw, 0.625rem);
 		font-weight: 600;
 		line-height: 1.05;
 		text-align: center;
-		hyphens: auto;
-		white-space: normal;
+		text-overflow: ellipsis;
+		/* Un nom de famille ne se coupe jamais : le jeton tronque au complet. */
+		hyphens: none;
+		white-space: nowrap;
 	}
 	/* Sous 640 px, le jeton de 44 px ne peut pas porter un nom lisible :
 	   le numéro reste seul, le nom complet vit dans le libellé accessible. */

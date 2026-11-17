@@ -117,6 +117,40 @@ function renderPublic(overrides: Partial<GameView> = {}) {
 }
 
 describe('propriétaire de la régénération d’alignement', () => {
+	it('laisse la carte Équilibre à la hauteur de son contenu et garde ses avertissements', () => {
+		function balanceCard(overrides: Partial<GameView> = {}): string {
+			const page = renderPublic(overrides);
+			const title = page.body.indexOf(t('team.balance'));
+			expect(title).toBeGreaterThan(-1);
+			const start = page.body.lastIndexOf('<section', title);
+			const end = page.body.indexOf('</section>', title);
+			return page.body.slice(start, end);
+		}
+
+		const plain = balanceCard();
+		expect(plain).toContain('self-start');
+		expect(plain).not.toContain(t('games.warning.rulePreference'));
+
+		const warned = balanceCard({
+			generation: { ...game.generation!, warnings: ['rule-preference'] }
+		});
+		expect(warned).toContain('self-start');
+		expect(warned).toContain(t('games.warning.rulePreference'));
+	});
+
+	it('laisse l’en-tête de la carte d’alignement replier son badge sous le titre', () => {
+		const page = renderPublic();
+		const title = page.body.indexOf(t('games.roster'));
+		const header = page.body.lastIndexOf('<header', title);
+		const tag = page.body.slice(header, page.body.indexOf('>', header) + 1);
+
+		expect(header).toBeGreaterThan(-1);
+		expect(tag).toContain('flex-wrap');
+		expect(page.body.slice(title, page.body.indexOf('</h2>', title))).toBe(
+			t('games.roster')
+		);
+	});
+
 	it('garde une seule commande de régénération pour un gérant', () => {
 		const publicPage = render(MatchPage, {
 			props: {
@@ -162,6 +196,22 @@ describe('propriétaire de la régénération d’alignement', () => {
 
 		expect(cancelled.body.split(t('games.cancelledNotice'))).toHaveLength(2);
 		expect(scheduled.body).not.toContain(t('games.cancelledNotice'));
+	});
+
+	it('ne demande pas d’alignement pour un match annulé', () => {
+		const cancelled = renderPublic({
+			status: 'cancelled',
+			generated: false,
+			generation: null,
+			lineupComplete: false
+		});
+		const scheduled = renderPublic({ generated: false, generation: null, lineupComplete: false });
+
+		expect(cancelled.body).not.toContain(t('games.notGenerated'));
+		expect(cancelled.body).not.toContain(t('games.lineupSoonAdmin'));
+		expect(cancelled.body).not.toContain(t('games.roster'));
+		expect(scheduled.body).toContain(t('games.notGenerated'));
+		expect(scheduled.body).toContain(t('games.lineupSoonAdmin'));
 	});
 
 	it('garde le banc dans la carte d’alignement, sans le répéter', () => {

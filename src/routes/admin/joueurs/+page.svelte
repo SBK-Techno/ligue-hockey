@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { replaceState } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { roleDefinition } from '#config/roles.ts';
 	import { positionDefinition } from '#config/positions.ts';
 	import { formatAge, formatCount, t } from '#lib/shared/i18n/index.ts';
@@ -11,13 +15,39 @@
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
+	import {
+		PLAYER_FILTERS,
+		playerFiltersUrl,
+		readPlayerFilters,
+		type PlayerFilter
+	} from './filters.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 	let showInvite = $state(false);
-	let query = $state('');
-	type Filter = 'all' | 'active' | 'subs' | 'inactive';
-	let filter = $state<Filter>('all');
+	// La recherche et la puce appartiennent à l'URL : le retour du navigateur
+	// les restitue sans état local à resynchroniser.
+	const filters = $derived(readPlayerFilters(page.url.searchParams));
+	const query = $derived(filters.query);
+	const filter = $derived(filters.filter);
+
+	const filterLabels: Record<PlayerFilter, I18nKey> = {
+		all: 'admin.filterAll',
+		active: 'admin.filterActive',
+		subs: 'admin.filterSubs',
+		inactive: 'admin.filterInactive'
+	};
+
+	function setFilters(next: { query?: string; filter?: PlayerFilter }): void {
+		const url = playerFiltersUrl(page.url.href, {
+			query: next.query ?? query,
+			filter: next.filter ?? filter
+		});
+		// La route est fixe; seuls les paramètres changent. resolve() valide la route,
+		// et la requête vient de page.url : le lint ne sait pas lire cette composition.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		replaceState(`${resolve('/admin/joueurs')}${url.search}`, {});
+	}
 
 	const filtered = $derived(
 		data.players.filter((player) => {
@@ -35,12 +65,6 @@
 		})
 	);
 
-	const filters = [
-		{ key: 'all' as const, labelKey: 'admin.filterAll' as const },
-		{ key: 'active' as const, labelKey: 'admin.filterActive' as const },
-		{ key: 'subs' as const, labelKey: 'admin.filterSubs' as const },
-		{ key: 'inactive' as const, labelKey: 'admin.filterInactive' as const }
-	];
 </script>
 
 <PageHeader
@@ -72,20 +96,21 @@
 	{/if}
 
 	{#if data.players.length > 0}
-		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+		<div class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
 			<label class="sr-only" for="player-search">{t('admin.searchPlayers')}</label>
 			<input
 				class="input sm:max-w-xs"
 				id="player-search"
 				type="search"
 				placeholder={t('admin.searchPlayers')}
-				bind:value={query}
+				value={query}
+				oninput={(event) => setFilters({ query: event.currentTarget.value })}
 			/>
 			<FilterChips
-				items={filters.map((option) => ({ key: option.key, label: t(option.labelKey) }))}
+				items={PLAYER_FILTERS.map((key) => ({ key, label: t(filterLabels[key]) }))}
 				active={filter}
 				label={t('admin.filter')}
-				onselect={(key) => (filter = key as Filter)}
+				onselect={(key) => setFilters({ filter: key as PlayerFilter })}
 			/>
 			{#if filter !== 'all' || query.trim()}
 				<p class="text-meta text-muted sm:ml-auto" aria-live="polite">

@@ -82,9 +82,14 @@
 	// section est enregistrée; seul le succès de la fiche le resynchronise.
 	// svelte-ignore state_referenced_locally
 	let identity = $state<IdentityDraft>(identityDraft(profile));
+	// Le nom affiché garde sa saisie pendant l'enregistrement d'une autre
+	// section; seul le succès de sa propre fiche le resynchronise.
+	// svelte-ignore state_referenced_locally
+	let displayName = $state(account?.name ?? '');
 
 	function syncIdentityDraft() {
 		identity = identityDraft(profile);
+		if (!profile) displayName = account?.name ?? '';
 	}
 	const isManager = $derived(data.nav.canViewAdmin);
 	const canSeeRatings = $derived(data.nav.canSeeRatings);
@@ -365,14 +370,19 @@
 							</dl>
 							<p class="hint mt-2">{t('profile.playerNameManaged')}</p>
 						{:else}
-							<form method="POST" action="?/identity" use:progressiveForm class="mt-3 space-y-3">
+							<form
+								method="POST"
+								action="?/identity"
+								use:progressiveForm={{ onSuccess: syncIdentityDraft }}
+								class="mt-3 space-y-3"
+							>
 								<div>
 									<label class="label" for="displayName">{t('profile.displayName')}</label>
 									<input
 										class="input"
 										id="displayName"
 										name="displayName"
-										value={account.name}
+										bind:value={displayName}
 										maxlength={ACCOUNT_LIMITS.displayNameMax}
 										autocomplete="name"
 										required

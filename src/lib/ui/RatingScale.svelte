@@ -50,7 +50,7 @@
 		{/if}
 	</div>
 	<div class={disabled ? 'opacity-60' : ''}>
-		<div class="flex items-center gap-1">
+		<div class="flex flex-wrap items-center gap-1">
 			{#each values as rating (rating)}
 				<label
 					class={chipClass(rating)}

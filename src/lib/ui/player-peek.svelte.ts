@@ -1,3 +1,4 @@
+import { PEEK_CLIENT_TTL_MS } from '#config/cache.ts';
 import type { PlayerPeekView } from '#lib/domain/players/peek.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { PLAYER_PEEK_EVENT } from './events.ts';
@@ -9,7 +10,6 @@ import {
 	type PeekCache
 } from './player-peek-cache.ts';
 
-const CACHE_TTL_MS = 30_000;
 const OPEN_DELAY_MS = 220;
 const CLOSE_DELAY_MS = 160;
 
@@ -119,7 +119,7 @@ export function openPlayerPeek(
 	if (typeof window !== 'undefined') {
 		window.dispatchEvent(new CustomEvent(PLAYER_PEEK_EVENT));
 	}
-	const cached = readPeekCache(cache, cacheScope, playerId, clock.nowMs(), CACHE_TTL_MS);
+	const cached = readPeekCache(cache, cacheScope, playerId, clock.nowMs(), PEEK_CLIENT_TTL_MS);
 	if (cached) {
 		view = cached;
 		status = 'ready';

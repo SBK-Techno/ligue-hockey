@@ -7,6 +7,7 @@
 	import { toDate, todayInZone } from '#lib/shared/time/clock.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
 	import ChatNewMessages from '#lib/ui/ChatNewMessages.svelte';
+	import { chatControlName } from '#lib/ui/chat-controls.ts';
 	import { publishChromeInset } from '#lib/ui/chrome-inset.svelte.ts';
 
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
@@ -198,7 +199,7 @@
 										class="btn-ghost btn-sm w-11 p-0"
 										type="button"
 										onclick={() => removeOption(index)}
-										aria-label={t('common.delete')}
+										aria-label={chatControlName({ kind: 'pollOption', index })}
 									>
 										×
 									</button>
@@ -300,7 +301,14 @@
 								{#if message.canDelete}
 									<div class="absolute right-1 top-2">
 										<details class="action-menu">
-											<summary aria-label={t('chat.actions')}>
+											<summary
+												aria-label={chatControlName({
+													kind: 'message',
+													author: message.authorName,
+													body: message.body,
+													question: message.poll?.question
+												})}
+											>
 												<svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
 													<circle cx="4" cy="10" r="1.5" fill="currentColor" />
 													<circle cx="10" cy="10" r="1.5" fill="currentColor" />

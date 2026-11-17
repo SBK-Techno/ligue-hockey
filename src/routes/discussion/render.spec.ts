@@ -60,6 +60,31 @@ describe('page de discussion', () => {
 		expect(body.indexOf('action="?/send"')).toBeGreaterThan(body.indexOf('role="status"'));
 	});
 
+	it('donne un nom unique au menu de chaque message', async () => {
+		const messages = [
+			{ ...data.messages[0], id: 'message-a', authorName: 'Karim Haddad', body: 'Salut la gang' },
+			{ ...data.messages[0], id: 'message-b', authorName: 'Karim Haddad', body: 'On joue à 20 h' },
+			{ ...data.messages[0], id: 'message-c', authorName: 'Léa Côté', body: 'Salut la gang' }
+		].map((message) => ({ ...message, canDelete: true }));
+		const { body } = await render(Page, {
+			props: { data: { ...data, messages }, form: null, params: {} }
+		});
+		const names = [...body.matchAll(/<summary[^>]*aria-label="([^"]*)"/g)].map(
+			(match) => match[1]
+		);
+
+		expect(names).toHaveLength(3);
+		expect(new Set(names).size).toBe(3);
+		for (const message of messages) {
+			expect(names).toContain(
+				t('chat.messageActionsName', {
+					author: message.authorName,
+					excerpt: message.body
+				})
+			);
+		}
+	});
+
 	it('expose le numéro de chandail comme une image nommée', async () => {
 		const { body } = await render(Page, { props: { data, form: null, params: {} } });
 

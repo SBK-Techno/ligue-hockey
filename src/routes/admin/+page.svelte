@@ -65,7 +65,7 @@
 
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
 		{#if data.permissions.games}
-			<SectionCard class="lg:col-start-2 lg:row-start-1" title={t('home.nextGame')}>
+			<SectionCard class="lg:col-start-1 lg:row-start-1" title={t('home.nextGame')}>
 				{#if data.nextGame}
 					<p class="serial">{formatDate(data.nextGame.gameDate)}</p>
 					<p class="mt-1 font-display text-subhead font-semibold leading-tight">
@@ -99,7 +99,11 @@
 			</SectionCard>
 		{/if}
 
-		<div class="space-y-4 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+		<div
+			class="space-y-4 lg:col-start-1 {data.permissions.games
+				? 'lg:row-start-2'
+				: 'lg:row-start-1'}"
+		>
 			<SectionCard title={t('admin.todo')} flush>
 				{#if hasTodo}
 					<ul role="list" class="divide-y divide-line">
@@ -164,11 +168,7 @@
 			{/if}
 		</div>
 
-		<div
-			class="space-y-4 lg:col-start-2 {data.permissions.games
-				? 'lg:row-start-2'
-				: 'lg:row-start-1'}"
-		>
+		<div class="space-y-4 lg:col-start-2 lg:row-start-1 lg:row-span-2">
 			{#if data.upcoming.length > 0}
 				<SectionCard
 					title={t('home.upcoming')}

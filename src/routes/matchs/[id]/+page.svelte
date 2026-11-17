@@ -65,7 +65,10 @@
 					hasAttendance: availability !== null,
 					hasSubstitutes: completed ? data.requests.length > 0 : hasSubsPanel,
 					hasSheet: Boolean(data.playable && data.sheet),
-					hasLineup: completed ? game.generated : true
+					// Un match annulé n'a pas d'alignement à publier : ni carte
+					// vide, ni invite à générer une équipe.
+					hasLineup:
+						game.status === 'cancelled' ? false : completed ? game.generated : true
 				})
 			: []
 	);
@@ -361,11 +364,6 @@
 {#snippet sheetPanel()}
 	{#if data.playable && data.sheet}
 		<SectionCard class="lg:col-span-12" title={t('gamesheet.title')} clip={false}>
-			{#snippet actions()}
-				{#if data.sheet?.finalized}
-					<span class="badge-ok">{t(gameStatus('completed').labelKey)}</span>
-				{/if}
-			{/snippet}
 			<GameSheet
 				sheet={data.sheet}
 				slots={game.slots}
@@ -410,7 +408,7 @@
 		</SectionCard>
 
 		{#if game.generation && data.canManage}
-			<SectionCard class="lg:col-span-4" title={t('team.balance')}>
+			<SectionCard class="self-start lg:col-span-4" title={t('team.balance')}>
 				<p class="text-body text-muted">
 					{balanceLine(game.generation.skillDiffLabel, game.generation.ageDiffLabel)}
 				</p>

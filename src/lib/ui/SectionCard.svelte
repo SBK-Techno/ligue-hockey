@@ -25,7 +25,7 @@
 </script>
 
 <section class="sheet {clip ? 'overflow-hidden' : ''} {className}">
-	<header class="flex items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
+	<header class="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
 		<h2>{title}</h2>
 		{#if actions}
 			<div class="flex flex-wrap items-center gap-2">

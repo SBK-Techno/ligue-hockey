@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 import { t } from '#lib/shared/i18n/index.ts';
@@ -90,6 +91,30 @@ describe('rendu de la carte d’alignement', () => {
 			expect(visible, token[0]).not.toBe(' ');
 			expect(label, visible).toContain(visible);
 		}
+	});
+
+	it('garde le nom de famille entier dans le jeton, sans coupure insérée', () => {
+		const slots = fullSlots.map((slot) =>
+			slot.player?.playerId === 'white-forward-0'
+				? { ...slot, player: { ...slot.player, fullName: 'Jean-Sébastien Rousseau' } }
+				: slot
+		);
+		const { body } = render(LineupBoard, {
+			props: { slots, bench, canEdit: false, expectedGeneratedAt: 123 }
+		});
+		const token = body.match(
+			/<button[^>]*data-player-id="white-forward-0"[^>]*>[\s\S]*?<\/button>/
+		)?.[0] ?? '';
+
+		expect(token).toContain('<span class="rink-name">Rousseau</span>');
+		expect(body).not.toContain('Rous\u00adseau');
+		expect(body).not.toContain('Rous-seau');
+
+		const css = readFileSync('src/routes/layout.css', 'utf8');
+		const block = css.slice(css.indexOf('.rink-name {'), css.indexOf('.rink-empty'));
+		expect(block).toContain('hyphens: none');
+		expect(block).toContain('text-overflow: ellipsis');
+		expect(block).toContain('white-space: nowrap');
 	});
 
 	it('rend les joueurs du banc comme des boutons non sélectionnés', () => {

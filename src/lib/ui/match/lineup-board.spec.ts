@@ -167,18 +167,23 @@ describe('carte d’alignement', () => {
 
 describe('lisibilité des jetons sur la glace', () => {
 	const css = readFileSync('src/routes/layout.css', 'utf8');
-	const nameBlock = css.slice(css.indexOf('.rink-name {'), css.indexOf('.rink-empty {'));
+	// La première règle `.rink-name` porte la base; la seconde, sous 640 px,
+	// retire le nom au profit du numéro. On borne chaque lecture à son bloc
+	// pour ne pas confondre la base avec la règle mobile.
+	const baseStart = css.indexOf('.rink-name {');
+	const mediaStart = css.indexOf('@media (max-width: 639px)', baseStart);
+	const base = css.slice(baseStart, mediaStart);
+	const small = css.slice(mediaStart, css.indexOf('.rink-empty {', mediaStart));
 
-	it('ne coupe plus un nom au milieu d’un mot', () => {
-		expect(nameBlock).not.toContain('text-overflow: ellipsis');
-		expect(nameBlock).not.toContain('white-space: nowrap');
-		expect(nameBlock).toContain('hyphens: auto');
+	it('tronque le nom au complet sans insérer de trait d’union', () => {
+		expect(base).toContain('hyphens: none');
+		expect(base).not.toContain('hyphens: auto');
+		expect(base).toContain('text-overflow: ellipsis');
+		expect(base).toContain('white-space: nowrap');
 	});
 
 	it('passe au numéro seul sur un jeton de 44 px', () => {
-		expect(css).toMatch(
-			/@media \(max-width: 639px\)[\s\S]{0,80}\.rink-name[\s\S]{0,40}display: none/
-		);
+		expect(small).toMatch(/\.rink-name[\s\S]{0,40}display: none/);
 	});
 });
 

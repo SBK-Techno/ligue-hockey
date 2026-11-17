@@ -10,3 +10,8 @@ export const PEEK_PUBLIC_CACHE = `private, max-age=${PEEK_PUBLIC_MAX_AGE_SECONDS
 
 /** Une fiche qui contient les notes ne doit jamais resservir. */
 export const PEEK_RATINGS_CACHE = 'no-store';
+
+/** La fiche déjà chargée reste en mémoire du client pendant cette fenêtre :
+ * plus longue que l'en-tête HTTP, elle évite de refaire la requête pendant
+ * une visite, sans garder une fiche privée au-delà. */
+export const PEEK_CLIENT_TTL_MS = 30_000;

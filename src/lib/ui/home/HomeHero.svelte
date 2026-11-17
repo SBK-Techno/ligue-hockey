@@ -81,11 +81,11 @@
 			method="POST"
 			action="?/availability"
 			use:progressiveForm
-			class="mt-2 grid grid-cols-2 gap-2"
+			class="mt-2 flex flex-wrap gap-2"
 		>
 			<input type="hidden" name="gameId" value={gameId} />
 			<button
-				class="chip chip-on-ink justify-center"
+				class="chip chip-on-ink max-w-60 justify-center"
 				name="status"
 				value="present"
 				type="submit"
@@ -94,7 +94,7 @@
 				{t('availability.markPresent')}
 			</button>
 			<button
-				class="chip chip-on-ink justify-center"
+				class="chip chip-on-ink max-w-60 justify-center"
 				name="status"
 				value="absent"
 				type="submit"

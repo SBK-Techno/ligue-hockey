@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { PEEK_CLIENT_TTL_MS } from '#config/cache.ts';
 import {
 	clearPeekCache,
 	readPeekCache,
@@ -33,10 +35,24 @@ describe('portée du cache des fiches joueur', () => {
 		expect(readPeekCache(cache, 'ratings', 'player-1', 1_001, 30_000)).toBeNull();
 	});
 
-	it('laisse expirer une entrée après la fenêtre', () => {
+	it('laisse expirer une entrée après la fenêtre du propriétaire', () => {
 		const cache: PeekCache<View> = {};
-		writePeekCache(cache, 'public', 'player-1', { withRatings: false }, 1_000);
+		const view = { withRatings: false };
+		writePeekCache(cache, 'public', 'player-1', view, 1_000);
 
-		expect(readPeekCache(cache, 'public', 'player-1', 31_000, 30_000)).toBeNull();
+		expect(
+			readPeekCache(cache, 'public', 'player-1', 1_000 + PEEK_CLIENT_TTL_MS - 1, PEEK_CLIENT_TTL_MS)
+		).toBe(view);
+		expect(
+			readPeekCache(cache, 'public', 'player-1', 1_000 + PEEK_CLIENT_TTL_MS, PEEK_CLIENT_TTL_MS)
+		).toBeNull();
+	});
+
+	it('importe la durée client depuis la politique de cache, sans littéral local', () => {
+		const source = readFileSync('src/lib/ui/player-peek.svelte.ts', 'utf8');
+
+		expect(source).toContain("import { PEEK_CLIENT_TTL_MS } from '#config/cache.ts'");
+		expect(source).toMatch(/clock\.nowMs\(\), PEEK_CLIENT_TTL_MS\)/);
+		expect(source).not.toMatch(/\b30_000\b/);
 	});
 });
