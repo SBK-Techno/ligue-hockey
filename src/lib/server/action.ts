@@ -1,6 +1,6 @@
 import { error as httpError, fail, json } from '@sveltejs/kit';
 import type { I18nKey } from '#config/i18n/fr.ts';
-import { isAppError } from '#lib/shared/errors.ts';
+import { AppError, isAppError } from '#lib/shared/errors.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 
@@ -22,6 +22,32 @@ export function actionError(
 		});
 	}
 	throw cause;
+}
+
+/**
+ * Refuse une écriture au-delà du seau de membre sans casser le formulaire.
+ * Une soumission enrichie reçoit un échec d'action SvelteKit; une soumission
+ * sans JavaScript reçoit une page courte et lisible; une API garde l'enveloppe
+ * JSON commune. Un seul limiteur, une seule formulation.
+ */
+export function memberThrottleResponse(cause: AppError, request: Request): Response {
+	const data = { ok: false, key: cause.key, message: t(cause.key, cause.params) };
+	if (request.headers.get('x-sveltekit-action') === 'true') {
+		return json(
+			{ type: 'failure', status: cause.status, data },
+			{ status: 200 }
+		);
+	}
+	if (request.headers.get('accept')?.includes('text/html')) {
+		return new Response(
+			`<!doctype html><html lang="fr"><meta charset="utf-8"><title>${data.message}</title><p>${data.message}</p><p><a href="/">Retour</a></p></html>`,
+			{
+				status: cause.status,
+				headers: { 'content-type': 'text/html; charset=utf-8' }
+			}
+		);
+	}
+	return apiError(cause);
 }
 
 export function loadError(cause: unknown): never {

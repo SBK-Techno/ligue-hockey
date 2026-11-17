@@ -236,6 +236,31 @@ describe('chargement de l’accueil', () => {
 		});
 	});
 
+	it('donne le score des matchs passés à un compte sans fiche joueur', async () => {
+		sqlite
+			.prepare(
+				`insert into games (id, game_date, start_time, location_id, location, status, roster_template_json, generated_at, generation_json, completed_at, created_at, updated_at)
+				 values ('past', '2020-01-05', '09:00', 'arena', 'Aréna', 'completed', '{}', 0, '{}', 0, 0, 0)`
+			)
+			.run();
+		sqlite
+			.prepare(
+				`insert into game_goals (id, game_id, team, period, clock, kind, scorer_player_id, scorer_name, scorer_number, created_at, updated_at)
+				 values ('past-goal', 'past', 'white', 1, '10:00', 'even', 'player', 'Prénom player', 9, 0, 0)`
+			)
+			.run();
+
+		const data = (await load({
+			locals: { actor: admin },
+			parent: async () => ({ hasPlayerProfile: false, isSubstitute: false })
+		} as never)) as { agenda: { past: { id: string; score: unknown }[] } };
+
+		expect(data.agenda.past.find((entry) => entry.id === 'past')?.score).toEqual({
+			white: 1,
+			black: 0
+		});
+	});
+
 	it('donne les places ouvertes au remplaçant seulement', async () => {
 		const data = (await loadFor(substitute, true)) as {
 			claimable: { id: string }[];

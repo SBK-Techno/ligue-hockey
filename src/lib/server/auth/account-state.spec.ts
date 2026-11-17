@@ -154,6 +154,8 @@ const RAW_MUTATIONS: readonly {
 	path: string;
 	body?: unknown;
 }[] = [
+	{ method: 'GET', path: '/api/auth/admin/list-users' },
+	{ method: 'GET', path: '/api/auth/admin/get-user?userId=someone' },
 	{
 		method: 'POST',
 		path: '/api/auth/sign-in/email',
@@ -214,6 +216,7 @@ const RAW_MUTATIONS: readonly {
 
 /** Les écritures de membre couvertes par le seau du hook. */
 const MEMBER_WRITES = [
+	'/',
 	'/discussion?/send',
 	'/discussion?/poll',
 	'/discussion?/vote',

@@ -4,7 +4,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { actorFromUser } from '#lib/domain/auth/types.ts';
 import { isAccountActive } from '#lib/domain/players/account-status.ts';
 import { actorContextRequired } from '#lib/server/actor-context.ts';
-import { apiError } from '#lib/server/action.ts';
+import { apiError, memberThrottleResponse } from '#lib/server/action.ts';
 import { cacheControlFor } from '#lib/server/cache-policy.ts';
 import { compressResponse } from '#lib/server/compression.ts';
 import { auth } from '#lib/server/auth.ts';
@@ -51,12 +51,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Le plan HTTP de Better Auth n'est pas un second propriétaire des
 	// mutations : toute écriture brute est refusée avec l'enveloppe commune.
-	// Les lectures (dont le lien de réinitialisation) restent disponibles, et
-	// les cas d'usage de l'application passent par `auth.api`, jamais par HTTP.
+	// Les lectures de réinitialisation restent disponibles, mais le plan
+	// d'administration HTTP est refusé en lecture comme en écriture : il
+	// exposerait un ancien administrateur dont la session n'a pas pu être
+	// révoquée. Les cas d'usage passent par `auth.api`, jamais par HTTP.
+	const authAdmin = event.url.pathname.startsWith('/api/auth/admin/');
 	const authMutation =
-		event.request.method !== 'GET' &&
-		event.request.method !== 'HEAD' &&
-		event.url.pathname.startsWith('/api/auth/');
+		authAdmin ||
+		(event.request.method !== 'GET' &&
+			event.request.method !== 'HEAD' &&
+			event.url.pathname.startsWith('/api/auth/'));
 
 	let response: Response;
 	if (authMutation) {
@@ -64,19 +68,29 @@ export const handle: Handle = async ({ event, resolve }) => {
 	} else {
 		try {
 			// Un seul limiteur pour tous les gestes de membre, réservé une fois
-			// par requête avant que la route puisse écrire.
+			// par requête avant que la route puisse écrire. Un refus garde la
+			// forme attendue par le client : échec d'action pour un formulaire
+			// enrichi, page courte sans JavaScript, enveloppe JSON pour l'API.
+			let throttled: Response | null = null;
 			if (
 				event.locals.actor.kind === 'user' &&
 				isMemberWrite(event.request.method, event.url.pathname)
 			) {
-				throttleMemberAction(event.locals.actor);
+				try {
+					throttleMemberAction(event.locals.actor);
+				} catch (cause) {
+					if (!isAppError(cause)) throw cause;
+					throttled = memberThrottleResponse(cause, event.request);
+				}
 			}
-			response = await svelteKitHandler({
-				event,
-				resolve,
-				auth,
-				building
-			});
+			response =
+				throttled ??
+				(await svelteKitHandler({
+					event,
+					resolve,
+					auth,
+					building
+				}));
 		} catch (cause) {
 			if (!isAppError(cause)) throw cause;
 			response = apiError(cause);
