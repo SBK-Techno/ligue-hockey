@@ -14,7 +14,7 @@
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import GameSheet from '#lib/ui/match/GameSheet.svelte';
-	import TeamLineup from '#lib/ui/TeamLineup.svelte';
+	import LineupBoard from '#lib/ui/match/LineupBoard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -364,7 +364,14 @@
 						{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
 					</p>
 				{/if}
-				<TeamLineup slots={game.slots} ownTeam={ownTeam} actorId={actor?.userId ?? null} />
+				{#key game.generation?.generatedAt}
+				<LineupBoard
+					slots={game.slots}
+					bench={game.generation?.bench ?? []}
+					canEdit={data.canManage && data.editable}
+					expectedGeneratedAt={game.generation?.generatedAt ?? null}
+				/>
+				{/key}
 			</div>
 		</SectionCard>
 

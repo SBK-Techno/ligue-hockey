@@ -10,6 +10,8 @@ import {
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
+import { saveManualLineup } from '#lib/domain/games/lineup.ts';
+import { manualLineupInputSchema } from '#lib/domain/games/validators.ts';
 import { isGameStarted, isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
@@ -29,7 +31,8 @@ import {
 } from '#lib/domain/gamesheet/validators.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
-import { parseForm } from '#lib/shared/validation.ts';
+import { parseForm, parseSchema } from '#lib/shared/validation.ts';
+import { AppError } from '#lib/shared/errors.ts';
 
 const availabilitySchema = z.object({
 	status: z.enum(['present', 'absent'])
@@ -190,6 +193,27 @@ export const actions: Actions = {
 		try {
 			finalizeGame(locals.actor, params.id!);
 			return { ok: true, message: t('gamesheet.finalized') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	lineup: async ({ request, locals, params }) => {
+		try {
+			const form = await request.formData();
+			const rawToken = String(form.get('expectedGeneratedAt') ?? '');
+			const token = rawToken === '' ? null : Number(rawToken);
+			let assignments: unknown;
+			try {
+				assignments = JSON.parse(String(form.get('lineup') ?? ''));
+			} catch {
+				throw new AppError('VALIDATION', { key: 'rink.invalid' });
+			}
+			const parsed = parseSchema(manualLineupInputSchema, {
+				expectedGeneratedAt: token,
+				assignments
+			});
+			saveManualLineup(locals.actor, params.id!, parsed);
+			return { ok: true, message: t('rink.saved') };
 		} catch (cause) {
 			return actionError(cause);
 		}

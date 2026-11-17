@@ -55,9 +55,14 @@ Findings are confirmed against source before any edit; the round is only closed 
 | `3728997` | `1.3.3` `/remplacants` inline pool and request actions | 350 tests, check, lint |
 | `b54d7c8` | `1.4.0` home board, admin surfaces, shared UI system | gate, PR 16, live |
 
+## 1.6.0 in progress
+
+- Rink placement board: `config/rink.ts` owns the geometry, `LineupBoard.svelte` renders both team halves, and the `?/lineup` action saves through `saveManualLineup` with the generation token. Pure placement rules live in `src/lib/ui/match/lineup-board.ts` with seven tests.
+- Legend identities: `config/legends.ts` will own the curated Canadiens alumni facts (name, number, position, era) and their stylised art variants; `config/identities.ts` composes them with the 28 league avatars behind one catalogue, and the picker will only offer legends that played the player's position.
+- Remaining: team season page `/equipe`, chat history pagination and connection-lost banner, and the confirmed UX findings from triple-check round 1.
+
 ## Next: 1.6.0
 
-- Rink placement board on the match page: `config/rink.ts` owns the geometry, but no surface renders it yet. A manager should place players, see pair-rule lines and save with the generation token.
 - Team season page `/equipe`: roster, attendance history, Black/White history and a past-game timeline, ratings only behind the ratings capability.
 - Chat history pagination and the connection-lost banner.
 - Admin row menus beyond the player list: move the remaining absolutely positioned menus out of clipped sheets where they still exist.
