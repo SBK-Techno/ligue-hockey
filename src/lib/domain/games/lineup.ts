@@ -1,19 +1,12 @@
-import type { Position } from '#config/positions.ts';
-import { buildSlotDefinitions, type SlotDefinition } from '#config/roster.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
 import { playerCandidatesByIds } from '#lib/domain/players/candidates.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
-import { buildGenerationSnapshot } from './alignment.ts';
+import { buildGenerationSnapshot, validateAssignments } from './alignment.ts';
 import { isLineupEditable } from './playability.ts';
-import {
-	benchFromMembers,
-	lineupPool,
-	templateFromRow,
-	type PoolSlot
-} from './pool.ts';
+import { benchFromMembers, lineupPool, type PoolSlot } from './pool.ts';
 import {
 	findGame,
 	listSlotAssignments,
@@ -27,14 +20,6 @@ import {
 	type ManualLineupAssignment,
 	type ManualLineupInput
 } from './validators.ts';
-
-function slotKey(slot: {
-	team: string;
-	position: Position;
-	slotIndex: number;
-}): string {
-	return `${slot.team}:${slot.position}:${slot.slotIndex}`;
-}
 
 function poolSlotsOf(slots: readonly GameSlotView[]): PoolSlot[] {
 	return slots.map((slot) => ({
@@ -103,48 +88,32 @@ export function saveManualLineup(
 		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
 	}
 
-	const definitions = new Map<string, SlotDefinition>(
-		buildSlotDefinitions(templateFromRow(row)).map((slot) => [
-			slotKey({ team: slot.team, position: slot.position, slotIndex: slot.index }),
-			slot
-		])
-	);
-
-	const writtenSlots = new Set<string>();
-	for (const assignment of parsed.assignments) {
-		const key = slotKey(assignment);
-		if (!definitions.has(key)) {
-			throw new AppError('VALIDATION', { key: 'games.lineupSlotUnknown' });
-		}
-		if (writtenSlots.has(key)) {
-			throw new AppError('VALIDATION', { key: 'games.lineupSlotUnknown' });
-		}
-		writtenSlots.add(key);
-	}
-	// Une formation partielle ne doit jamais ressembler à une mise à blanc :
-	// chaque place du modèle est présente, vide comprise.
-	if (writtenSlots.size !== definitions.size) {
-		throw new AppError('VALIDATION', { key: 'games.lineupIncomplete' });
-	}
-
+	const currentSlots = listSlotAssignments(gameId);
 	const chosen = parsed.assignments.filter(
 		(assignment): assignment is ManualLineupAssignment & { playerId: string } =>
 			assignment.playerId !== null
 	);
-	const assignedPlayers = new Set<string>();
-	for (const assignment of chosen) {
-		if (assignedPlayers.has(assignment.playerId)) {
-			throw new AppError('VALIDATION', { key: 'games.lineupPlayerDuplicate' });
-		}
-		assignedPlayers.add(assignment.playerId);
+	const details = playerCandidatesByIds([
+		...new Set(chosen.map((assignment) => assignment.playerId))
+	]);
+	const byId = new Map(details.map((player) => [player.userId, player]));
+	const names = new Map(details.map((player) => [player.userId, player.fullName]));
+
+	// Une formation partielle ne doit jamais ressembler à une mise à blanc :
+	// chaque place du match est présente, vide comprise. La validation et
+	// l'univers des places sont ceux des gestes internes.
+	const writtenSlots = validateAssignments(currentSlots, parsed.assignments, names);
+	if (writtenSlots.size !== currentSlots.length) {
+		throw new AppError('VALIDATION', { key: 'games.lineupIncomplete' });
 	}
+	const assignedPlayers = new Set(chosen.map((assignment) => assignment.playerId));
 
 	// La présence et les réclamations viennent du même bassin vivant que la
 	// vue de l'éditeur : une lecture ne peut pas accepter un joueur que
 	// l'autre n'a jamais montré.
 	const pool = lineupPool(
 		row,
-		listSlotAssignments(gameId).map((slot) => ({
+		currentSlots.map((slot) => ({
 			team: slot.team,
 			position: slot.position,
 			slotIndex: slot.slotIndex,
@@ -155,8 +124,6 @@ export function saveManualLineup(
 		}))
 	);
 	const members = new Map(pool.members.map((member) => [member.playerId, member]));
-	const details = playerCandidatesByIds([...assignedPlayers]);
-	const byId = new Map(details.map((player) => [player.userId, player]));
 
 	const assignments: SlotAssignment[] = chosen.map((assignment) => {
 		const player = byId.get(assignment.playerId);
@@ -198,7 +165,7 @@ export function saveManualLineup(
 	const built = buildGenerationSnapshot({
 		assignments,
 		bench,
-		openSlots: definitions.size - assignments.length
+		openSlots: currentSlots.length - assignments.length
 	});
 
 	const blocked = built.violations.find((violation) => violation.strict);

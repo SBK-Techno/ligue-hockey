@@ -39,55 +39,252 @@ export type RinkRoleDefinition = {
 	pair: number;
 };
 
+export type RinkPlacement = RinkRoleDefinition & {
+	position: Position;
+	slotIndex: number;
+};
+
 /**
- * Les six places de départ. Les deuxièmes trios réutilisent les mêmes
- * coordonnées : la place est un trio, la position sur la glace est la même.
+ * Chaque place d'attaque et de défense soutenue par les réglages (jusqu'à
+ * 8F et 8D) a sa propre coordonnée. Deux jetons ne partagent jamais top/left :
+ * le dernier nœud du DOM ne peut donc pas voler le clic du premier. La
+ * première ligne et la première paire gardent les coordonnées historiques.
  */
-export const RINK_ROLES = [
-	{ key: 'G', labelKey: 'rink.goalie', x: 50, y: 92, line: 0, pair: 0 },
-	{ key: 'LD', labelKey: 'rink.leftDefense', x: 30, y: 62, line: 0, pair: 1 },
-	{ key: 'RD', labelKey: 'rink.rightDefense', x: 70, y: 62, line: 0, pair: 1 },
-	{ key: 'C', labelKey: 'rink.center', x: 50, y: 50, line: 1, pair: 0 },
-	{ key: 'LW', labelKey: 'rink.leftWing', x: 16, y: 38, line: 1, pair: 0 },
-	{ key: 'RW', labelKey: 'rink.rightWing', x: 84, y: 38, line: 1, pair: 0 }
-] as const satisfies readonly RinkRoleDefinition[];
-
-export type RinkPlacement = RinkRoleDefinition;
-
-function role(key: RinkRoleKey): RinkRoleDefinition {
-	const definition = RINK_ROLES.find((entry) => entry.key === key);
-	if (!definition) {
-		throw new Error(`Unknown rink role: ${key}`);
-	}
-	return definition;
-}
-
-const FORWARD_ROLES: readonly RinkRoleKey[] = ['C', 'LW', 'RW', 'C', 'LW', 'RW'];
-const DEFENSE_ROLES: readonly RinkRoleKey[] = ['LD', 'RD', 'LD', 'RD'];
+export const RINK_PLACEMENTS = [
+	{
+		position: 'forward',
+		slotIndex: 0,
+		key: 'C',
+		labelKey: 'rink.center',
+		x: 50,
+		y: 50,
+		line: 1,
+		pair: 0
+	},
+	{
+		position: 'forward',
+		slotIndex: 1,
+		key: 'LW',
+		labelKey: 'rink.leftWing',
+		x: 16,
+		y: 38,
+		line: 1,
+		pair: 0
+	},
+	{
+		position: 'forward',
+		slotIndex: 2,
+		key: 'RW',
+		labelKey: 'rink.rightWing',
+		x: 84,
+		y: 38,
+		line: 1,
+		pair: 0
+	},
+	{
+		position: 'forward',
+		slotIndex: 3,
+		key: 'C',
+		labelKey: 'rink.center',
+		x: 50,
+		y: 64,
+		line: 2,
+		pair: 0
+	},
+	{
+		position: 'forward',
+		slotIndex: 4,
+		key: 'LW',
+		labelKey: 'rink.leftWing',
+		x: 30,
+		y: 48,
+		line: 2,
+		pair: 0
+	},
+	{
+		position: 'forward',
+		slotIndex: 5,
+		key: 'RW',
+		labelKey: 'rink.rightWing',
+		x: 70,
+		y: 48,
+		line: 2,
+		pair: 0
+	},
+	{
+		position: 'forward',
+		slotIndex: 6,
+		key: 'LW',
+		labelKey: 'rink.leftWing',
+		x: 30,
+		y: 34,
+		line: 3,
+		pair: 0
+	},
+	{
+		position: 'forward',
+		slotIndex: 7,
+		key: 'RW',
+		labelKey: 'rink.rightWing',
+		x: 70,
+		y: 34,
+		line: 3,
+		pair: 0
+	},
+	{
+		position: 'defense',
+		slotIndex: 0,
+		key: 'LD',
+		labelKey: 'rink.leftDefense',
+		x: 30,
+		y: 62,
+		line: 0,
+		pair: 1
+	},
+	{
+		position: 'defense',
+		slotIndex: 1,
+		key: 'RD',
+		labelKey: 'rink.rightDefense',
+		x: 70,
+		y: 62,
+		line: 0,
+		pair: 1
+	},
+	{
+		position: 'defense',
+		slotIndex: 2,
+		key: 'LD',
+		labelKey: 'rink.leftDefense',
+		x: 30,
+		y: 76,
+		line: 0,
+		pair: 2
+	},
+	{
+		position: 'defense',
+		slotIndex: 3,
+		key: 'RD',
+		labelKey: 'rink.rightDefense',
+		x: 70,
+		y: 76,
+		line: 0,
+		pair: 2
+	},
+	{
+		position: 'defense',
+		slotIndex: 4,
+		key: 'LD',
+		labelKey: 'rink.leftDefense',
+		x: 12,
+		y: 68,
+		line: 0,
+		pair: 3
+	},
+	{
+		position: 'defense',
+		slotIndex: 5,
+		key: 'RD',
+		labelKey: 'rink.rightDefense',
+		x: 88,
+		y: 68,
+		line: 0,
+		pair: 3
+	},
+	{
+		position: 'defense',
+		slotIndex: 6,
+		key: 'LD',
+		labelKey: 'rink.leftDefense',
+		x: 12,
+		y: 80,
+		line: 0,
+		pair: 4
+	},
+	{
+		position: 'defense',
+		slotIndex: 7,
+		key: 'RD',
+		labelKey: 'rink.rightDefense',
+		x: 88,
+		y: 80,
+		line: 0,
+		pair: 4
+	},
+	{
+		position: 'goalie',
+		slotIndex: 0,
+		key: 'G',
+		labelKey: 'rink.goalie',
+		x: 50,
+		y: 92,
+		line: 0,
+		pair: 0
+	},
+] as const satisfies readonly RinkPlacement[];
 
 /**
- * Associe une place d'alignement à sa position sur la patinoire. Les surnuméraires
- * retournent null : ils vivent dans la liste des joueurs sans place, pas sur la
- * glace. Les six rôles restent une pure présentation; le schéma garde les trois
- * positions grossières.
+ * Associe une place d'alignement à sa position sur la patinoire. Les places
+ * sans rôle de glace (deuxième et troisième gardien) retournent null : elles
+ * vivent dans les places hors glace, pas sur le dessin.
  */
 export function rinkRole(
 	position: Position,
 	slotIndex: number
 ): RinkPlacement | null {
 	if (!Number.isInteger(slotIndex) || slotIndex < 0) return null;
+	return (
+		RINK_PLACEMENTS.find(
+			(placement) =>
+				placement.position === position && placement.slotIndex === slotIndex
+		) ?? null
+	);
+}
 
-	if (position === 'goalie') {
-		return slotIndex === 0 ? role('G') : null;
-	}
+type RinkMeasures = {
+	length: number;
+	goalLine: number;
+	blueLine: number;
+	circleRadius: number;
+};
 
-	if (position === 'defense') {
-		const key = DEFENSE_ROLES[slotIndex];
-		if (!key) return null;
-		return { ...role(key), pair: slotIndex < 2 ? 1 : 2 };
-	}
+export type RinkLineVariables = {
+	center: string;
+	blueLeft: string;
+	blueRight: string;
+	goalLeft: string;
+	goalRight: string;
+	circle: string;
+};
 
-	const key = FORWARD_ROLES[slotIndex];
-	if (!key) return null;
-	return { ...role(key), line: slotIndex < 3 ? 1 : 2 };
+function lengthPercent(meters: number, length: number): string {
+	return `${Number(((meters / length) * 100).toFixed(3))}%`;
+}
+
+/**
+ * Les lignes peintes viennent des mesures, jamais d'un pourcentage recopié :
+ * changer `RINK` change la glace rendue.
+ */
+export function rinkLineVariables(rink: RinkMeasures = RINK): RinkLineVariables {
+	return {
+		center: lengthPercent(rink.length / 2, rink.length),
+		blueLeft: lengthPercent(rink.blueLine, rink.length),
+		blueRight: lengthPercent(rink.length - rink.blueLine, rink.length),
+		goalLeft: lengthPercent(rink.goalLine, rink.length),
+		goalRight: lengthPercent(rink.length - rink.goalLine, rink.length),
+		circle: lengthPercent(rink.circleRadius * 2, rink.length)
+	};
+}
+
+/** Le style inline qui alimente les variables CSS de la glace. */
+export function rinkGeometryStyle(rink: RinkMeasures = RINK): string {
+	const lines = rinkLineVariables(rink);
+	return [
+		`--rink-center: ${lines.center}`,
+		`--rink-blue-left: ${lines.blueLeft}`,
+		`--rink-blue-right: ${lines.blueRight}`,
+		`--rink-goal-left: ${lines.goalLeft}`,
+		`--rink-goal-right: ${lines.goalRight}`,
+		`--rink-circle: ${lines.circle}`
+	].join('; ');
 }

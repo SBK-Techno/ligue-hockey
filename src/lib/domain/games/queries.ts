@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
+import { slotKey } from '#config/slot.ts';
 import { players } from '#lib/domain/players/schema.ts';
 import { deleteGameRatingsForPlayers } from '#lib/domain/ratings/queries.ts';
 import { gameAvailability, gameSlots, games } from './schema.ts';
@@ -176,7 +177,7 @@ export function saveAssignments(
 				.run();
 			if (writtenSlot.changes !== 1) {
 				throw new Error(
-					`Unknown alignment slot: ${assignment.team}:${assignment.position}:${assignment.slotIndex}`
+					`Unknown alignment slot: ${slotKey(assignment)}`
 				);
 			}
 		}

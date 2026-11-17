@@ -527,6 +527,7 @@ export const fr = {
   'rink.attackRight': 'Attaque vers la droite',
   'rink.attackLeft': 'Attaque vers la gauche',
   'rink.emptySlot': 'Place libre',
+  'rink.extraSlot': 'Place hors glace {index}',
   'rink.bench': 'Sur le banc',
   'rink.choosePlace': 'Choisis une place libre sur la glace.',
   'rink.chooseOther': 'Choisis une autre place pour l’échanger.',

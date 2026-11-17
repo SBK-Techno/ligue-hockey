@@ -35,6 +35,25 @@ export function isPosition(value: string): value is Position {
   return POSITION_KEYS.includes(value as Position);
 }
 
+/**
+ * L'ordre des postes pour l'affichage et les comparaisons : attaque, défense,
+ * gardien. C'est le seul propriétaire de ce rang.
+ */
+export function positionRank(position: Position): number {
+  return POSITION_KEYS.indexOf(position);
+}
+
+/** Le préfixe commun des tris de bassin : poste, puis régulier ou remplaçant. */
+export function comparePositionThenKind(
+  a: { position: Position; kind: string },
+  b: { position: Position; kind: string }
+): number {
+  return (
+    positionRank(a.position) - positionRank(b.position) ||
+    a.kind.localeCompare(b.kind)
+  );
+}
+
 export function positionDefinition(position: Position) {
   const definition = POSITIONS.find((entry) => entry.key === position);
   if (!definition) {

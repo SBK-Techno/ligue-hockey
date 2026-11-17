@@ -1,5 +1,6 @@
 import type { Position } from '#config/positions.ts';
 import { buildSlotDefinitions, rosterTemplateFromSettings } from '#config/roster.ts';
+import { slotRowId } from '#config/slot.ts';
 import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
@@ -221,7 +222,11 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 	const now = clock.nowMs();
 	const gameId = newId('game');
 	const slots = buildSlotDefinitions(rosterTemplate).map((slot) => ({
-		id: `${gameId}:${slot.team}:${slot.position}:${slot.index}`,
+		id: slotRowId(gameId, {
+			team: slot.team,
+			position: slot.position,
+			slotIndex: slot.index
+		}),
 		gameId,
 		team: slot.team,
 		position: slot.position,

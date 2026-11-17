@@ -1,32 +1,26 @@
 <script lang="ts">
-	import { rinkRole, type RinkRoleDefinition } from '#config/rink.ts';
-	import { TEAMS, teamDefinition, type Team } from '#config/teams.ts';
+	import { rinkGeometryStyle } from '#config/rink.ts';
+	import { TEAMS, teamDefinition } from '#config/teams.ts';
 	import { branding } from '#lib/generated/branding.ts';
 	import type { GameBenchView, GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import {
 		assignmentsForSave,
+		boardPlacements,
 		initialAssignments,
 		placeFromBench,
 		removePlayer,
-	slotKey,
-	swapPlayers,
-	type LineupAssignmentMap
-} from './lineup-board.ts';
+		slotAriaLabel,
+		swapPlayers,
+		type LineupAssignmentMap,
+		type LineupPlacement
+	} from './lineup-board.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	type BoardPlayer = {
 		playerId: string;
 		fullName: string;
 		jerseyNumber: number | null;
-	};
-
-	type Placement = {
-		key: string;
-		team: Team;
-		position: GameSlotView['position'];
-		slotIndex: number;
-		role: RinkRoleDefinition | null;
 	};
 
 	let {
@@ -41,15 +35,7 @@
 		expectedGeneratedAt: number | null;
 	} = $props();
 
-	const placements = $derived.by<Placement[]>(() =>
-		slots.map((slot) => ({
-			key: slotKey(slot),
-			team: slot.team,
-			position: slot.position,
-			slotIndex: slot.slotIndex,
-			role: rinkRole(slot.position, slot.slotIndex)
-		}))
-	);
+	const placements = $derived.by<LineupPlacement[]>(() => boardPlacements(slots));
 
 	// La carte est remontée quand la génération change; l'état initial est stable.
 	// svelte-ignore state_referenced_locally
@@ -88,6 +74,7 @@
 	);
 
 	const assignmentsJson = $derived(JSON.stringify(assignmentsForSave(slots, assignments)));
+	const geometryStyle = rinkGeometryStyle();
 
 	function playerAt(key: string): BoardPlayer | null {
 		const playerId = assignments[key];
@@ -152,7 +139,10 @@
 						{team.key === 'black' ? t('rink.attackLeft') : t('rink.attackRight')}
 					</span>
 				</div>
-				<div class="rink" style="--rink-texture: url({branding.textures.ice})">
+				<div
+					class="rink"
+					style="--rink-texture: url({branding.textures.ice}); {geometryStyle}"
+				>
 					{#each placements.filter((placement) => placement.team === team.key) as placement (placement.key)}
 						{#if placement.role}
 							{@const player = playerAt(placement.key)}
@@ -167,9 +157,7 @@
 								disabled={!canEdit && player === null}
 								data-player-peek={!canEdit && player ? 'click' : undefined}
 								onclick={() => selectSlot(placement.key)}
-								aria-label={player
-									? `${t(teamDefinition(team.key).labelKey)}, ${t(placement.role.labelKey)} · ${player.jerseyNumber ?? ''} ${player.fullName}`
-									: `${t(teamDefinition(team.key).labelKey)}, ${t(placement.role.labelKey)} · ${t('rink.emptySlot')}`}
+								aria-label={slotAriaLabel(team.key, placement, player)}
 								aria-pressed={canEdit ? selected === placement.key : undefined}
 							>
 								{#if player}
@@ -187,11 +175,29 @@
 					<ul role="list" class="mt-2 flex flex-wrap gap-1.5">
 						{#each placements.filter((placement) => placement.team === team.key && !placement.role) as placement (placement.key)}
 							{@const player = playerAt(placement.key)}
-							{#if player}
-								<li class="badge">
-									{player.jerseyNumber ?? ''} {player.fullName}
-								</li>
-							{/if}
+							<li>
+								<button
+									type="button"
+									class="bench-chip"
+									data-player-id={player?.playerId}
+									data-filled={player !== null}
+									data-selected={selected === placement.key}
+									disabled={!canEdit && player === null}
+									data-player-peek={!canEdit && player ? 'click' : undefined}
+									onclick={() => selectSlot(placement.key)}
+									aria-label={slotAriaLabel(team.key, placement, player)}
+									aria-pressed={canEdit ? selected === placement.key : undefined}
+								>
+									{#if player}
+										<span class="font-mono text-caption text-muted"
+											>{player.jerseyNumber ?? '?'}</span
+										>
+										{player.fullName}
+									{:else}
+										<span class="text-muted">+ {t('rink.emptySlot')}</span>
+									{/if}
+								</button>
+							</li>
 						{/each}
 					</ul>
 				{/if}

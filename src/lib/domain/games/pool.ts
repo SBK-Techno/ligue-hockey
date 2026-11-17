@@ -1,4 +1,4 @@
-import { POSITIONS, type Position } from '#config/positions.ts';
+import { comparePositionThenKind, positionRank, type Position } from '#config/positions.ts';
 import { rosterTemplateSchema, type RosterTemplate } from '#config/roster.ts';
 import type { SettingsValues } from '#config/settings-registry.ts';
 import type { Team } from '#config/teams.ts';
@@ -60,10 +60,6 @@ export type GenerationPlan = {
 	kindOf: Map<string, 'regular' | 'sub'>;
 };
 
-const POSITION_INDEX = new Map<Position, number>(
-	POSITIONS.map((position, index) => [position.key, index])
-);
-
 export function templateFromRow(row: GameRow): RosterTemplate {
 	try {
 		return rosterTemplateSchema.parse(JSON.parse(row.rosterTemplateJson));
@@ -93,10 +89,7 @@ function uniqueBench(entries: readonly BenchPlayer[]): BenchPlayer[] {
 	}
 	return unique.sort(
 		(a, b) =>
-			(POSITION_INDEX.get(a.position) ?? 0) -
-				(POSITION_INDEX.get(b.position) ?? 0) ||
-			a.kind.localeCompare(b.kind) ||
-			a.playerId.localeCompare(b.playerId)
+			comparePositionThenKind(a, b) || a.playerId.localeCompare(b.playerId)
 	);
 }
 
@@ -148,8 +141,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		entries.sort(
 			(a, b) =>
 				a.filledAt - b.filledAt ||
-				(POSITION_INDEX.get(a.position) ?? 0) -
-					(POSITION_INDEX.get(b.position) ?? 0)
+				positionRank(a.position) - positionRank(b.position)
 		);
 	}
 
@@ -217,9 +209,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 
 	members.sort(
 		(a, b) =>
-			(POSITION_INDEX.get(a.position) ?? 0) -
-				(POSITION_INDEX.get(b.position) ?? 0) ||
-			a.kind.localeCompare(b.kind) ||
+			comparePositionThenKind(a, b) ||
 			a.order - b.order ||
 			a.playerId.localeCompare(b.playerId)
 	);

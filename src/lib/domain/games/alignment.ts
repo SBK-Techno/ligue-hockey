@@ -1,5 +1,6 @@
 import type { Position } from '#config/positions.ts';
 import { gameWarningsInOrder, type GameWarning } from '#config/game-warnings.ts';
+import { candidateKey, slotKey } from '#config/slot.ts';
 import { TEAMS, type Team } from '#config/teams.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
@@ -195,27 +196,46 @@ function placementsOf(assignments: readonly SlotAssignment[]): Placement[] {
 	}));
 }
 
-function candidateKey(assignments: readonly SlotAssignment[]): string {
-	return [...assignments]
-		.sort(
-			(a, b) =>
-				a.team.localeCompare(b.team) ||
-				a.position.localeCompare(b.position) ||
-				a.slotIndex - b.slotIndex
-		)
-		.map(
-			(assignment) =>
-				`${assignment.team}:${assignment.position}:${assignment.slotIndex}:${assignment.playerId}`
-		)
-		.join('|');
-}
-
-function slotKey(slot: {
+export type KnownSlot = {
 	team: Team;
 	position: Position;
 	slotIndex: number;
-}): string {
-	return `${slot.team}:${slot.position}:${slot.slotIndex}`;
+};
+
+export type AssignmentToValidate = KnownSlot & { playerId: string | null };
+
+/**
+ * La seule validation d'un alignement, pour l'enregistrement manuel comme
+ * pour les gestes internes : place inconnue, place écrite deux fois, joueur
+ * deux fois. Les deux chemins refusent donc avec les mêmes codes; `names`
+ * alimente le message de doublon.
+ */
+export function validateAssignments(
+	knownSlots: readonly KnownSlot[],
+	assignments: readonly AssignmentToValidate[],
+	names: ReadonlyMap<string, string>
+): Set<string> {
+	const known = new Set(knownSlots.map((slot) => slotKey(slot)));
+	const written = new Set<string>();
+	const players = new Set<string>();
+
+	for (const assignment of assignments) {
+		const key = slotKey(assignment);
+		if (!known.has(key) || written.has(key)) {
+			throw new AppError('VALIDATION', { key: 'games.lineupSlotUnknown' });
+		}
+		written.add(key);
+		if (assignment.playerId === null) continue;
+		if (players.has(assignment.playerId)) {
+			throw new AppError('VALIDATION', {
+				key: 'games.lineupPlayerDuplicate',
+				params: { name: names.get(assignment.playerId) ?? assignment.playerId }
+			});
+		}
+		players.add(assignment.playerId);
+	}
+
+	return written;
 }
 
 function validatedOpenSlots(
@@ -223,31 +243,13 @@ function validatedOpenSlots(
 	assignments: readonly SlotAssignment[]
 ): number {
 	const slots = listSlotAssignments(gameId);
-	const known = new Set(
-		slots.map((slot) =>
-			slotKey({ team: slot.team, position: slot.position, slotIndex: slot.slotIndex })
+	const names = new Map(
+		playerCandidatesByIds(assignments.map((assignment) => assignment.playerId)).map(
+			(player) => [player.userId, player.fullName]
 		)
 	);
-	const written = new Set<string>();
-	const players = new Set<string>();
-
-	for (const assignment of assignments) {
-		const key = slotKey(assignment);
-		if (!known.has(key) || written.has(key)) {
-			throw new AppError('INTERNAL', {
-				message: `Invalid alignment slot: ${key}`
-			});
-		}
-		if (players.has(assignment.playerId)) {
-			throw new AppError('INTERNAL', {
-				message: `Duplicate player in alignment: ${assignment.playerId}`
-			});
-		}
-		written.add(key);
-		players.add(assignment.playerId);
-	}
-
-	return known.size - written.size;
+	const written = validateAssignments(slots, assignments, names);
+	return slots.length - written.size;
 }
 
 function limitExceeded(view: BalanceView, settings: SettingsValues): boolean {

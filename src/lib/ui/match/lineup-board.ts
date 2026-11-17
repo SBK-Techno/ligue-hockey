@@ -1,4 +1,45 @@
+import { positionDefinition, type Position } from '#config/positions.ts';
+import { rinkRole, type RinkPlacement } from '#config/rink.ts';
+import { slotKey } from '#config/slot.ts';
+import { teamDefinition, type Team } from '#config/teams.ts';
 import type { GameSlotView } from '#lib/domain/games/types.ts';
+import { t } from '#lib/shared/i18n/index.ts';
+
+type NamedPlacement = {
+	position: Position;
+	slotIndex: number;
+	role: Pick<RinkPlacement, 'labelKey' | 'line' | 'pair'> | null;
+};
+
+/**
+ * Le nom accessible d'une place : équipe, rôle, puis trio ou paire. Les deux
+ * centres et les deux ailes ne partagent donc jamais un nom; une place hors
+ * glace se distingue par son indice. Aucun écran ne recompose ce nom.
+ */
+export function slotAriaLabel(
+	team: Team,
+	placement: NamedPlacement,
+	player: { jerseyNumber: number | null; fullName: string } | null
+): string {
+	const parts = [t(teamDefinition(team).labelKey)];
+	if (placement.role) {
+		parts.push(t(placement.role.labelKey));
+		if (placement.position === 'forward') {
+			parts.push(t('rink.line', { line: placement.role.line }));
+		} else if (placement.position === 'defense') {
+			parts.push(t('rink.pair', { pair: placement.role.pair }));
+		}
+	} else {
+		parts.push(t(positionDefinition(placement.position).labelKey));
+		parts.push(t('rink.extraSlot', { index: placement.slotIndex + 1 }));
+	}
+	parts.push(
+		player
+			? `${player.jerseyNumber ?? ''} ${player.fullName}`
+			: t('rink.emptySlot')
+	);
+	return parts.join(', ');
+}
 
 /**
  * La logique de la glace est pure : elle décide où va chaque joueur sans
@@ -12,15 +53,8 @@ export type LineupPlacement = {
 	position: GameSlotView['position'];
 	slotIndex: number;
 	playerId: string | null;
+	role: RinkPlacement | null;
 };
-
-export function slotKey(slot: {
-	team: GameSlotView['team'];
-	position: GameSlotView['position'];
-	slotIndex: number;
-}): string {
-	return `${slot.team}:${slot.position}:${slot.slotIndex}`;
-}
 
 export function initialAssignments(
 	slots: readonly GameSlotView[]
@@ -41,8 +75,16 @@ export function placementsOf(
 		team: slot.team,
 		position: slot.position,
 		slotIndex: slot.slotIndex,
-		playerId: map[slotKey(slot)] ?? null
+		playerId: map[slotKey(slot)] ?? null,
+		role: rinkRole(slot.position, slot.slotIndex)
 	}));
+}
+
+/** Les places de la carte, avec leur rôle de glace ou hors glace. */
+export function boardPlacements(
+	slots: readonly GameSlotView[]
+): LineupPlacement[] {
+	return placementsOf(slots, initialAssignments(slots));
 }
 
 /** Échange deux places, même quand l'une des deux est vide. */

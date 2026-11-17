@@ -741,11 +741,11 @@
 		border-radius: var(--radius-card);
 		background-color: var(--color-ice-soft);
 		background-image:
-			linear-gradient(90deg, transparent 49.7%, var(--color-accent) 49.7% 50.3%, transparent 50.3%),
-			linear-gradient(90deg, transparent 24.7%, var(--color-ice-deep) 24.7% 25.3%, transparent 25.3%),
-			linear-gradient(90deg, transparent 74.7%, var(--color-ice-deep) 74.7% 75.3%, transparent 75.3%),
-			linear-gradient(90deg, transparent 6.4%, var(--color-accent) 6.4% 7%, transparent 7%),
-			linear-gradient(90deg, transparent 93%, var(--color-accent) 93% 93.6%, transparent 93.6%),
+			linear-gradient(90deg, transparent calc(var(--rink-center) - 0.3%), var(--color-accent) calc(var(--rink-center) - 0.3%) calc(var(--rink-center) + 0.3%), transparent calc(var(--rink-center) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-blue-left) - 0.3%), var(--color-ice-deep) calc(var(--rink-blue-left) - 0.3%) calc(var(--rink-blue-left) + 0.3%), transparent calc(var(--rink-blue-left) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-blue-right) - 0.3%), var(--color-ice-deep) calc(var(--rink-blue-right) - 0.3%) calc(var(--rink-blue-right) + 0.3%), transparent calc(var(--rink-blue-right) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-goal-left) - 0.3%), var(--color-accent) calc(var(--rink-goal-left) - 0.3%) calc(var(--rink-goal-left) + 0.3%), transparent calc(var(--rink-goal-left) + 0.3%)),
+			linear-gradient(90deg, transparent calc(var(--rink-goal-right) - 0.3%), var(--color-accent) calc(var(--rink-goal-right) - 0.3%) calc(var(--rink-goal-right) + 0.3%), transparent calc(var(--rink-goal-right) + 0.3%)),
 			var(--rink-texture);
 		background-size: cover;
 		background-position: center;
@@ -755,7 +755,7 @@
 		position: absolute;
 		top: 50%;
 		left: 50%;
-		width: 22%;
+		width: var(--rink-circle);
 		aspect-ratio: 1;
 		transform: translate(-50%, -50%);
 		border: 2px solid color-mix(in srgb, var(--color-ice-deep) 55%, transparent);

@@ -52,7 +52,9 @@ const { saveGameAssessment } = await import('#lib/domain/ratings/service.ts');
 const { findGame } = await import('./queries.ts');
 const { getGame, regenerateAsAdmin } = await import('./service.ts');
 const { markAvailability } = await import('#lib/domain/availability/service.ts');
-const { applyBestSwap, fillOpenSlots, lineupIntelligence } = await import('./alignment.ts');
+const { applyBestSwap, fillOpenSlots, lineupIntelligence, validateAssignments } = await import(
+	'./alignment.ts'
+);
 
 const admin: Actor = {
 	kind: 'user', active: true,
@@ -685,5 +687,70 @@ describe('lineup rating purge', () => {
 		expect(kept).toHaveLength(4);
 		expect(kept.every((row) => row.value === 5)).toBe(true);
 		expect(gameRatingRows(gameId, 'c').every((row) => row.value === 2)).toBe(true);
+	});
+});
+
+describe('validation partagée des alignements', () => {
+	const known = [
+		{ team: 'white' as const, position: 'forward' as const, slotIndex: 0 },
+		{ team: 'white' as const, position: 'forward' as const, slotIndex: 1 }
+	];
+	const names = new Map([['a', 'Alice'], ['b', 'Bob']]);
+
+	it('refuse une place inconnue et une place écrite deux fois', () => {
+		expect(
+			captureError(() =>
+				validateAssignments(
+					known,
+					[{ team: 'white', position: 'forward', slotIndex: 2, playerId: 'a' }],
+					names
+				)
+			)
+		).toMatchObject({ code: 'VALIDATION', key: 'games.lineupSlotUnknown' });
+
+		expect(
+			captureError(() =>
+				validateAssignments(
+					known,
+					[
+						{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
+						{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'b' }
+					],
+					names
+				)
+			)
+		).toMatchObject({ code: 'VALIDATION', key: 'games.lineupSlotUnknown' });
+	});
+
+	it('refuse un joueur deux fois avec son nom, comme le chemin manuel', () => {
+		expect(
+			captureError(() =>
+				validateAssignments(
+					known,
+					[
+						{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
+						{ team: 'white', position: 'forward', slotIndex: 1, playerId: 'a' }
+					],
+					names
+				)
+			)
+		).toMatchObject({
+			code: 'VALIDATION',
+			key: 'games.lineupPlayerDuplicate',
+			params: { name: 'Alice' }
+		});
+	});
+
+	it('retourne les places écrites quand tout est valide', () => {
+		expect(
+			validateAssignments(
+				known,
+				[
+					{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
+					{ team: 'white', position: 'forward', slotIndex: 1, playerId: 'b' }
+				],
+				names
+			)
+		).toEqual(new Set(['white:forward:0', 'white:forward:1']));
 	});
 });

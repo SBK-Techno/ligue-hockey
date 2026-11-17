@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { rinkRole } from '#config/rink.ts';
+import { TEAMS } from '#config/teams.ts';
 import type { GameSlotView } from '#lib/domain/games/types.ts';
+import { t } from '#lib/shared/i18n/index.ts';
 import {
 	assignmentsForSave,
+	boardPlacements,
 	initialAssignments,
 	placeFromBench,
 	removePlayer,
+	slotAriaLabel,
 	swapPlayers
 } from './lineup-board.ts';
 
@@ -99,5 +104,46 @@ describe('carte d’alignement', () => {
 			slotIndex: 0,
 			playerId: 'd'
 		});
+	});
+
+	it('projette les places hors glace, même vides', () => {
+		const placements = boardPlacements([
+			...slots,
+			slot('black', 'goalie', 1, null)
+		]);
+
+		expect(placements.at(-1)).toMatchObject({ role: null, playerId: null });
+		expect(
+			slotAriaLabel('black', placements.at(-1)!, null)
+		).toContain(t('rink.extraSlot', { index: 2 }));
+	});
+
+	it('donne un nom accessible distinct à chaque place de la glace', () => {
+		const names = new Set<string>();
+		for (const team of TEAMS) {
+			for (const position of ['forward', 'defense'] as const) {
+				for (let slotIndex = 0; slotIndex < 8; slotIndex += 1) {
+					names.add(
+						slotAriaLabel(
+							team.key,
+							{ position, slotIndex, role: rinkRole(position, slotIndex) },
+							null
+						)
+					);
+				}
+			}
+			names.add(
+				slotAriaLabel(
+					team.key,
+					{ position: 'goalie', slotIndex: 0, role: rinkRole('goalie', 0) },
+					null
+				)
+			);
+		}
+
+		expect(names.size).toBe(TEAMS.length * 17);
+		const labels = [...names];
+		expect(labels.some((label) => label.includes(t('rink.line', { line: 2 })))).toBe(true);
+		expect(labels.some((label) => label.includes(t('rink.pair', { pair: 2 })))).toBe(true);
 	});
 });

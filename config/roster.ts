@@ -52,12 +52,6 @@ export function buildSlotDefinitions(
 	return slots;
 }
 
-export function slotId(
-	gameId: string,
-	slot: Pick<SlotDefinition, 'team' | 'position' | 'index'>
-): string {
-	return `${gameId}:${slot.team}:${slot.position}:${slot.index}`;
-}
 
 export function totalSlots(template: RosterTemplate): number {
 	const counts = slotCounts(template);

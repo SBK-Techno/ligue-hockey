@@ -26,7 +26,8 @@ import {
 	overallRating
 } from '#config/rating-attributes.ts';
 import { AVATAR_IDS } from '#config/avatars.ts';
-import { buildSlotDefinitions, slotId, type RosterTemplate } from '#config/roster.ts';
+import { buildSlotDefinitions, type RosterTemplate } from '#config/roster.ts';
+import { slotKey, slotRowId } from '#config/slot.ts';
 import {
 	NOTIFICATION_EVENTS,
 	type NotificationEventKey
@@ -680,7 +681,7 @@ for (const game of planned) {
 
 	const assignments = new Map(
 		result.assignments.map((assignment) => [
-			`${assignment.team}:${assignment.position}:${assignment.slotIndex}`,
+			slotKey(assignment),
 			assignment
 		])
 	);
@@ -688,9 +689,14 @@ for (const game of planned) {
 	db.insert(gameSlots)
 		.values(
 			slotDefinitions.map((slot) => {
-				const assignment = assignments.get(`${slot.team}:${slot.position}:${slot.index}`);
+				const slotRef = {
+					team: slot.team,
+					position: slot.position,
+					slotIndex: slot.index
+				};
+				const assignment = assignments.get(slotKey(slotRef));
 				return {
-					id: slotId(game.id, slot),
+					id: slotRowId(game.id, slotRef),
 					gameId: game.id,
 					team: slot.team,
 					position: slot.position,
