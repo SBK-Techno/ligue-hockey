@@ -1,16 +1,5 @@
-import {
-	AVATAR_IDS,
-	DEFAULT_AVATAR_ID,
-	type AvatarId
-} from '#config/avatars.ts';
-import {
-	IDENTITY_IDS,
-	identityAllowedForPosition,
-	identityById,
-	isIdentityId,
-	type IdentityId
-} from '#config/identities.ts';
-import type { Position } from '#config/positions.ts';
+import type { IdentityId } from '#config/identities.ts';
+import { branding } from '#lib/generated/branding.ts';
 
 /**
  * Player visual identity.
@@ -19,7 +8,20 @@ import type { Position } from '#config/positions.ts';
  * legend. A profile without one, or whose id left the catalogue, receives a
  * stable league avatar derived from its account id: the same person keeps the
  * same appearance across sessions without a database write.
+ *
+ * The lookups read the compact index generated from the catalogue, so an
+ * avatar surface never imports the names, numbers and eras of 58 identities.
+ * The catalogue remains the only source of that index.
  */
+
+export type { IdentityId };
+
+const identityIds = branding.identities.ids as readonly IdentityId[];
+const identityColors = branding.identities.colors;
+const indexById = new Map<string, number>(
+	identityIds.map((identityId, index) => [identityId, index])
+);
+const leagueIds = identityIds.slice(0, branding.identities.leagueFaces);
 
 /** FNV-1a 32 bits: short, deterministic and dependency-free. */
 function stableHash(value: string): number {
@@ -31,38 +33,22 @@ function stableHash(value: string): number {
 	return hash >>> 0;
 }
 
+export function isIdentityId(
+	value: string | null | undefined
+): value is IdentityId {
+	return typeof value === 'string' && indexById.has(value);
+}
+
 export function resolveAvatarId(
 	userId: string,
 	avatarId?: string | null
 ): IdentityId {
 	if (isIdentityId(avatarId)) return avatarId;
-	return AVATAR_IDS[stableHash(userId) % AVATAR_IDS.length] ?? DEFAULT_AVATAR_ID;
+	return leagueIds[stableHash(userId) % leagueIds.length] ?? identityIds[0]!;
 }
 
 /** The CSS property name, never a raw colour. */
 export function avatarColor(avatarId: IdentityId): string {
-	return `--color-player-${identityById[avatarId].color}`;
+	const index = indexById.get(avatarId);
+	return `--color-player-${identityColors[index ?? 0]}`;
 }
-
-/**
- * First free identity in catalogue order. League faces come before legends, so
- * automatic assignment only reaches a tribute identity once every face is
- * taken. With a position, legends that played another position are skipped, so
- * a forward never receives a goalie. The caller decides what to do with a null
- * result: an exhausted catalogue is never stored as a null identity.
- */
-export function firstFreeAvatarId(
-	used: Iterable<string>,
-	position?: Position
-): IdentityId | null {
-	const taken = new Set(used);
-	return (
-		IDENTITY_IDS.find(
-			(avatarId) =>
-				!taken.has(avatarId) &&
-				(position === undefined || identityAllowedForPosition(avatarId, position))
-		) ?? null
-	);
-}
-
-export type { AvatarId, IdentityId };

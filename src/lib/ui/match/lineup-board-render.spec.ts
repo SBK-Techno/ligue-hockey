@@ -4,15 +4,21 @@ import { render } from 'svelte/server';
 import { t } from '#lib/shared/i18n/index.ts';
 import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
+import { identitySheetStyle } from '#lib/ui/identity-display.ts';
 import LineupBoard from './LineupBoard.svelte';
 
-function player(id: string): GamePlayer {
+const knownAvatars: Record<string, string> = {
+	'white-forward-0': 'legende-lafleur',
+	'black-forward-0': 'capitaine-navy'
+};
+
+function player(id: string, avatarId: string | null = null): GamePlayer {
 	return {
 		playerId: id,
 		fullName: `${id} Test`,
 		position: 'forward',
 		jerseyNumber: Number(id.replace(/\D/g, '')) || 1,
-		avatarId: null,
+		avatarId,
 		kind: 'regular'
 	};
 }
@@ -23,11 +29,12 @@ function slot(
 	slotIndex: number,
 	filled: boolean
 ): GameSlotView {
+	const playerId = `${team}-${position}-${slotIndex}`;
 	return {
 		team,
 		position,
 		slotIndex,
-		player: filled ? player(`${team}-${position}-${slotIndex}`) : null
+		player: filled ? player(playerId, knownAvatars[playerId] ?? null) : null
 	};
 }
 
@@ -130,6 +137,43 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).toContain('data-player-id="bench-1"');
 		expect(body).toContain('aria-pressed="false"');
 		expect(body).not.toContain('aria-haspopup="dialog"');
+	});
+
+	it('affiche un portrait par joueur et le guide des trois gestes', () => {
+		const { body } = render(LineupBoard, {
+			props: { slots: fullSlots, bench, canEdit: true, expectedGeneratedAt: 123 }
+		});
+
+		expect((body.match(/class="identity-portrait"/g) ?? []).length).toBe(37);
+		expect(body).toMatch(/background-image: url\(\/identities\/identities-[0-9a-f]{12}\.webp\)/);
+		for (const avatarId of Object.values(knownAvatars)) {
+			expect(body, avatarId).toContain(identitySheetStyle(avatarId));
+		}
+		expect(identitySheetStyle(knownAvatars['white-forward-0']!)).not.toBe(
+			identitySheetStyle(knownAvatars['black-forward-0']!)
+		);
+		expect(body).toContain(t('rink.stepPick'));
+		expect(body).toContain(t('rink.stepPlace'));
+		expect(body).toContain(t('rink.stepSave'));
+		expect(body).toContain(t('rink.stepActive'));
+		expect(body).toContain(t('rink.stepTodo'));
+		expect((body.match(/aria-current="step"/g) ?? []).length).toBe(1);
+		expect(body).toContain(t('rink.undo'));
+		expect(body).toContain('data-bench-drop="true"');
+
+		const keys = [...body.matchAll(/data-lineup-key="([^"]*)"/g)].map((match) => match[1]);
+		expect(keys).toHaveLength(38);
+		expect(new Set(keys).size).toBe(keys.length);
+	});
+
+	it('masque le guide et la cible du banc en lecture seule', () => {
+		const { body } = render(LineupBoard, {
+			props: { slots: fullSlots, bench, canEdit: false, expectedGeneratedAt: 123 }
+		});
+
+		expect(body).not.toContain(t('rink.stepPick'));
+		expect(body).not.toContain('data-bench-drop');
+		expect(body).not.toContain(t('rink.undo'));
 	});
 
 	it('annonce une fiche de joueur sur le banc en lecture seule, pas une sélection', () => {

@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
-import { IDENTITIES } from '#config/identities.ts';
+import { AVATAR_IDS } from '#config/avatars.ts';
+import { IDENTITIES, IDENTITY_IDS } from '#config/identities.ts';
+import { IDENTITY_SHEET } from '#config/identity-sheet.ts';
 import { fr } from '#config/i18n/fr.ts';
 import { MATERIALS } from '#config/materials.ts';
 import { PERFORMANCE_BUDGETS } from '#config/performance.ts';
@@ -12,7 +14,6 @@ import {
 	type Branding,
 	type TextureKey
 } from '#config/branding-schema.ts';
-import { avatarSymbol } from '../../src/lib/ui/avatar-art.ts';
 import { retainedForCache } from './asset-retention.ts';
 import { assertDeclaredSurfaces } from './generated-surfaces.ts';
 import { emailPaletteFrom, parsePalette, type EmailPalette, type Palette } from './palette.ts';
@@ -289,9 +290,47 @@ export type AuthImages = {
 	height: number;
 };
 
-/** Une planche unique : chaque identité est un symbole, jamais un SVG complet. */
-export function buildIdentitySprite(): string {
-	return `<svg xmlns="http://www.w3.org/2000/svg">${IDENTITIES.map(avatarSymbol).join('')}</svg>`;
+/**
+ * La planche unique des portraits : une tuile carrée par identité, dans
+ * l'ordre du catalogue. La source peinte est l'original; la planche livrée est
+ * une seule image WebP nommée par son contenu. Un portrait manquant arrête la
+ * génération au lieu de laisser un trou silencieux.
+ */
+export async function buildIdentitySheet(root: string): Promise<Buffer> {
+	const { columns, tileSize, webpQuality, sourceDir, sourceExtension } = IDENTITY_SHEET;
+	const rows = Math.ceil(IDENTITIES.length / columns);
+	const composites: Array<{ input: Buffer; left: number; top: number }> = [];
+
+	for (const [index, identity] of IDENTITIES.entries()) {
+		const sourcePath = path.join(root, sourceDir, `${identity.id}${sourceExtension}`);
+		let source: Buffer;
+		try {
+			source = await readFile(sourcePath);
+		} catch {
+			throw new Error(`Portrait manquant pour ${identity.id}: ${sourcePath}`);
+		}
+		const tile = await sharp(source)
+			.resize(tileSize, tileSize, { fit: 'cover', position: 'centre' })
+			.removeAlpha()
+			.toBuffer();
+		composites.push({
+			input: tile,
+			left: (index % columns) * tileSize,
+			top: Math.floor(index / columns) * tileSize
+		});
+	}
+
+	return sharp({
+		create: {
+			width: columns * tileSize,
+			height: rows * tileSize,
+			channels: 4,
+			background: { r: 0, g: 0, b: 0, alpha: 0 }
+		}
+	})
+		.composite(composites)
+		.webp({ quality: webpQuality, effort: 6 })
+		.toBuffer();
 }
 
 /** Le hash CSP de la tranche critique, calculé sur le texte exact injecté. */
@@ -314,7 +353,7 @@ function buildBrandingModule(
 	icons: Record<IconRole, string>,
 	palette: EmailPalette,
 	auth: AuthImages,
-	identitySprite: string,
+	identitySheet: string,
 	textures: Record<TextureKey, string>,
 	socialImage: string
 ) {
@@ -334,7 +373,18 @@ function buildBrandingModule(
 		emailPalette: palette,
 		socialImage,
 		auth,
-		identitySprite,
+		identitySheet,
+		/**
+		 * L'index compact des identités : les identifiants, la couleur de
+		 * joueur de chacun et le nombre de visages de la ligue. Le catalogue
+		 * complet reste la source; cet index évite de livrer les noms, les
+		 * époques et les descriptions à chaque page.
+		 */
+		identities: {
+			ids: IDENTITY_IDS,
+			colors: IDENTITIES.map((identity) => identity.color),
+			leagueFaces: AVATAR_IDS.length
+		},
 		manifestPath: MANIFEST_PATH,
 		offlinePath: OFFLINE_PATH,
 		/**
@@ -352,7 +402,7 @@ function buildBrandingModule(
 				GENERATED_ASSETS_PATH,
 				socialImage,
 				...auth.srcset.split(', ').map((entry) => entry.split(' ')[0]),
-				identitySprite,
+				identitySheet,
 				...Object.values(icons),
 				...Object.values(textures)
 			])
@@ -376,41 +426,29 @@ const AUTH_WIDTHS = [640, 960, 1200] as const;
 const AUTH_RATIO = 2 / 3;
 
 /**
- * Une tuile sans couture : la source est répétée en miroir, puis le centre est
- * découpé. Les bords gauche/droit et haut/bas se raccordent exactement.
+ * Une matière couvre sa surface d'un seul tenant : la source est cadrée à la
+ * taille native de la surface, puis compressée. Aucune répétition, aucune
+ * couture, aucun motif en miroir.
  */
 async function renderTexture(
 	root: string,
 	sourcePath: string,
-	gamma: number
+	material: (typeof MATERIALS)[keyof typeof MATERIALS]
 ): Promise<Buffer> {
-	const size = MATERIALS.tileSize;
+	const { width, height, quality, gamma, gain, budget } = material;
 	const source = await readFile(path.join(root, sourcePath));
-	const base = await sharp(source)
-		.resize(size, size, { fit: 'cover', position: 'centre' })
+	const tile = await sharp(source)
+		.resize(width, height, { fit: 'cover', position: 'centre' })
+		.removeAlpha()
 		.gamma(gamma)
+		.linear(gain, 0)
+		.webp({ quality, effort: 6 })
 		.toBuffer();
-	const flop = await sharp(base).flop().toBuffer();
-	const flip = await sharp(base).flip().toBuffer();
-	const both = await sharp(base).flop().flip().toBuffer();
-	const mirrored = await sharp({
-		create: { width: size * 2, height: size * 2, channels: 3, background: { r: 0, g: 0, b: 0 } }
-	})
-		.composite([
-			{ input: base, left: 0, top: 0 },
-			{ input: flop, left: size, top: 0 },
-			{ input: flip, left: 0, top: size },
-			{ input: both, left: size, top: size }
-		])
-		.png()
-		.toBuffer();
-	const tile = await sharp(mirrored)
-		.extract({ left: size / 2, top: size / 2, width: size, height: size })
-		.webp({ quality: MATERIALS.webpQuality, effort: 6 })
-		.toBuffer();
-	if (tile.length > PERFORMANCE_BUDGETS.textureBytes) {
+
+	const limit = PERFORMANCE_BUDGETS[budget];
+	if (tile.length > limit) {
 		throw new Error(
-			`Texture ${sourcePath} trop lourde : ${tile.length} octets pour un budget de ${PERFORMANCE_BUDGETS.textureBytes}.`
+			`Texture ${sourcePath} trop lourde : ${tile.length} octets pour un budget de ${limit}.`
 		);
 	}
 	return tile;
@@ -550,20 +588,20 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 
 	const textures = {} as Record<TextureKey, string>;
 	for (const key of TEXTURE_KEYS) {
-		const contents = await renderTexture(root, branding.textures[key], MATERIALS.gamma[key]);
+		const contents = await renderTexture(root, branding.textures[key], MATERIALS[key]);
 		const publicPath = `/textures/${key}-${sha256(contents).slice(0, 12)}.webp`;
 		textures[key] = publicPath;
 		files.push({ path: `static${publicPath}`, contents });
 	}
 
-	const spriteContents = Buffer.from(buildIdentitySprite());
-	if (spriteContents.length > PERFORMANCE_BUDGETS.identitySpriteBytes) {
+	const sheetContents = await buildIdentitySheet(root);
+	if (sheetContents.length > PERFORMANCE_BUDGETS.identitySheetBytes) {
 		throw new Error(
-			`Planche d'identités trop lourde : ${spriteContents.length} octets pour un budget de ${PERFORMANCE_BUDGETS.identitySpriteBytes}.`
+			`Planche d'identités trop lourde : ${sheetContents.length} octets pour un budget de ${PERFORMANCE_BUDGETS.identitySheetBytes}.`
 		);
 	}
-	const identitySprite = `/identities/identities-${sha256(spriteContents).slice(0, 12)}.svg`;
-	files.push({ path: `static${identitySprite}`, contents: spriteContents });
+	const identitySheet = `/identities/identities-${sha256(sheetContents).slice(0, 12)}.webp`;
+	files.push({ path: `static${identitySheet}`, contents: sheetContents });
 
 	const social = await renderSocialImage(root, branding, svg, palette);
 	const socialImage = contentHashedPath(branding.socialImage, social);
@@ -574,7 +612,7 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 		icons,
 		palette,
 		auth,
-		identitySprite,
+		identitySheet,
 		textures,
 		socialImage
 	);

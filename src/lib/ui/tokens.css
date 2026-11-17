@@ -44,7 +44,6 @@
 	--shadow-button: inset 0 1px 0 rgb(255 253 248 / 0.2);
 	--shadow-strip: none;
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-	--ease-spring: cubic-bezier(0.22, 1.18, 0.36, 1);
 
 	/* Durées : court pour un retour immédiat, moyen pour un panneau. */
 	--duration-fast: 140ms;
@@ -73,30 +72,10 @@
 }
 
 /*
- * Avatars compose their colours inside SVG strings, outside Tailwind
- * utilities. `static` prevents these unused variables from being pruned.
+ * Player accents are composed by `avatarColor` outside Tailwind utilities.
+ * `static` prevents these variables from being pruned.
  */
 @theme static {
-	/* Six skin tones, six hair colours, six backgrounds. */
-	--color-avatar-skin-1: #f2c9a0;
-	--color-avatar-skin-2: #e3ab7d;
-	--color-avatar-skin-3: #c98a5c;
-	--color-avatar-skin-4: #a4693f;
-	--color-avatar-skin-5: #7d4a2a;
-	--color-avatar-skin-6: #5c3520;
-	--color-avatar-hair-1: #2b2118;
-	--color-avatar-hair-2: #4a3220;
-	--color-avatar-hair-3: #7a4f2a;
-	--color-avatar-hair-4: #b98341;
-	--color-avatar-hair-5: #8c8c8c;
-	--color-avatar-hair-6: #1c1c1c;
-	--color-avatar-bg-1: #e9e1d2;
-	--color-avatar-bg-2: #dbe4e2;
-	--color-avatar-bg-3: #e3ddcf;
-	--color-avatar-bg-4: #d6dfe6;
-	--color-avatar-bg-5: #e6dfe3;
-	--color-avatar-bg-6: #dfe3d5;
-
 	/* Player accents: 58 dark shades that read on cream paper. */
 	--color-player-1: #1f3a5f;
 	--color-player-2: #8c3223;

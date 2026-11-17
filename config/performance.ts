@@ -21,13 +21,18 @@ export const PERFORMANCE_BUDGETS = {
 	 * navigateur (31 à 38 requêtes) fait foi jusqu'à une nouvelle mesure.
 	 */
 	jsRequestsPerPage: 20,
-	/** Une tuile de texture tuilée à l'échelle 1:1. */
-	textureBytes: 5 * 1024,
+	/** La feuille de papier pleine page, chargée une fois et mise en cache. */
+	paperTextureBytes: 160 * 1024,
+	/**
+	 * La glace pleine largeur de la patinoire, chargée seulement sur les pages
+	 * de match. Elle n'est jamais répétée.
+	 */
+	rinkTextureBytes: 384 * 1024,
 	/** La variante choisie pour la photo de connexion sur un téléphone étroit. */
 	authMobileImageBytes: 72 * 1024,
 	authDesktopImageBytes: 80 * 1024,
-	/** Le sprite complet des identités, chargé une fois et mis en cache. */
-	identitySpriteBytes: 220 * 1024
+	/** La planche complète des portraits, chargée une fois et mise en cache. */
+	identitySheetBytes: 220 * 1024
 } as const;
 
 export type PerformanceBudget = keyof typeof PERFORMANCE_BUDGETS;

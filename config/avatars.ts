@@ -2,8 +2,9 @@
  * Player avatar catalogue.
  *
  * Each variant is a complete, stable identity: skin tone, hair colour,
- * background, hairstyle, facial hair and glasses. The vector renderer lives in
- * `src/lib/ui/avatar-art.ts` and reads only this catalogue.
+ * background, hairstyle, facial hair and glasses. The painted source for each
+ * identity lives under `config/branding/portraits/`, and the single sheet is
+ * composed by `scripts/lib/branding.ts`; the UI never draws a face itself.
  */
 
 export type AvatarStyle =
@@ -21,9 +22,8 @@ export type AvatarFacialHair = 'none' | 'stubble' | 'moustache' | 'beard';
 export type AvatarMouth = 'smile' | 'flat' | 'grin';
 
 /**
- * Les nuances valides sont aussi la liste des jetons de `tokens.css`. Une
- * teinte ajoutée ici doit exister comme jeton; le test de catalogue le refuse
- * sinon.
+ * Les nuances valides décrivent le portrait peint : elles ne sont plus des
+ * jetons CSS, l'image peinte porte elle-même la couleur.
  */
 export const AVATAR_SKIN_TONES = [1, 2, 3, 4, 5, 6] as const;
 export const AVATAR_HAIR_SHADES = [1, 2, 3, 4, 5, 6] as const;
@@ -34,9 +34,9 @@ export type AvatarHair = (typeof AVATAR_HAIR_SHADES)[number];
 export type AvatarBackground = (typeof AVATAR_BACKGROUND_SHADES)[number];
 
 /**
- * The drawing contract shared by every identity family. The base league
- * avatars and the tribute legends both satisfy it, so the renderer has one
- * input shape and no knowledge of where an identity comes from.
+ * The appearance contract shared by every identity family. The base league
+ * avatars and the tribute legends both satisfy it; it describes the painted
+ * portrait, and the UI never draws a face from these fields.
  */
 export type AvatarArt = {
   id: string;

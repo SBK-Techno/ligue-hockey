@@ -1,10 +1,8 @@
 <script lang="ts">
-	import type { AvatarArt } from '#config/avatars.ts';
-	import { identityById, isIdentityId } from '#config/identities.ts';
-	import { avatarColor, resolveAvatarId } from '#lib/domain/players/identity.ts';
-	import { branding } from '#lib/generated/branding.ts';
+	import { avatarColor, isIdentityId, resolveAvatarId } from '#lib/domain/players/identity.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
-	import { identitySymbolId, monogram } from './identity-display.ts';
+	import IdentityPortrait from './IdentityPortrait.svelte';
+	import { monogram } from './identity-display.ts';
 
 	type AvatarSize = 24 | 32 | 40 | 48 | 64 | 96;
 
@@ -12,24 +10,22 @@
 		player,
 		size = 48,
 		decorative = true,
-		peek = true
+		peek = true,
+		fill = false
 	}: {
 		player: { fullName: string; userId: string; avatarId?: string | null };
 		size?: AvatarSize;
 		decorative?: boolean;
 		peek?: boolean;
+		/** Remplit le cadre fourni par l'appelant, sans bordure ni ombre propres. */
+		fill?: boolean;
 	} = $props();
 
 	const avatarId = $derived(resolveAvatarId(player.userId, player.avatarId));
-	const variant = $derived(variantFor(avatarId));
 	const boxStyle = $derived(
-		`--player-color: var(${avatarColor(avatarId)}); width: ${size}px; height: ${size}px; font-size: ${Math.round(size * 0.34)}px;`
+		`--player-color: var(${avatarColor(avatarId)}); width: ${fill ? '100%' : `${size}px`}; height: ${fill ? '100%' : `${size}px`}; font-size: ${fill ? '0.85rem' : `${Math.round(size * 0.34)}px`};`
 	);
 	const initials = $derived(monogram(player.fullName));
-
-	function variantFor(id: string): AvatarArt | undefined {
-		return isIdentityId(id) ? identityById[id] : undefined;
-	}
 
 </script>
 
@@ -38,6 +34,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <span
 	class="inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-paper-deep align-middle"
+	class:avatar-frame={!fill}
 	style={boxStyle}
 	role={decorative ? undefined : peek ? 'button' : 'img'}
 	aria-hidden={decorative ? 'true' : undefined}
@@ -52,11 +49,10 @@
 	aria-haspopup={peek && !decorative ? 'dialog' : undefined}
 	aria-expanded={peek && !decorative ? 'false' : undefined}
 >
-	{#if variant}
-		<!-- Le catalogue fixe est chargé une fois; chaque avatar n'est qu'une référence. -->
-		<svg viewBox="0 0 512 512" class="h-full w-full" aria-hidden="true" focusable="false">
-			<use href={`${branding.identitySprite}#${identitySymbolId(avatarId)}`}></use>
-		</svg>
+	{#if isIdentityId(avatarId)}
+		<!-- La planche est chargée une fois; chaque avatar n'est qu'une
+		     position dans cette image. -->
+		<IdentityPortrait {avatarId} />
 	{:else}
 		<span class="font-semibold tracking-wide text-ink">{initials}</span>
 	{/if}

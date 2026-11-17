@@ -5,10 +5,10 @@ import type { Position } from './positions.ts';
  * Tribute identities.
  *
  * The names, jersey numbers, positions and eras are historical facts about
- * Montréal Canadiens alumni. The portraits are original stylised vectors built
- * on the same drawing contract as the league avatars: no photograph, no logo
- * and no official mark is used or implied. The disclaimer shown by the picker
- * is the single notice for the whole family.
+ * Montréal Canadiens alumni. The portraits are original painted images,
+ * recognizable through likeness, era and equipment: no photograph, logo or
+ * official mark is used or implied. The disclaimer shown by the picker is the
+ * single notice for the whole family.
  *
  * A legend is a complete identity: it owns its appearance and its colour, and
  * the picker only offers the legends that played the player's position.

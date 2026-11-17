@@ -19,7 +19,7 @@ import {
 	playerRatings,
 	type PlayerRatingRow
 } from '#lib/domain/ratings/schema.ts';
-import { firstFreeAvatarId } from './identity.ts';
+import { firstFreeAvatarId } from './identity-assignment.ts';
 import { players, type NewPlayerRow, type PlayerRow } from './schema.ts';
 
 export type PlayerWithEmail = PlayerRow & {

@@ -2,6 +2,11 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.7.0 (in progress)
+
+- **Dependency override.** `drizzle-kit@0.31.11` still depends on the deprecated `@esbuild-kit/esm-loader`, which pins `esbuild@0.18.20` through `@esbuild-kit/core-utils`. The root `overrides` entry lifts that nested copy to `0.25.12`, the version `drizzle-kit` already resolves at its own level, so the development server advisory disappears and `npm audit` reports zero vulnerabilities. Generated migrations were rechecked after the change: `drizzle-kit generate` reads the TypeScript config and reports no schema changes.
+- **Override exit.** Remove the `overrides` entry once `drizzle-kit` drops `@esbuild-kit/esm-loader`; until then the nested copy stays on the patched line.
+
 ## Release 1.6.0 (shipped)
 
 - `feat/legends-1.6.0` merged into `main` at `e6aaa20` (PR #18). The auto-release version pull request #19 merged at `e34a3ac` and produced tag `v1.6.0` and the GHCR image without a manual tag.

@@ -28,14 +28,13 @@ describe('generated app shell', () => {
 describe('catalogue des couleurs', () => {
 	const css = readFileSync('src/lib/ui/tokens.css', 'utf8');
 
-	it('déclare exactement les jetons des trois familles', () => {
+	it('déclare exactement les jetons des deux familles', () => {
 		const declared = [...parseColourTokens(css).keys()].sort();
 		const families = colourFamilies(IDENTITIES.length);
 
 		expect(declared).toEqual(allColourKeys(IDENTITIES.length).sort());
 		expect(families.palette).toHaveLength(21);
 		expect(families.player).toHaveLength(IDENTITIES.length);
-		expect(families.avatar).toHaveLength(18);
 	});
 
 	it('donne une couleur distincte à chaque identité', () => {

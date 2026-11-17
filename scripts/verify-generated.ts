@@ -1,7 +1,8 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { generateBranding, checksumOf } from './lib/branding.ts';
-import { isRetainedHashedAsset } from './lib/asset-retention.ts';
+import { isRetainedHashedAsset, retainedForCache } from './lib/asset-retention.ts';
 
 const GENERATED_TEXT_EXTENSIONS = new Set([
 	'.html',
@@ -27,6 +28,24 @@ async function listFiles(root: string, relative = ''): Promise<string[]> {
 	}
 	return files;
 }
+
+/**
+ * Un actif suivi par Git ne vieillit pas : une nouvelle copie de travail lui
+ * redonne l'âge du jour, donc la fenêtre de rétention ne le libérerait jamais.
+ * Seuls les fichiers non suivis peuvent rester pour la transition de cache.
+ */
+function isTracked(relativePath: string): boolean {
+	try {
+		execFileSync('git', ['ls-files', '--error-unmatch', '--', relativePath], {
+			stdio: 'ignore'
+		});
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+const HASHED_ASSET_NAME = /-[0-9a-f]{12}\.(png|webp|svg|jpe?g)$/;
 
 const root = process.cwd();
 const expected = await generateBranding(root);
@@ -84,12 +103,29 @@ generatedStatic.add('static/generated-assets.json');
 
 for (const file of await listFiles(path.join(root, 'static'))) {
 	const relative = `static/${file}`;
-	if (!GENERATED_TEXT_EXTENSIONS.has(path.extname(file))) continue;
 	if (generatedStatic.has(relative)) continue;
-	// Un actif daté remplacé reste servi pendant la fenêtre de cache. Son nom
-	// porte le préfixe de son propre contenu, donc il reste vérifié.
-	const contents = await readFile(path.join(root, 'static', file));
-	if (isRetainedHashedAsset(relative, checksumOf(contents))) continue;
+
+	// Un actif daté non déclaré est soit une ancienne génération suivie par
+	// Git, soit une transition de cache encore fraîche. Le premier cas ne
+	// vieillit jamais et doit échouer; le second expire tout seul.
+	if (HASHED_ASSET_NAME.test(relative)) {
+		if (isTracked(relative)) {
+			failures.push(`stale tracked generated asset: ${relative}`);
+			continue;
+		}
+		const contents = await readFile(path.join(root, 'static', file));
+		const info = await stat(path.join(root, 'static', file));
+		if (
+			isRetainedHashedAsset(relative, checksumOf(contents)) &&
+			retainedForCache(info.mtimeMs, Date.now())
+		) {
+			continue;
+		}
+		failures.push(`unlisted generated asset: ${relative}`);
+		continue;
+	}
+
+	if (!GENERATED_TEXT_EXTENSIONS.has(path.extname(file))) continue;
 	failures.push(`hand-maintained static text asset: ${relative}`);
 }
 
