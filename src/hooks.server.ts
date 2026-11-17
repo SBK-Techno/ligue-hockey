@@ -4,6 +4,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { actorFromUser } from '#lib/domain/auth/types.ts';
 import { isAccountActive } from '#lib/domain/players/account-status.ts';
 import { actorContextRequired } from '#lib/server/actor-context.ts';
+import { cacheControlFor } from '#lib/server/cache-policy.ts';
 import { auth } from '#lib/server/auth.ts';
 import { startup } from '#lib/server/startup.ts';
 import { isAppError } from '#lib/shared/errors.ts';
@@ -55,15 +56,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
 		response.headers.set(name, value);
 	}
+	const cacheControl = cacheControlFor({
+		pathname: event.url.pathname,
+		hasSession: Boolean(session?.session),
+		declared: response.headers.get('cache-control'),
+		contentType: response.headers.get('content-type')
+	});
+	if (cacheControl) response.headers.set('Cache-Control', cacheControl);
 	if (
 		event.url.pathname === '/reinitialiser-mot-de-passe' ||
 		event.url.pathname.startsWith('/api/auth/reset-password/')
 	) {
 		response.headers.set('Referrer-Policy', 'no-referrer');
-		response.headers.set('Cache-Control', 'no-store');
-	}
-	if (session?.session) {
-		response.headers.set('Cache-Control', 'private, no-store');
 	}
 
 	logger.info('http.request', {

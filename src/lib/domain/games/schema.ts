@@ -108,6 +108,7 @@ export const gameSlots = sqliteTable(
 			table.gameId,
 			table.assignedPlayerId
 		),
+		index('game_slots_assigned_player_idx').on(table.assignedPlayerId),
 		check('game_slots_team_check', sql.raw(`"team" in (${TEAM_SQL})`)),
 		check(
 			'game_slots_position_check',

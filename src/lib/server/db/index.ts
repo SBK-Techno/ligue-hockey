@@ -37,7 +37,3 @@ export function closeDatabase(): void {
 	sqlite.close();
 	logger.info('db.closed');
 }
-
-process.once('sveltekit:shutdown', () => {
-	closeDatabase();
-});

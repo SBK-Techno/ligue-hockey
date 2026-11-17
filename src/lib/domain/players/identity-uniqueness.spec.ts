@@ -309,7 +309,6 @@ describe('poste et identité', () => {
 					firstName: 'Gardien',
 					lastName: 'Test',
 					age: 30,
-					position: 'goalie',
 					jerseyNumber: null,
 					avatarId: 'legende-lafleur'
 				}

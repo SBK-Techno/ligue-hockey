@@ -848,8 +848,8 @@ export const fr = {
   'profile.ratingsHidden':
     'Les notes restent confidentielles. Elles servent seulement à équilibrer les équipes.',
   'profile.ageHelp': 'Sert à équilibrer l’âge des deux équipes.',
-  'profile.positionHelp':
-    'Ton poste principal. Il guide l’équilibre des équipes.',
+  'profile.positionManaged':
+    'Ton poste se change avec un responsable. Il sert à l’équilibre des équipes et au tarif de gardien.',
   'profile.currentPasswordInvalid': 'Le mot de passe actuel est incorrect.',
   'profile.ageInvalid': 'Entre un âge valide.',
 

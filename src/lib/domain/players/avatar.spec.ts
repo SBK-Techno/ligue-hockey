@@ -133,7 +133,9 @@ describe('service des identités', () => {
 
 		expect(updatePlayer).toHaveBeenCalledWith(
 			'me',
-			expect.objectContaining({ avatarId: 'tuque-rouge' })
+			expect.objectContaining({ avatarId: 'tuque-rouge' }),
+			{},
+			expect.anything()
 		);
 	});
 

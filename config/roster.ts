@@ -3,10 +3,26 @@ import { POSITIONS, type Position } from './positions.ts';
 import { settingBound, type SettingsValues } from './settings-registry.ts';
 import { TEAMS, type Team } from './teams.ts';
 
+/** Les bornes dures du modèle, dérivées des réglages, sans recopie. */
+const goaliesMax = settingBound('roster.goaliesPerTeam', 'max');
+const forwardsMax = settingBound('roster.forwardsPerTeam', 'max');
+const defenseMax = settingBound('roster.defensePerTeam', 'max');
+const maxSlotsPerTeam = goaliesMax + forwardsMax + defenseMax;
+
+export const ROSTER_LIMITS = {
+	goaliesPerTeam: goaliesMax,
+	forwardsPerTeam: forwardsMax,
+	defensePerTeam: defenseMax,
+	maxSlotsPerTeam,
+	maxSlotIndex: Math.max(goaliesMax, forwardsMax, defenseMax) - 1,
+	/** Deux équipes, toutes positions confondues. */
+	maxAssignments: maxSlotsPerTeam * TEAMS.length
+} as const;
+
 export const rosterTemplateSchema = z.object({
-	goaliesPerTeam: z.number().int().min(0).max(settingBound('roster.goaliesPerTeam', 'max')),
-	forwardsPerTeam: z.number().int().min(0).max(settingBound('roster.forwardsPerTeam', 'max')),
-	defensePerTeam: z.number().int().min(0).max(settingBound('roster.defensePerTeam', 'max'))
+	goaliesPerTeam: z.number().int().min(0).max(ROSTER_LIMITS.goaliesPerTeam),
+	forwardsPerTeam: z.number().int().min(0).max(ROSTER_LIMITS.forwardsPerTeam),
+	defensePerTeam: z.number().int().min(0).max(ROSTER_LIMITS.defensePerTeam)
 });
 
 export type RosterTemplate = z.infer<typeof rosterTemplateSchema>;

@@ -23,6 +23,27 @@ export default defineConfig({
 			// Les URL d'actifs restent absolues : le CSS inliné est partagé par
 			// toutes les routes, y compris les routes imbriquées.
 			paths: { relative: false },
+			// CSP native de SvelteKit : les scripts et styles générés reçoivent
+			// un nonce par réponse. Les attributs `style="..."` du produit
+			// (jetons de glace, gabarits) restent autorisés explicitement.
+			csp: {
+				mode: 'nonce',
+				directives: {
+					'default-src': ['self'],
+					'script-src': ['self'],
+					'style-src': ['self'],
+					'style-src-attr': ['unsafe-inline'],
+					'img-src': ['self', 'data:'],
+					'font-src': ['self'],
+					'connect-src': ['self'],
+					'manifest-src': ['self'],
+					'media-src': ['self'],
+					'object-src': ['none'],
+					'base-uri': ['self'],
+					'form-action': ['self'],
+					'frame-ancestors': ['none']
+				}
+			},
 			adapter: adapter()
 		})
 	],

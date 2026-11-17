@@ -2,7 +2,7 @@ import type { I18nKey } from '#config/i18n/fr.ts';
 import { HOUR_MS } from '#config/time.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
 import { isGameStarted, visibleParticipants } from '#lib/domain/games/playability.ts';
-import { requireUser } from '#lib/domain/auth/policy.ts';
+import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import {
@@ -174,7 +174,7 @@ export function markAvailability(
 	gameId: string,
 	status: AvailabilityStatus
 ): AvailabilityResult {
-	const user = requireUser(actor);
+	const user = requirePermission(actor, 'manageOwnAvailability');
 	const player = getOwnProfile(actor);
 	if (player.isSubstitute) {
 		throw new AppError('FORBIDDEN', { key: 'availability.substituteNoConfirm' });

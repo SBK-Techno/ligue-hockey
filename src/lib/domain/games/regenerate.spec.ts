@@ -14,7 +14,8 @@ vi.mock('#lib/server/db/index.ts', async () => {
 
 const { sqlite } = await import('#lib/server/db/index.ts');
 const { regenerateGame } = await import('./service.ts');
-const { regenerateUpcomingGeneratedGames } = await import('./upcoming.ts');
+const { flushUpcomingRegeneration, regenerateUpcomingGeneratedGames } =
+	await import('./upcoming.ts');
 
 const actor: Actor = {
 	kind: 'user', active: true,
@@ -110,6 +111,7 @@ describe('regeneration policy', () => {
 	});
 
 	it('does not try to recalculate a started game in the background', () => {
-		expect(regenerateUpcomingGeneratedGames()).toEqual({ regenerated: 0, failed: 0 });
+		regenerateUpcomingGeneratedGames();
+		expect(flushUpcomingRegeneration()).toEqual({ regenerated: 0, failed: 0 });
 	});
 });

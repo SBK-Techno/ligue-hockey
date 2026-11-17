@@ -15,6 +15,7 @@ import {
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
+import { db } from '#lib/server/db/index.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import { applyDiscount, splitPlan } from './plan.ts';
@@ -234,23 +235,31 @@ export function applyDefaultPlan(actor: Actor, playerId: string): BalanceView | 
 	const amounts = splitPlan(total, settings['finance.firstInstallmentPercent']);
 	const now = clock.nowMs();
 
-	upsertPlan({
-		id: findPlan(playerId)?.id ?? newId('plan'),
-		playerId,
-		totalCents: amounts.totalCents,
-		firstCents: amounts.firstCents,
-		secondCents: amounts.secondCents,
-		firstDueDate: settings['finance.installment1Due'],
-		secondDueDate: settings['finance.installment2Due'],
-		createdAt: now,
-		updatedAt: now
-	});
-
-	recordAudit(actor, {
-		action: 'finance.plan_default',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { totalCents: amounts.totalCents }
+	db.transaction((tx) => {
+		upsertPlan(
+			{
+				id: findPlan(playerId)?.id ?? newId('plan'),
+				playerId,
+				totalCents: amounts.totalCents,
+				firstCents: amounts.firstCents,
+				secondCents: amounts.secondCents,
+				firstDueDate: settings['finance.installment1Due'],
+				secondDueDate: settings['finance.installment2Due'],
+				createdAt: now,
+				updatedAt: now
+			},
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.plan_default',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { totalCents: amounts.totalCents }
+			},
+			tx
+		);
 	});
 
 	return getPlayerBalance(actor, playerId);
@@ -268,23 +277,31 @@ export function setPlan(
 	const now = clock.nowMs();
 	const existing = findPlan(playerId);
 
-	upsertPlan({
-		id: existing?.id ?? newId('plan'),
-		playerId,
-		totalCents: amounts.totalCents,
-		firstCents: amounts.firstCents,
-		secondCents: amounts.secondCents,
-		firstDueDate: parsed.firstDueDate,
-		secondDueDate: parsed.secondDueDate,
-		createdAt: now,
-		updatedAt: now
-	});
-
-	recordAudit(actor, {
-		action: 'finance.plan_set',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { totalCents: amounts.totalCents }
+	db.transaction((tx) => {
+		upsertPlan(
+			{
+				id: existing?.id ?? newId('plan'),
+				playerId,
+				totalCents: amounts.totalCents,
+				firstCents: amounts.firstCents,
+				secondCents: amounts.secondCents,
+				firstDueDate: parsed.firstDueDate,
+				secondDueDate: parsed.secondDueDate,
+				createdAt: now,
+				updatedAt: now
+			},
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.plan_set',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { totalCents: amounts.totalCents }
+			},
+			tx
+		);
 	});
 
 	return getPlayerBalance(actor, playerId);
@@ -302,22 +319,30 @@ export function recordPayment(
 		throw new AppError('CONFLICT', { key: 'balance.noPlan' });
 	}
 
-	insertPayment({
-		id: newId('pay'),
-		playerId,
-		amountCents: parsed.amountCents,
-		paidAt: parsed.paidAt,
-		method: parsed.method,
-		note: parsed.note,
-		recordedBy: actor.kind === 'user' ? actor.userId : null,
-		createdAt: clock.nowMs()
-	});
-
-	recordAudit(actor, {
-		action: 'finance.payment',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { amountCents: parsed.amountCents, method: parsed.method }
+	db.transaction((tx) => {
+		insertPayment(
+			{
+				id: newId('pay'),
+				playerId,
+				amountCents: parsed.amountCents,
+				paidAt: parsed.paidAt,
+				method: parsed.method,
+				note: parsed.note,
+				recordedBy: actor.kind === 'user' ? actor.userId : null,
+				createdAt: clock.nowMs()
+			},
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.payment',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { amountCents: parsed.amountCents, method: parsed.method }
+			},
+			tx
+		);
 	});
 
 	return getPlayerBalance(actor, playerId);
@@ -329,11 +354,17 @@ export function removePayment(actor: Actor, playerId: string, paymentId: string)
 	if (!payment || payment.playerId !== playerId) {
 		throw new AppError('NOT_FOUND', { key: 'balance.paymentNotFound' });
 	}
-	deletePayment(paymentId);
-	recordAudit(actor, {
-		action: 'finance.payment_deleted',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { paymentId }
+	db.transaction((tx) => {
+		deletePayment(paymentId, tx);
+		recordAudit(
+			actor,
+			{
+				action: 'finance.payment_deleted',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { paymentId }
+			},
+			tx
+		);
 	});
 }

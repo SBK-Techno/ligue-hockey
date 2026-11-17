@@ -39,6 +39,17 @@ openssl rand -base64 48          # BETTER_AUTH_SECRET
 npx web-push generate-vapid-keys # VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
 ```
 
+## Proxy TLS et HSTS
+
+L'application ne termine pas TLS et n'émet jamais `Strict-Transport-Security` : le proxy HTTPS en est le seul propriétaire. Le contrat du proxy est le suivant.
+
+- Terminer TLS et transmettre `X-Forwarded-Proto: https` et `Host` au conteneur, sur le port applicatif interne. Ne pas exposer le conteneur en clair.
+- Ajouter sur toute réponse HTTPS : `Strict-Transport-Security: max-age=31536000; includeSubDomains`. N'ajouter `preload` qu'après inscription du domaine; ne jamais envoyer HSTS sur une réponse HTTP en clair.
+- Ne pas retirer ni remplacer les en-têtes produits par l'application : `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`. La CSP est configurée dans `vite.config.ts` et non dans le proxy.
+- Vérifier après chaque changement de proxy :
+  `curl -sI https://votre-domaine/ | grep -i '^strict-transport-security'`
+  puis charger une page connectée et confirmer l'absence d'erreur CSP dans la console.
+
 ## Première mise en service
 
 ```bash

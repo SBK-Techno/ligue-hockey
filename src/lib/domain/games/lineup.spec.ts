@@ -447,7 +447,7 @@ describe('alignement manuel', () => {
 					...fullLineup(),
 					assignments: [
 						...fullLineup().assignments,
-						{ team: 'white', position: 'forward', slotIndex: 9, playerId: 'a' }
+						{ team: 'white', position: 'forward', slotIndex: 2, playerId: 'a' }
 					]
 				})
 			)

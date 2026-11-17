@@ -4,7 +4,7 @@
 	import { page } from '$app/state';
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
 	import { PLAYER_LIMITS } from '#config/players.ts';
-	import { POSITIONS, positionDefinition, type Position } from '#config/positions.ts';
+	import { positionDefinition, type Position } from '#config/positions.ts';
 	import { legendForIdentity } from '#config/identities.ts';
 	import { roleDefinition } from '#config/roles.ts';
 	import {
@@ -405,15 +405,11 @@
 									/>
 									<p class="hint">{t('profile.ageHelp')}</p>
 								</div>
-								<div>
-									<label class="label" for="position">{t('position.label')}</label>
-									<select class="input" id="position" name="position" required bind:value={position}>
-										{#each POSITIONS as entry (entry.key)}
-											<option value={entry.key}>{t(entry.labelKey)}</option>
-										{/each}
-									</select>
-									<p class="hint">{t('profile.positionHelp')}</p>
+								<div class="fact">
+									<dt>{t('position.label')}</dt>
+									<dd>{t(positionDefinition(profile.position).labelKey)}</dd>
 								</div>
+								<p class="hint">{t('profile.positionManaged')}</p>
 								<div>
 									<label class="label" for="jerseyNumber">{t('profile.jersey')}</label>
 									<input

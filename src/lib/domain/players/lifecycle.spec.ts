@@ -15,7 +15,8 @@ vi.mock('#lib/server/db/index.ts', async () => {
 const h = vi.hoisted(() => ({
 	revokeSessions: vi.fn(async () => undefined),
 	updateName: vi.fn(async () => undefined),
-	regenerate: vi.fn()
+	regenerate: vi.fn(),
+	logError: vi.fn()
 }));
 
 vi.mock('../auth/identity.ts', async (importOriginal) => {
@@ -37,8 +38,18 @@ vi.mock('#lib/domain/games/upcoming.ts', () => ({
 	regenerateUpcomingGeneratedGames: h.regenerate
 }));
 
+vi.mock('#lib/shared/logging/logger.ts', () => ({
+	logger: {
+		error: h.logError,
+		warn: vi.fn(),
+		info: vi.fn(),
+		debug: vi.fn()
+	}
+}));
+
 const { sqlite } = await import('#lib/server/db/index.ts');
-const { adminUpdatePlayer } = await import('./service.ts');
+const { adminUpdatePlayer, updateOwnProfile } = await import('./service.ts');
+const { updateOwnProfileSchema } = await import('./validators.ts');
 const { actorFromUser, anonymousActor } = await import('#lib/domain/auth/types.ts');
 const { can } = await import('#lib/domain/auth/policy.ts');
 const { claimSubstitute } = await import('#lib/domain/subs/service.ts');
@@ -161,6 +172,7 @@ beforeEach(() => {
 	h.revokeSessions.mockClear();
 	h.updateName.mockClear();
 	h.regenerate.mockClear();
+	h.logError.mockClear();
 });
 
 describe('désactivation d’un joueur', () => {
@@ -290,5 +302,76 @@ describe('désactivation d’un joueur', () => {
 			caught = error;
 		}
 		expect(caught).toMatchObject({ key: 'subs.notEligible' });
+	});
+});
+
+describe('synchronisation du nom', () => {
+	const playerActor: Actor = {
+		kind: 'user',
+		userId: 'player',
+		name: 'player',
+		role: 'player',
+		active: true
+	};
+
+	it('garde la fiche, journalise l’échec et réessaie à la prochaine sauvegarde', async () => {
+		addPlayer('player');
+		h.updateName.mockRejectedValueOnce(new Error('identity down'));
+
+		await updateOwnProfile(playerActor, {
+			firstName: 'Nouveau',
+			lastName: 'Nom',
+			age: 31,
+			jerseyNumber: null
+		});
+
+		expect(
+			sqlite
+				.prepare(`select first_name as firstName from players where user_id = 'player'`)
+				.get()
+		).toEqual({ firstName: 'Nouveau' });
+		expect(h.logError).toHaveBeenCalledWith(
+			'players.name_sync_failed',
+			expect.objectContaining({ userId: 'player' })
+		);
+
+		await updateOwnProfile(playerActor, {
+			firstName: 'Nouveau',
+			lastName: 'Nom',
+			age: 31,
+			jerseyNumber: null
+		});
+		expect(h.updateName).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('poste du joueur', () => {
+	it('ignore un poste envoyé par la fiche personnelle', async () => {
+		addPlayer('player');
+		const parsed = updateOwnProfileSchema.parse({
+			firstName: 'Nouveau',
+			lastName: 'Nom',
+			age: 31,
+			jerseyNumber: null,
+			position: 'goalie'
+		});
+		expect(parsed).not.toHaveProperty('position');
+
+		await updateOwnProfile(
+			{
+				kind: 'user',
+				userId: 'player',
+				name: 'player',
+				role: 'player',
+				active: true
+			},
+			parsed
+		);
+
+		expect(
+			sqlite
+				.prepare(`select position from players where user_id = 'player'`)
+				.get()
+		).toEqual({ position: 'forward' });
 	});
 });

@@ -8,15 +8,12 @@ export type UpcomingRegeneration = {
 	failed: number;
 };
 
-/**
- * Recalcule chaque match à venir déjà publié. Un changement de joueur, de
- * note ou de règle doit se refléter tout de suite dans les alignements, sans
- * qu'un administrateur ait à cliquer sur « Régénérer ».
- *
- * Un match qui ne peut pas être recalculé (notes incomplètes, par exemple) est
- * laissé tel quel et journalisé; les autres matchs sont quand même mis à jour.
- */
-export function regenerateUpcomingGeneratedGames(): UpcomingRegeneration {
+/** La fenêtre de coalescence : N écritures rapides donnent un seul recalcul. */
+export const UPCOMING_REGENERATION_WINDOW_MS = 250;
+
+let timer: ReturnType<typeof setTimeout> | null = null;
+
+function run(): UpcomingRegeneration {
 	let regenerated = 0;
 	let failed = 0;
 
@@ -48,4 +45,38 @@ export function regenerateUpcomingGeneratedGames(): UpcomingRegeneration {
 	}
 
 	return { regenerated, failed };
+}
+
+/**
+ * Recalcule chaque match à venir déjà publié, au plus une fois par fenêtre.
+ * Les écritures rapprochées (présences, notes, règles) marquent le besoin;
+ * le premier appel programme le balayage, les suivants se contentent de le
+ * rejoindre.
+ */
+export function regenerateUpcomingGeneratedGames(): void {
+	if (timer !== null) return;
+	timer = setTimeout(() => {
+		timer = null;
+		run();
+	}, UPCOMING_REGENERATION_WINDOW_MS);
+	// Le minuteur ne retient jamais le processus en vie.
+	timer.unref?.();
+}
+
+/** Le balayage immédiat, pour l'arrêt du serveur et les tests. */
+export function flushUpcomingRegeneration(): UpcomingRegeneration {
+	if (timer !== null) {
+		clearTimeout(timer);
+		timer = null;
+	}
+	return run();
+}
+
+/**
+ * Arrêt propre : le dernier balayage en attente part avant la fermeture de la
+ * base, jamais après.
+ */
+export function stopUpcomingRegeneration(): void {
+	if (timer === null) return;
+	flushUpcomingRegeneration();
 }

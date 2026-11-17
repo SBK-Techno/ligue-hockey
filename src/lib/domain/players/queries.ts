@@ -7,7 +7,7 @@ import {
 import type { Position } from '#config/positions.ts';
 import { ADMIN_ROLE } from '#config/roles.ts';
 import { positionRatingKeysToClear } from '#config/rating-attributes.ts';
-import { db } from '#lib/server/db/index.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { paymentPlans, payments } from '#lib/domain/finance/schema.ts';
 import { gameAvailability, gameSlots, games } from '#lib/domain/games/schema.ts';
@@ -202,99 +202,110 @@ export type PlayerUpdateResult =
  * réservation. La désactivation retire aussi, atomiquement, les engagements
  * futurs du joueur.
  */
+function applyUpdate(
+	tx: DbExecutor,
+	playerId: string,
+	patch: PlayerPatch,
+	options: PlayerUpdateOptions
+): PlayerUpdateResult {
+		const current = tx
+		.select()
+		.from(players)
+		.where(eq(players.userId, playerId))
+		.get();
+	if (!current) return { status: 'not-found' };
+
+	const next = { ...patch };
+	const positionTouched =
+		(next.position !== undefined && next.position !== current.position) ||
+		(next.avatarId !== undefined && next.avatarId !== current.avatarId);
+	const effectivePosition = next.position ?? current.position;
+	const currentAvatar = next.avatarId !== undefined ? next.avatarId : current.avatarId;
+	if (
+		positionTouched &&
+		currentAvatar !== null &&
+		!identityAllowedForPosition(currentAvatar as IdentityId, effectivePosition)
+	) {
+		return { status: 'identity-position' };
+	}
+
+	// Une identité retirée du catalogue ou absente ne peut pas redevenir
+	// active telle quelle : l'activation en réserve une libre.
+	const validAvatar =
+		currentAvatar !== null && isIdentityId(currentAvatar) ? currentAvatar : null;
+	if (next.active === true && validAvatar === null) {
+		const free = firstFreeAvatarId(activeAvatarIds(tx), effectivePosition);
+		if (!free) return { status: 'no-identity' };
+		next.avatarId = free;
+	}
+
+	const claimedAvatar =
+		next.avatarId !== undefined
+			? next.avatarId
+			: next.active === true
+				? validAvatar
+				: null;
+	if (claimedAvatar !== null) {
+		const conflict = tx
+			.select({ userId: players.userId })
+			.from(players)
+			.where(
+				and(
+					eq(players.active, true),
+					eq(players.avatarId, claimedAvatar),
+					ne(players.userId, playerId)
+				)
+			)
+			.get();
+		if (conflict) return { status: 'avatar-taken' };
+	}
+
+	let cleared: string[] = [];
+	if (next.position !== undefined && current.position !== next.position) {
+		const stored = tx
+			.select({ attribute: playerRatings.attribute })
+			.from(playerRatings)
+			.where(eq(playerRatings.playerId, playerId))
+			.all()
+			.map((row) => row.attribute);
+		cleared = positionRatingKeysToClear(next.position, stored);
+		if (cleared.length > 0) {
+			tx.delete(playerRatings)
+				.where(
+					and(
+						eq(playerRatings.playerId, playerId),
+						inArray(playerRatings.attribute, cleared as PlayerRatingRow['attribute'][])
+					)
+				)
+				.run();
+		}
+	}
+
+	if (Object.keys(next).length > 0) {
+		tx.update(players)
+			.set({ ...next, updatedAt: clock.nowMs() })
+			.where(eq(players.userId, playerId))
+			.run();
+	}
+
+	if (options.deactivate) {
+		clearFutureCommitments(tx, playerId, options.deactivate);
+	}
+
+	return { status: 'updated', cleared };
+}
+
 export function updatePlayer(
 	playerId: string,
 	patch: PlayerPatch,
-	options: PlayerUpdateOptions = {}
+	options: PlayerUpdateOptions = {},
+	executor: DbExecutor = db
 ): PlayerUpdateResult {
 	try {
-		return db.transaction((tx): PlayerUpdateResult => {
-			const current = tx
-				.select()
-				.from(players)
-				.where(eq(players.userId, playerId))
-				.get();
-			if (!current) return { status: 'not-found' };
-
-			const next = { ...patch };
-			const positionTouched =
-				(next.position !== undefined && next.position !== current.position) ||
-				(next.avatarId !== undefined && next.avatarId !== current.avatarId);
-			const effectivePosition = next.position ?? current.position;
-			const currentAvatar = next.avatarId !== undefined ? next.avatarId : current.avatarId;
-			if (
-				positionTouched &&
-				currentAvatar !== null &&
-				!identityAllowedForPosition(currentAvatar as IdentityId, effectivePosition)
-			) {
-				return { status: 'identity-position' };
-			}
-
-			// Une identité retirée du catalogue ou absente ne peut pas redevenir
-			// active telle quelle : l'activation en réserve une libre.
-			const validAvatar =
-				currentAvatar !== null && isIdentityId(currentAvatar) ? currentAvatar : null;
-			if (next.active === true && validAvatar === null) {
-				const free = firstFreeAvatarId(activeAvatarIds(tx), effectivePosition);
-				if (!free) return { status: 'no-identity' };
-				next.avatarId = free;
-			}
-
-			const claimedAvatar =
-				next.avatarId !== undefined
-					? next.avatarId
-					: next.active === true
-						? validAvatar
-						: null;
-			if (claimedAvatar !== null) {
-				const conflict = tx
-					.select({ userId: players.userId })
-					.from(players)
-					.where(
-						and(
-							eq(players.active, true),
-							eq(players.avatarId, claimedAvatar),
-							ne(players.userId, playerId)
-						)
-					)
-					.get();
-				if (conflict) return { status: 'avatar-taken' };
-			}
-
-			let cleared: string[] = [];
-			if (next.position !== undefined && current.position !== next.position) {
-				const stored = tx
-					.select({ attribute: playerRatings.attribute })
-					.from(playerRatings)
-					.where(eq(playerRatings.playerId, playerId))
-					.all()
-					.map((row) => row.attribute);
-				cleared = positionRatingKeysToClear(next.position, stored);
-				if (cleared.length > 0) {
-					tx.delete(playerRatings)
-						.where(
-							and(
-								eq(playerRatings.playerId, playerId),
-								inArray(playerRatings.attribute, cleared as PlayerRatingRow['attribute'][])
-							)
-						)
-						.run();
-				}
-			}
-
-			if (Object.keys(next).length > 0) {
-				tx.update(players)
-					.set({ ...next, updatedAt: clock.nowMs() })
-					.where(eq(players.userId, playerId))
-					.run();
-			}
-
-			if (options.deactivate) {
-				clearFutureCommitments(tx, playerId, options.deactivate);
-			}
-
-			return { status: 'updated', cleared };
-		});
+		if (executor === db) {
+			return db.transaction((tx) => applyUpdate(tx, playerId, patch, options));
+		}
+		return applyUpdate(executor, playerId, patch, options);
 	} catch (error) {
 		if (isUniqueConstraint(error)) return { status: 'avatar-taken' };
 		throw error;
@@ -306,7 +317,7 @@ export function updatePlayer(
  * (matchs passés, terminés ou annulés) restent intacts.
  */
 function clearFutureCommitments(
-	tx: Transaction,
+	tx: DbExecutor,
 	playerId: string,
 	window: NonNullable<PlayerUpdateOptions['deactivate']>
 ): void {
@@ -362,9 +373,18 @@ function clearFutureCommitments(
  * their history with an empty assignment; sub requests filled by the deleted
  * player reopen so the league can fill them again.
  */
-export function deletePlayerAccount(playerId: string, today: string, nowTime: string): void {
+export function deletePlayerAccount(
+	playerId: string,
+	today: string,
+	nowTime: string,
+	executor: DbExecutor = db
+): void {
+	if (executor === db) {
+		db.transaction((tx) => deletePlayerAccount(playerId, today, nowTime, tx));
+		return;
+	}
+	const tx = executor;
 	const now = clock.nowMs();
-	db.transaction((tx) => {
 		tx.delete(paymentPlans).where(eq(paymentPlans.playerId, playerId)).run();
 		tx.delete(payments).where(eq(payments.playerId, playerId)).run();
 		tx.update(gameSlots)
@@ -410,5 +430,4 @@ export function deletePlayerAccount(playerId: string, today: string, nowTime: st
 			.where(eq(subRequests.filledByPlayerId, playerId))
 			.run();
 		tx.delete(user).where(eq(user.id, playerId)).run();
-	});
 }

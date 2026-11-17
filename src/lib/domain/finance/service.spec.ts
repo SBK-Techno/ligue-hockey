@@ -9,6 +9,19 @@ vi.mock('#lib/domain/settings/service.ts', () => ({
 	})
 }));
 
+const audit = vi.hoisted(() => ({ fail: false }));
+
+vi.mock('#lib/domain/audit/service.ts', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/domain/audit/service.ts')>();
+	return {
+		...actual,
+		recordAudit: (...args: Parameters<typeof actual.recordAudit>) => {
+			if (audit.fail) throw new Error('audit down');
+			actual.recordAudit(...args);
+		}
+	};
+});
+
 vi.mock('#lib/server/db/index.ts', async () => {
 	const Database = (await import('better-sqlite3')).default;
 	const { drizzle } = await import('drizzle-orm/better-sqlite3');
@@ -47,6 +60,7 @@ function paymentCount(): number {
 }
 
 beforeEach(() => {
+	audit.fail = false;
 	sqlite.prepare('delete from payments').run();
 	sqlite.prepare('delete from payment_plans').run();
 	sqlite.prepare('delete from players').run();
@@ -122,6 +136,37 @@ describe('recordPayment', () => {
 			note: null
 		});
 
+		expect(paymentCount()).toBe(1);
+	});
+});
+
+describe('atomicité de l’audit financier', () => {
+	it('annule le paiement quand la trace d’audit échoue', () => {
+		sqlite
+			.prepare(
+				`insert into payment_plans (id, player_id, total_cents, first_cents, second_cents, created_at, updated_at)
+				 values ('plan', 'player', 30000, 15000, 15000, 0, 0)`
+			)
+			.run();
+		audit.fail = true;
+
+		expect(() =>
+			recordPayment(actor, 'player', {
+				amountCents: 5_000,
+				paidAt: '2026-11-16',
+				method: 'etransfer',
+				note: null
+			})
+		).toThrow('audit down');
+		expect(paymentCount()).toBe(0);
+
+		audit.fail = false;
+		recordPayment(actor, 'player', {
+			amountCents: 5_000,
+			paidAt: '2026-11-16',
+			method: 'etransfer',
+			note: null
+		});
 		expect(paymentCount()).toBe(1);
 	});
 });

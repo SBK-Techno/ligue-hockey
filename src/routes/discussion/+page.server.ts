@@ -13,6 +13,7 @@ import { CHAT_LIMITS, voteInputSchema } from '#lib/domain/chat/validators.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
+import { throttleMemberAction } from '#lib/server/security/member-action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { DAY_MS } from '#config/time.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
@@ -50,6 +51,7 @@ export const load: ServerLoad = ({ locals }) => {
 export const actions: Actions = {
 	send: async ({ request, locals }) => {
 		try {
+			throttleMemberAction(locals.actor);
 			const parsed = parseForm(messageSchema, await request.formData());
 			sendMessage(locals.actor, parsed);
 			return { ok: true, message: t('chat.sent') };

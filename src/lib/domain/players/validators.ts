@@ -47,7 +47,6 @@ export const updateOwnProfileSchema = z.object({
 	firstName: name,
 	lastName: name,
 	age,
-	position: z.enum(POSITION_KEYS),
 	jerseyNumber: jersey,
 	avatarId: avatarId.optional()
 });

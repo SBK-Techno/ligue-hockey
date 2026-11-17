@@ -404,7 +404,7 @@ export function claimSubstitute(
 	game: GameSummary,
 	requestId: string
 ): ClaimResult {
-	const user = requireUser(actor);
+	const user = requirePermission(actor, 'claimSubs');
 	const player = getOwnProfile(actor);
 	if (!player.isSubstitute || !player.active) {
 		throw new AppError('FORBIDDEN', { key: 'subs.notEligible' });

@@ -1,3 +1,4 @@
+import { ABUSE_LIMITS } from '#config/abuse.ts';
 import { legendForIdentity } from '#config/identities.ts';
 import type { Legend } from '#config/legends.ts';
 import { can } from '#lib/domain/auth/policy.ts';
@@ -7,6 +8,8 @@ import {
 	type SeasonStats
 } from '#lib/domain/gamesheet/season-stats.ts';
 import { getRatings, type RatingsView } from '#lib/domain/ratings/service.ts';
+import { AppError } from '#lib/shared/errors.ts';
+import { recordAttempt, tooManyAttempts } from '#lib/server/security/throttle.ts';
 import { getPlayer, type PublicPlayer } from './service.ts';
 
 /**
@@ -25,7 +28,31 @@ export type PlayerPeekView = {
 	ratings: RatingsView | null;
 };
 
+/**
+ * La fiche complète n'est jamais mise en cache : une réponse qui contient les
+ * notes ne doit pas resservir après une perte de capacité. Les autres fiches
+ * restent privées et courtes.
+ */
+export function peekCacheControl(actor: Actor): string {
+	return actor.kind === 'user' && can(actor, 'editRatings')
+		? 'no-store'
+		: 'private, max-age=15';
+}
+
+/**
+ * Le seul limiteur des fiches de joueur. Il vit dans le service, pas dans la
+ * route, pour que tout appelant passe par le même seau.
+ */
+export function assertPeekAllowed(actor: Actor): void {
+	const key = `peek:${actor.kind === 'user' ? actor.userId : 'anonymous'}`;
+	if (tooManyAttempts(key, ABUSE_LIMITS.peek.limit)) {
+		throw new AppError('RATE_LIMITED');
+	}
+	recordAttempt(key, ABUSE_LIMITS.peek.windowMs);
+}
+
 export function getPlayerPeek(actor: Actor, playerId: string): PlayerPeekView {
+	assertPeekAllowed(actor);
 	const full = getPlayer(actor, playerId);
 	const player: PublicPlayer = {
 		userId: full.userId,

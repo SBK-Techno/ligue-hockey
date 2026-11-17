@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { getPlayerPeek } from '#lib/domain/players/peek.ts';
+import { getPlayerPeek, peekCacheControl } from '#lib/domain/players/peek.ts';
 import { isAppError } from '#lib/shared/errors.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import type { RequestHandler } from './$types';
@@ -12,7 +12,7 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = ({ locals, params }) => {
 	try {
 		return json(getPlayerPeek(locals.actor, params.id), {
-			headers: { 'cache-control': 'private, max-age=15' }
+			headers: { 'cache-control': peekCacheControl(locals.actor) }
 		});
 	} catch (cause) {
 		if (isAppError(cause)) {

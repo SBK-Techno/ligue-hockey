@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { POSITION_KEYS } from '#config/positions.ts';
 import { GAME_WARNING_KEYS } from '#config/game-warnings.ts';
+import { ROSTER_LIMITS } from '#config/roster.ts';
 import { TEAM_KEYS } from '#config/teams.ts';
 import { DATE_PATTERN, TIME_PATTERN } from '#config/time.ts';
 import { isRealDate } from '#lib/shared/time/clock.ts';
@@ -60,14 +61,16 @@ export const manualLineupInputSchema = z.object({
 	 * `null` pour une place vide. Le service compare les clés au modèle du
 	 * match; un envoi partiel ne peut donc pas effacer l'alignement.
 	 */
-	assignments: z.array(
-		z.object({
-			team: z.enum(TEAM_KEYS),
-			position: z.enum(POSITION_KEYS),
-			slotIndex: z.number().int().min(0),
-			playerId: z.string().trim().min(1).nullable()
-		})
-	)
+	assignments: z
+		.array(
+			z.object({
+				team: z.enum(TEAM_KEYS),
+				position: z.enum(POSITION_KEYS),
+				slotIndex: z.number().int().min(0).max(ROSTER_LIMITS.maxSlotIndex),
+				playerId: z.string().trim().min(1).nullable()
+			})
+		)
+		.max(ROSTER_LIMITS.maxAssignments)
 });
 
 export type ManualLineupInput = z.infer<typeof manualLineupInputSchema>;

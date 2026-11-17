@@ -9,6 +9,7 @@ import { recordAudit } from '#lib/domain/audit/service.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
+import { db } from '#lib/server/db/index.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock, timeInZone, todayInZone } from '#lib/shared/time/clock.ts';
 import {
@@ -211,6 +212,21 @@ export function getAdminPlayer(actor: Actor, playerId: string): AdminPlayer {
 	return toAdmin(row);
 }
 
+/**
+ * La synchronisation du nom BetterAuth est un effet externe : elle ne peut pas
+ * entrer dans la transaction SQLite. Un échec est journalisé et rejoué à la
+ * prochaine sauvegarde, jamais avalé.
+ */
+async function syncIdentityName(playerId: string): Promise<void> {
+	const row = findPlayer(playerId);
+	if (!row) return;
+	try {
+		await identity().updateName(playerId, `${row.firstName} ${row.lastName}`);
+	} catch (error) {
+		logger.error('players.name_sync_failed', { userId: playerId, error });
+	}
+}
+
 export async function invitePlayer(
 	actor: Actor,
 	input: InvitePlayerInput
@@ -337,20 +353,27 @@ export async function updateOwnProfile(
 		firstName: input.firstName,
 		lastName: input.lastName,
 		age: input.age,
-		position: input.position,
 		jerseyNumber: input.jerseyNumber
 	};
 	if (input.avatarId !== undefined) {
 		patch.avatarId = input.avatarId;
 	}
-	const cleared = applyPlayerUpdate(updatePlayer(user.userId, patch));
-	await identity().updateName(user.userId, `${input.firstName} ${input.lastName}`);
-	recordAudit(actor, {
-		action: 'player.self_update',
-		entityType: 'player',
-		entityId: user.userId,
-		metadata: cleared.length > 0 ? { positionRatingsCleared: cleared } : undefined
+	db.transaction((tx) => {
+		const result = applyPlayerUpdate(updatePlayer(user.userId, patch, {}, tx));
+		recordAudit(
+			actor,
+			{
+				action: 'player.self_update',
+				entityType: 'player',
+				entityId: user.userId,
+				metadata:
+					result.length > 0 ? { positionRatingsCleared: result } : undefined
+			},
+			tx
+		);
+		return result;
 	});
+	await syncIdentityName(user.userId);
 	regenerateUpcomingGeneratedGames();
 	return getOwnProfile(actor);
 }
@@ -389,20 +412,37 @@ export async function adminUpdatePlayer(
 	if (input.active !== undefined) patch.active = input.active;
 
 	const now = clock.nowMs();
-	const cleared = applyPlayerUpdate(
-		updatePlayer(
-			playerId,
-			patch,
-			input.active === false
-				? {
-						deactivate: {
-							today: todayInZone(branding.timezone, now),
-							nowTime: timeInZone(branding.timezone, now)
+	db.transaction((tx) => {
+		const result = applyPlayerUpdate(
+			updatePlayer(
+				playerId,
+				patch,
+				input.active === false
+					? {
+							deactivate: {
+								today: todayInZone(branding.timezone, now),
+								nowTime: timeInZone(branding.timezone, now)
+							}
 						}
-					}
-				: {}
-		)
-	);
+					: {},
+				tx
+			)
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'player.admin_update',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: {
+					fields: Object.keys(patch),
+					...(result.length > 0 ? { positionRatingsCleared: result } : {})
+				}
+			},
+			tx
+		);
+		return result;
+	});
 	if (input.active === false) {
 		try {
 			await identity().revokeSessions(playerId);
@@ -417,21 +457,7 @@ export async function adminUpdatePlayer(
 			});
 		}
 	}
-	if (input.firstName !== undefined || input.lastName !== undefined) {
-		const updated = findPlayerWithEmail(playerId);
-		if (updated) {
-			await identity().updateName(playerId, `${updated.firstName} ${updated.lastName}`);
-		}
-	}
-	recordAudit(actor, {
-		action: 'player.admin_update',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: {
-			fields: Object.keys(patch),
-			...(cleared.length > 0 ? { positionRatingsCleared: cleared } : {})
-		}
-	});
+	await syncIdentityName(playerId);
 	regenerateUpcomingGeneratedGames();
 
 	return toAdmin(findPlayerWithEmail(playerId));
@@ -474,19 +500,26 @@ export async function deletePlayer(actor: Actor, playerId: string): Promise<void
 		throw new AppError('FORBIDDEN', { key: 'admin.deleteAdmin' });
 	}
 	const now = clock.nowMs();
-	deletePlayerAccount(
-		playerId,
-		todayInZone(branding.timezone, now),
-		timeInZone(branding.timezone, now)
-	);
+	db.transaction((tx) => {
+		deletePlayerAccount(
+			playerId,
+			todayInZone(branding.timezone, now),
+			timeInZone(branding.timezone, now),
+			tx
+		);
+		recordAudit(
+			actor,
+			{
+				action: 'player.delete',
+				entityType: 'player',
+				entityId: playerId,
+				metadata: { role }
+			},
+			tx
+		);
+	});
 	if (findPlayer(playerId)) {
 		throw new AppError('INTERNAL', { key: 'admin.playerDeleteFailed' });
 	}
-	recordAudit(actor, {
-		action: 'player.delete',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { role }
-	});
 	regenerateUpcomingGeneratedGames();
 }

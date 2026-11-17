@@ -35,7 +35,14 @@ vi.mock('#lib/shared/i18n/index.ts', () => ({
 }));
 
 vi.mock('#lib/domain/auth/policy.ts', () => ({
-	requireUser: () => ({ kind: 'user', active: true, userId: 'me', role: 'player', name: 'Moi' })
+	requireUser: () => ({ kind: 'user', active: true, userId: 'me', role: 'player', name: 'Moi' }),
+	requirePermission: () => ({
+		kind: 'user',
+		active: true,
+		userId: 'me',
+		role: 'player',
+		name: 'Moi'
+	})
 }));
 
 vi.mock('#lib/domain/audit/service.ts', () => ({

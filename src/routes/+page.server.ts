@@ -38,6 +38,7 @@ import { getSettings } from '#lib/domain/settings/service.ts';
 import { getMySubProfile } from '#lib/domain/subs/service.ts';
 import { subRequestRefSchema } from '#lib/domain/subs/validators.ts';
 import { actionError } from '#lib/server/action.ts';
+import { throttleMemberAction } from '#lib/server/security/member-action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { todayInZone } from '#lib/shared/time/clock.ts';
 import { parseForm } from '#lib/shared/validation.ts';
@@ -278,6 +279,7 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 export const actions: Actions = {
 	availability: async ({ request, locals }) => {
 		try {
+			throttleMemberAction(locals.actor);
 			const parsed = parseForm(availabilitySchema, await request.formData());
 			const result = markAvailability(locals.actor, parsed.gameId, parsed.status);
 			return {

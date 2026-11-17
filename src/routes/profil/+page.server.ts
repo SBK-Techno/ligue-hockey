@@ -26,6 +26,7 @@ import { getMySubProfile, saveMySubProfile } from '#lib/domain/subs/service.ts';
 import { subProfileInputSchema } from '#lib/domain/subs/validators.ts';
 import { auth } from '#lib/server/auth.ts';
 import { actionError } from '#lib/server/action.ts';
+import { throttleMemberAction } from '#lib/server/security/member-action.ts';
 import { clearAttempts, recordAttempt, tooManyAttempts } from '#lib/server/security/throttle.ts';
 import { env } from '#lib/shared/config/env.ts';
 import { publicEnv } from '#lib/shared/config/public-env.ts';
@@ -114,6 +115,7 @@ export const actions: Actions = {
 	},
 	profile: async ({ request, locals }) => {
 		try {
+			throttleMemberAction(locals.actor);
 			const parsed = parseForm(updateOwnProfileSchema, await request.formData());
 			await updateOwnProfile(locals.actor, parsed);
 			return { ok: true, section: 'joueur', message: t('profile.saved') };

@@ -84,7 +84,12 @@ describe('deletePlayer', () => {
 		const { deletePlayer } = await import('./service.ts');
 		await deletePlayer(admin, 'target');
 
-		expect(deletePlayerAccount).toHaveBeenCalledWith('target', expect.any(String), expect.any(String));
+		expect(deletePlayerAccount).toHaveBeenCalledWith(
+			'target',
+			expect.any(String),
+			expect.any(String),
+			expect.anything()
+		);
 		expect(identitySpy).not.toHaveBeenCalled();
 		expect(regenerateUpcomingGeneratedGames).toHaveBeenCalledTimes(1);
 	});
