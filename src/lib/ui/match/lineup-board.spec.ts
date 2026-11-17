@@ -18,7 +18,8 @@ import {
 	selectBenchPlayer,
 	selectPlace,
 	slotAriaLabel,
-	swapPlayers
+	swapPlayers,
+	viewerSpot
 } from './lineup-board.ts';
 
 function slot(
@@ -169,13 +170,8 @@ describe('carte d’alignement', () => {
 
 describe('lisibilité des jetons sur la glace', () => {
 	const css = readFileSync('src/routes/layout.css', 'utf8');
-	// La première règle `.rink-name` porte la base; la seconde, sous 640 px,
-	// retire le nom au profit du numéro. On borne chaque lecture à son bloc
-	// pour ne pas confondre la base avec la règle mobile.
 	const baseStart = css.indexOf('.rink-name {');
-	const mediaStart = css.indexOf('@media (max-width: 639px)', baseStart);
-	const base = css.slice(baseStart, mediaStart);
-	const small = css.slice(mediaStart, css.indexOf('.rink-empty {', mediaStart));
+	const base = css.slice(baseStart, css.indexOf('.rink-empty {', baseStart));
 
 	it('tronque le nom au complet sans insérer de trait d’union', () => {
 		expect(base).toContain('hyphens: none');
@@ -184,8 +180,62 @@ describe('lisibilité des jetons sur la glace', () => {
 		expect(base).toContain('white-space: nowrap');
 	});
 
-	it('passe au numéro seul sur un jeton de 44 px', () => {
-		expect(small).toMatch(/\.rink-name[\s\S]{0,40}display: none/);
+	it('garde le nom visible sur un jeton mobile', () => {
+		expect(base).not.toContain('display: none');
+	});
+
+	it('affiche une seule équipe et une liste nommée sous 640 px', () => {
+		const mobile = css.slice(css.indexOf('@media (max-width: 639px)', css.indexOf('.rink-switch')));
+
+		expect(mobile).toContain(".rink-team[data-active='false']");
+		expect(mobile).toContain('.rink-roster');
+		expect(mobile).toContain('display: block');
+	});
+});
+
+describe('place du joueur connecté', () => {
+	const benchPlayer = {
+		playerId: 'd',
+		fullName: 'D Test',
+		position: 'defense' as const,
+		jerseyNumber: 4,
+		avatarId: null,
+		kind: 'regular' as const
+	};
+
+	it('ne décrit rien sans joueur connecté', () => {
+		expect(viewerSpot(slots, [benchPlayer], null)).toBeNull();
+	});
+
+	it('décrit une place sur la glace avec son trio', () => {
+		expect(viewerSpot(slots, [], 'a')).toEqual({
+			kind: 'slot',
+			team: 'white',
+			position: 'forward',
+			slotIndex: 0,
+			role: 'C',
+			line: 1,
+			pair: null
+		});
+	});
+
+	it('décrit une place de défenseur avec sa paire', () => {
+		const defense = slot('white', 'defense', 2, 'e');
+		expect(viewerSpot([defense], [], 'e')).toMatchObject({
+			kind: 'slot',
+			position: 'defense',
+			role: 'LD',
+			line: null,
+			pair: 2
+		});
+	});
+
+	it('reconnaît un joueur sur le banc', () => {
+		expect(viewerSpot(slots, [benchPlayer], 'd')).toEqual({ kind: 'bench' });
+	});
+
+	it('signale un joueur absent de la formation publiée', () => {
+		expect(viewerSpot(slots, [benchPlayer], 'absent')).toEqual({ kind: 'absent' });
 	});
 });
 

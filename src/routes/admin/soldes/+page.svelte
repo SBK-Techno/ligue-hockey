@@ -12,7 +12,8 @@
 	let { data }: PageProps = $props();
 
 	type Filter = 'all' | 'overdue' | 'outstanding' | 'noPlan';
-	let filter = $state<Filter>('all');
+	// La page s'ouvre sur l'exception : les joueurs qui doivent encore payer.
+	let filter = $state<Filter>('outstanding');
 
 	const filters = [
 		{ key: 'all' as const, labelKey: 'admin.filterAll' as const },
@@ -20,6 +21,13 @@
 		{ key: 'outstanding' as const, labelKey: 'balance.outstanding' as const },
 		{ key: 'noPlan' as const, labelKey: 'balance.noPlanShort' as const }
 	];
+
+	const counts = $derived({
+		all: data.balances.length,
+		overdue: data.balances.filter((row) => row.status === 'overdue').length,
+		outstanding: data.balances.filter((row) => row.outstandingCents > 0).length,
+		noPlan: data.balances.filter((row) => !row.hasPlan).length
+	});
 
 	const rows = $derived(
 		data.balances
@@ -59,7 +67,11 @@
 	{#if data.balances.length > 0}
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
 			<FilterChips
-				items={filters.map((option) => ({ key: option.key, label: t(option.labelKey) }))}
+				items={filters.map((option) => ({
+					key: option.key,
+					label: t(option.labelKey),
+					count: counts[option.key]
+				}))}
 				active={filter}
 				label={t('admin.filter')}
 				onselect={(key) => (filter = key as Filter)}
@@ -73,15 +85,33 @@
 	{#if data.balances.length === 0}
 		<EmptyState title={t('admin.noPlayers')} />
 	{:else if rows.length === 0}
-		<EmptyState title={t('admin.noResults')}>
-			{#snippet action()}
-				<button class="btn-secondary" type="button" onclick={() => (filter = 'all')}>
-					{t('admin.filterAll')}
-				</button>
-			{/snippet}
-		</EmptyState>
+		{#if filter === 'outstanding'}
+			<EmptyState title={t('admin.allBalancesPaid')}>
+				{#snippet action()}
+					<button class="btn-secondary" type="button" onclick={() => (filter = 'all')}>
+						{t('admin.filterAll')}
+					</button>
+				{/snippet}
+			</EmptyState>
+		{:else if filter === 'overdue'}
+			<EmptyState title={t('admin.noOverdue')}>
+				{#snippet action()}
+					<button class="btn-secondary" type="button" onclick={() => (filter = 'outstanding')}>
+						{t('balance.outstanding')}
+					</button>
+				{/snippet}
+			</EmptyState>
+		{:else}
+			<EmptyState title={t('admin.noResults')}>
+				{#snippet action()}
+					<button class="btn-secondary" type="button" onclick={() => (filter = 'all')}>
+						{t('admin.filterAll')}
+					</button>
+				{/snippet}
+			</EmptyState>
+		{/if}
 	{:else}
-		<SectionCard title={t('admin.balances')} flush>
+		<SectionCard flush>
 			<ul role="list" class="divide-y divide-line">
 				{#each rows as row (row.playerId)}
 					{@const status = balanceStatusDefinition(row.status)}

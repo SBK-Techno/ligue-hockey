@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { ADMIN_TABS } from '#config/admin-tabs.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
@@ -18,15 +17,23 @@
 		return isActiveHref(page.url.pathname, href, href === '/admin');
 	}
 
-	const selected = $derived(tabs.find((tab) => active(tab.href))?.href ?? tabs[0]?.href ?? '/admin');
-
 	// La sous-barre mobile recouvre le document sous l'en-tête : sa hauteur
 	// mesurée rejoint l'unique décalage composé par `layout.css`.
 	let subBarHeight = $state(0);
+	let mobileNav = $state<HTMLElement | null>(null);
 
 	$effect(() => {
 		publishChromeInset('top', subBarHeight);
 		return () => publishChromeInset('top', 0);
+	});
+
+	// La destination active reste visible dans la bande horizontale.
+	$effect(() => {
+		void page.url.pathname;
+		mobileNav?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({
+			block: 'nearest',
+			inline: 'nearest'
+		});
 	});
 </script>
 
@@ -68,25 +75,36 @@
 
 	<div class="min-w-0">
 		<div
-			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-paper px-4 py-2 lg:hidden"
+			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 border-b border-line bg-paper px-4 py-2 lg:hidden"
 			bind:clientHeight={subBarHeight}
 		>
-			{@render backToLeague(
-				t('nav.home'),
-				'flex min-h-11 shrink-0 items-center gap-1 pr-2 text-meta font-semibold text-muted no-underline hover:text-ice-deep'
-			)}
-			<label class="sr-only" for="admin-nav">{t('nav.admin')}</label>
-			<select
-				id="admin-nav"
-				class="input min-h-11 flex-1 py-1.5 font-semibold"
-				value={selected}
+			<div class="flex items-center justify-between gap-2">
+				{@render backToLeague(
+					t('nav.backToLeague'),
+					'flex min-h-11 shrink-0 items-center gap-1 pr-2 text-meta font-semibold text-muted no-underline hover:text-ice-deep'
+				)}
+				<p class="serial">{t('admin.title')}</p>
+			</div>
+			<nav
+				class="mt-1 min-w-0 overflow-x-auto"
 				aria-label={t('nav.admin')}
-				onchange={(event) => goto(event.currentTarget.value)}
+				bind:this={mobileNav}
 			>
-				{#each tabs as tab (tab.href)}
-					<option value={tab.href}>{t(tab.labelKey)}</option>
-				{/each}
-			</select>
+				<ul role="list" class="flex gap-1">
+					{#each tabs as tab (tab.href)}
+						{@const current = active(tab.href)}
+						<li class="shrink-0">
+							<a
+								href={tab.href}
+								class="chip"
+								aria-current={current ? 'page' : undefined}
+							>
+								{t(tab.shortLabelKey ?? tab.labelKey)}
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</nav>
 		</div>
 		{@render children()}
 	</div>

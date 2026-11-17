@@ -5,7 +5,7 @@ const state = (overrides: Partial<MatchSectionState> = {}): MatchSectionState =>
 	completed: false,
 	hasAttendance: true,
 	hasSubstitutes: true,
-	hasSheet: true,
+	hasSheet: false,
 	hasLineup: true,
 	...overrides
 });
@@ -13,39 +13,59 @@ const state = (overrides: Partial<MatchSectionState> = {}): MatchSectionState =>
 describe('ordre des sections d’un match', () => {
 	const cases = [
 		{
-			name: 'un match à venir commence par la présence',
+			name: 'un match à venir commence par l’alignement',
 			state: state(),
-			expected: ['attendance', 'substitutes', 'sheet', 'lineup']
+			expected: ['lineup', 'attendance', 'substitutes']
 		},
 		{
-			name: 'un match sans feuille de match garde l’alignement à la fin',
-			state: state({ hasSheet: false }),
-			expected: ['attendance', 'substitutes', 'lineup']
+			name: 'un match à venir sans feuille ni remplaçants garde l’alignement et la présence',
+			state: state({ hasSubstitutes: false }),
+			expected: ['lineup', 'attendance']
+		},
+		{
+			name: 'un match à venir sans présence montre l’alignement puis les remplaçants',
+			state: state({ hasAttendance: false }),
+			expected: ['lineup', 'substitutes']
+		},
+		{
+			name: 'un match commencé commence par la feuille et le score',
+			state: state({ hasSheet: true }),
+			expected: ['sheet', 'lineup', 'substitutes']
 		},
 		{
 			name: 'un match terminé commence par la feuille et le score',
-			state: state({ completed: true }),
+			state: state({ completed: true, hasSheet: true }),
 			expected: ['sheet', 'lineup', 'substitutes']
 		},
 		{
 			name: 'un match terminé sans feuille garde l’alignement en tête',
-			state: state({ completed: true, hasSheet: false }),
+			state: state({ completed: true }),
 			expected: ['lineup', 'substitutes']
 		},
 		{
 			name: 'un match terminé sans historique de remplaçants n’affiche pas leur panneau',
-			state: state({ completed: true, hasSubstitutes: false }),
+			state: state({ completed: true, hasSheet: true, hasSubstitutes: false }),
 			expected: ['sheet', 'lineup']
 		},
 		{
 			name: 'un match terminé sans alignement ne montre pas de panneau vide',
-			state: state({ completed: true, hasLineup: false, hasSubstitutes: false }),
+			state: state({
+				completed: true,
+				hasSheet: true,
+				hasLineup: false,
+				hasSubstitutes: false
+			}),
 			expected: ['sheet']
 		},
 		{
 			name: 'la présence verrouillée d’un match terminé est omise',
-			state: state({ completed: true, hasAttendance: false }),
+			state: state({ completed: true, hasSheet: true, hasAttendance: false }),
 			expected: ['sheet', 'lineup', 'substitutes']
+		},
+		{
+			name: 'un match à venir sans alignement ne montre pas de panneau vide',
+			state: state({ hasLineup: false, hasAttendance: false, hasSubstitutes: false }),
+			expected: []
 		}
 	] as const;
 

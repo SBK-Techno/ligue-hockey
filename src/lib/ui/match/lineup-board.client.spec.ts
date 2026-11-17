@@ -203,6 +203,26 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.selected).toBe('true');
 	});
 
+	it('change d’équipe avec le commutateur sans toucher à la formation', () => {
+		const black = document.querySelector<HTMLButtonElement>(
+			'button[aria-controls="rink-team-black"]'
+		);
+		expect(black).not.toBeNull();
+		expect(black!.getAttribute('aria-pressed')).toBe('false');
+
+		black!.click();
+		flushSync();
+
+		expect(black!.getAttribute('aria-pressed')).toBe('true');
+		expect(document.querySelector('#rink-team-black')?.getAttribute('data-active')).toBe(
+			'true'
+		);
+		expect(document.querySelector('#rink-team-white')?.getAttribute('data-active')).toBe(
+			'false'
+		);
+		expect(token('white:forward:0').getAttribute('data-filled')).toBe('true');
+	});
+
 	it('ne déplace pas un joueur pendant un défilement tactile', () => {
 		dropTarget = token('white:forward:1');
 		fireTouch(token('white:forward:0'), 'pointerdown', 10, 10);

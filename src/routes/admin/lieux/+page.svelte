@@ -120,7 +120,10 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<SectionCard title="{t('admin.locations')} ({data.locations.length})" flush>
+		<SectionCard flush>
+			<p class="section-row text-meta text-muted">
+				{formatCount(data.locations.length, 'admin.locationCount.one', 'admin.locationCount.many')}
+			</p>
 			<ul role="list" class="divide-y divide-line">
 				{#each data.locations as location (location.id)}
 					{@const metric = metricsById.get(location.id)}

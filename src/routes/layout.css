@@ -619,8 +619,81 @@
 		background: currentColor;
 	}
 
+	/* La présence reste une action, pas une section : une bande compacte
+	   au-dessus de l'alignement, avec le statut et les deux réponses. */
+	.presence-strip {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem 1rem;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-card);
+		background: var(--color-surface);
+		box-shadow: var(--shadow-card);
+	}
+	.presence-actions {
+		display: grid;
+		width: 100%;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.5rem;
+	}
+	@media (min-width: 640px) {
+		.presence-actions {
+			display: inline-flex;
+			width: auto;
+		}
+	}
+
+	/* La réponse à « où je joue » avant la carte : le poste, l'équipe et le
+	   trio, dans une bande qui reste lisible à 320 px. */
+	.you-spot {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 0.75rem;
+		width: fit-content;
+		max-width: 100%;
+		padding: 0.6rem 0.75rem;
+		border: 1px solid color-mix(in srgb, var(--color-ice-deep) 28%, var(--color-line));
+		border-radius: var(--radius-card);
+		background: color-mix(in srgb, var(--color-ice) 12%, var(--color-surface));
+	}
+
 	/* La glace : une surface peinte, des lignes fonctionnelles, des jetons
 	   posés. Les lignes restent des traits, jamais un dégradé décoratif. */
+	.rink-switch {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.5rem;
+	}
+	.rink-switch .chip[aria-pressed='true'] {
+		border-color: var(--color-accent);
+		background: var(--color-accent-soft);
+		color: var(--color-ink);
+	}
+	@media (min-width: 640px) {
+		.rink-switch {
+			display: none;
+		}
+	}
+	/* Sous 640 px, une seule équipe à la fois : la carte reste lisible et la
+	   liste nommée prend le relais sous la glace. */
+	@media (max-width: 639px) {
+		.rink-team[data-active='false'] {
+			display: none;
+		}
+	}
+	.rink-roster {
+		display: none;
+	}
+	@media (max-width: 639px) {
+		.rink-roster {
+			display: block;
+			border-top: 1px solid var(--color-line);
+		}
+	}
 	.rink {
 		position: relative;
 		aspect-ratio: 5 / 3;
@@ -695,6 +768,12 @@
 			0 0 0 1px var(--color-paper),
 			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 	}
+	.rink-token[data-you='true'] {
+		box-shadow:
+			0 0 0 2px var(--color-paper),
+			0 0 0 4px var(--color-accent),
+			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
+	}
 	.rink-token[data-awaiting='true'] {
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
 	}
@@ -750,6 +829,23 @@
 		line-height: 1.15rem;
 		text-align: center;
 	}
+	.rink-role {
+		position: absolute;
+		top: 0.1rem;
+		left: 0.1rem;
+		z-index: 1;
+		min-width: 1.15rem;
+		height: 1.15rem;
+		padding: 0 0.18rem;
+		border-radius: var(--radius-pill);
+		background: var(--color-paper);
+		color: var(--color-ink);
+		font-family: var(--font-mono);
+		font-size: clamp(0.58rem, 2.4vw, 0.7rem);
+		font-weight: 700;
+		line-height: 1.15rem;
+		text-align: center;
+	}
 	.rink-name {
 		position: absolute;
 		right: 0;
@@ -762,7 +858,7 @@
 		padding: 0.15rem 0.1rem;
 		background: color-mix(in srgb, var(--color-ink) 78%, transparent);
 		color: var(--color-paper);
-		font-size: clamp(0.55rem, 1.8vw, 0.7rem);
+		font-size: clamp(0.6rem, 1.8vw, 0.7rem);
 		font-weight: 600;
 		line-height: 1.05;
 		text-align: center;
@@ -770,13 +866,6 @@
 		/* Un nom de famille ne se coupe jamais : le jeton tronque au complet. */
 		hyphens: none;
 		white-space: nowrap;
-	}
-	/* Sous 640 px, le jeton de 44 px ne peut pas porter un nom lisible :
-	   le numéro reste seul, le nom complet vit dans le libellé accessible. */
-	@media (max-width: 639px) {
-		.rink-name {
-			display: none;
-		}
 	}
 	.rink-empty {
 		display: grid;
@@ -810,6 +899,13 @@
 	.bench-chip[data-selected='true'] {
 		border-color: var(--color-accent);
 		background: var(--color-accent-soft);
+	}
+	.bench-chip[data-you='true'] {
+		border-color: color-mix(in srgb, var(--color-ice-deep) 35%, var(--color-line));
+		background: color-mix(in srgb, var(--color-ice) 12%, var(--color-surface));
+	}
+	.bench-chip .stamp {
+		flex: none;
 	}
 	.bench-chip[data-drop-active='true'] {
 		border-color: var(--color-accent);

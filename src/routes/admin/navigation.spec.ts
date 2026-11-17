@@ -22,8 +22,10 @@ describe('leaving admin', () => {
 		expect(tabs).toBeGreaterThan(title);
 	});
 
-	it('labels the mobile exit instead of showing an unlabelled icon', () => {
-		expect(source).toContain("t('nav.home')");
-		expect(source).not.toContain("aria-label={t('nav.backToLeague')}");
+	it('labels both exits the same way and uses tabs on mobile', () => {
+		expect(source.match(/t\('nav\.backToLeague'\)/g)).toHaveLength(2);
+		expect(source).not.toContain('<select');
+		expect(source).not.toContain('goto(');
+		expect(source).toContain("aria-current={current ? 'page' : undefined}");
 	});
 });

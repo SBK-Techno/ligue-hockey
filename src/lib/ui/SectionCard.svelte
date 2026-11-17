@@ -11,7 +11,9 @@
 		class: className = '',
 		children
 	}: {
-		title: string;
+		/** Un titre absent laisse la surface sans en-tête, pour une liste qui
+		 *  suit déjà un en-tête de page. */
+		title?: string;
 		href?: string;
 		linkLabel?: string;
 		/** Une liste ou un tableau porte ses propres rangées pleine largeur. */
@@ -25,16 +27,20 @@
 </script>
 
 <section class="sheet {clip ? 'overflow-hidden' : ''} {className}">
-	<header class="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
-		<h2>{title}</h2>
-		{#if actions}
-			<div class="flex flex-wrap items-center gap-2">
-				{@render actions()}
-			</div>
-		{:else if href && linkLabel}
-			<a class="link -my-2 inline-flex min-h-11 items-center text-body" {href}>{linkLabel}</a>
-		{/if}
-	</header>
+	{#if title || actions || (href && linkLabel)}
+		<header class="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
+			{#if title}
+				<h2>{title}</h2>
+			{/if}
+			{#if actions}
+				<div class="flex flex-wrap items-center gap-2">
+					{@render actions()}
+				</div>
+			{:else if href && linkLabel}
+				<a class="link -my-2 inline-flex min-h-11 items-center text-body" {href}>{linkLabel}</a>
+			{/if}
+		</header>
+	{/if}
 	{#if flush}
 		{@render children()}
 	{:else}

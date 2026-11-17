@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { balanceStatusDefinition } from '#config/balance-status.ts';
 	import { gameStatus } from '#config/game-status.ts';
+	import { NOTIFICATION_CHANNELS } from '#config/notification-channels.ts';
 	import { positionDefinition } from '#config/positions.ts';
 	import {
 		formatCount,
@@ -31,6 +32,11 @@
 		{ key: 'preference_disabled', labelKey: 'notifications.suppression.preferenceDisabled' },
 		{ key: 'no_push_subscription', labelKey: 'notifications.suppression.noPushSubscription' }
 	] as const;
+
+	function channelLabel(channel: string): string {
+		const definition = NOTIFICATION_CHANNELS.find((entry) => entry.key === channel);
+		return definition ? t(definition.labelKey) : channel;
+	}
 </script>
 
 <PageHeader title={t('admin.dashboard')} meta={t('admin.dashboardHelp')} />
@@ -107,38 +113,48 @@
 			<SectionCard title={t('admin.todo')} flush>
 				{#if hasTodo}
 					<ul role="list" class="divide-y divide-line">
-						{#each data.unpaid as balance (balance.playerId)}
-							{@const status = balanceStatusDefinition(balance.status)}
-							<li>
-								<RecordRow
-									href="/admin/joueurs/{balance.playerId}#solde"
-									title={balance.playerName}
-									meta={t('balance.paidOf', {
-										paid: formatMoney(balance.paidCents, balance.currency),
-										total: formatMoney(balance.totalCents, balance.currency)
-									})}
-									trailing={formatMoney(balance.outstandingCents, balance.currency)}
-									badge={t(status.labelKey)}
-									badgeTone={status.tone}
-								/>
+						{#if data.unpaid.length > 0}
+							<li class="section-row">
+								<p class="micro-label">{t('admin.todoBalances', { count: data.unpaid.length })}</p>
 							</li>
-						{/each}
+							{#each data.unpaid as balance (balance.playerId)}
+								{@const status = balanceStatusDefinition(balance.status)}
+								<li>
+									<RecordRow
+										href="/admin/joueurs/{balance.playerId}#solde"
+										title={balance.playerName}
+										meta={t('balance.paidOf', {
+											paid: formatMoney(balance.paidCents, balance.currency),
+											total: formatMoney(balance.totalCents, balance.currency)
+										})}
+										trailing={formatMoney(balance.outstandingCents, balance.currency)}
+										badge={t(status.labelKey)}
+										badgeTone={status.tone}
+									/>
+								</li>
+							{/each}
+						{/if}
 
-						{#each data.requests as request (request.id)}
-							<li>
-								<RecordRow
-									href="/remplacants"
-									title={t('admin.requestRow', {
-										position: t(positionDefinition(request.position).labelKey)
-									})}
-									meta="{formatDate(request.game.gameDate, 'short')} · {request.game.location}{request.requestedByName
-										? ` · ${request.requestedByName}`
-										: ''}"
-									badge={t('subs.placeOpen')}
-									badgeTone="ice"
-								/>
+						{#if data.requests.length > 0}
+							<li class="section-row">
+								<p class="micro-label">{t('admin.todoRequests', { count: data.requests.length })}</p>
 							</li>
-						{/each}
+							{#each data.requests as request (request.id)}
+								<li>
+									<RecordRow
+										href="/remplacants"
+										title={t('admin.requestRow', {
+											position: t(positionDefinition(request.position).labelKey)
+										})}
+										meta="{formatDate(request.game.gameDate, 'short')} · {request.game.location}{request.requestedByName
+											? ` · ${request.requestedByName}`
+											: ''}"
+										badge={t('subs.placeOpen')}
+										badgeTone="ice"
+									/>
+								</li>
+							{/each}
+						{/if}
 					</ul>
 				{:else}
 					<p class="section-row text-body text-muted">
@@ -237,13 +253,23 @@
 						<ul role="list" class="mt-4 divide-y divide-line border-t border-line">
 							{#each data.notifications.failed as job (job.id)}
 								<li class="py-2.5">
-									<p class="text-meta font-semibold">{job.eventKey} · {job.channel}</p>
+									<p class="text-meta font-semibold">
+										{t('notifications.failedSend')} · {channelLabel(job.channel)}
+									</p>
 									<p class="text-caption text-muted">
 										{t('notifications.attempts', { count: job.attempts })}
 									</p>
-									{#if job.lastError}
-										<p class="mt-0.5 break-words text-caption text-alert">{job.lastError}</p>
-									{/if}
+									<details class="mt-1">
+										<summary
+											class="link inline-flex min-h-11 items-center text-caption marker:content-none"
+										>
+											{t('notifications.technicalDetails')}
+										</summary>
+										<p class="break-all text-caption text-muted">{job.eventKey}</p>
+										{#if job.lastError}
+											<p class="mt-1 break-words text-caption text-alert">{job.lastError}</p>
+										{/if}
+									</details>
 									<form method="POST" action="?/retry" use:progressiveForm class="mt-1.5">
 										<input type="hidden" name="jobId" value={job.id} />
 										<button class="btn-secondary btn-sm" type="submit">

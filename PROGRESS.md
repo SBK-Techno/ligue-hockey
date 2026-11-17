@@ -2,6 +2,16 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## A1 design pass 1.8.0 (in progress)
+
+- Branch `feat/a1-pass-1.8.0`, stacked on `feat/realism-1.7.0` (PR #21). The pass follows the independent critique that scored the app 22/40: the login, home hero and desktop rink were reference-grade, while the mobile lineup, admin tables, settings, notifications and profile body were not.
+- **Milestone 1, mobile lineup.** An upcoming match now opens with the alignment, not the attendance roster. Presence is a compact strip above the board, with the deadline and the two responses; the named attendance list follows the alignment. The board shows a "Ton poste" summary (team, position, trio or pair), a visible role label on every filled token, a "Toi" ring and hidden accessible marker, and a "Toi" stamp in the bench and the text roster.
+- **Mobile adaptation.** Under 640 px the board shows one team at a time with a two-button switcher and a named roster grouped by position under the rink. Names remain on the rink tokens. The canonical roster was extracted to `TeamRoster.svelte`; `TeamLineup.svelte` keeps the admin text roster, and the board reuses the same component.
+- **Evidence.** `npm run gate` exit 0 after the milestone: 1108 tests in 149 files, svelte-check 0/0, architecture 387 files, generated assets current, 93 client chunks without zod. Headless Chromium at 1440, 390 and 320 verified the order, the compact presence strip, the one-team switcher, the named roster, the "Ton poste" summary for a player in the lineup, and the "Toi" ring and stamp.
+- **Milestone 2, admin exceptions.** Évaluations opens on the files to complete, with the complete files behind a counted toggle; played games put the incomplete ones first and show how many remain. Soldes opens on amounts due, every filter carries its count, and a fully paid league gets a positive empty state. The dashboard separates balances from open requests with counts, the notification card speaks human language and hides the technical event key behind a disclosure, and the mobile admin selector became a two-row tab strip with short labels. Joueurs, Soldes and Lieux lost their duplicate card titles, and player names remain whole at 320.
+- **Evidence.** `npm run gate` exit 0 after the milestone: 1112 tests in 151 files, svelte-check 0/0, architecture 389 files, generated assets current, 93 client chunks without zod. Headless Chromium at 1440, 390 and 320 verified the exception-first lists, the counted filter chips, the grouped dashboard, the open settings groups, the mobile tab strip, and whole player names at 320.
+- **Deferred in this pass.** Page archetypes and empty space, the 12 px type floor, the 44 px desktop navigation, and the remaining P2 mechanical defects are the next milestone.
+
 ## Release 1.6.0 (shipped)
 
 - `feat/legends-1.6.0` merged into `main` at `e6aaa20` (PR #18). The auto-release version pull request #19 merged at `e34a3ac` and produced tag `v1.6.0` and the GHCR image without a manual tag.
