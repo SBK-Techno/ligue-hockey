@@ -17,6 +17,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [string, I18nKey]> = [
 	['/admin/evaluations', 'admin.evaluationsSeason'],
 	['/admin', 'admin.title'],
 	['/matchs', 'games.title'],
+	['/equipes', 'teams.title'],
 	['/remplacants', 'subs.title'],
 	['/discussion', 'nav.chat'],
 	['/notifications', 'notifications.title'],

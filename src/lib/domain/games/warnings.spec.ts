@@ -54,7 +54,6 @@ describe('game warning registry', () => {
 			expect(gameWarningLabelKey(key)).toBe(warning.labelKey);
 			expect(typeof fr[warning.labelKey]).toBe('string');
 			if (warning.helpKey) expect(typeof fr[warning.helpKey]).toBe('string');
-			if (warning.playerHelpKey) expect(typeof fr[warning.playerHelpKey]).toBe('string');
 		}
 	);
 

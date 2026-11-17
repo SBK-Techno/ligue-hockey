@@ -1,22 +1,19 @@
 <script lang="ts">
 	import { gameStatus } from '#config/game-status.ts';
-	import { gameWarningDefinition } from '#config/game-warnings.ts';
 	import { mapUrlFor } from '#config/maps.ts';
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
-	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import { teamDefinition } from '#config/teams.ts';
-	import { formatDate, formatTime, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import { formatDate, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import AvailabilityRoster from '#lib/ui/AvailabilityRoster.svelte';
-	import { balanceLine } from '#lib/ui/game-balance.ts';
 	import { badgeClass } from '#lib/ui/badge-tone.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import MapLink from '#lib/ui/MapLink.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import GameSheet from '#lib/ui/match/GameSheet.svelte';
 	import { matchSectionOrder } from '#lib/ui/match/match-layout.ts';
-	import LineupBoard from '#lib/ui/match/LineupBoard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import type { PageProps } from './$types';
 
@@ -49,7 +46,6 @@
 		Boolean(availability && availability.rows.length + availability.pending.length > 0)
 	);
 	const hasSubsPanel = $derived(data.requests.length > 0 || isManager);
-	const hasBalancePanel = $derived(Boolean(game?.generation && data.canManage));
 	const filledRequests = $derived(
 		data.requests.filter(
 			(request) =>
@@ -67,11 +63,7 @@
 					completed,
 					hasAttendance,
 					hasSubstitutes: completed ? data.requests.length > 0 : hasSubsPanel,
-					hasSheet: Boolean(data.playable && data.sheet),
-					// Un match annulé n'a pas d'alignement à publier : ni carte
-					// vide, ni invite à générer une équipe.
-					hasLineup:
-						game.status === 'cancelled' ? false : completed ? game.generated : true
+					hasSheet: Boolean(data.playable && data.sheet)
 				})
 			: []
 	);
@@ -93,9 +85,14 @@
 		{#snippet actions()}
 			<span class={badgeClass(gameStatus(game.status).tone)}>{t(gameStatus(game.status).labelKey)}</span>
 			{#if ownTeam}
-				<span class="badge-ice">
+				<a
+					class="badge-ice inline-flex min-h-11 items-center no-underline"
+					href="/equipes/{game.id}"
+				>
 					{t('home.team')} · {t(teamDefinition(ownTeam).labelKey)}
-				</span>
+				</a>
+			{:else}
+				<a class="btn-secondary btn-sm" href="/equipes/{game.id}">{t('teams.view')}</a>
 			{/if}
 			{#if data.canManage && data.editable}
 				<a class="btn-secondary btn-sm" href="/admin/matchs/{game.id}">{t('games.adminEdit')}</a>
@@ -105,26 +102,7 @@
 
 	<div class="page-stack">
 	{#if mapUrl}
-		<p>
-			<a
-				class="link inline-flex min-h-11 items-center gap-1 text-body"
-				href={mapUrl}
-				target="_blank"
-				rel="noreferrer"
-			>
-				{t('games.openMap')}
-				<svg
-					viewBox="0 0 24 24"
-					class="h-3.5 w-3.5"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					aria-hidden="true"
-				>
-					<path d="M14 5h5v5M19 5l-8 8M18 13v6H5V6h6" />
-				</svg>
-			</a>
-		</p>
+		<p><MapLink href={mapUrl} /></p>
 	{/if}
 
 	{#if game.notes}
@@ -377,109 +355,6 @@
 
 {/snippet}
 
-{#snippet lineupPanel()}
-	{#if game.generated}
-		<SectionCard
-			class={hasBalancePanel ? 'lg:col-span-8' : 'lg:col-span-12'}
-			title={t('games.roster')}
-			flush
-		>
-			{#snippet actions()}
-				{#if game.lineupComplete}
-					<span class="badge-ok">{t('games.generated')}</span>
-				{:else}
-					<span class="badge-alert">{t('games.rosterIncomplete')}</span>
-				{/if}
-			{/snippet}
-			<div class="section-body">
-				{#if game.generation}
-					<p class="text-meta text-muted">
-						{t('games.publishedAt', { date: formatTimestamp(game.generation.generatedAt) })}
-					</p>
-				{/if}
-				<FormFeedback {form} section="lineup" focusOnChange class="mb-3" />
-				{#key game.generation?.generatedAt}
-				<LineupBoard
-					slots={game.slots}
-					bench={game.generation?.bench ?? []}
-					canEdit={data.canManage && data.editable}
-					expectedGeneratedAt={game.generation?.generatedAt ?? null}
-					actorId={hasProfile ? actor?.userId ?? null : null}
-					{ownTeam}
-				/>
-				{/key}
-			</div>
-		</SectionCard>
-
-		{#if game.generation && data.canManage}
-			<SectionCard class="self-start lg:col-span-4" title={t('team.balance')}>
-				<p class="text-body text-muted">
-					{balanceLine(game.generation.skillDiffLabel, game.generation.ageDiffLabel)}
-				</p>
-				{#each game.generation.warnings as warning (warning)}
-					{@const definition = gameWarningDefinition(warning)}
-					{#if !definition.managerOnly || data.canManage}
-						<div class={definition.tone === 'alert' ? 'alert mt-3' : 'notice mt-3'}>
-							<p class="font-semibold">{t(definition.labelKey)}</p>
-							{#if definition.helpKey}
-								<p class="mt-1">
-									{t(
-										data.canManage || !definition.playerHelpKey
-											? definition.helpKey
-											: definition.playerHelpKey
-									)}
-								</p>
-							{/if}
-							{#if definition.detail === 'open-slots'}
-								<p class="mt-1 text-body">{game.openSlotsLabel}</p>
-							{/if}
-						</div>
-					{/if}
-				{/each}
-				{#if data.canManage && game.generation.ruleViolations.length > 0}
-					<div class="notice mt-3">
-						<p class="font-semibold">{t('admin.ruleViolations')}</p>
-						<ul role="list" class="mt-2 space-y-1 text-body">
-							{#each game.generation.ruleViolations as violation (violation.ruleId)}
-								{@const mode = ruleModeDefinition(
-									ruleModeFor(violation.kind, violation.strict)
-								)}
-								<li class="flex flex-wrap items-center gap-2">
-									<span class={badgeClass(mode?.tone)}>
-										{mode ? t(mode.shortLabelKey) : ''}
-									</span>
-									<span>{violation.names[0]} · {violation.names[1]}</span>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-				{#if data.canManage && data.editable}
-					<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
-						<ConfirmSubmit
-							label={t('games.regenerate')}
-							question={t('games.regenerateConfirm')}
-							confirmLabel={t('games.regenerate')}
-							class="btn-secondary btn-sm"
-						/>
-					</form>
-				{/if}
-			</SectionCard>
-		{/if}
-	{:else}
-		<SectionCard class="lg:col-span-12" title={t('games.notGenerated')}>
-			<p class="measure text-body text-muted">
-				{data.canManage ? t('games.lineupSoonAdmin') : t('games.lineupSoon')}
-			</p>
-			{#if data.canManage && data.editable}
-				<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
-					<button class="btn-primary" type="submit">{t('games.generate')}</button>
-				</form>
-			{/if}
-		</SectionCard>
-	{/if}
-{/snippet}
-
 	{#if showPresence}
 		{@render presenceStrip()}
 	{/if}
@@ -492,8 +367,6 @@
 			{@render substitutesPanel()}
 		{:else if section === 'sheet'}
 			{@render sheetPanel()}
-		{:else}
-			{@render lineupPanel()}
 		{/if}
 	{/each}
 	</div>

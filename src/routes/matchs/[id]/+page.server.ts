@@ -9,9 +9,7 @@ import {
 	listRequestsForGame,
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
-import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
-import { saveManualLineup } from '#lib/domain/games/lineup.ts';
-import { manualLineupInputSchema } from '#lib/domain/games/validators.ts';
+import { getGame } from '#lib/domain/games/service.ts';
 import { isGamePlayable, isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import type { Position } from '#config/positions.ts';
@@ -30,8 +28,7 @@ import {
 } from '#lib/domain/gamesheet/validators.ts';
 import { actionError } from '#lib/server/action.ts';
 import { formatDate, t } from '#lib/shared/i18n/index.ts';
-import { parseForm, parseSchema } from '#lib/shared/validation.ts';
-import { AppError } from '#lib/shared/errors.ts';
+import { parseForm } from '#lib/shared/validation.ts';
 
 const availabilitySchema = z.object({
 	status: z.enum(['present', 'absent'])
@@ -104,14 +101,6 @@ export const actions: Actions = {
 				ok: true,
 				message: t(result.warning ?? result.messageKey)
 			};
-		} catch (cause) {
-			return actionError(cause);
-		}
-	},
-	generate: async ({ locals, params }) => {
-		try {
-			regenerateAsAdmin(locals.actor, params.id!);
-			return { ok: true, message: t('games.generated') };
 		} catch (cause) {
 			return actionError(cause);
 		}
@@ -194,27 +183,6 @@ export const actions: Actions = {
 			return { ok: true, message: t('gamesheet.finalized') };
 		} catch (cause) {
 			return actionError(cause);
-		}
-	},
-	lineup: async ({ request, locals, params }) => {
-		try {
-			const form = await request.formData();
-			const rawToken = String(form.get('expectedGeneratedAt') ?? '');
-			const token = rawToken === '' ? null : Number(rawToken);
-			let assignments: unknown;
-			try {
-				assignments = JSON.parse(String(form.get('lineup') ?? ''));
-			} catch {
-				throw new AppError('VALIDATION', { key: 'rink.invalid' });
-			}
-			const parsed = parseSchema(manualLineupInputSchema, {
-				expectedGeneratedAt: token,
-				assignments
-			});
-			saveManualLineup(locals.actor, params.id!, parsed);
-			return { ok: true, section: 'lineup', message: t('rink.saved') };
-		} catch (cause) {
-			return actionError(cause, { section: 'lineup' });
 		}
 	},
 	requestSub: async ({ request, locals, params }) => {

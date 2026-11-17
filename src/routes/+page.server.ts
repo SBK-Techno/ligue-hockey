@@ -16,7 +16,7 @@ import {
 import { voteInputSchema } from '#lib/domain/chat/validators.ts';
 import { getMyBalance } from '#lib/domain/finance/service.ts';
 import { getGame, listSchedule } from '#lib/domain/games/service.ts';
-import { nextGameId, splitSchedule } from '#lib/domain/games/schedule.ts';
+import { scheduleView } from '#lib/domain/games/schedule.ts';
 import {
 	composeHome,
 	type HomeComposition,
@@ -105,13 +105,10 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 	const canClaimSubs = can(actor, 'claimSubs');
 
 	const schedule = listSchedule(actor);
-	const { upcoming, past } = splitSchedule(schedule);
+	const { upcoming, past, nextId } = scheduleView(schedule);
 	// Un match annulé ne cache jamais le suivant, mais s'il ne reste que lui,
 	// l'accueil doit le montrer comme annulé plutôt que comme une absence de match.
-	const nextId =
-		nextGameId(schedule) ??
-		upcoming.find((entry) => entry.status === 'cancelled')?.id ??
-		null;
+	// Hors saison, l'accueil ne promeut jamais le dernier match joué en « prochain ».
 	const game = nextId ? getGame(actor, nextId) : null;
 	const today = todayInZone(branding.timezone);
 

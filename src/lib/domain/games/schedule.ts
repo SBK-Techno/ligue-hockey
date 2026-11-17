@@ -63,6 +63,43 @@ export function nextGameId(
 	return null;
 }
 
+export type ScheduleView<T extends ScheduleGame> = ScheduleSplit<T> & {
+	/**
+	 * Le prochain match visible : un match programmé, sinon un match annulé
+	 * encore à venir. C'est la sémantique de l'accueil, qui ne montre jamais un
+	 * match déjà joué comme « prochain match ».
+	 */
+	nextId: string | null;
+	/**
+	 * La cible par défaut d'une surface qui doit toujours montrer une équipe :
+	 * le prochain match visible, sinon le dernier match passé. Une équipe
+	 * publiée ne disparaît donc jamais entre deux matchs.
+	 */
+	defaultId: string | null;
+};
+
+/**
+ * Une seule découpe du calendrier et un seul instant pour le prochain match,
+ * la cible par défaut et les archives. Les pages lisent cette vue au lieu de
+ * recalculer chacune leur part.
+ */
+export function scheduleView<T extends ScheduleGame>(
+	games: readonly T[],
+	at: number = clock.nowMs(),
+	timeZone: string = branding.timezone
+): ScheduleView<T> {
+	const split = splitSchedule(games, at, timeZone);
+	const next =
+		split.upcoming.find((entry) => entry.status === 'scheduled') ??
+		split.upcoming.find((entry) => entry.status === 'cancelled') ??
+		null;
+	return {
+		...split,
+		nextId: next?.id ?? null,
+		defaultId: next?.id ?? split.past[0]?.id ?? null
+	};
+}
+
 /** Le jour de ligue suivant : le prochain dimanche, jamais aujourd'hui. */
 export function nextLeagueDay(today: string): string {
 	const weekday = dateOnlyToDate(today).getUTCDay();

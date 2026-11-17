@@ -13,7 +13,7 @@ vi.mock('#lib/server/db/index.ts', async () => {
 });
 
 const { sqlite } = await import('#lib/server/db/index.ts');
-const { listGameListEntries } = await import('./service.ts');
+const { listGameListEntries, listTeamHistory } = await import('./service.ts');
 
 const actor: Actor = {
 	kind: 'user',
@@ -60,6 +60,62 @@ function seedGames(count: number): string[] {
 	return ids;
 }
 
+const SNAPSHOT = JSON.stringify({
+	skillDiff: 0,
+	ageDiff: 0,
+	sizeDiff: 0,
+	warnings: [],
+	ruleViolations: [],
+	bench: [],
+	candidateKey: 'test',
+	generatedAt: 1
+});
+
+function seedPlayer(userId: string, firstName: string): void {
+	sqlite
+		.prepare(
+			`insert into user (id, name, email, email_verified, created_at, updated_at)
+			 values (?, ?, ?, 0, 0, 0)`
+		)
+		.run(userId, firstName, `${userId}@test.local`);
+	sqlite
+		.prepare(
+			`insert into players
+			 (user_id, first_name, last_name, position, age, active, created_at, updated_at)
+			 values (?, ?, 'Test', 'forward', 30, 1, 0, 0)`
+		)
+		.run(userId, firstName);
+}
+
+function seedAssignedGame(id: string, gameDate: string, white: number, black: number): void {
+	sqlite
+		.prepare(
+			`insert into games
+			 (id, game_date, start_time, location_id, location, roster_template_json,
+			  generated_at, generation_json, created_at, updated_at)
+			 values (?, ?, '09:00', 'loc', 'Aréna test', '{}', 1, ?, 0, 0)`
+		)
+		.run(id, gameDate, SNAPSHOT);
+	let slot = 0;
+	for (const [team, count] of [
+		['white', white],
+		['black', black]
+	] as const) {
+		for (let index = 0; index < count; index += 1) {
+			const playerId = `${id}-${team}-${index}`;
+			seedPlayer(playerId, `${team}-${index}`);
+			sqlite
+				.prepare(
+					`insert into game_slots
+					 (id, game_id, team, position, slot_index, assigned_player_id,
+					  assignment_kind, created_at, updated_at)
+					 values (?, ?, ?, 'forward', ?, ?, 'regular', 0, 0)`
+				)
+				.run(`${id}-slot-${slot++}`, id, team, index, playerId);
+		}
+	}
+}
+
 function counted<T>(read: () => T): { value: T; statements: number } {
 	const original = sqlite.prepare.bind(sqlite);
 	let statements = 0;
@@ -93,5 +149,26 @@ describe('projection de liste des matchs', () => {
 		expect(large.statements).toBe(small.statements);
 		expect(large.value.get(ids[0])?.openSlots).toBe(4);
 		expect(large.value.get(ids[0])?.openSlotsLabel).toContain('4');
+	});
+});
+
+describe('historique des équipes', () => {
+	it('garde l’ordre demandé et les compteurs de chaque match', () => {
+		sqlite
+			.prepare(
+				`insert into locations (id, name, created_at, updated_at)
+				 values ('loc', 'Aréna test', 0, 0)`
+			)
+			.run();
+		seedAssignedGame('game-b', '2026-11-15', 2, 1);
+		seedAssignedGame('game-a', '2026-11-08', 0, 0);
+
+		const read = counted(() => listTeamHistory(actor, ['game-b', 'game-a']));
+
+		expect(read.value.map((entry) => entry.id)).toEqual(['game-b', 'game-a']);
+		expect(read.value[0].generated).toBe(true);
+		expect(read.value[0].counts).toEqual({ white: 2, black: 1 });
+		expect(read.value[1].counts).toEqual({ white: 0, black: 0 });
+		expect(read.statements).toBe(3);
 	});
 });

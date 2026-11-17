@@ -5,6 +5,7 @@ import {
 	defaultGameDraft,
 	nextGameId,
 	nextLeagueDay,
+	scheduleView,
 	splitSchedule,
 	type ScheduleGame
 } from './schedule.ts';
@@ -133,6 +134,50 @@ describe('nextGameId', () => {
 
 	it('returns null without a scheduled game', () => {
 		expect(nextGameId([game('cancelled', '2026-11-16', '19:00', 'cancelled')], now)).toBe(null);
+	});
+});
+
+describe('scheduleView', () => {
+	const now = at('2026-11-16', '09:00');
+
+	it('préfère le prochain match programmé au match annulé en tête', () => {
+		const view = scheduleView(
+			[
+				game('cancelled', '2026-11-16', '10:00', 'cancelled'),
+				game('scheduled', '2026-11-16', '19:00')
+			],
+			now
+		);
+
+		expect(view.nextId).toBe('scheduled');
+		expect(view.defaultId).toBe('scheduled');
+	});
+
+	it('garde le prochain match annulé quand aucun match n’est programmé', () => {
+		const view = scheduleView([game('cancelled', '2026-11-16', '19:00', 'cancelled')], now);
+
+		expect(view.nextId).toBe('cancelled');
+		expect(view.defaultId).toBe('cancelled');
+	});
+
+	it('ne promeut jamais un match passé comme prochain match', () => {
+		const view = scheduleView(
+			[
+				game('old', '2026-11-01', '08:00', 'completed'),
+				game('recent', '2026-11-15', '08:00', 'completed')
+			],
+			now
+		);
+
+		expect(view.nextId).toBe(null);
+		expect(view.defaultId).toBe('recent');
+	});
+
+	it('ne choisit rien sans calendrier', () => {
+		const view = scheduleView([], now);
+
+		expect(view.nextId).toBe(null);
+		expect(view.defaultId).toBe(null);
 	});
 });
 

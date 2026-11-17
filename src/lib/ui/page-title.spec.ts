@@ -20,6 +20,10 @@ describe('titre de document', () => {
 
 	it('garde le titre de section pour une route sans détail', () => {
 		expect(resolvePageTitle({ ...branding, pathname: '/matchs' })).toBe('Matchs · LHDM');
+		expect(resolvePageTitle({ ...branding, pathname: '/equipes' })).toBe('Équipes · LHDM');
+		expect(resolvePageTitle({ ...branding, pathname: '/equipes/game-1' })).toBe(
+			'Équipes · LHDM'
+		);
 		expect(resolvePageTitle({ ...branding, pathname: '/admin/joueurs/joueur-1' })).toBe(
 			'Joueurs · LHDM'
 		);

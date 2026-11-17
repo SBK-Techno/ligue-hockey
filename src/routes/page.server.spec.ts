@@ -214,6 +214,25 @@ describe('chargement de l’accueil', () => {
 		expect(data.game?.generation).toBeNull();
 	});
 
+	it('ne prend pas le dernier match joué comme prochain match hors saison', async () => {
+		sqlite
+			.prepare(
+				`update games set game_date = '2020-01-05', status = 'completed', completed_at = 0
+				 where id = 'future'`
+			)
+			.run();
+
+		const data = (await loadFor(player)) as {
+			game: unknown;
+			managerSummary: unknown;
+			board: { panels: { kind: string }[] };
+		};
+
+		expect(data.game).toBeNull();
+		expect(data.managerSummary).toBeNull();
+		expect(data.board.panels.some((panel) => panel.kind === 'team')).toBe(false);
+	});
+
 	it('donne le bandeau de gestion et les compteurs au gestionnaire', async () => {
 		const data = (await loadFor(admin)) as {
 			board: { manager: boolean };

@@ -69,10 +69,11 @@ export type MeasuredPage = {
 
 /**
  * Les routes dont le graphe JavaScript initial est mesuré. Le smoke du
- * conteneur demande chaque route statique. Les cinq surfaces à paramètre
- * (/matchs/[id], /admin/matchs/[id], /admin/joueurs/[id],
- * /admin/evaluations/[id], /admin/evaluations/matchs/[id]) sont déclarées mais
- * mesurées en préversion avec les données de démonstration.
+ * conteneur demande chaque page statique; /equipes redirige et se mesure via sa
+ * page de détail. Les six surfaces à paramètre (/matchs/[id], /equipes/[id],
+ * /admin/matchs/[id], /admin/joueurs/[id], /admin/evaluations/[id],
+ * /admin/evaluations/matchs/[id]) sont déclarées mais mesurées en préversion
+ * avec les données de démonstration.
  */
 export const MEASURED_PAGES: readonly MeasuredPage[] = [
 	{
@@ -115,6 +116,14 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 		audience: 'admin'
 	},
 	{ name: 'matchs', path: '/matchs', maxRequests: 26, maxBytes: 110 * 1024, audience: 'admin' },
+	{
+		name: 'equipes',
+		path: '/equipes',
+		audience: 'player',
+		// La route redirige vers le match par défaut : le smoke mesurerait un
+		// corps vide. La vraie page se mesure en préversion via /equipes/[id].
+		preview: true
+	},
 	{
 		name: 'remplacants',
 		path: '/remplacants',
@@ -195,6 +204,12 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 	{
 		name: 'match-detail',
 		path: '/matchs/[id]',
+		audience: 'player',
+		preview: true
+	},
+	{
+		name: 'team-detail',
+		path: '/equipes/[id]',
 		audience: 'player',
 		preview: true
 	},

@@ -6,6 +6,7 @@
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import MapLink from '#lib/ui/MapLink.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import RecordRow from '#lib/ui/RecordRow.svelte';
@@ -134,14 +135,7 @@
 							<div class="px-4 pb-3">
 								<div class="flex flex-wrap items-center gap-3">
 									{#if href}
-										<a
-											class="link inline-flex min-h-11 items-center text-body"
-											href={href}
-											target="_blank"
-											rel="noreferrer"
-										>
-											{t('games.openMap')}
-										</a>
+										<MapLink href={href} />
 									{/if}
 									{#if (metric?.gameCount ?? 0) > 0}
 										<p class="hint">{t('admin.locationInUse')}</p>

@@ -53,6 +53,7 @@ export const fr = {
 
   'nav.home': 'Accueil',
   'nav.games': 'Matchs',
+  'nav.teams': 'Équipes',
   'nav.chat': 'Discussion',
   'nav.chatShort': 'Jaser',
   'nav.profile': 'Mon profil',
@@ -218,7 +219,37 @@ export const fr = {
   'team.black': 'Équipe noire',
   'team.black.short': 'Noire',
   'team.label': 'Équipe',
-  'team.balance': 'Équilibre',
+
+  'teams.title': 'Équipes',
+  'teams.meta': 'L’équipe du prochain match et les équipes déjà alignées.',
+  'teams.nextMatch': 'Prochain match',
+  'teams.pastMatch': 'Match passé',
+  'teams.selectedMatch': 'Match sélectionné',
+  'teams.history': 'Matchs passés',
+  'teams.historyHelp':
+    'Chaque match garde l’équipe qui a été alignée, même quand l’équipe change.',
+  'teams.historyEmpty': 'Aucun match passé pour le moment.',
+  'teams.historyMore': 'Les matchs plus anciens restent dans',
+  'teams.view': 'Voir l’équipe',
+  'teams.manage': 'Préparer l’équipe',
+  'teams.noLineup': 'Aucune équipe publiée',
+  'teams.noLineupHelp':
+    'Le responsable n’a pas encore publié l’alignement de ce match.',
+  'teams.noLineupPast': 'Aucune équipe n’a été publiée pour ce match.',
+  'teams.managerTitle': 'Préparation de l’équipe',
+  'teams.managerHelp':
+    'Déplace un joueur, refais les équipes ou comble une place. L’alignement enregistré reste attaché à ce match.',
+  'teams.generateHelp':
+    'Crée l’alignement du prochain match à partir des présences et des règles de la ligue.',
+  'teams.lockedHelp': 'Ce match a commencé : l’alignement ne change plus.',
+  'teams.pastHelp': 'L’alignement affiché est celui qui a été publié pour ce match.',
+  'teams.adminHelp':
+    'L’alignement, les échanges et les places ouvertes se préparent dans Équipes.',
+  'teams.ratingsMissingHelp':
+    'Ils restent sur le banc tant que leurs notes ne sont pas complètes.',
+  'teams.noGames': 'Aucun match au calendrier',
+  'teams.noGamesHelp':
+    'Les équipes apparaîtront ici dès qu’un match sera au calendrier.',
 
   'payment.etransfer': 'Virement Interac',
   'payment.cash': 'Comptant',
@@ -329,7 +360,6 @@ export const fr = {
   'home.availability': 'Ta présence',
   'home.team': 'Ton équipe',
   'home.balanceClear': 'À jour',
-  'home.manageGame': 'Gérer le match',
   'home.viewGame': 'Voir le match',
   'home.noGameHelp':
     'Un administrateur publie la prochaine date. Tu la verras ici.',
@@ -421,8 +451,6 @@ export const fr = {
     'Une équipe n’a encore aucun joueur. L’équilibre sera mesuré quand les deux équipes seront remplies.',
   'games.openSlots.one': '{count} place ouverte',
   'games.openSlots.many': '{count} places ouvertes',
-  'games.filledPlaces.one': '{count} place comblée',
-  'games.filledPlaces.many': '{count} places comblées',
   'games.sizeGap': 'Écart de joueurs : {count}',
   'games.teamSize': '{team} : {count}',
   'games.details': 'Détails du match',
@@ -433,9 +461,6 @@ export const fr = {
   'games.generated': 'Alignement publié',
   'games.publishedAt': 'Équipes affichées le {date}',
   'games.notGenerated': 'Sans alignement',
-  'games.skillGap': 'Écart de notes',
-  'games.ageGap': 'Écart d’âge cumulé',
-  'games.average': 'Moyenne de l’équipe {team}',
   'games.bestSwap': 'Le meilleur échange',
   'games.bestSwapHelp':
     'Échanger {a} et {b} ferait passer l’écart de notes de {before} à {after}.',
@@ -447,21 +472,14 @@ export const fr = {
   'games.swapDone': 'Échange fait, alignement rééquilibré.',
   'games.noBetterSwap': 'Aucun échange ne rapproche davantage les équipes.',
   'games.fillSlots': 'Combler les places',
-  'games.fillSlotsHelp.one':
-    '{count} joueur du bassin peut combler une place selon son poste.',
-  'games.fillSlotsHelp.many':
-    '{count} joueurs du bassin peuvent combler une place selon leur poste.',
   'games.fillDone.one': '{count} place comblée.',
   'games.fillDone.many': '{count} places comblées.',
   'games.noOneToFill': 'Aucun joueur disponible ne peut combler une place.',
   'games.alreadyBalanced': 'Aucun échange ne rapproche davantage les équipes.',
-  'games.bench': 'Joueurs sans place',
-  'games.benchAvailable': 'Disponibles non habillés',
   'games.unassigned': 'Place libre',
   'games.substitutes': 'Remplaçant',
   'games.adminCreate': 'Créer un match',
   'games.adminEdit': 'Modifier le match',
-  'games.editLineup': 'Modifier l’alignement',
   'games.adminCancel': 'Annuler le match',
   'games.notes': 'Note pour les joueurs',
   'games.balanceSkill': 'Écart de notes : {value}',
@@ -473,15 +491,10 @@ export const fr = {
   'games.limitConflict': 'Les écarts demandés ne sont pas respectés',
   'games.limitConflictHelp':
     'Aucun alignement ne respecte les écarts demandés. Demande à un administrateur d’ajuster les réglages.',
-  'games.rulesConflictPlayer':
-    'L’alignement doit être ajusté. Un administrateur va s’en occuper.',
   'games.rulesConflictHelp':
     'Aucune combinaison ne respecte toutes les règles. Demande à un administrateur d’ajuster les règles.',
   'games.ratingsMissing':
     'Certains joueurs n’ont pas encore d’évaluations complètes.',
-  'games.ratingsMissingNames': 'Joueurs concernés : {names}.',
-  'games.ratingsMissingHelp':
-    'Complète leurs évaluations pour les inclure dans l’alignement.',
   'games.ratingsMissingLink': 'Ouvrir les évaluations',
   'games.noMatch': 'Ce match est introuvable.',
   'games.cancelledNotice': 'Ce match est annulé.',
@@ -674,8 +687,6 @@ export const fr = {
     'Les remplaçants reçoivent un avis. La première personne qui répond a la place.',
   'games.lineupSoonAdmin':
     'Publie les équipes quand les présences sont prêtes.',
-  'games.lineupSoon':
-    'Les équipes s’affichent ici dès qu’un administrateur les publie.',
   'subs.subtitle': 'Les places ouvertes et la banque de remplaçants.',
   'subs.openPositions': 'Places à combler',
   'subs.positionNotSelected':
@@ -1115,7 +1126,6 @@ export const fr = {
   'admin.overdueBalance': 'Solde en retard',
   'admin.toReceive': 'À recevoir',
   'admin.unansweredNames': 'Sans réponse : {names}',
-  'admin.openSheet': 'Ouvrir la feuille de match',
   'admin.withoutPlanTitle': 'Sans versements ({count})',
   'admin.noUnpaid': 'Aucun montant à recevoir.',
   'admin.withoutPlanHelp': 'Ces joueurs n’ont pas encore de frais ni de dates.',

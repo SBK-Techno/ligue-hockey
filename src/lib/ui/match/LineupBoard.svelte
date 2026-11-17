@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { positionDefinition } from '#config/positions.ts';
 	import { rinkGeometryStyle } from '#config/rink.ts';
-	import { TEAMS, teamDefinition, type Team } from '#config/teams.ts';
+	import {
+		orderedTeams as teamsInOrder,
+		TEAMS,
+		teamDefinition,
+		type Team
+	} from '#config/teams.ts';
 	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
@@ -64,11 +69,7 @@
 	} = $props();
 
 	const placements = $derived.by<LineupPlacement[]>(() => boardPlacements(slots));
-	const orderedTeams = $derived(
-		ownTeam
-			? [...TEAMS].sort((a, b) => (a.key === ownTeam ? -1 : b.key === ownTeam ? 1 : 0))
-			: [...TEAMS]
-	);
+	const orderedTeams = $derived(teamsInOrder(ownTeam));
 	// svelte-ignore state_referenced_locally
 	let activeTeam = $state<Team>(ownTeam ?? TEAMS[0].key);
 

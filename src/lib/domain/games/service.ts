@@ -1,6 +1,7 @@
 import type { Position } from '#config/positions.ts';
 import { buildSlotDefinitions, rosterTemplateFromSettings } from '#config/roster.ts';
 import { slotRowId } from '#config/slot.ts';
+import type { Team } from '#config/teams.ts';
 import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
@@ -34,6 +35,7 @@ import {
 	listAvailabilityForPlayer,
 	listGameListRows,
 	listGames,
+	listTeamSlotCounts,
 	releasePlayerSlot,
 	listSlotAssignments,
 	saveAssignments,
@@ -227,6 +229,36 @@ export function listGameListEntries(
 			}
 		])
 	);
+}
+
+export type TeamHistoryEntry = GameListEntry & {
+	/** Joueurs habillés par équipe au moment où ce match a été publié. */
+	counts: Record<Team, number>;
+};
+
+/**
+ * L'historique de la section Équipes : la liste bornée des matchs passés et,
+ * pour chacun, le nombre de joueurs réellement habillés dans chaque équipe.
+ * Une seule lecture de liste et une seule lecture groupée des places, jamais
+ * une fiche complète par ligne.
+ */
+export function listTeamHistory(
+	actor: Actor,
+	gameIds: readonly string[]
+): TeamHistoryEntry[] {
+	requireUser(actor);
+	const entries = listGameListEntries(actor, gameIds);
+	const counts = new Map<string, Record<Team, number>>(
+		gameIds.map((gameId) => [gameId, { white: 0, black: 0 }])
+	);
+	for (const row of listTeamSlotCounts(gameIds)) {
+		const record = counts.get(row.gameId);
+		if (record) record[row.team] = row.count;
+	}
+	return gameIds.flatMap((gameId) => {
+		const entry = entries.get(gameId);
+		return entry ? [{ ...entry, counts: counts.get(gameId)! }] : [];
+	});
 }
 
 export function getGame(actor: Actor, gameId: string): GameView {
