@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
-import { IDENTITIES } from '#config/identities.ts';
+import { AVATAR_IDS } from '#config/avatars.ts';
+import { IDENTITIES, IDENTITY_IDS } from '#config/identities.ts';
 import { IDENTITY_SHEET } from '#config/identity-sheet.ts';
 import { fr } from '#config/i18n/fr.ts';
 import { MATERIALS } from '#config/materials.ts';
@@ -373,6 +374,17 @@ function buildBrandingModule(
 		socialImage,
 		auth,
 		identitySheet,
+		/**
+		 * L'index compact des identités : les identifiants, la couleur de
+		 * joueur de chacun et le nombre de visages de la ligue. Le catalogue
+		 * complet reste la source; cet index évite de livrer les noms, les
+		 * époques et les descriptions à chaque page.
+		 */
+		identities: {
+			ids: IDENTITY_IDS,
+			colors: IDENTITIES.map((identity) => identity.color),
+			leagueFaces: AVATAR_IDS.length
+		},
 		manifestPath: MANIFEST_PATH,
 		offlinePath: OFFLINE_PATH,
 		/**

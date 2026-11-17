@@ -2,9 +2,8 @@
 	import { rinkGeometryStyle } from '#config/rink.ts';
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
 	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
-	import { resolveAvatarId } from '#lib/domain/players/identity.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
-	import IdentityPortrait from '#lib/ui/IdentityPortrait.svelte';
+	import Avatar from '#lib/ui/Avatar.svelte';
 	import {
 		assignmentsForSave,
 		benchKey,
@@ -120,8 +119,13 @@
 		return benchId !== null ? playerById(benchId) : playerAt(key);
 	}
 
-	function avatarFor(player: BoardPlayer): string {
-		return resolveAvatarId(player.playerId, player.avatarId);
+	/** Le portrait partage le rendu de tous les avatars de l'application. */
+	function portrait(player: BoardPlayer) {
+		return {
+			fullName: player.fullName,
+			userId: player.playerId,
+			avatarId: player.avatarId
+		};
 	}
 
 	/**
@@ -328,7 +332,7 @@
 							>
 								{#if player}
 									<span class="rink-portrait">
-										<IdentityPortrait avatarId={avatarFor(player)} />
+										<Avatar player={portrait(player)} fill />
 									</span>
 									<span class="rink-number">{player.jerseyNumber ?? '?'}</span>
 									<span class="rink-name">{rinkPlayerLastName(player.fullName)}</span>
@@ -366,7 +370,7 @@
 								>
 									{#if player}
 										<span class="bench-portrait">
-											<IdentityPortrait avatarId={avatarFor(player)} />
+											<Avatar player={portrait(player)} fill />
 										</span>
 										<span class="font-mono text-caption text-muted"
 											>{player.jerseyNumber ?? '?'}</span
@@ -414,7 +418,7 @@
 								aria-pressed={canEdit ? selected === benchKey(player.playerId) : undefined}
 							>
 								<span class="bench-portrait">
-									<IdentityPortrait avatarId={avatarFor(player)} />
+									<Avatar player={portrait(player)} fill />
 								</span>
 								<span class="font-mono text-caption text-muted">{player.jerseyNumber ?? '?'}</span>
 								<span class="bench-name">{player.fullName}</span>
@@ -431,7 +435,7 @@
 	{#if canEdit && selected && selectedPlayer}
 		<div class="selection-tray">
 			<span class="selection-portrait">
-				<IdentityPortrait avatarId={avatarFor(selectedPlayer)} />
+				<Avatar player={portrait(selectedPlayer)} fill />
 			</span>
 			<div class="min-w-0" role="status">
 				<p class="truncate text-body font-semibold">{selectedPlayer.fullName}</p>
@@ -489,7 +493,7 @@
 			aria-hidden="true"
 		>
 			<span class="drag-ghost-portrait">
-				<IdentityPortrait avatarId={avatarFor(draggedPlayer)} />
+				<Avatar player={portrait(draggedPlayer)} fill />
 			</span>
 			<span class="drag-ghost-name">{draggedPlayer.fullName}</span>
 		</div>

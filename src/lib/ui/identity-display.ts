@@ -1,16 +1,16 @@
-import { IDENTITY_IDS } from '#config/identities.ts';
 import { IDENTITY_SHEET } from '#config/identity-sheet.ts';
 import { branding } from '#lib/generated/branding.ts';
 
 /**
- * La position d'une identité dans la planche unique. La colonne et la ligne
- * viennent du même catalogue que le générateur; aucun composant ne recompose
- * un nom de fichier ni un indice de tuile.
+ * La position d'une identité dans la planche unique. L'ordre vient de l'index
+ * généré du catalogue; aucun composant ne recompose un nom de fichier ni un
+ * indice de tuile.
  */
+const identityIds = branding.identities.ids;
 const columns = IDENTITY_SHEET.columns;
-const rows = Math.ceil(IDENTITY_IDS.length / columns);
+const rows = Math.ceil(identityIds.length / columns);
 const positions = new Map<string, { x: number; y: number }>(
-	IDENTITY_IDS.map((identityId, index) => [
+	identityIds.map((identityId, index) => [
 		identityId,
 		{
 			x: ((index % columns) / (columns - 1)) * 100,

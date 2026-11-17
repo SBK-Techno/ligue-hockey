@@ -20,8 +20,10 @@ import {
 	legendsForPosition
 } from '#config/legends.ts';
 import { POSITION_KEYS } from '#config/positions.ts';
+import { branding } from '#lib/generated/branding.ts';
 import { parseColourTokens } from '../../../../scripts/lib/palette.ts';
-import { avatarColor, firstFreeAvatarId, resolveAvatarId } from './identity.ts';
+import { firstFreeAvatarId } from './identity-assignment.ts';
+import { avatarColor, resolveAvatarId } from './identity.ts';
 
 describe('catalogue des visages de la ligue', () => {
 	it('offre 28 identifiants et 28 couleurs uniques', () => {
@@ -184,6 +186,14 @@ describe('catalogue des identités', () => {
 		}
 		expect(isIdentityId(null)).toBe(false);
 		expect(isIdentityId(undefined)).toBe(false);
+	});
+
+	it('génère l’index compact depuis le catalogue complet', () => {
+		expect(branding.identities.ids).toEqual([...IDENTITY_IDS]);
+		expect(branding.identities.colors).toEqual(
+			IDENTITIES.map((identity) => identity.color)
+		);
+		expect(branding.identities.leagueFaces).toBe(AVATAR_IDS.length);
 	});
 });
 

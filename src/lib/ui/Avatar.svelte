@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { isIdentityId } from '#config/identities.ts';
-	import { avatarColor, resolveAvatarId } from '#lib/domain/players/identity.ts';
+	import { avatarColor, isIdentityId, resolveAvatarId } from '#lib/domain/players/identity.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import IdentityPortrait from './IdentityPortrait.svelte';
 	import { monogram } from './identity-display.ts';
@@ -11,17 +10,20 @@
 		player,
 		size = 48,
 		decorative = true,
-		peek = true
+		peek = true,
+		fill = false
 	}: {
 		player: { fullName: string; userId: string; avatarId?: string | null };
 		size?: AvatarSize;
 		decorative?: boolean;
 		peek?: boolean;
+		/** Remplit le cadre fourni par l'appelant, sans bordure ni ombre propres. */
+		fill?: boolean;
 	} = $props();
 
 	const avatarId = $derived(resolveAvatarId(player.userId, player.avatarId));
 	const boxStyle = $derived(
-		`--player-color: var(${avatarColor(avatarId)}); width: ${size}px; height: ${size}px; font-size: ${Math.round(size * 0.34)}px;`
+		`--player-color: var(${avatarColor(avatarId)}); width: ${fill ? '100%' : `${size}px`}; height: ${fill ? '100%' : `${size}px`}; font-size: ${fill ? '0.85rem' : `${Math.round(size * 0.34)}px`};`
 	);
 	const initials = $derived(monogram(player.fullName));
 
@@ -31,7 +33,8 @@
      the catalogue stays an image otherwise. -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <span
-	class="avatar-frame inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-paper-deep align-middle"
+	class="inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-paper-deep align-middle"
+	class:avatar-frame={!fill}
 	style={boxStyle}
 	role={decorative ? undefined : peek ? 'button' : 'img'}
 	aria-hidden={decorative ? 'true' : undefined}
@@ -47,7 +50,7 @@
 	aria-expanded={peek && !decorative ? 'false' : undefined}
 >
 	{#if isIdentityId(avatarId)}
-		<!-- La planche fixe est chargée une fois; chaque avatar n'est qu'une
+		<!-- La planche est chargée une fois; chaque avatar n'est qu'une
 		     position dans cette image. -->
 		<IdentityPortrait {avatarId} />
 	{:else}
