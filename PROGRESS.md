@@ -2,12 +2,14 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release 1.8.2 (in progress)
+## Release 1.8.2 (shipped)
 
 - **Home last row.** The poll and the discussion each took the full row on a wide home, so the page still ended as a single column of two panels. In lineup, announced, presence and absent modes, when no substitute list owns its own row, the poll and the discussion now share the last row at 6 and 6. The game-day poll keeps its place beside attendance, and the substitute list keeps its own row.
 - **Evidence.** At 900 px the manager home drops from 2337 to 2136 px and the player home from 1925 to 1724; at 1440 px the player home drops from 1872 to 1671. The last row shows the poll and the discussion side by side, with no horizontal overflow and no console errors at either width.
 - **Gate.** `npm run gate` exit 0: 1127 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
-- **Next.** Merge, release `1.8.2` and deploy.
+- **Release.** PR #29 merged at `ad6b160`; release PR #30 merged at `d6758fd`. The automatic workflow produced tag `v1.8.2`, the GitHub release and the GHCR image without a manual tag.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.8.2`, host digest `sha256:32b1a052b504f5c765fca39e71cd12208060cbaa2982ffaf4044b5d0daf79c82`, local id `sha256:252205812ea5d1b170bcd8c3e9f94b812d840076be4b6c9a276bb2f8b8518a9f`, healthy since 2026-11-17T14:55:23Z with zero restarts. Public health reports `ok`/`ok`/`applied` with HSTS, the first three minutes of logs carry no error, and the live manager home at 900 px shows the poll and the discussion side by side.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261117T095459.db`; the 1.8.1 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.8.1.bak`.
 
 ## Release 1.8.1 (shipped)
 
