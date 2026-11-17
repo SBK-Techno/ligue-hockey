@@ -36,28 +36,14 @@ This file tracks the current milestone, verified evidence, and the work that is 
 | `1a00cf7` | `1.3.1` initial-paint flash fix | gate, PR 13, live |
 | `3b50ec4` | `1.3.2` natural rink, auth hero, shared team sheet, recalibration test | 340 tests, live health `ok` |
 | `3728997` | `1.3.3` `/remplacants` inline pool and request actions | 350 tests, check, lint |
+| `b54d7c8` | `1.4.0` home board, admin surfaces, shared UI system | gate, PR 16, live |
 
-## Next: 1.3.4 correctness
+## Next: 1.6.0
 
-- Freeze game records and availability after the start time; make cancellation atomic; filter recent form by playability.
-- Notification inbox: mark every unread item, cursor pagination, anchor rows with a separate read action.
-- One invitation/reset mode token; keep the email after a wrong password; correct resend purpose.
-- Chat: initial scroll to the latest message, true new-message count, growing composer, focus return.
-- Evaluation: return the actual `canRate` reason, show failures near the form, expose older played games.
-- Remaining navigation checks: header at 768 and the bottom-bar reserve on admin and tablet (the profile destination and the 320 admin grid ship in 1.3.3).
-
-## Next: 1.3.5 input and administration
-
-- Finance input guards only: real dates, ordered dates, non-zero installments, no future payments, cap at outstanding.
-- Admin schedule: reverse archive, exclude completed games from the draft reference, no silent location fallback, configured limits.
-- Admin and accessibility polish: self-role reason, shared filter counts and reset, `#solde` anchors, one inactive label, profile fieldsets, 44 px standalone links, row-menu direction, paid amount.
-- Copy/glossary pass and `PROGRESS.md` upkeep.
-- Test isolation: `.env.test` database, scripts typecheck, language in the CI contract, one DB opener, strict config validators, own-property key lookups.
-
-## Next: 1.4.0 member surfaces
-
-- Home situation board: the hero and the panel spans change with game phase, presence, lineup state, absence, manager slots, balance, substitute requests, polls and profile presence. Month calendar with game days, today and multiple games per day.
-- Team section `/equipe`: season roster with position, games, attendance and Black/White history; ratings only behind the ratings capability. Rink board with placement for managers, pair-rule lines, live balance and a past-game timeline.
+- Rink placement board on the match page: `config/rink.ts` owns the geometry, but no surface renders it yet. A manager should place players, see pair-rule lines and save with the generation token.
+- Team season page `/equipe`: roster, attendance history, Black/White history and a past-game timeline, ratings only behind the ratings capability.
+- Chat history pagination and the connection-lost banner.
+- Admin row menus beyond the player list: move the remaining absolutely positioned menus out of clipped sheets where they still exist.
 
 ## Deferred to a later milestone
 
