@@ -2,6 +2,16 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Team section (in progress)
+
+- **One owner.** `/equipes/[id]` is the canonical team surface: next-match card, manager preparation, lineup editor, read-only teams and the last 20 past matches with their stored per-game team counts. `/equipes` redirects to the first relevant game, so every entry point owns a real game id. `/matchs/[id]` and `/admin/matchs/[id]` link to it and no longer render a lineup editor or a second team view. `TeamLineup.svelte` and the old match editor tests are removed.
+- **History.** Past teams come from the stored `game_slots` of each game, never from the current live pool. `listTeamHistory` reads the bounded list and the per-game team counts in one grouped query; counts stay attached to the match that was published even after later lineup changes.
+- **Players and managers.** A player sees the published two-team board, the read-only bench and the history. A manager editing an upcoming generated game also sees balance, regenerate, swap and fill. Cancelled, started and past games are read-only; an ungenerated editable game offers the single generate action to a manager.
+- **Navigation and entry points.** `Équipes` is a primary member surface; players gain it in the five-slot mobile bar and managers reach it from the home preparation panel, the admin dashboard, the match header and the admin match page. The shared `nav-icons.ts` owner now carries the shield icon that Gestion declared.
+- **Evidence.** Visual audits at 1440, 1024, 900 and 320 for player, manager, no-lineup, cancelled, cancelled-only, started, off-season and no-profile admin variants report no horizontal overflow and no console errors. The off-season home shows no next match, `/equipes` falls back to the last past game, and a started game is labelled “Match passé” without an “À venir” badge. Functional preview runs recorded a manual save (`game.lineup_manual`), regeneration (`game.generate`, manual marker cleared), one filled slot (`game.fill`) and an applied swap (`game.swap`), each with the matching confirmation copy. Players see the published teams and the read-only bench; unrated players are named on the manager panel and stay on the bench.
+- **Gate.** `npm run gate` exit 0: 1156 tests in 159 files, svelte-check 0/0, architecture 409 files, generated assets and documentation current, 94 client chunks without zod.
+- **Pending.** Pull request, automatic release, live deployment with retained rollback and live health check.
+
 ## Release 1.9.1 (shipped)
 
 - **Admin Accueil.** An account without a player profile has no presence, poll or discussion, so 1.9.0 collapsed its home to one full-width column. The manager preparation panel and the season now share the 12-column main grid at 1024 px and up: the match to prepare takes 5 columns and the season 7, instead of stacking two wide bands. The 900 to 1023 px board uses the same 5/7 split. A no-profile player still receives the single profile surface.

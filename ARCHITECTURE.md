@@ -41,9 +41,9 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Recent-form window | `config/ratings.ts` | ratings service | rating tests |
 | Penalty infractions and default minutes | `config/infractions.ts` | schema checks, game sheet form, totals | migration test |
 | Periods and overtime label | `config/periods.ts` | game sheet, game detail | typecheck |
-| Rink geometry and the six presentation roles | `config/rink.ts` | lineup board, match page, admin game views | rink test |
+| Rink geometry and the six presentation roles | `config/rink.ts` | team section, lineup board | rink test |
 | Game sheet goals, penalties and totals | `src/lib/domain/gamesheet/` | match sheet, game detail | service tests + migration test |
-| Manual lineup marker and CAS token | `games.lineup_manual_at`, `games.generated_at` | regeneration policy, lineup editor | lineup tests |
+| Manual lineup marker and CAS token | `games.lineup_manual_at`, `games.generated_at` | regeneration policy, team section | lineup tests |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Application version | `package.json` | `package-lock.json` root, `.env.example` image suffix, Docker OCI label, GHCR tags, GitHub release | `verify:release` + release workflow |
@@ -150,7 +150,7 @@ A game is completed only when `games.completed_at` is set; the `completed` statu
 
 ## Manual lineup
 
-The lineup editor sends `expectedGeneratedAt`, the `games.generated_at` value it read. `saveAssignments` performs the conditional update first and aborts before touching a slot when the token no longer matches, so two managers cannot overwrite each other. A manual save sets `games.lineup_manual_at` and the same snapshot builder as automatic generation. `regenerateIfGenerated` and `regenerateUpcomingGeneratedGames` skip a manual lineup; an explicit `regenerateGame` clears the flag. Swaps and slot filling are user actions, so they also set it.
+The canonical team surface is `/equipes/[id]`: it owns the next-match lineup, the read-only past lineup and every lineup action. The match and admin pages link to it and never render a second editor. The lineup editor sends `expectedGeneratedAt`, the `games.generated_at` value it read. `saveAssignments` performs the conditional update first and aborts before touching a slot when the token no longer matches, so two managers cannot overwrite each other. A manual save sets `games.lineup_manual_at` and the same snapshot builder as automatic generation. `regenerateIfGenerated` and `regenerateUpcomingGeneratedGames` skip a manual lineup; an explicit `regenerateGame` clears the flag. Swaps and slot filling are user actions, so they also set it.
 
 ## Notifications
 

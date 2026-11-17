@@ -17,10 +17,7 @@ export type GameWarningDefinition = {
 	key: GameWarning;
 	labelKey: I18nKey;
 	helpKey?: I18nKey;
-	playerHelpKey?: I18nKey;
 	tone: GameWarningTone;
-	/** Un avertissement qui ne concerne que la gestion. */
-	managerOnly?: boolean;
 	/** Un détail calculé à afficher sous le libellé, déclaré par le registre. */
 	detail?: 'open-slots';
 };
@@ -36,7 +33,6 @@ export const GAME_WARNINGS = [
 		key: 'rule-conflict',
 		labelKey: 'games.rulesConflict',
 		helpKey: 'games.rulesConflictHelp',
-		playerHelpKey: 'games.rulesConflictPlayer',
 		tone: 'alert'
 	},
 	{
@@ -48,8 +44,7 @@ export const GAME_WARNINGS = [
 		key: 'rule-limit',
 		labelKey: 'games.limitConflict',
 		helpKey: 'games.limitConflictHelp',
-		tone: 'alert',
-		managerOnly: true
+		tone: 'alert'
 	}
 ] as const satisfies readonly GameWarningDefinition[];
 

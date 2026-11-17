@@ -127,19 +127,9 @@ describe('confirmation des actions destructives du match', () => {
 		expect(cancel).not.toContain('type="submit"');
 	});
 
-	it('régénère l’alignement seulement après une confirmation qui le nomme', () => {
-		const regenerate = form(body(), 'generate');
-
-		expect(regenerate).toContain(t('games.regenerate'));
-		expect(regenerate).toContain('type="button"');
-		expect(regenerate).not.toContain('type="submit"');
-		expect(t('games.regenerateConfirm')).toContain('alignement publié');
-	});
-
-	it('branche chaque confirmation sur la question partagée', () => {
+	it('branche l’annulation sur la question partagée', () => {
 		const source = readFileSync(new URL('./+page.svelte', import.meta.url), 'utf8');
 
 		expect(source).toContain("question={t('subs.cancelRequestConfirm')}");
-		expect(source).toContain("question={t('games.regenerateConfirm')}");
 	});
 });

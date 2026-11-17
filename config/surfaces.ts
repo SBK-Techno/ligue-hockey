@@ -48,6 +48,15 @@ export const SURFACES = [
     mobilePriority: 30
   },
   {
+    key: 'teams',
+    href: '/equipes',
+    labelKey: 'nav.teams',
+    icon: 'team',
+    capabilities: ['member'],
+    placement: 'primary',
+    mobilePriority: 55
+  },
+  {
     key: 'chat',
     href: '/discussion',
     labelKey: 'nav.chat',

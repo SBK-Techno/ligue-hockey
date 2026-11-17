@@ -22,6 +22,14 @@ export function otherTeam(team: Team): Team {
   return team === 'white' ? 'black' : 'white';
 }
 
+/** L'équipe du joueur d'abord, puis l'ordre déclaré du registre. */
+export function orderedTeams(ownTeam: Team | null): readonly (typeof TEAMS)[number][] {
+  if (!ownTeam) return TEAMS;
+  return [...TEAMS].sort((a, b) =>
+    a.key === ownTeam ? -1 : b.key === ownTeam ? 1 : 0
+  );
+}
+
 export function teamDefinition(team: Team) {
   const definition = TEAMS.find((entry) => entry.key === team);
   if (!definition) {
@@ -32,4 +40,9 @@ export function teamDefinition(team: Team) {
 
 export const TEAM_GENERATION = {
 	maxCandidates: 200_000
+} as const;
+
+/** Bornes d'affichage de la section Équipes, jamais des règles de jeu. */
+export const TEAM_SECTION = {
+	historyLimit: 20
 } as const;

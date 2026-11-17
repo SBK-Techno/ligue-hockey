@@ -2,9 +2,10 @@
 	import { POSITIONS } from '#config/positions.ts';
 	import { teamDefinition, type Team } from '#config/teams.ts';
 	import type { GameSlotView } from '#lib/domain/games/types.ts';
-	import { t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, t } from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
 	import PlayerName from '#lib/ui/PlayerName.svelte';
+	import TeamMark from '#lib/ui/teams/TeamMark.svelte';
 
 	let {
 		slots,
@@ -12,7 +13,8 @@
 		actorId = null,
 		ownTeam = null,
 		heading = true,
-		peek = true
+		peek = true,
+		showCount = false
 	}: {
 		slots: readonly GameSlotView[];
 		team: Team;
@@ -20,9 +22,13 @@
 		ownTeam?: Team | null;
 		heading?: boolean;
 		peek?: boolean;
+		showCount?: boolean;
 	} = $props();
 
 	const definition = $derived(teamDefinition(team));
+	const playerCount = $derived(
+		slots.filter((slot) => slot.team === team && slot.player !== null).length
+	);
 
 	function slotsFor(position: string) {
 		return slots.filter((slot) => slot.team === team && slot.position === position);
@@ -36,13 +42,13 @@
 			: 'border-team-white bg-surface'}"
 	>
 		<div class="flex min-w-0 items-center gap-2">
-			<span
-				aria-hidden="true"
-				class="h-3 w-3 shrink-0 rounded-full {team === 'black'
-					? 'bg-team-black'
-					: 'border border-line-strong bg-team-white'}"
-			></span>
+			<TeamMark {team} />
 			<h3 class="text-base font-semibold">{t(definition.labelKey)}</h3>
+			{#if showCount}
+				<span class="text-meta text-muted">
+					{formatCount(playerCount, 'common.playerCount.one', 'common.playerCount.many')}
+				</span>
+			{/if}
 		</div>
 		{#if ownTeam === team}
 			<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('home.team')}</span>

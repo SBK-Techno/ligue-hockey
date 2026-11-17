@@ -9,6 +9,7 @@
 	import { t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import PlayerName from '#lib/ui/PlayerName.svelte';
+	import TeamMark from '#lib/ui/teams/TeamMark.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	let {
@@ -127,12 +128,7 @@
 									<span class="w-11 shrink-0 pt-0.5 font-mono text-meta tabular-nums text-muted">
 										{goal.clock}
 									</span>
-									<span
-										class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {goal.team === 'black'
-											? 'bg-team-black'
-											: 'border border-line-strong bg-team-white'}"
-										aria-hidden="true"
-									></span>
+									<TeamMark team={goal.team} size="sm" class="mt-1.5" />
 									<div class="min-w-0 flex-1">
 										<p class="text-body font-semibold">
 											{#if goal.scorer}
@@ -206,12 +202,7 @@
 									<span class="w-11 shrink-0 pt-0.5 font-mono text-meta tabular-nums text-muted">
 										{penalty.clock}
 									</span>
-									<span
-										class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {penalty.team === 'black'
-											? 'bg-team-black'
-											: 'border border-line-strong bg-team-white'}"
-										aria-hidden="true"
-									></span>
+									<TeamMark team={penalty.team} size="sm" class="mt-1.5" />
 									<div class="min-w-0 flex-1">
 										<p class="text-body font-semibold">
 											<span class="font-mono text-meta text-muted"

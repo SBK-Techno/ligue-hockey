@@ -39,7 +39,7 @@ describe('libellé de la barre mobile', () => {
 			'games',
 			'subs',
 			'chat',
-			'account'
+			'teams'
 		]);
 		expect(mobileSurfaces(actor('manager')).map((surface) => surface.key)).toEqual([
 			'home',

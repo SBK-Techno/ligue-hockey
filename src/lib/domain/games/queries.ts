@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
@@ -99,6 +99,28 @@ export function listGameListRows(gameIds: readonly string[]): GameListRow[] {
 		generated: isPublished(row),
 		openSlots: open.get(row.id) ?? 0
 	}));
+}
+
+/**
+ * Le nombre de joueurs habillés par équipe pour plusieurs matchs. Une seule
+ * lecture groupée sert l'historique de la section Équipes; chaque match garde
+ * donc les compteurs de l'alignement qui a réellement été publié.
+ */
+export function listTeamSlotCounts(
+	gameIds: readonly string[]
+): { gameId: string; team: 'white' | 'black'; count: number }[] {
+	if (gameIds.length === 0) return [];
+	return db
+		.select({ gameId: gameSlots.gameId, team: gameSlots.team, count: count() })
+		.from(gameSlots)
+		.where(
+			and(
+				inArray(gameSlots.gameId, [...gameIds]),
+				isNotNull(gameSlots.assignedPlayerId)
+			)
+		)
+		.groupBy(gameSlots.gameId, gameSlots.team)
+		.all();
 }
 
 export function listSlots(gameId: string) {

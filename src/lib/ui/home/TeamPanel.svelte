@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { positionDefinition } from '#config/positions.ts';
 	import { ruleModeDefinition, ruleModeFor } from '#config/rule-modes.ts';
-	import { teamDefinition } from '#config/teams.ts';
 	import type { GameView } from '#lib/domain/games/service.ts';
 	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import TeamMark from '#lib/ui/teams/TeamMark.svelte';
 
 	let {
 		game,
@@ -19,7 +19,6 @@
 		actorId: string;
 	} = $props();
 
-	const team = $derived(ownSlot ? teamDefinition(ownSlot.team) : null);
 	const jersey = $derived(ownSlot?.player?.jerseyNumber ?? null);
 	const position = $derived(ownSlot ? positionDefinition(ownSlot.position) : null);
 	const violation = $derived(
@@ -36,17 +35,11 @@
 </script>
 
 <SectionCard title={t('home.team')}>
-	{#if ownSlot && team && position}
+	{#if ownSlot && position}
 			<div class="flex items-start gap-3">
 				<span class="jersey min-h-10 min-w-10 text-base">{jersey ?? '-'}</span>
 				<div class="min-w-0">
-					<span
-						class="badge {ownSlot.team === 'black'
-							? 'border-team-black bg-team-black text-team-white'
-							: 'border-line-strong bg-team-white text-team-black'}"
-					>
-						{t(team.labelKey)}
-					</span>
+					<TeamMark team={ownSlot.team} variant="badge" />
 					<p class="mt-1.5 text-body font-semibold">{t(position.labelKey)}</p>
 				</div>
 			</div>
@@ -60,4 +53,7 @@
 			<p class="text-body font-semibold">{t('home.teamNoSlot')}</p>
 			<p class="hint">{t('home.teamNoSlotHelp')}</p>
 		{/if}
+	<a class="link mt-3 inline-flex min-h-11 items-center text-body" href="/equipes/{game.id}">
+		{t('teams.view')}
+	</a>
 </SectionCard>

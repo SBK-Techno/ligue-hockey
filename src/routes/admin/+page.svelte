@@ -95,8 +95,8 @@
 							</p>
 						{/if}
 					{/if}
-					<a class="btn-primary mt-4 w-full" href="/admin/matchs/{data.nextGame.id}">
-						{t('admin.openSheet')}
+					<a class="btn-primary mt-4 w-full" href="/equipes/{data.nextGame.id}">
+						{t('teams.manage')}
 					</a>
 				{:else}
 					<p class="text-body text-muted">{t('home.noGame')}</p>

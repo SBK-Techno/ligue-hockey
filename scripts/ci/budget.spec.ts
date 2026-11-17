@@ -122,7 +122,7 @@ describe('budgets de page', () => {
 	it('déclare chaque route du dépôt, y compris les routes à paramètre', () => {
 		const declared = MEASURED_PAGES.map((page) => page.path).sort();
 		expect(declared).toEqual(pageRoutes().sort());
-		expect(declared.filter((path) => path.includes('['))).toHaveLength(5);
+		expect(declared.filter((path) => path.includes('['))).toHaveLength(6);
 	});
 
 	it('garde un plafond global plus serré que le pire plafond déclaré', () => {

@@ -119,19 +119,20 @@ describe('capability policy', () => {
 describe('role surfaces', () => {
 	it('keeps the player navigation to member destinations', () => {
 		const keys = primarySurfaces(actor('player')).map((surface) => surface.key);
-		expect(keys).toEqual(['home', 'games', 'subs', 'chat', 'account']);
+		expect(keys).toEqual(['home', 'games', 'subs', 'teams', 'chat', 'account']);
 		expect(mobileSurfaces(actor('player')).map((surface) => surface.key)).toEqual([
 			'home',
 			'games',
 			'subs',
 			'chat',
-			'account'
+			'teams'
 		]);
 	});
 
 	it('puts management in the manager navigation and the fifth mobile slot', () => {
 		const keys = primarySurfaces(actor('manager')).map((surface) => surface.key);
 		expect(keys).toContain('management');
+		expect(keys).toContain('teams');
 		expect(mobileSurfaces(actor('manager')).map((surface) => surface.key)).toEqual([
 			'home',
 			'games',

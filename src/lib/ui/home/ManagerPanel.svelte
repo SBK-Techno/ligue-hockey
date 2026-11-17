@@ -49,7 +49,7 @@
 		<StatStrip {cells} />
 	</div>
 
-	<a class="btn-primary mt-4 w-full" href="/admin/matchs/{gameId}">
-		{t('home.manageGame')}
+	<a class="btn-primary mt-4 w-full" href="/equipes/{gameId}">
+		{t('teams.manage')}
 	</a>
 </SectionCard>
