@@ -2,6 +2,13 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.8.2 (in progress)
+
+- **Home last row.** The poll and the discussion each took the full row on a wide home, so the page still ended as a single column of two panels. In lineup, announced, presence and absent modes, when no substitute list owns its own row, the poll and the discussion now share the last row at 6 and 6. The game-day poll keeps its place beside attendance, and the substitute list keeps its own row.
+- **Evidence.** At 900 px the manager home drops from 2337 to 2136 px and the player home from 1925 to 1724; at 1440 px the player home drops from 1872 to 1671. The last row shows the poll and the discussion side by side, with no horizontal overflow and no console errors at either width.
+- **Gate.** `npm run gate` exit 0: 1127 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
+- **Next.** Merge, release `1.8.2` and deploy.
+
 ## Release 1.8.1 (shipped)
 
 - **Desktop threshold.** The desktop composition started at 1024 px, so a 900 to 1023 px desktop window still received the phone column even though the shell is a desktop. The `lg` breakpoint in `tokens.css` is now 900 px and the authored media queries in `layout.css` and `critical.css` follow it. The shell, navigation, page grids, chat rows and rink labels compose from 900 px.
