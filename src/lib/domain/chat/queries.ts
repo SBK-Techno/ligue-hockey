@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
 import type { Cursor } from '#lib/shared/paging/cursor.ts';
 import { db } from '#lib/server/db/index.ts';
+import { insertAudit, type AuditEntry } from '#lib/domain/audit/queries.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { players } from '#lib/domain/players/schema.ts';
 import {
@@ -110,6 +111,7 @@ export function insertPollMessage(input: {
 	question: string;
 	options: readonly { id: string; label: string }[];
 	createdAt: number;
+	audit: AuditEntry;
 }): void {
 	db.transaction((tx) => {
 		tx.insert(chatMessages).values(input.message).run();
@@ -131,6 +133,7 @@ export function insertPollMessage(input: {
 				})
 				.run();
 		});
+		insertAudit(input.audit, tx);
 	});
 }
 
@@ -196,19 +199,30 @@ export function castVote(
 	});
 }
 
-export function closePoll(messageId: string, closesAt: number): void {
-	db.update(polls).set({ closesAt }).where(eq(polls.messageId, messageId)).run();
+export function closePoll(
+	messageId: string,
+	closesAt: number,
+	audit: AuditEntry
+): void {
+	db.transaction((tx) => {
+		tx.update(polls).set({ closesAt }).where(eq(polls.messageId, messageId)).run();
+		insertAudit(audit, tx);
+	});
 }
 
 export function softDeleteMessage(
 	id: string,
 	deletedAt: number,
-	deletedBy: string
+	deletedBy: string,
+	audit: AuditEntry
 ): void {
-	db.update(chatMessages)
-		.set({ deletedAt, deletedBy })
-		.where(and(eq(chatMessages.id, id), isNull(chatMessages.deletedAt)))
-		.run();
+	db.transaction((tx) => {
+		tx.update(chatMessages)
+			.set({ deletedAt, deletedBy })
+			.where(and(eq(chatMessages.id, id), isNull(chatMessages.deletedAt)))
+			.run();
+		insertAudit(audit, tx);
+	});
 }
 
 export function findPoll(messageId: string) {

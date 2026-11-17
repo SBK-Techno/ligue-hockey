@@ -12,6 +12,7 @@ const row = {
 	avatarId: null,
 	isSubstitute: false,
 	active: true,
+	deletedAt: null,
 	role: 'player' as const
 };
 
@@ -21,7 +22,7 @@ const findPlayerWithEmail = vi.fn((...args: [string]) => {
 });
 const findPlayer = vi.fn((...args: [string]) => {
 	void args;
-	return undefined;
+	return { ...row, active: false, deletedAt: 1 };
 });
 const deletePlayerAccount = vi.fn();
 
@@ -34,7 +35,7 @@ vi.mock('./queries.ts', () => ({
 	countActiveAdmins: () => 1,
 	listActivePlayers: vi.fn(() => []),
 	listAllPlayersWithEmail: vi.fn(() => [row]),
-	listActiveAvatarAssignments: vi.fn(() => []),
+	listAvatarAssignments: vi.fn(() => []),
 	updatePlayer: vi.fn(),
 	deletePlayerAccount: (...args: [string, string, string]) => deletePlayerAccount(...args)
 }));

@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
+import { insertAudit, type AuditEntry } from '#lib/domain/audit/queries.ts';
 import { session, user } from '#lib/server/db/auth.schema.ts';
 import { ACCOUNT_LIMITS } from '#config/account.ts';
 import { ROLES } from '#config/roles.ts';
@@ -69,4 +70,15 @@ export function deleteOtherSessions(userId: string, currentSessionId: string): n
 		.delete(session)
 		.where(and(eq(session.userId, userId), ne(session.id, currentSessionId)))
 		.run().changes;
+}
+
+/**
+ * Le rôle et sa trace d'audit sont une seule écriture : une trace manquée ne
+ * peut pas laisser un privilège accordé sans preuve.
+ */
+export function setUserRole(userId: string, role: string, audit: AuditEntry): void {
+	db.transaction((tx) => {
+		tx.update(user).set({ role }).where(eq(user.id, userId)).run();
+		insertAudit(audit, tx);
+	});
 }

@@ -122,6 +122,7 @@
 		<SectionCard title={t('games.details')}>
 			{#if game.status === 'scheduled'}
 				<form method="POST" action="?/update" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
+					<input type="hidden" name="expectedUpdatedAt" value={game.updatedAt} />
 					<div>
 						<label class="label" for="gameDate">{t('games.date')}</label>
 						<input class="input" id="gameDate" name="gameDate" type="date" value={game.gameDate} required />

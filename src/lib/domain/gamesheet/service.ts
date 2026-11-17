@@ -6,6 +6,7 @@ import { getGame, completeGame, type GameView } from '#lib/domain/games/service.
 import { isGamePlayable } from '#lib/domain/games/playability.ts';
 import type { GamePlayer } from '#lib/domain/games/types.ts';
 import { playersByIds } from '#lib/domain/players/candidates.ts';
+import { neutralPlayerName } from '#lib/domain/players/public.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { clock } from '#lib/shared/time/clock.ts';
@@ -152,7 +153,7 @@ function requireDressed(
 	if (!player) {
 		throw new AppError('VALIDATION', {
 			key,
-			params: { name: names.get(playerId) ?? playerId }
+			params: { name: names.get(playerId) ?? neutralPlayerName() }
 		});
 	}
 	return player;

@@ -89,7 +89,9 @@ export const subRequests = sqliteTable(
 		),
 		check(
 			'sub_requests_filled_state',
-			sql`(${table.status} = 'filled') = (${table.filledByPlayerId} is not null)`
+			// Une demande annulée peut garder son remplaçant : c'est la trace
+			// historique d'une place comblée avant la fin du match.
+			sql`(${table.status} = 'cancelled') or ((${table.status} = 'filled') = (${table.filledByPlayerId} is not null))`
 		),
 		check(
 			'sub_requests_cancelled_state',

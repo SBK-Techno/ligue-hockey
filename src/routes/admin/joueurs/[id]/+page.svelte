@@ -148,7 +148,7 @@
 				</div>
 			</div>
 
-			{#if !isSelf && player.role !== 'admin'}
+			{#if data.canDelete}
 				<div class="mt-5 border-t border-line pt-4">
 					<h3 class="text-subhead font-semibold text-alert">{t('admin.deletePlayer')}</h3>
 					<p class="hint mt-1">{t('admin.deletePlayerHelp')}</p>

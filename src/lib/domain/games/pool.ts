@@ -3,6 +3,7 @@ import { rosterTemplateSchema, type RosterTemplate } from '#config/roster.ts';
 import type { SettingsValues } from '#config/settings-registry.ts';
 import type { Team } from '#config/teams.ts';
 import { generationCandidates, playerCandidatesByIds } from '#lib/domain/players/candidates.ts';
+import { neutralPlayerName } from '#lib/domain/players/public.ts';
 import { overallsForPlayers } from '#lib/domain/ratings/overall.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { claimsForGeneration } from '#lib/domain/subs/generation.ts';
@@ -190,7 +191,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 	const allIds = new Set<string>([...memberIds, ...dressedIds]);
 	const names = new Map<string, string>();
 	for (const playerId of allIds) {
-		names.set(playerId, detailOf(playerId)?.fullName ?? playerId);
+		names.set(playerId, detailOf(playerId)?.fullName ?? neutralPlayerName());
 	}
 
 	const overalls = overallsForPlayers([...allIds]);
@@ -269,7 +270,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 
 	const unrated = [...allIds]
 		.filter((playerId) => !overalls.has(playerId))
-		.map((playerId) => names.get(playerId) ?? playerId)
+		.map((playerId) => names.get(playerId) ?? neutralPlayerName())
 		.sort((a, b) => a.localeCompare(b));
 
 	const available = members

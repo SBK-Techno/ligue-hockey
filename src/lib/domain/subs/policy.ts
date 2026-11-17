@@ -1,8 +1,6 @@
 import type { Position } from '#config/positions.ts';
+import { HOUR_MS, MINUTE_MS } from '#config/time.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
 
 export type SubRequestWaveInput = {
 	gameStartMs: number;
@@ -37,22 +35,22 @@ function clamp(value: number, min: number, max: number): number {
 export function computeSubRequestWaves(
 	input: SubRequestWaveInput
 ): SubRequestWaves {
-	const earliest = input.nowMs + MINUTE;
+	const earliest = input.nowMs + MINUTE_MS;
 	const latest = Math.max(
 		earliest,
-		input.gameStartMs - input.lastCallMinutes * MINUTE
+		input.gameStartMs - input.lastCallMinutes * MINUTE_MS
 	);
 
 	const favoriteTarget =
 		input.gameStartMs -
-		(input.generalLeadHours + input.priorityGapHours) * HOUR;
-	const generalTarget = input.gameStartMs - input.generalLeadHours * HOUR;
+		(input.generalLeadHours + input.priorityGapHours) * HOUR_MS;
+	const generalTarget = input.gameStartMs - input.generalLeadHours * HOUR_MS;
 
 	const favoriteAt = clamp(favoriteTarget, earliest, latest);
 	// Les favoris gardent leur avance même quand la demande arrive tard :
 	// la vague générale est repoussée, sans jamais dépasser le dernier appel.
 	const generalAt = clamp(
-		Math.max(generalTarget, favoriteAt + input.priorityGapHours * HOUR),
+		Math.max(generalTarget, favoriteAt + input.priorityGapHours * HOUR_MS),
 		favoriteAt,
 		latest
 	);
@@ -65,7 +63,7 @@ export function isTooLateForSubRequest(
 	nowMs: number,
 	lastCallMinutes: number
 ): boolean {
-	return nowMs >= gameStartMs - lastCallMinutes * MINUTE;
+	return nowMs >= gameStartMs - lastCallMinutes * MINUTE_MS;
 }
 
 export type OpenRequestOrder = {

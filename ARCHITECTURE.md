@@ -117,6 +117,8 @@ Ratings and other players' balances are removed from view models in the service,
 
 Deactivation writes four things in one transaction: the player row becomes inactive, future `game_slots` are emptied, future attendance rows are deleted and future substitute claims are reopened. The account loses every capability immediately, not at commit: `hooks.server.ts` reads the player's active flag on each page, data or API request and builds an anonymous actor for an inactive account, so an old cookie cannot keep a capability; public immutable assets skip both lookups. Session revocation follows the committed transaction; when the provider call fails, the failure is logged as `players.session_revoke_failed` and returned as `admin.playerDeactivateFailed`, so the partial state stays observable instead of being retried inside the transaction. Self-deactivation and deactivation of the last active administrator are refused.
 
+Deletion follows a retention rule owned by `src/lib/domain/players/queries.ts` and stated here: the player row is never removed. Its name becomes the neutral `player.deletedName` copy, its email, password, sessions and substitute profile are erased, and `deleted_at` marks it as unrecoverable. Payments, payment plans, past `game_slots`, goals and past substitute requests keep their foreign keys, so the ledger and the historical sheets remain readable; the public and admin reads resolve the row to the neutral name and never print the raw id. Future slots, future attendance and future substitute requests are released in the same transaction, exactly like deactivation. A deleted row is excluded from the admin lists, cannot be reactivated, and its identity is free for another visible row.
+
 ## Evaluations
 
 Two layers, never merged:

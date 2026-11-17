@@ -51,7 +51,11 @@
 	const hasSubsPanel = $derived(data.requests.length > 0 || isManager);
 	const hasBalancePanel = $derived(Boolean(game?.generation && data.canManage));
 	const filledRequests = $derived(
-		data.requests.filter((request) => request.status === 'filled')
+		data.requests.filter(
+			(request) =>
+				request.status === 'filled' ||
+				(request.status === 'cancelled' && request.filledByPlayerId !== null)
+		)
 	);
 	const completed = $derived(game?.status === 'completed');
 	const sectionOrder = $derived(

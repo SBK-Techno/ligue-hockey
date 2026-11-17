@@ -64,7 +64,10 @@ type StatsData = {
 };
 
 async function loadFor(actor: Actor = player): Promise<StatsData> {
-	return (await load({ locals: { actor, sessionId: null } } as never)) as unknown as StatsData;
+	return (await load({
+		locals: { actor, sessionId: null },
+		parent: async () => ({ isSubstitute: false })
+	} as never)) as unknown as StatsData;
 }
 
 function addCompletedGame(): void {
@@ -160,5 +163,14 @@ describe('données de stats du profil', () => {
 	it('ne fournit pas de stats à un compte sans fiche de joueur', async () => {
 		sqlite.prepare(`delete from players`).run();
 		expect((await loadFor()).stats).toBeNull();
+	});
+
+	it('lit la présence remplaçant résolue par le layout', async () => {
+		const data = (await load({
+			locals: { actor: player, sessionId: null },
+			parent: async () => ({ isSubstitute: true })
+		} as never)) as unknown as { isSubstitute: boolean };
+
+		expect(data.isSubstitute).toBe(true);
 	});
 });

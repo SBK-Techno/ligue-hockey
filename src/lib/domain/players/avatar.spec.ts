@@ -56,7 +56,7 @@ vi.mock('./queries.ts', () => ({
 	countActiveAdmins: () => 1,
 	listActivePlayers: () => [],
 	listAllPlayersWithEmail: () => [row],
-	listActiveAvatarAssignments: () => usage,
+	listAvatarAssignments: () => usage,
 	updatePlayer: (...args: unknown[]) => updatePlayer(...args),
 	deletePlayerAccount: vi.fn()
 }));

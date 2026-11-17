@@ -4,12 +4,7 @@ import {
 	subscribeToPush,
 	unsubscribeFromPush
 } from '#lib/domain/notifications/service.ts';
-import { isAppError } from '#lib/shared/errors.ts';
-
-function failure(cause: unknown) {
-	const status = isAppError(cause) ? cause.status : 500;
-	return json({ ok: false }, { status });
-}
+import { apiError } from '#lib/server/action.ts';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
@@ -27,7 +22,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		});
 		return json({ ok: true });
 	} catch (cause) {
-		return failure(cause);
+		return apiError(cause);
 	}
 };
 
@@ -37,6 +32,6 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		unsubscribeFromPush(locals.actor, body.endpoint ?? '');
 		return json({ ok: true });
 	} catch (cause) {
-		return failure(cause);
+		return apiError(cause);
 	}
 };

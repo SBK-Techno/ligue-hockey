@@ -35,29 +35,29 @@ function evictOldest(): void {
 	}
 }
 
-export function tooManyAttempts(key: string, limit: number): boolean {
+/**
+ * Réserve atomiquement une tentative : la vérification et l'incrément sont
+ * une seule opération synchrone. Deux requêtes parallèles ne peuvent donc pas
+ * lire le même compte avant que l'une des deux l'ait consommé.
+ */
+export function consumeAttempt(
+	key: string,
+	limit: number,
+	windowMs: number
+): boolean {
 	const now = clock.nowMs();
 	const bucket = buckets.get(key);
 	if (!bucket || bucket.resetAt <= now) {
 		if (bucket) buckets.delete(key);
-		return false;
-	}
-	touch(key, bucket);
-	return bucket.count >= limit;
-}
-
-export function recordAttempt(key: string, windowMs: number): void {
-	const now = clock.nowMs();
-	prune(now);
-	const bucket = buckets.get(key);
-	if (!bucket || bucket.resetAt <= now) {
-		if (bucket) buckets.delete(key);
+		prune(now);
 		evictOldest();
 		buckets.set(key, { count: 1, resetAt: now + windowMs });
-		return;
+		return limit >= 1;
 	}
-	bucket.count += 1;
 	touch(key, bucket);
+	if (bucket.count >= limit) return false;
+	bucket.count += 1;
+	return true;
 }
 
 export function clearAttempts(key: string): void {

@@ -20,6 +20,7 @@ import {
 	setPlayerRole
 } from '#lib/domain/players/service.ts';
 import { adminUpdatePlayerSchema } from '#lib/domain/players/validators.ts';
+import { canDeletePlayer } from '#lib/domain/auth/policy.ts';
 import { getRatings } from '#lib/domain/ratings/service.ts';
 import { CURRENCY } from '#config/currency.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
@@ -77,7 +78,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 			payments: [],
 			plan: null,
 			isFavorite: false,
-			currency
+			currency,
+			canDelete: false
 		};
 	}
 
@@ -94,7 +96,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 				payments: [],
 				plan: null,
 				isFavorite: false,
-				currency
+				currency,
+				canDelete: false
 			};
 		}
 		throw cause;
@@ -122,6 +125,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		payments: listPlayerPayments(actor, params.id),
 		isFavorite: favorite ?? false,
 		currency,
+		canDelete: canDeletePlayer(actor, { userId: player.userId, role: player.role }),
 		plan: {
 			total: centsToInput(balance?.totalCents ?? suggested.totalCents),
 			firstPercent,

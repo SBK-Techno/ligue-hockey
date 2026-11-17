@@ -1,7 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { getPlayerPeek, peekCacheControl } from '#lib/domain/players/peek.ts';
-import { isAppError } from '#lib/shared/errors.ts';
-import { t } from '#lib/shared/i18n/index.ts';
+import { apiError } from '#lib/server/action.ts';
 import type { RequestHandler } from './$types';
 
 /**
@@ -15,12 +14,6 @@ export const GET: RequestHandler = ({ locals, params }) => {
 			headers: { 'cache-control': peekCacheControl(locals.actor) }
 		});
 	} catch (cause) {
-		if (isAppError(cause)) {
-			return json(
-				{ message: t(cause.key, cause.params) },
-				{ status: cause.status }
-			);
-		}
-		throw cause;
+		return apiError(cause);
 	}
 };

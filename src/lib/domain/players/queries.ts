@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import {
 	identityAllowedForPosition,
 	isIdentityId,
@@ -8,10 +8,10 @@ import type { Position } from '#config/positions.ts';
 import { ADMIN_ROLE } from '#config/roles.ts';
 import { positionRatingKeysToClear } from '#config/rating-attributes.ts';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
-import { user } from '#lib/server/db/auth.schema.ts';
-import { paymentPlans, payments } from '#lib/domain/finance/schema.ts';
+import { account, session, user } from '#lib/server/db/auth.schema.ts';
 import { gameAvailability, gameSlots, games } from '#lib/domain/games/schema.ts';
-import { subRequests } from '#lib/domain/subs/schema.ts';
+import { subProfiles, subRequests } from '#lib/domain/subs/schema.ts';
+import { t } from '#lib/shared/i18n/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { playerRatings, type PlayerRatingRow } from '#lib/domain/ratings/schema.ts';
 import { firstFreeAvatarId } from './identity.ts';
@@ -38,6 +38,7 @@ export function findPlayerWithEmail(playerId: string): PlayerWithEmail | undefin
 			avatarId: players.avatarId,
 			isSubstitute: players.isSubstitute,
 			active: players.active,
+			deletedAt: players.deletedAt,
 			createdAt: players.createdAt,
 			updatedAt: players.updatedAt,
 			email: user.email,
@@ -45,7 +46,7 @@ export function findPlayerWithEmail(playerId: string): PlayerWithEmail | undefin
 		})
 		.from(players)
 		.innerJoin(user, eq(user.id, players.userId))
-		.where(eq(players.userId, playerId))
+		.where(and(eq(players.userId, playerId), isNull(players.deletedAt)))
 		.get();
 }
 
@@ -72,12 +73,12 @@ export type PlayerAvatarAssignment = {
 	avatarId: string | null;
 };
 
-/** Every active player, including those whose avatar is still derived. */
-export function listActiveAvatarAssignments(): PlayerAvatarAssignment[] {
+/** Chaque ligne visible qui porte une identité, active ou non. */
+export function listAvatarAssignments(): PlayerAvatarAssignment[] {
 	return db
 		.select({ userId: players.userId, avatarId: players.avatarId })
 		.from(players)
-		.where(eq(players.active, true))
+		.where(or(eq(players.active, true), isNotNull(players.avatarId)))
 		.all();
 }
 
@@ -93,6 +94,7 @@ export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 			avatarId: players.avatarId,
 			isSubstitute: players.isSubstitute,
 			active: players.active,
+			deletedAt: players.deletedAt,
 			createdAt: players.createdAt,
 			updatedAt: players.updatedAt,
 			email: user.email,
@@ -100,6 +102,7 @@ export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 		})
 		.from(players)
 		.innerJoin(user, eq(user.id, players.userId))
+		.where(isNull(players.deletedAt))
 		.orderBy(asc(players.active), asc(players.lastName), asc(players.firstName))
 		.all();
 }
@@ -112,11 +115,11 @@ export type InsertPlayerResult =
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type ReadExecutor = Transaction | typeof db;
 
-function activeAvatarIds(executor: ReadExecutor): string[] {
+function takenAvatarIds(executor: ReadExecutor): string[] {
 	return executor
 		.select({ avatarId: players.avatarId })
 		.from(players)
-		.where(and(eq(players.active, true), isNotNull(players.avatarId)))
+		.where(isNotNull(players.avatarId))
 		.all()
 		.map((row) => row.avatarId)
 		.filter((avatarId): avatarId is string => avatarId !== null);
@@ -141,7 +144,7 @@ export function insertPlayerWithNextAvatar(
 ): InsertPlayerResult {
 	try {
 		return db.transaction((tx) => {
-			const avatarId = firstFreeAvatarId(activeAvatarIds(tx), position);
+			const avatarId = firstFreeAvatarId(takenAvatarIds(tx), position);
 			if (!avatarId) return { status: 'no-identity' as const };
 			tx.insert(players).values({ ...row, avatarId }).run();
 			return { status: 'inserted' as const, avatarId };
@@ -153,7 +156,7 @@ export function insertPlayerWithNextAvatar(
 }
 
 export function hasFreeAvatarForPosition(position: Position): boolean {
-	return firstFreeAvatarId(activeAvatarIds(db), position) !== null;
+	return firstFreeAvatarId(takenAvatarIds(db), position) !== null;
 }
 
 export function countActiveAdmins(): number {
@@ -216,13 +219,12 @@ function applyUpdate(
 	if (!current) return { status: 'not-found' };
 
 	const next = { ...patch };
-	const positionTouched =
-		(next.position !== undefined && next.position !== current.position) ||
-		(next.avatarId !== undefined && next.avatarId !== current.avatarId);
 	const effectivePosition = next.position ?? current.position;
 	const currentAvatar = next.avatarId !== undefined ? next.avatarId : current.avatarId;
+	// L'invariant vaut pour toute écriture, pas seulement quand le poste ou
+	// l'identité change : enregistrer un numéro de chandail ne peut pas
+	// entériner une légende du mauvais poste, et une activation non plus.
 	if (
-		positionTouched &&
 		currentAvatar !== null &&
 		!identityAllowedForPosition(currentAvatar as IdentityId, effectivePosition)
 	) {
@@ -234,7 +236,7 @@ function applyUpdate(
 	const validAvatar =
 		currentAvatar !== null && isIdentityId(currentAvatar) ? currentAvatar : null;
 	if (next.active === true && validAvatar === null) {
-		const free = firstFreeAvatarId(activeAvatarIds(tx), effectivePosition);
+		const free = firstFreeAvatarId(takenAvatarIds(tx), effectivePosition);
 		if (!free) return { status: 'no-identity' };
 		next.avatarId = free;
 	}
@@ -251,7 +253,6 @@ function applyUpdate(
 			.from(players)
 			.where(
 				and(
-					eq(players.active, true),
 					eq(players.avatarId, claimedAvatar),
 					ne(players.userId, playerId)
 				)
@@ -367,11 +368,11 @@ function clearFutureCommitments(
 }
 
 /**
- * Deletes a player account and every row that would otherwise block the
- * deletion. Finance and assignment rows use restrictive foreign keys, so they
- * are cleared here in the same transaction as the user row. Game slots keep
- * their history with an empty assignment; sub requests filled by the deleted
- * player reopen so the league can fill them again.
+ * Supprime un compte joueur en conservant son histoire. La fiche reste en base,
+ * anonymisée et inactive, parce que les paiements, les places jouées et les buts
+ * la référencent. Le compte d'authentification perd ses identifiants et ses
+ * sessions; les engagements futurs (places, présence, demandes de
+ * remplacement) sont libérés, mais les faits passés ne sont jamais réécrits.
  */
 export function deletePlayerAccount(
 	playerId: string,
@@ -385,49 +386,92 @@ export function deletePlayerAccount(
 	}
 	const tx = executor;
 	const now = clock.nowMs();
-		tx.delete(paymentPlans).where(eq(paymentPlans.playerId, playerId)).run();
-		tx.delete(payments).where(eq(payments.playerId, playerId)).run();
-		tx.update(gameSlots)
-			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt: now })
-			.where(eq(gameSlots.assignedPlayerId, playerId))
-			.run();
-		tx.delete(subRequests).where(eq(subRequests.requestedByPlayerId, playerId)).run();
+	const firstName = t('player.deletedFirstName');
+	const lastName = t('player.deletedLastName');
+	const fullName = t('player.deletedName');
 
-		// Une place reprise sur un match à venir redevient disponible. Sur un
-		// match passé ou annulé, elle est fermée pour conserver l'historique.
-		const reopenable = tx
-			.select({ id: games.id })
-			.from(games)
-			.where(
-				and(
-					eq(games.status, 'scheduled'),
-					or(
-						gt(games.gameDate, today),
-						and(eq(games.gameDate, today), gt(games.startTime, nowTime))
-					)
+	tx.update(players)
+		.set({
+			firstName,
+			lastName,
+			active: false,
+			isSubstitute: false,
+			avatarId: null,
+			jerseyNumber: null,
+			deletedAt: now,
+			updatedAt: now
+		})
+		.where(eq(players.userId, playerId))
+		.run();
+
+	// Le compte garde sa ligne (les clés étrangères des faits passés en
+	// dépendent) mais perd son adresse, son nom affiché et ses identifiants.
+	tx.update(user)
+		.set({
+			name: fullName,
+			email: `supprime+${playerId}@invalide.local`,
+			banned: true,
+			banReason: 'Compte supprimé',
+			banExpires: null
+		})
+		.where(eq(user.id, playerId))
+		.run();
+	tx.delete(session).where(eq(session.userId, playerId)).run();
+	tx.delete(account).where(eq(account.userId, playerId)).run();
+	tx.delete(subProfiles).where(eq(subProfiles.playerId, playerId)).run();
+
+	// Une place reprise sur un match à venir redevient disponible. Sur un
+	// match passé ou annulé, elle est fermée pour conserver l'historique.
+	const futureIds = tx
+		.select({ id: games.id })
+		.from(games)
+		.where(
+			and(
+				eq(games.status, 'scheduled'),
+				or(
+					gt(games.gameDate, today),
+					and(eq(games.gameDate, today), gt(games.startTime, nowTime))
 				)
 			)
-			.all()
-			.map((row) => row.id);
-		if (reopenable.length > 0) {
-			tx.update(subRequests)
-				.set({ status: 'open', filledByPlayerId: null, filledAt: null })
-				.where(
-					and(
-						eq(subRequests.filledByPlayerId, playerId),
-						inArray(subRequests.gameId, reopenable)
-					)
+		)
+		.all()
+		.map((row) => row.id);
+
+	if (futureIds.length > 0) {
+		tx.update(gameSlots)
+			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt: now })
+			.where(
+				and(
+					eq(gameSlots.assignedPlayerId, playerId),
+					inArray(gameSlots.gameId, futureIds)
 				)
-				.run();
-		}
-		tx.update(subRequests)
-			.set({
-				status: 'cancelled',
-				filledByPlayerId: null,
-				filledAt: null,
-				cancelledAt: now
-			})
-			.where(eq(subRequests.filledByPlayerId, playerId))
+			)
 			.run();
-		tx.delete(user).where(eq(user.id, playerId)).run();
+		tx.delete(gameAvailability)
+			.where(
+				and(
+					eq(gameAvailability.playerId, playerId),
+					inArray(gameAvailability.gameId, futureIds)
+				)
+			)
+			.run();
+		tx.update(subRequests)
+			.set({ status: 'open', filledByPlayerId: null, filledAt: null })
+			.where(
+				and(
+					eq(subRequests.filledByPlayerId, playerId),
+					inArray(subRequests.gameId, futureIds)
+				)
+			)
+			.run();
+		tx.update(subRequests)
+			.set({ status: 'cancelled', cancelledAt: now })
+			.where(
+				and(
+					eq(subRequests.requestedByPlayerId, playerId),
+					inArray(subRequests.gameId, futureIds)
+				)
+			)
+			.run();
+	}
 }

@@ -14,7 +14,6 @@ import { saveManualLineup } from '#lib/domain/games/lineup.ts';
 import { manualLineupInputSchema } from '#lib/domain/games/validators.ts';
 import { isGamePlayable, isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
-import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
 import type { Position } from '#config/positions.ts';
 import { getMySubProfile } from '#lib/domain/subs/service.ts';
 import {
@@ -65,8 +64,9 @@ function emptyMatchView(positions: Position[]) {
 	};
 }
 
-export const load: ServerLoad = ({ locals, params }) => {
+export const load: ServerLoad = async ({ locals, params, parent }) => {
 	const actor = locals.actor;
+	const { isSubstitute } = await parent();
 	const positions: Position[] =
 		actor.kind === 'user' ? getMySubProfile(actor).positions : [];
 	if (actor.kind !== 'user') {
@@ -89,7 +89,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		sheet: playable ? getGameSheet(actor, gameId) : null,
 		availability: getAvailability(actor, gameId),
 		requests: listRequestsForGame(actor, gameId),
-		isSubstitute: isSubstitutePlayer(actor),
+		isSubstitute,
 		positions,
 		canManage: can(actor, 'manageGames')
 	};

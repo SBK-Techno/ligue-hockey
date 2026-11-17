@@ -1,9 +1,8 @@
 import { isPosition, type Position } from '#config/positions.ts';
-import { branding } from '#lib/generated/branding.ts';
 import { listUserIdsWithCapability } from '#lib/domain/auth/queries.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import {
 	findOwnProfile,
@@ -17,7 +16,7 @@ import type { GameSummary } from '#lib/domain/games/types.ts';
 import { isLineupEditable } from '#lib/domain/games/playability.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
-import { clock, todayInZone } from '#lib/shared/time/clock.ts';
+import { clock } from '#lib/shared/time/clock.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
 import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
@@ -39,7 +38,8 @@ import {
 	listRequestsForUser,
 	listSubProfiles,
 	releaseRequest,
-	upsertSubProfile
+	upsertSubProfile,
+	upsertSubProfileWithAudit
 } from './queries.ts';
 import type { SubRequestRow, SubRequestStatus } from './schema.ts';
 import { subFavoriteInputSchema, subProfileInputSchema } from './validators.ts';
@@ -164,19 +164,21 @@ export function setSubstituteFavorite(
 	}
 
 	const existing = findSubProfile(parsed.playerId);
-	upsertSubProfile({
-		playerId: parsed.playerId,
-		favorite: parsed.favorite,
-		positionsJson:
-			existing?.positionsJson ?? JSON.stringify([player.position]),
-		updatedAt: clock.nowMs()
-	});
-	recordAudit(actor, {
-		action: 'sub.favorite',
-		entityType: 'player',
-		entityId: parsed.playerId,
-		metadata: { favorite: parsed.favorite }
-	});
+	upsertSubProfileWithAudit(
+		{
+			playerId: parsed.playerId,
+			favorite: parsed.favorite,
+			positionsJson:
+				existing?.positionsJson ?? JSON.stringify([player.position]),
+			updatedAt: clock.nowMs()
+		},
+		auditEntry(actor, {
+			action: 'sub.favorite',
+			entityType: 'player',
+			entityId: parsed.playerId,
+			metadata: { favorite: parsed.favorite }
+		})
+	);
 }
 
 export function listSubstitutes(actor: Actor): SubProfileView[] {
@@ -241,7 +243,8 @@ function eligibleSubs(
 
 export function notifyRequestWaves(
 	request: SubRequestRow,
-	game: GameSummary
+	game: GameSummary,
+	occurrenceAt: number = request.createdAt
 ): WaveSchedule {
 	const settings = getSettings();
 	const now = clock.nowMs();
@@ -266,12 +269,10 @@ export function notifyRequestWaves(
 		request.requestedByPlayerId
 	);
 
-	const dedupeRoot = request.requestedByPlayerId
-		? `sub_request:${request.gameId}:${request.requestedByPlayerId}:${todayInZone(
-				branding.timezone,
-				now
-			)}`
-		: `sub_request:${request.id}`;
+	// Chaque demande et chaque réouverture portent leur propre occurrence :
+	// une place relâchée ou une demande recréée le même jour produit de
+	// nouveaux avis au lieu d'être avalée par la clé de la première vague.
+	const dedupeRoot = `sub_request:${request.id}:${occurrenceAt}`;
 
 	if (!tooLate) {
 		notify(
@@ -431,8 +432,9 @@ export function claimSubstitute(
 	}
 
 	let claimed: boolean;
+	const claimedAt = clock.nowMs();
 	try {
-		claimed = claimRequest(requestId, user.userId, clock.nowMs());
+		claimed = claimRequest(requestId, user.userId, claimedAt);
 	} catch (cause) {
 		throw new AppError('CONFLICT', {
 			key: 'subs.alreadyPlaying',
@@ -458,7 +460,7 @@ export function claimSubstitute(
 			gameDate: game.gameDate,
 			startTime: game.startTime
 		},
-		{ dedupeKey: `sub_claimed:${requestId}` }
+		{ dedupeKey: `sub_claimed:${requestId}:${claimedAt}` }
 	);
 
 	recordAudit(actor, {
@@ -500,7 +502,7 @@ export function releaseSubstitute(
 	if (!reopened) {
 		throw new AppError('INTERNAL');
 	}
-	return notifyRequestWaves(reopened, game);
+	return notifyRequestWaves(reopened, game, clock.nowMs());
 }
 
 export function cancelRequestByAdmin(
@@ -617,7 +619,9 @@ export function listGameRequests(
 ): SubRequestView[] {
 	requireUser(actor);
 	const requests = listRequestsForGame(game.id).filter(
-		(request) => request.status !== 'cancelled'
+		// Une demande fermée par la fin du match garde son remplaçant : elle
+		// reste dans l'historique au lieu de disparaître avec le statut.
+		(request) => request.status !== 'cancelled' || request.filledByPlayerId !== null
 	);
 	const names = namesFor(requests);
 	return requests.map((request) => requestView(request, names));

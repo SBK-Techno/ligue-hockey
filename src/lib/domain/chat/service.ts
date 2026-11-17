@@ -2,7 +2,7 @@ import { CHAT_PAGE_SIZE, HOME_POLL_LIMIT } from '#config/chat.ts';
 import type { Position } from '#config/positions.ts';
 import { canCreatePoll, can, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { auditEntry } from '#lib/domain/audit/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
@@ -229,13 +229,12 @@ export function createPoll(actor: Actor, input: { question: string; options: unk
 		},
 		question: parsed.question,
 		options: options.map((label) => ({ id: newId('opt'), label })),
-		createdAt
-	});
-
-	recordAudit(actor, {
-		action: 'chat.poll_created',
-		entityType: 'chat_message',
-		entityId: messageId
+		createdAt,
+		audit: auditEntry(actor, {
+			action: 'chat.poll_created',
+			entityType: 'chat_message',
+			entityId: messageId
+		})
 	});
 	return messageId;
 }
@@ -282,12 +281,15 @@ export function closePollAsAdmin(actor: Actor, messageId: string): void {
 	if (!poll) {
 		throw new AppError('NOT_FOUND', { key: 'chat.pollNotFound' });
 	}
-	closePoll(messageId, clock.nowMs());
-	recordAudit(actor, {
-		action: 'chat.poll_closed',
-		entityType: 'chat_message',
-		entityId: messageId
-	});
+	closePoll(
+		messageId,
+		clock.nowMs(),
+		auditEntry(actor, {
+			action: 'chat.poll_closed',
+			entityType: 'chat_message',
+			entityId: messageId
+		})
+	);
 }
 
 export function deleteChatMessage(actor: Actor, messageId: string): void {
@@ -299,5 +301,15 @@ export function deleteChatMessage(actor: Actor, messageId: string): void {
 	if (message.authorUserId !== user.userId && !can(user, 'moderateChat')) {
 		throw new AppError('FORBIDDEN');
 	}
-	softDeleteMessage(messageId, clock.nowMs(), user.userId);
+	softDeleteMessage(
+		messageId,
+		clock.nowMs(),
+		user.userId,
+		auditEntry(actor, {
+			action: 'chat.message_deleted',
+			entityType: 'chat_message',
+			entityId: messageId,
+			metadata: { authorUserId: message.authorUserId }
+		})
+	);
 }

@@ -5,6 +5,7 @@ import {
 	can,
 	canAny,
 	canCreatePoll,
+	canDeletePlayer,
 	canEditProfile,
 	canManageGame,
 	canModerateChat,
@@ -47,6 +48,15 @@ describe('capability policy', () => {
 		expect(can(actor('manager'), 'manageSettings')).toBe(false);
 		expect(can(actor('admin'), 'managePlayers')).toBe(true);
 		expect(can(actor('admin'), 'manageSettings')).toBe(true);
+	});
+
+	it('owns player deletion in one policy rule', () => {
+		const target = { userId: 'other', role: 'player' };
+		expect(canDeletePlayer(actor('admin'), target)).toBe(true);
+		expect(canDeletePlayer(actor('manager'), target)).toBe(false);
+		expect(canDeletePlayer(actor('player'), target)).toBe(false);
+		expect(canDeletePlayer(actor('admin'), { userId: 'user-1', role: 'player' })).toBe(false);
+		expect(canDeletePlayer(actor('admin'), { userId: 'other', role: 'admin' })).toBe(false);
 	});
 
 	it('lets a manager run the league without owning accounts', () => {

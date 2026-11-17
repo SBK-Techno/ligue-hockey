@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
+import { insertAudit, type AuditEntry } from '#lib/domain/audit/queries.ts';
 import { subProfiles, subRequests, type SubRequestRow } from './schema.ts';
 
 export type NewSubRequest = typeof subRequests.$inferInsert;
@@ -16,13 +17,17 @@ export function listSubProfiles() {
 	return db.select().from(subProfiles).orderBy(asc(subProfiles.playerId)).all();
 }
 
-export function upsertSubProfile(input: {
-	playerId: string;
-	favorite: boolean;
-	positionsJson: string;
-	updatedAt: number;
-}): void {
-	db.insert(subProfiles)
+function upsertProfile(
+	executor: DbExecutor,
+	input: {
+		playerId: string;
+		favorite: boolean;
+		positionsJson: string;
+		updatedAt: number;
+	}
+): void {
+	executor
+		.insert(subProfiles)
 		.values({
 			playerId: input.playerId,
 			favorite: input.favorite,
@@ -39,6 +44,31 @@ export function upsertSubProfile(input: {
 			}
 		})
 		.run();
+}
+
+export function upsertSubProfile(input: {
+	playerId: string;
+	favorite: boolean;
+	positionsJson: string;
+	updatedAt: number;
+}): void {
+	upsertProfile(db, input);
+}
+
+/** La préférence et sa trace d'audit réussissent ou échouent ensemble. */
+export function upsertSubProfileWithAudit(
+	input: {
+		playerId: string;
+		favorite: boolean;
+		positionsJson: string;
+		updatedAt: number;
+	},
+	audit: AuditEntry
+): void {
+	db.transaction((tx) => {
+		upsertProfile(tx, input);
+		insertAudit(audit, tx);
+	});
 }
 
 export function findRequest(id: string): SubRequestRow | undefined {
@@ -119,24 +149,28 @@ export function cancelRequest(id: string, at: number): boolean {
 	return result.changes === 1;
 }
 
+/**
+ * Ferme toutes les demandes d'un match. Une demande encore ouverte n'a pas de
+ * remplaçant et part telle quelle; une demande comblée garde son remplaçant et
+ * son heure, parce que l'historique du match doit continuer de dire qui a pris
+ * la place.
+ */
 export function cancelOpenRequests(
 	gameId: string,
 	at: number,
 	executor: DbExecutor = db
 ): number {
-	const result = executor
+	const open = executor
 		.update(subRequests)
-		.set({
-			status: 'cancelled',
-			filledByPlayerId: null,
-			filledAt: null,
-			cancelledAt: at
-		})
-		.where(
-			and(eq(subRequests.gameId, gameId), inArray(subRequests.status, ['open', 'filled']))
-		)
+		.set({ status: 'cancelled', cancelledAt: at })
+		.where(and(eq(subRequests.gameId, gameId), eq(subRequests.status, 'open')))
 		.run();
-	return result.changes;
+	const filled = executor
+		.update(subRequests)
+		.set({ status: 'cancelled', cancelledAt: at })
+		.where(and(eq(subRequests.gameId, gameId), eq(subRequests.status, 'filled')))
+		.run();
+	return open.changes + filled.changes;
 }
 
 export function listRequestsForGame(gameId: string) {

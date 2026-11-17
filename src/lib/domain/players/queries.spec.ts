@@ -68,7 +68,7 @@ function request(id: string, gameId: string, filler: string, status = 'filled'):
 }
 
 beforeEach(() => {
-	for (const table of ['sub_requests', 'games', 'locations', 'players', 'user']) {
+	for (const table of ['payments', 'payment_plans', 'sub_requests', 'games', 'locations', 'players', 'user']) {
 		sqlite.prepare(`delete from ${table}`).run();
 	}
 	sqlite
@@ -85,17 +85,53 @@ beforeEach(() => {
 });
 
 describe('suppression d’un remplaçant', () => {
-	it('ne rouvre pas une place sur un match déjà commencé le même jour', () => {
+	it('libère seulement les engagements à venir et garde les faits passés', () => {
 		deletePlayerAccount('sub', '2026-11-16', '20:00');
 
 		const rows = sqlite
-			.prepare('select id, status from sub_requests order by id')
-			.all() as { id: string; status: string }[];
+			.prepare('select id, status, filled_by_player_id from sub_requests order by id')
+			.all() as { id: string; status: string; filled_by_player_id: string | null }[];
 
 		expect(rows).toEqual([
-			{ id: 'r1', status: 'cancelled' },
-			{ id: 'r2', status: 'open' },
-			{ id: 'r3', status: 'cancelled' }
+			{ id: 'r1', status: 'filled', filled_by_player_id: 'sub' },
+			{ id: 'r2', status: 'open', filled_by_player_id: null },
+			{ id: 'r3', status: 'filled', filled_by_player_id: 'sub' }
 		]);
+	});
+
+	it('anonymise la fiche et garde le compte sans identifiants', () => {
+		sqlite
+			.prepare(
+				`insert into payments (id, player_id, amount_cents, paid_at, method, created_at)
+				 values ('pay', 'sub', 5000, '2026-11-01', 'cash', 0)`
+			)
+			.run();
+
+		deletePlayerAccount('sub', '2026-11-16', '20:00');
+
+		const player = sqlite
+			.prepare(
+				'select first_name, last_name, active, avatar_id, deleted_at from players where user_id = ?'
+			)
+			.get('sub') as {
+			first_name: string;
+			last_name: string;
+			active: number;
+			avatar_id: string | null;
+			deleted_at: number | null;
+		};
+		expect(player).toEqual({
+			first_name: 'Joueur',
+			last_name: 'retiré',
+			active: 0,
+			avatar_id: null,
+			deleted_at: expect.any(Number)
+		});
+		expect(
+			sqlite.prepare("select email from user where id = 'sub'").get()
+		).toEqual({ email: 'supprime+sub@invalide.local' });
+		expect(
+			sqlite.prepare("select count(*) as count from payments where id = 'pay'").get()
+		).toEqual({ count: 1 });
 	});
 });

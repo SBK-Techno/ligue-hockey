@@ -11,8 +11,9 @@ import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
 import { gameWarningsInOrder } from '#config/game-warnings.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
+import { neutralPlayerName } from '#lib/domain/players/public.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import { cancelAllForGame, closeRequestsOnFinalize } from '#lib/domain/subs/generation.ts';
+import { closeRequestsForGame } from '#lib/domain/subs/generation.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
@@ -48,8 +49,10 @@ import type {
 import {
 	gameInputSchema,
 	generationSnapshotSchema,
+	updateGameInputSchema,
 	type GameInput,
-	type GenerationSnapshot
+	type GenerationSnapshot,
+	type UpdateGameInput
 } from './validators.ts';
 
 export type GameView = GameSummary & {
@@ -65,6 +68,8 @@ export type GameView = GameSummary & {
 	/** Toutes les places du modèle sont remplies : l'alignement est complet. */
 	lineupComplete: boolean;
 	generated: boolean;
+	/** Jeton de concurrence de la fiche : le formulaire le renvoie tel quel. */
+	updatedAt: number;
 };
 
 export type GenerationResult = GameGenerationView & {
@@ -145,8 +150,8 @@ function generationView(
 			strict: violation.strict,
 			playerIds: violation.playerIds,
 					names: [
-						names.get(violation.playerIds[0])?.fullName ?? violation.playerIds[0],
-						names.get(violation.playerIds[1])?.fullName ?? violation.playerIds[1]
+						names.get(violation.playerIds[0])?.fullName ?? neutralPlayerName(),
+						names.get(violation.playerIds[1])?.fullName ?? neutralPlayerName()
 					]
 				}))
 			: [],
@@ -155,7 +160,7 @@ function generationView(
 		bench: live
 			? live.bench.map((entry) => ({
 					playerId: entry.playerId,
-					fullName: live.names.get(entry.playerId) ?? entry.playerId,
+					fullName: live.names.get(entry.playerId) ?? neutralPlayerName(),
 					position: entry.position,
 					jerseyNumber: members.get(entry.playerId)?.jerseyNumber ?? null,
 					avatarId: members.get(entry.playerId)?.avatarId ?? null,
@@ -167,7 +172,7 @@ function generationView(
 					(playerId) => names.get(playerId)?.active !== false
 				).map((entry) => ({
 					playerId: entry.playerId,
-					fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
+					fullName: names.get(entry.playerId)?.fullName ?? neutralPlayerName(),
 					position: entry.position,
 					jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
 					avatarId: names.get(entry.playerId)?.avatarId ?? null,
@@ -221,7 +226,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		player: slot.player
 			? {
 					playerId: slot.player.playerId,
-					fullName: names.get(slot.player.playerId)?.fullName ?? slot.player.playerId,
+					fullName: names.get(slot.player.playerId)?.fullName ?? neutralPlayerName(),
 					position: slot.position,
 					jerseyNumber: names.get(slot.player.playerId)?.jerseyNumber ?? null,
 					avatarId: names.get(slot.player.playerId)?.avatarId ?? null,
@@ -245,7 +250,8 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		openSlots,
 		openSlotsLabel: formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many'),
 		lineupComplete: openSlots === 0,
-		generated: snapshot !== null
+		generated: snapshot !== null,
+		updatedAt: row.updatedAt
 	};
 }
 
@@ -313,7 +319,11 @@ export function createGame(actor: Actor, input: GameInput): GameSummary {
 	};
 }
 
-export function updateGame(actor: Actor, gameId: string, input: GameInput): GameSummary {
+export function updateGame(
+	actor: Actor,
+	gameId: string,
+	input: UpdateGameInput
+): GameSummary {
 	requirePermission(actor, 'manageGames');
 	const row = findGame(gameId);
 	if (!row) {
@@ -322,7 +332,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 	if (!isLineupEditable(row)) {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
-	const parsed = parseSchema(gameInputSchema, input);
+	const parsed = parseSchema(updateGameInputSchema, input);
 	const location = getLocation(actor, parsed.locationId);
 	const locationChanged = parsed.locationId !== row.locationId;
 
@@ -339,7 +349,12 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 				notes: parsed.notes
 			},
 			clock.nowMs(),
-			row.updatedAt
+			parsed.expectedUpdatedAt,
+			auditEntry(actor, {
+				action: 'game.update',
+				entityType: 'game',
+				entityId: gameId
+			})
 		);
 		if (!saved) {
 			throw new AppError('CONFLICT', { key: 'games.lineupChanged' });
@@ -350,12 +365,6 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 		}
 		throw cause;
 	}
-
-	recordAudit(actor, {
-		action: 'game.update',
-		entityType: 'game',
-		entityId: gameId
-	});
 
 	return summary({
 		...row,
@@ -381,10 +390,19 @@ export function cancelGame(actor: Actor, gameId: string): void {
 	}
 
 	const updatedAt = clock.nowMs();
-	if (!cancelGameRow(gameId, updatedAt)) {
+	const cancelled = cancelGameRow(
+		gameId,
+		updatedAt,
+		auditEntry(actor, {
+			action: 'game.cancel',
+			entityType: 'game',
+			entityId: gameId
+		}),
+		(tx) => closeRequestsForGame(actor, gameId, updatedAt, tx, 'cancelled')
+	);
+	if (!cancelled) {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
-	cancelAllForGame(actor, summary(row));
 
 	const recipients = generationCandidates().map((player) => ({
 		userId: player.userId
@@ -400,12 +418,6 @@ export function cancelGame(actor: Actor, gameId: string): void {
 		},
 		{ dedupeKey: `game_cancelled:${gameId}` }
 	);
-
-	recordAudit(actor, {
-		action: 'game.cancel',
-		entityType: 'game',
-		entityId: gameId
-	});
 }
 
 export function regenerateGame(
@@ -518,7 +530,7 @@ export function regenerateGame(
 	const names = namedPlayers(namedIds);
 	const benchViews: GamePlayer[] = plan.bench.map((entry) => ({
 		playerId: entry.playerId,
-		fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
+		fullName: names.get(entry.playerId)?.fullName ?? neutralPlayerName(),
 		position: entry.position,
 		jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
 		avatarId: names.get(entry.playerId)?.avatarId ?? null,
@@ -539,8 +551,8 @@ export function regenerateGame(
 			strict: violation.strict,
 			playerIds: violation.playerIds,
 			names: [
-				names.get(violation.playerIds[0])?.fullName ?? violation.playerIds[0],
-				names.get(violation.playerIds[1])?.fullName ?? violation.playerIds[1]
+				names.get(violation.playerIds[0])?.fullName ?? neutralPlayerName(),
+				names.get(violation.playerIds[1])?.fullName ?? neutralPlayerName()
 			]
 		})),
 		bench: benchViews,
@@ -592,7 +604,7 @@ export function completeGame(actor: Actor, gameId: string): void {
 			entityType: 'game',
 			entityId: gameId
 		}),
-		(tx) => closeRequestsOnFinalize(actor, gameId, at, tx)
+		(tx) => closeRequestsForGame(actor, gameId, at, tx, 'finalized')
 	);
 	if (!finalized) {
 		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });

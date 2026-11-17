@@ -27,11 +27,6 @@ export const betterAuthIdentity: IdentityProvider = {
 		await context.internalAdapter.updateUser(userId, { name });
 	},
 
-	async setRole(userId, role) {
-		const context = await auth.$context;
-		await context.internalAdapter.updateUser(userId, { role });
-	},
-
 	async setAccountState(userId, state) {
 		const context = await auth.$context;
 		await context.internalAdapter.updateUser(
@@ -59,6 +54,36 @@ export const betterAuthIdentity: IdentityProvider = {
 			body: {
 				email,
 				redirectTo: target.toString()
+			}
+		});
+	},
+
+	async signIn(credentials, headers) {
+		await auth.api.signInEmail({
+			body: {
+				email: credentials.email,
+				password: credentials.password
+			},
+			headers
+		});
+	},
+
+	async changePassword(_userId, input, headers) {
+		await auth.api.changePassword({
+			body: {
+				currentPassword: input.currentPassword,
+				newPassword: input.newPassword,
+				revokeOtherSessions: true
+			},
+			headers
+		});
+	},
+
+	async resetPassword(input) {
+		await auth.api.resetPassword({
+			body: {
+				newPassword: input.newPassword,
+				token: input.token
 			}
 		});
 	}

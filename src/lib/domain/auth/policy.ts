@@ -1,5 +1,5 @@
 import type { Capability } from '#config/capabilities.ts';
-import { roleCapabilities, roleHasCapability } from '#config/roles.ts';
+import { ADMIN_ROLE, roleCapabilities, roleHasCapability } from '#config/roles.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import type { Actor, UserActor } from './types.ts';
 
@@ -40,6 +40,30 @@ export function canViewBalance(actor: Actor, playerId: string): boolean {
 export function canEditProfile(actor: Actor, playerId: string): boolean {
   const user = activeUser(actor);
   return user !== null && (can(user, 'managePlayers') || user.userId === playerId);
+}
+
+export type PlayerDeletionVerdict = 'allowed' | 'self' | 'admin' | 'forbidden';
+
+/**
+ * La seule règle de suppression d'un joueur. La page et le service lisent ce
+ * verdict; ni l'un ni l'autre ne compare un rôle.
+ */
+export function playerDeletion(
+  actor: Actor,
+  target: { userId: string; role: string | null }
+): PlayerDeletionVerdict {
+  const user = activeUser(actor);
+  if (!user || !roleHasCapability(user.role, 'deletePlayer')) return 'forbidden';
+  if (user.userId === target.userId) return 'self';
+  if (target.role === ADMIN_ROLE) return 'admin';
+  return 'allowed';
+}
+
+export function canDeletePlayer(
+  actor: Actor,
+  target: { userId: string; role: string | null }
+): boolean {
+  return playerDeletion(actor, target) === 'allowed';
 }
 
 export function canCreatePoll(actor: Actor, allowPlayerPolls: boolean): boolean {

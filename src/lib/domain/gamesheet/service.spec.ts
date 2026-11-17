@@ -38,7 +38,9 @@ const {
 	updatePenalty
 } = await import('./service.ts');
 const { deletePlayerAccount } = await import('#lib/domain/players/queries.ts');
-const { cancelRequestByAdmin } = await import('#lib/domain/subs/service.ts');
+const { cancelRequestByAdmin, listGameRequests } = await import(
+	'#lib/domain/subs/service.ts'
+);
 const { getGame } = await import('#lib/domain/games/service.ts');
 
 const manager: Actor = {
@@ -667,9 +669,11 @@ describe('score et totaux', () => {
 
 		deletePlayerAccount('a', '2026-11-16', '00:00');
 
+		// La fiche reste en base, anonymisée : le but garde son instantané et
+		// le grand livre ne perd ni le score ni la participation.
 		const sheet = getGameSheet(playerActor, 'started');
 		expect(sheet.goals[0].scorer).toEqual({
-			playerId: '',
+			playerId: 'a',
 			fullName: 'a Test',
 			jerseyNumber: 9,
 			team: 'white'
@@ -717,6 +721,34 @@ describe('finalisation', () => {
 			)
 			.get() as { count: number };
 		expect(audit.count).toBe(1);
+	});
+
+	it('garde dans l’historique le remplaçant qui a comblé une demande', () => {
+		sqlite
+			.prepare(
+				`insert into sub_requests
+				 (id, game_id, position, reason, status, created_at, filled_by_player_id, filled_at)
+				 values ('filled', 'started', 'forward', 'manual', 'filled', 0, 'e', 1)`
+			)
+			.run();
+
+		finalizeGame(admin, 'started');
+
+		const stored = sqlite
+			.prepare(
+				"select status, filled_by_player_id from sub_requests where id = 'filled'"
+			)
+			.get();
+		expect(stored).toEqual({ status: 'cancelled', filled_by_player_id: 'e' });
+
+		const history = listGameRequests(admin, getGame(admin, 'started'));
+		expect(history).toEqual([
+			expect.objectContaining({
+				id: 'filled',
+				filledByPlayerId: 'e',
+				filledByName: 'e Test'
+			})
+		]);
 	});
 
 	it('refuse d’annuler une demande après le début du match', () => {

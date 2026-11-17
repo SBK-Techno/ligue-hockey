@@ -294,40 +294,55 @@ export function updateGame(
 		Pick<NewGame, 'gameDate' | 'startTime' | 'locationId' | 'location' | 'notes' | 'status'>
 	>,
 	updatedAt: number,
-	expectedUpdatedAt: number
+	expectedUpdatedAt: number,
+	audit?: AuditEntry
 ): boolean {
-	const result = db
-		.update(games)
-		.set({ ...patch, updatedAt })
-		.where(
-			and(
-				eq(games.id, gameId),
-				eq(games.status, 'scheduled'),
-				eq(games.updatedAt, expectedUpdatedAt)
+	return db.transaction((tx) => {
+		const result = tx
+			.update(games)
+			.set({ ...patch, updatedAt })
+			.where(
+				and(
+					eq(games.id, gameId),
+					eq(games.status, 'scheduled'),
+					eq(games.updatedAt, expectedUpdatedAt)
+				)
 			)
-		)
-		.run();
-	return result.changes === 1;
+			.run();
+		if (result.changes !== 1) return false;
+		if (audit) insertAudit(audit, tx);
+		return true;
+	});
 }
 
 /**
- * Annule seulement un match encore programmé et jamais terminé. Le statut et
- * l'estampille de fin sont dans la condition : un finalize concurrent gagne et
- * l'annulation échoue au lieu d'écraser l'historique.
+ * Annule seulement un match encore programmé et jamais terminé. Le statut, la
+ * trace d'audit et la fermeture des demandes vivent dans la même transaction :
+ * une erreur de fermeture laisse le match intact.
  */
-export function cancelGame(gameId: string, updatedAt: number): boolean {
-	const result = db
-		.update(games)
-		.set({ status: 'cancelled', updatedAt })
-		.where(
-			and(
-				eq(games.id, gameId),
-				eq(games.status, 'scheduled'),
-				isNull(games.completedAt)
+export function cancelGame(
+	gameId: string,
+	updatedAt: number,
+	audit: AuditEntry,
+	close?: (executor: DbExecutor) => void
+): boolean {
+	return db.transaction((tx) => {
+		const result = tx
+			.update(games)
+			.set({ status: 'cancelled', updatedAt })
+			.where(
+				and(
+					eq(games.id, gameId),
+					eq(games.status, 'scheduled'),
+					isNull(games.completedAt)
+				)
 			)
-		)
-		.run();
-	return result.changes === 1;
+			.run();
+		if (result.changes !== 1) return false;
+		insertAudit(audit, tx);
+		close?.(tx);
+		return true;
+	});
 }
 
 export function listAvailability(gameId: string) {

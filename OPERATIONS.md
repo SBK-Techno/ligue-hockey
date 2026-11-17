@@ -45,6 +45,7 @@ npx web-push generate-vapid-keys # VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
 L'application ne termine pas TLS et n'émet jamais `Strict-Transport-Security` : le proxy HTTPS en est le seul propriétaire. Le contrat du proxy est le suivant.
 
 - Terminer TLS et transmettre `X-Forwarded-Proto: https` et `Host` au conteneur, sur le port applicatif interne. Ne pas exposer le conteneur en clair.
+- Réécrire `X-Forwarded-For` avec l'adresse réelle du client, une seule entrée : le compose lit cet en-tête (`ADDRESS_HEADER: X-Forwarded-For`, `XFF_DEPTH: "1"`) pour que les limiteurs de connexion et de réinitialisation comptent par client, pas par proxy. Un en-tête fourni par le navigateur qui n'est pas réécrit permet à un anonyme de changer de seau à volonté; un en-tête absent fait échouer la lecture de l'adresse.
 - Ajouter sur toute réponse HTTPS : `Strict-Transport-Security: max-age=31536000; includeSubDomains`. N'ajouter `preload` qu'après inscription du domaine; ne jamais envoyer HSTS sur une réponse HTTP en clair.
 - Ne pas retirer ni remplacer les en-têtes produits par l'application : `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`. La CSP est configurée dans `vite.config.ts` et non dans le proxy.
 - Activer HTTP/2 (h2) vers les navigateurs. L'origine Node sert du HTTP/1.1; le proxy négocie h2 avec le client et multiplexe les requêtes. Sans h2, le graphe JavaScript d'une page coûte plus de connexions que le budget ne le permet.

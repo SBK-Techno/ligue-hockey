@@ -224,6 +224,29 @@ describe('unicité des identités actives', () => {
 		expect(playerRow('inactive').active).toBe(0);
 	});
 
+	it('réserve aussi l’identité d’une fiche inactive', async () => {
+		addPlayer('inactive', { avatarId: 'capitaine-navy', active: false });
+		addPlayer('other', { avatarId: 'tuque-rouge' });
+
+		await expect(
+			adminUpdatePlayer(admin, 'other', { avatarId: 'capitaine-navy' })
+		).rejects.toMatchObject({ key: 'error.avatarTaken' });
+		expect(playerRow('other').avatar_id).toBe('tuque-rouge');
+
+		const picker = getOwnAvatarPicker({
+			kind: 'user',
+			userId: 'other',
+			name: 'Autre',
+			role: 'player',
+			active: true
+		});
+		expect(picker.taken).toContain('capitaine-navy');
+
+		await expect(
+			adminUpdatePlayer(admin, 'inactive', { active: true })
+		).resolves.toMatchObject({ userId: 'inactive', active: true });
+	});
+
 	it('remplace une identité retirée du catalogue à la réactivation', async () => {
 		addPlayer('inactive', { avatarId: 'visage-retire', active: false });
 
@@ -337,6 +360,42 @@ describe('poste et identité', () => {
 			adminUpdatePlayer(admin, 'forward', { position: 'goalie' })
 		).rejects.toMatchObject({ key: 'error.identityWrongPosition' });
 		expect(playerRow('forward').position).toBe('forward');
+	});
+
+	it('refuse d’enregistrer un numéro sur une légende du mauvais poste', async () => {
+		addPlayer('goalie', { position: 'goalie', avatarId: 'legende-lafleur' });
+
+		await expect(
+			updateOwnProfile(
+				{
+					kind: 'user',
+					userId: 'goalie',
+					name: 'Gardien',
+					role: 'player',
+					active: true
+				},
+				{
+					firstName: 'Gardien',
+					lastName: 'Test',
+					age: 30,
+					jerseyNumber: 31
+				}
+			)
+		).rejects.toMatchObject({ key: 'error.identityWrongPosition' });
+		expect(playerRow('goalie').avatar_id).toBe('legende-lafleur');
+	});
+
+	it('refuse d’activer une fiche qui porte une légende du mauvais poste', async () => {
+		addPlayer('goalie', {
+			position: 'goalie',
+			avatarId: 'legende-koivu',
+			active: false
+		});
+
+		await expect(
+			adminUpdatePlayer(admin, 'goalie', { active: true })
+		).rejects.toMatchObject({ key: 'error.identityWrongPosition' });
+		expect(playerRow('goalie').active).toBe(0);
 	});
 
 	it('garde une incompatibilité déjà enregistrée lisible et signalable', () => {

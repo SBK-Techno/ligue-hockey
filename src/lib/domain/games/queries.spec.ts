@@ -20,6 +20,15 @@ vi.mock('#lib/server/db/index.ts', async () => {
 const { sqlite } = await import('#lib/server/db/index.ts');
 const { cancelGame, updateGame } = await import('./queries.ts');
 
+const AUDIT = {
+	actorUserId: null,
+	action: 'game.cancel',
+	entityType: 'game',
+	entityId: 'g1',
+	metadataJson: null,
+	createdAt: 0
+};
+
 const TEMPLATE = JSON.stringify({
 	goaliesPerTeam: 1,
 	forwardsPerTeam: 3,
@@ -38,6 +47,7 @@ function game(id: string, status: 'scheduled' | 'completed'): void {
 }
 
 beforeEach(() => {
+	sqlite.prepare('delete from audit_log').run();
 	sqlite.prepare('delete from games').run();
 	sqlite.prepare('delete from locations').run();
 	sqlite
@@ -49,14 +59,14 @@ describe('écritures conditionnelles d’un match', () => {
 	it('annule un match programmé une seule fois', () => {
 		game('g1', 'scheduled');
 
-		expect(cancelGame('g1', 2)).toBe(true);
-		expect(cancelGame('g1', 3)).toBe(false);
+		expect(cancelGame('g1', 2, AUDIT)).toBe(true);
+		expect(cancelGame('g1', 3, AUDIT)).toBe(false);
 	});
 
 	it('refuse d’annuler un match terminé', () => {
 		game('g2', 'completed');
 
-		expect(cancelGame('g2', 2)).toBe(false);
+		expect(cancelGame('g2', 2, AUDIT)).toBe(false);
 	});
 
 	it('modifie seulement la révision lue', () => {

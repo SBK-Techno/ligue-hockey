@@ -48,6 +48,17 @@ export const generationSnapshotSchema = z.object({
 });
 
 export type GameInput = z.infer<typeof gameInputSchema>;
+
+/**
+ * Le formulaire d'édition transporte le jeton `updatedAt` qu'il a lu. Le
+ * service ne le remplace jamais par une lecture fraîche : un formulaire
+ * périmé doit perdre la course.
+ */
+export const updateGameInputSchema = gameInputSchema.extend({
+	expectedUpdatedAt: z.coerce.number().int()
+});
+
+export type UpdateGameInput = z.infer<typeof updateGameInputSchema>;
 export type GenerationSnapshot = z.infer<typeof generationSnapshotSchema>;
 
 export const manualLineupInputSchema = z.object({

@@ -26,6 +26,12 @@ export const players = sqliteTable(
 		avatarId: text('avatar_id'),
 		isSubstitute: integer('is_substitute', { mode: 'boolean' }).notNull().default(false),
 		active: integer('active', { mode: 'boolean' }).notNull().default(true),
+		/**
+		 * Une fiche supprimée reste en base pour que le grand livre et les
+		 * feuilles de match gardent leur histoire. Elle n'apparaît plus dans
+		 * les listes et ne peut plus redevenir active.
+		 */
+		deletedAt: integer('deleted_at'),
 		createdAt: integer('created_at').notNull(),
 		updatedAt: integer('updated_at').notNull()
 	},

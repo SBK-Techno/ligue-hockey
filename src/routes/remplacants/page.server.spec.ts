@@ -349,18 +349,25 @@ describe('chargement de la page', () => {
 		canManagePool: boolean;
 	};
 
+	function loadFor(actor: Actor, isSubstitute = false) {
+		return load({
+			locals: { actor },
+			parent: async () => ({ isSubstitute })
+		} as never);
+	}
+
 	it('donne la liste des matchs à venir seulement aux gestionnaires', async () => {
-		const managerData = (await load({ locals: { actor: manager } } as never)) as LoadResult;
+		const managerData = (await loadFor(manager)) as LoadResult;
 		expect(managerData.games.map((game) => game.id)).toEqual(['future']);
 		expect(managerData.canManageRequests).toBe(true);
 		expect(managerData.canManagePool).toBe(false);
 
-		const adminData = (await load({ locals: { actor: admin } } as never)) as LoadResult;
+		const adminData = (await loadFor(admin)) as LoadResult;
 		expect(adminData.games.map((game) => game.id)).toEqual(['future']);
 		expect(adminData.canManageRequests).toBe(true);
 		expect(adminData.canManagePool).toBe(true);
 
-		const playerData = (await load({ locals: { actor: player } } as never)) as LoadResult;
+		const playerData = (await loadFor(player)) as LoadResult;
 		expect(playerData.games).toEqual([]);
 		expect(playerData.canManageRequests).toBe(false);
 		expect(playerData.canManagePool).toBe(false);
@@ -380,7 +387,7 @@ describe('chargement de la page', () => {
 				.run(id, gameId);
 		}
 
-		const data = (await load({ locals: { actor: player } } as never)) as LoadResult;
+		const data = (await loadFor(player)) as LoadResult;
 		expect(data.requests.map((request) => request.id)).toEqual(['open-future']);
 	});
 });

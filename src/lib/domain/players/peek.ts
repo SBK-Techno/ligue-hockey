@@ -9,7 +9,7 @@ import {
 } from '#lib/domain/gamesheet/season-stats.ts';
 import { getRatings, type RatingsView } from '#lib/domain/ratings/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
-import { recordAttempt, tooManyAttempts } from '#lib/server/security/throttle.ts';
+import { consumeAttempt } from '#lib/server/security/throttle.ts';
 import { getPlayer, type PublicPlayer } from './service.ts';
 
 /**
@@ -45,10 +45,9 @@ export function peekCacheControl(actor: Actor): string {
  */
 export function assertPeekAllowed(actor: Actor): void {
 	const key = `peek:${actor.kind === 'user' ? actor.userId : 'anonymous'}`;
-	if (tooManyAttempts(key, ABUSE_LIMITS.peek.limit)) {
+	if (!consumeAttempt(key, ABUSE_LIMITS.peek.limit, ABUSE_LIMITS.peek.windowMs)) {
 		throw new AppError('RATE_LIMITED');
 	}
-	recordAttempt(key, ABUSE_LIMITS.peek.windowMs);
 }
 
 export function getPlayerPeek(actor: Actor, playerId: string): PlayerPeekView {

@@ -365,6 +365,7 @@ describe('migrations vs registres', () => {
 			'age',
 			'avatar_id',
 			'created_at',
+			'deleted_at',
 			'first_name',
 			'is_substitute',
 			'jersey_number',

@@ -2,10 +2,11 @@ import type { Position } from '#config/positions.ts';
 import { ADMIN_ROLE, DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
 import type { IdentityId } from '#config/identities.ts';
 import { branding } from '#lib/generated/branding.ts';
-import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
+import { can, playerDeletion, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { identity } from '#lib/domain/auth/identity.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { setUserRole } from '#lib/domain/auth/queries.ts';
+import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
@@ -19,9 +20,9 @@ import {
 	findPlayerWithEmail,
 	hasFreeAvatarForPosition,
 	insertPlayerWithNextAvatar,
-	listActiveAvatarAssignments,
 	listActivePlayers,
 	listAllPlayersWithEmail,
+	listAvatarAssignments,
 	updatePlayer,
 	type PlayerUpdateResult
 } from './queries.ts';
@@ -92,11 +93,12 @@ export type AvatarPickerView = {
 };
 
 /**
- * The displayed identity of every active player, whether the avatar is stored
- * or derived. Two active players must never share the same appearance.
+ * The displayed identity of every visible player, whether the avatar is stored
+ * or derived. Two visible rows must never share the same appearance: an
+ * inactive row keeps its identity until it changes or is reactivated.
  */
-function activeAvatarUsage(): { userId: string; avatarId: IdentityId }[] {
-	return listActiveAvatarAssignments().map((row) => ({
+function avatarUsage(): { userId: string; avatarId: IdentityId }[] {
+	return listAvatarAssignments().map((row) => ({
 		userId: row.userId,
 		avatarId: resolveAvatarId(row.userId, row.avatarId)
 	}));
@@ -105,7 +107,7 @@ function activeAvatarUsage(): { userId: string; avatarId: IdentityId }[] {
 function takenAvatarIds(playerId: string): IdentityId[] {
 	return [
 		...new Set(
-			activeAvatarUsage()
+			avatarUsage()
 				.filter((entry) => entry.userId !== playerId)
 				.map((entry) => entry.avatarId)
 		)
@@ -125,11 +127,6 @@ function applyPlayerUpdate(result: PlayerUpdateResult): string[] {
 		case 'no-identity':
 			throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
 	}
-}
-
-export function isSubstitutePlayer(actor: Actor): boolean {
-	const user = requireUser(actor);
-	return findPlayer(user.userId)?.isSubstitute ?? false;
 }
 
 export function listRoster(actor: Actor): PublicPlayer[] {
@@ -500,27 +497,33 @@ export async function setPlayerRole(
 	if (!row.active) {
 		throw new AppError('FORBIDDEN', { key: 'admin.roleInactive' });
 	}
-	await identity().setRole(playerId, role);
-	recordAudit(actor, {
-		action: 'player.role_update',
-		entityType: 'player',
-		entityId: playerId,
-		metadata: { role }
-	});
+	setUserRole(
+		playerId,
+		role,
+		auditEntry(actor, {
+			action: 'player.role_update',
+			entityType: 'player',
+			entityId: playerId,
+			metadata: { role }
+		})
+	);
 	return toAdmin(findPlayerWithEmail(playerId));
 }
 
 export async function deletePlayer(actor: Actor, playerId: string): Promise<void> {
-	requirePermission(actor, 'managePlayers');
-	if (actor.kind === 'user' && actor.userId === playerId) {
-		throw new AppError('FORBIDDEN', { key: 'admin.deleteSelf' });
-	}
 	const row = findPlayerWithEmail(playerId);
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 	const role = row.role && isRole(row.role) ? row.role : DEFAULT_ROLE;
-	if (role === 'admin') {
+	const verdict = playerDeletion(actor, { userId: playerId, role });
+	if (verdict === 'forbidden') {
+		throw new AppError('FORBIDDEN');
+	}
+	if (verdict === 'self') {
+		throw new AppError('FORBIDDEN', { key: 'admin.deleteSelf' });
+	}
+	if (verdict === 'admin') {
 		throw new AppError('FORBIDDEN', { key: 'admin.deleteAdmin' });
 	}
 	const now = clock.nowMs();
@@ -537,12 +540,13 @@ export async function deletePlayer(actor: Actor, playerId: string): Promise<void
 				action: 'player.delete',
 				entityType: 'player',
 				entityId: playerId,
-				metadata: { role }
+				metadata: { role, retention: 'anonymized' }
 			},
 			tx
 		);
 	});
-	if (findPlayer(playerId)) {
+	const deleted = findPlayer(playerId);
+	if (!deleted || deleted.deletedAt === null) {
 		throw new AppError('INTERNAL', { key: 'admin.playerDeleteFailed' });
 	}
 	regenerateUpcomingGeneratedGames();
