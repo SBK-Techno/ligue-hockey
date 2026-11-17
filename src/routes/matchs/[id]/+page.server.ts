@@ -10,9 +10,9 @@ import {
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
-import { saveManualLineup } from '#lib/domain/games/lineup.ts';
+import { saveManualLineup, lineupBoardView } from '#lib/domain/games/lineup.ts';
 import { manualLineupInputSchema } from '#lib/domain/games/validators.ts';
-import { isGameStarted, isLineupEditable } from '#lib/domain/games/playability.ts';
+import { isGamePlayable, isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
 import type { Position } from '#config/positions.ts';
@@ -62,7 +62,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 			positions,
 			canManage: false,
 			editable: false,
-			started: false,
+			playable: false,
 			sheet: null
 		};
 	}
@@ -76,18 +76,21 @@ export const load: ServerLoad = ({ locals, params }) => {
 			positions,
 			canManage: false,
 			editable: false,
-			started: false,
+			playable: false,
 			sheet: null
 		};
 	}
 
-	const game = getGame(actor, gameId);
-	const started = isGameStarted(game);
+	const loaded = getGame(actor, gameId);
+	const editable = isLineupEditable(loaded);
+	// L'éditeur lit le bassin vivant, jamais le banc figé de l'instantané.
+	const game = editable && loaded.generated ? lineupBoardView(loaded) : loaded;
+	const playable = isGamePlayable(game);
 	return {
 		game,
-		editable: isLineupEditable(game),
-		started,
-		sheet: started ? getGameSheet(actor, gameId) : null,
+		editable,
+		playable,
+		sheet: playable ? getGameSheet(actor, gameId) : null,
 		availability: getAvailability(actor, gameId),
 		requests: listRequestsForGame(actor, gameId),
 		isSubstitute: isSubstitutePlayer(actor),

@@ -3,7 +3,7 @@ import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
 import { getGame, completeGame, type GameView } from '#lib/domain/games/service.ts';
-import { isGameStarted } from '#lib/domain/games/playability.ts';
+import { isGamePlayable } from '#lib/domain/games/playability.ts';
 import type { GamePlayer } from '#lib/domain/games/types.ts';
 import { playersByIds } from '#lib/domain/players/candidates.ts';
 import { AppError } from '#lib/shared/errors.ts';
@@ -42,6 +42,7 @@ import {
 	type GoalInput,
 	type PenaltyInput
 } from './validators.ts';
+import { goalEntryOptions } from './options.ts';
 
 function playerRef(
 	team: Team,
@@ -86,7 +87,7 @@ function goalView(row: GameGoalRow): GameGoalView {
 		clock: row.clock,
 		kind: row.kind,
 		scorer: playerRef(
-			row.team,
+			row.kind === 'own_goal' ? otherTeam(row.team) : row.team,
 			row.scorerPlayerId,
 			row.scorerName,
 			row.scorerNumber
@@ -177,8 +178,10 @@ function resolveGoal(
 	);
 	const names = nameOf(ids);
 	// Un but contre son camp crédite l'autre camp, mais le buteur appartient
-	// à l'équipe qui l'a marqué contre elle-même.
-	const scoringTeam = input.kind === 'own_goal' ? otherTeam(input.team) : input.team;
+	// à l'équipe qui l'a marqué contre elle-même. Le même propriétaire décide
+	// des options offertes par le formulaire.
+	const entry = goalEntryOptions(input.team, input.kind);
+	const scoringTeam = entry.scorerTeam;
 	const scorer = requireDressed(
 		slots,
 		scoringTeam,
@@ -190,7 +193,7 @@ function resolveGoal(
 	const assistIds = [input.assist1PlayerId, input.assist2PlayerId].filter(
 		(value): value is string => value !== null
 	);
-	if (input.kind === 'own_goal' && assistIds.length > 0) {
+	if (!entry.assistsAllowed && assistIds.length > 0) {
 		throw new AppError('VALIDATION', { key: 'gamesheet.ownGoalNoAssists' });
 	}
 	const seen = new Set<string>();
@@ -204,19 +207,13 @@ function resolveGoal(
 		seen.add(assistId);
 	}
 	for (const assistId of assistIds) {
-		const slot = requireDressed(
+		requireDressed(
 			slots,
 			scoringTeam,
 			assistId,
 			names,
 			'gamesheet.assistNotDressed'
 		);
-		if (slot.fullName === scorer.fullName) {
-			throw new AppError('VALIDATION', {
-				key: 'gamesheet.assistDuplicateName',
-				params: { name: slot.fullName }
-			});
-		}
 	}
 
 	return {
@@ -231,11 +228,10 @@ function resolveGoal(
 function startedGame(actor: Actor, gameId: string): GameView {
 	requirePermission(actor, 'manageGames');
 	const game = getGame(actor, gameId);
-	if (game.status === 'cancelled') {
-		throw new AppError('CONFLICT', { key: 'gamesheet.cancelled' });
-	}
-	if (!isGameStarted(game)) {
-		throw new AppError('CONFLICT', { key: 'games.notStarted' });
+	if (!isGamePlayable(game)) {
+		throw new AppError('CONFLICT', {
+			key: game.status === 'cancelled' ? 'gamesheet.cancelled' : 'games.notStarted'
+		});
 	}
 	return game;
 }

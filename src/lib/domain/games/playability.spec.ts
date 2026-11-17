@@ -19,8 +19,10 @@ describe('isGamePlayable', () => {
 	it.each([
 		['annulé dans le passé', game({ status: 'cancelled', gameDate: '2026-11-01' }), false],
 		['annulé plus tard aujourd’hui', game({ status: 'cancelled', startTime: '20:00' }), false],
+		['annulé demain', game({ status: 'cancelled', gameDate: '2026-11-17', startTime: '09:00' }), false],
 		['sans alignement généré', game({ generated: false, gameDate: '2026-11-01' }), false],
 		['complété dans le futur', game({ status: 'completed', gameDate: '2026-12-01' }), true],
+		['complété dans le passé', game({ status: 'completed', gameDate: '2026-11-01' }), true],
 		['complété sans alignement généré', game({ status: 'completed', generated: false }), false],
 		['programmé plus tôt aujourd’hui', game({ startTime: '12:00' }), true],
 		['programmé exactement à l’heure de départ', game({ startTime: '13:00' }), true],

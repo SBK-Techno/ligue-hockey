@@ -5,7 +5,6 @@ import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
 import { playerCandidatesByIds } from '#lib/domain/players/candidates.ts';
-import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
 import { overallsForPlayers } from '#lib/domain/ratings/overall.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
@@ -349,11 +348,6 @@ function saveAlignment(
 	metadata: Record<string, unknown>
 ): void {
 	const openSlots = validatedOpenSlots(gameId, assignments);
-	const ids = assignments.map((assignment) => assignment.playerId);
-	const dressed = new Set(ids);
-	const removedRatedPlayerIds = listGameRatingPlayerIds(gameId).filter(
-		(playerId) => !dressed.has(playerId)
-	);
 	const built = buildGenerationSnapshot({ assignments, bench, openSlots });
 
 	saveAssignments(
@@ -366,24 +360,20 @@ function saveAlignment(
 			// Un échange ou un comblement est un geste de gestion : il fige
 			// l'alignement contre le recalcul automatique.
 			manualAt: built.generatedAt,
-			removedRatedPlayerIds,
+			ratingsAudit: (playerIds) =>
+				auditEntry(actor, {
+					action: 'ratings.game_removed',
+					entityType: 'game',
+					entityId: gameId,
+					metadata: { playerIds }
+				}),
 			audits: [
 				auditEntry(actor, {
 					action,
 					entityType: 'game',
 					entityId: gameId,
 					metadata
-				}),
-				...(removedRatedPlayerIds.length > 0
-					? [
-							auditEntry(actor, {
-								action: 'ratings.game_removed',
-								entityType: 'game',
-								entityId: gameId,
-								metadata: { playerIds: removedRatedPlayerIds }
-							})
-						]
-					: [])
+				})
 			]
 		}
 	);

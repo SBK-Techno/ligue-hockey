@@ -334,7 +334,7 @@
 		</SectionCard>
 	{/if}
 
-	{#if data.started && data.sheet}
+	{#if data.playable && data.sheet}
 		<SectionCard class="lg:col-span-12" title={t('gamesheet.title')} clip={false}>
 			{#snippet actions()}
 				{#if data.sheet?.finalized}

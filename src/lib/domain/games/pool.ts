@@ -28,6 +28,7 @@ export type PoolSlot = {
 export type LineupMember = SelectionCandidate & {
 	name: string;
 	age: number;
+	jerseyNumber: number | null;
 	overall: number | null;
 	placed: boolean;
 };
@@ -96,6 +97,22 @@ function uniqueBench(entries: readonly BenchPlayer[]): BenchPlayer[] {
 				(POSITION_INDEX.get(b.position) ?? 0) ||
 			a.kind.localeCompare(b.kind) ||
 			a.playerId.localeCompare(b.playerId)
+	);
+}
+
+/**
+ * Le banc d'un alignement : les membres vivants que la formation ne place
+ * pas. C'est la seule projection du banc, pour le bassin comme pour
+ * l'éditeur; un joueur sorti de la glace n'y retourne jamais par erreur.
+ */
+export function benchFromMembers(
+	members: readonly LineupMember[],
+	dressedIds: ReadonlySet<string>
+): BenchPlayer[] {
+	return uniqueBench(
+		members
+			.filter((member) => !dressedIds.has(member.playerId))
+			.map(benchPlayer)
 	);
 }
 
@@ -192,6 +209,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 			kind,
 			order,
 			age: detail.age,
+			jerseyNumber: detail.jerseyNumber,
 			overall: overalls.get(playerId) ?? null,
 			placed: placedIds.has(playerId)
 		});
@@ -232,6 +250,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 			kind,
 			order: 0,
 			age: detail.age,
+			jerseyNumber: detail.jerseyNumber,
 			overall,
 			placed: true
 		};
@@ -248,9 +267,7 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		.map((member) => member as EligiblePlayer)
 		.sort((a, b) => a.order - b.order || a.playerId.localeCompare(b.playerId));
 
-	const bench = uniqueBench(
-		members.filter((member) => !member.placed).map(benchPlayer)
-	);
+	const bench = benchFromMembers(members, placedIds);
 
 	return {
 		template,

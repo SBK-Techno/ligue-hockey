@@ -10,9 +10,8 @@ import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
 import { gameWarningsInOrder } from '#config/game-warnings.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
-import { listGameRatingPlayerIds } from '#lib/domain/ratings/queries.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import { cancelAllForGame } from '#lib/domain/subs/generation.ts';
+import { cancelAllForGame, closeRequestsOnFinalize } from '#lib/domain/subs/generation.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { AppError, isAppError } from '#lib/shared/errors.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
@@ -388,7 +387,6 @@ export function regenerateGame(
 		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
 	}
 
-	const previousRatedPlayerIds = listGameRatingPlayerIds(gameId);
 	const slotRows: PoolSlot[] = listSlotAssignments(gameId).map((slot) => ({
 		team: slot.team,
 		position: slot.position,
@@ -424,10 +422,6 @@ export function regenerateGame(
 	}));
 
 	const generatedAt = clock.nowMs();
-	const dressed = new Set(assignments.map((assignment) => assignment.playerId));
-	const removedRatedPlayerIds = previousRatedPlayerIds.filter(
-		(playerId) => !dressed.has(playerId)
-	);
 	const snapshot: GenerationSnapshot = {
 		skillDiff: result.skillDiff,
 		ageDiff: result.ageDiff,
@@ -450,18 +444,14 @@ export function regenerateGame(
 		{
 			expectedGeneratedAt: row.generatedAt ?? null,
 			manualAt: null,
-			removedRatedPlayerIds,
+			ratingsAudit: (playerIds) =>
+				auditEntry(actor, {
+					action: 'ratings.game_removed',
+					entityType: 'game',
+					entityId: gameId,
+					metadata: { playerIds }
+				}),
 			audits: [
-				...(removedRatedPlayerIds.length > 0
-					? [
-							auditEntry(actor, {
-								action: 'ratings.game_removed',
-								entityType: 'game',
-								entityId: gameId,
-								metadata: { playerIds: removedRatedPlayerIds }
-							})
-						]
-					: []),
 				auditEntry(actor, {
 					action: 'game.generate',
 					entityType: 'game',
@@ -568,7 +558,8 @@ export function completeGame(actor: Actor, gameId: string): void {
 			action: 'game.finalized',
 			entityType: 'game',
 			entityId: gameId
-		})
+		}),
+		(tx) => closeRequestsOnFinalize(actor, gameId, at, tx)
 	);
 	if (!finalized) {
 		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });

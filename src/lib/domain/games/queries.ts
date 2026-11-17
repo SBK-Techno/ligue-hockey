@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
 import { players } from '#lib/domain/players/schema.ts';
@@ -80,8 +80,12 @@ export type SlotAssignment = {
 export type SaveAssignmentsOptions = {
 	/** Audits écrits dans la même transaction que les places. */
 	audits?: readonly AuditEntry[];
-	/** Joueurs sortis de l'alignement dont les notes de match sont purgées. */
-	removedRatedPlayerIds?: readonly string[];
+	/**
+	 * Construit l'audit de purge à partir des joueurs dont les notes ont
+	 * réellement été retirées. Le diff est calculé dans la transaction, entre
+	 * l'ancien alignement et le nouveau, donc le banc n'est jamais purgé.
+	 */
+	ratingsAudit?: (playerIds: readonly string[]) => AuditEntry;
 	/**
 	 * Jeton de concurrence : la génération enregistrée doit encore être celle
 	 * que l'appelant a lue. Absent, aucune condition n'est posée; null exige
@@ -100,12 +104,6 @@ export function saveAssignments(
 	updatedAt: number,
 	options: SaveAssignmentsOptions = {}
 ): boolean {
-	const written = new Set(assignments.map((assignment) => assignment.playerId));
-	for (const playerId of options.removedRatedPlayerIds ?? []) {
-		if (written.has(playerId)) {
-			throw new Error(`Cannot purge ratings for a dressed player: ${playerId}`);
-		}
-	}
 	const hasCondition = 'expectedGeneratedAt' in options;
 
 	return db.transaction((tx) => {
@@ -136,6 +134,23 @@ export function saveAssignments(
 				.run();
 			if (claimed.changes !== 1) return false;
 		}
+
+		// Le seul propriétaire du diff de purge : l'ancien ensemble habillé
+		// moins le nouveau. Un joueur au banc n'a jamais été habillé et garde
+		// donc ses notes; un joueur sorti de la glace les perd.
+		const previousDressed = new Set(
+			tx
+				.select({ playerId: gameSlots.assignedPlayerId })
+				.from(gameSlots)
+				.where(eq(gameSlots.gameId, gameId))
+				.all()
+				.map((row) => row.playerId)
+				.filter((playerId): playerId is string => playerId !== null)
+		);
+		const nextDressed = new Set(assignments.map((assignment) => assignment.playerId));
+		const removedRatedPlayerIds = [...previousDressed].filter(
+			(playerId) => !nextDressed.has(playerId)
+		);
 
 		tx.update(gameSlots)
 			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt })
@@ -170,7 +185,10 @@ export function saveAssignments(
 			tx.update(games).set(generation).where(eq(games.id, gameId)).run();
 		}
 
-		deleteGameRatingsForPlayers(gameId, options.removedRatedPlayerIds ?? [], tx);
+		deleteGameRatingsForPlayers(gameId, removedRatedPlayerIds, tx);
+		if (removedRatedPlayerIds.length > 0 && options.ratingsAudit) {
+			insertAudit(options.ratingsAudit(removedRatedPlayerIds), tx);
+		}
 		for (const audit of options.audits ?? []) {
 			insertAudit(audit, tx);
 		}
@@ -187,7 +205,8 @@ export function saveAssignments(
 export function completeGame(
 	gameId: string,
 	at: number,
-	audit: AuditEntry
+	audit: AuditEntry,
+	finalize?: (executor: DbExecutor) => void
 ): boolean {
 	return db.transaction((tx) => {
 		const result = tx
@@ -197,6 +216,7 @@ export function completeGame(
 			.run();
 		if (result.changes !== 1) return false;
 		insertAudit(audit, tx);
+		finalize?.(tx);
 		return true;
 	});
 }

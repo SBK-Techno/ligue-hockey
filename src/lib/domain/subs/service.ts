@@ -513,6 +513,11 @@ export function cancelRequestByAdmin(
 	if (!request || request.gameId !== game.id) {
 		throw new AppError('NOT_FOUND', { key: 'subs.requestNotFound' });
 	}
+	// Une demande ne se ferme plus une fois le match commencé : la finale
+	// ferme elle-même les demandes restantes dans sa transaction.
+	if (!isLineupEditable(game)) {
+		throw new AppError('CONFLICT', { key: 'subs.requestNotActive' });
+	}
 	return cancelRequestWithEffects(actor, game, request);
 }
 

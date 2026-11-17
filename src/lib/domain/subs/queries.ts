@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, or } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { subProfiles, subRequests, type SubRequestRow } from './schema.ts';
 
 export type NewSubRequest = typeof subRequests.$inferInsert;
@@ -119,8 +119,12 @@ export function cancelRequest(id: string, at: number): boolean {
 	return result.changes === 1;
 }
 
-export function cancelOpenRequests(gameId: string, at: number): number {
-	const result = db
+export function cancelOpenRequests(
+	gameId: string,
+	at: number,
+	executor: DbExecutor = db
+): number {
+	const result = executor
 		.update(subRequests)
 		.set({
 			status: 'cancelled',

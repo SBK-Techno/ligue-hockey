@@ -499,6 +499,8 @@ export const fr = {
   'games.lineupChanged':
     'L’alignement a changé. Recharge la page avant de le modifier.',
   'games.lineupSlotUnknown': 'Cette place ne fait pas partie du match.',
+  'games.lineupIncomplete':
+    'Envoie toutes les places de l’alignement, même les places vides.',
   'games.lineupPlayerDuplicate': '{name} est déjà placé dans l’alignement.',
   'games.lineupPlayerUnknown': 'Ce joueur est introuvable.',
   'games.lineupPlayerInactive': '{name} n’est plus actif.',
@@ -606,8 +608,6 @@ export const fr = {
   'gamesheet.assistIsScorer': 'Le buteur ne peut pas être son propre aide.',
   'gamesheet.assistDuplicate': 'Un même joueur ne peut pas signer deux aides.',
   'gamesheet.ownGoalNoAssists': 'Un but contre son camp n’a pas d’aide.',
-  'gamesheet.assistDuplicateName':
-    '{name} ne peut pas être à la fois buteur et aide.',
   'gamesheet.goalNotFound': 'Ce but est introuvable.',
   'gamesheet.penaltyNotFound': 'Cette pénalité est introuvable.',
 

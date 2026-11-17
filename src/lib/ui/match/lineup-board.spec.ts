@@ -84,14 +84,20 @@ describe('carte d’alignement', () => {
 		expect(placeFromBench(map, 'd', 'nope')).toBe(map);
 	});
 
-	it('produit le contrat du serveur sans les places vides', () => {
-		const map = { ...initialAssignments(slots), 'black:goalie:0': 'd' };
-
-		expect(assignmentsForSave(slots, map)).toEqual([
+	it('produit une formation complète, places vides comprises', () => {
+		expect(assignmentsForSave(slots, initialAssignments(slots))).toEqual([
 			{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
 			{ team: 'white', position: 'forward', slotIndex: 1, playerId: 'b' },
 			{ team: 'black', position: 'forward', slotIndex: 0, playerId: 'c' },
-			{ team: 'black', position: 'goalie', slotIndex: 0, playerId: 'd' }
+			{ team: 'black', position: 'goalie', slotIndex: 0, playerId: null }
 		]);
+
+		const filled = { ...initialAssignments(slots), 'black:goalie:0': 'd' };
+		expect(assignmentsForSave(slots, filled).at(-1)).toEqual({
+			team: 'black',
+			position: 'goalie',
+			slotIndex: 0,
+			playerId: 'd'
+		});
 	});
 });

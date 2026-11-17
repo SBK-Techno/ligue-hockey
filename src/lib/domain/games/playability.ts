@@ -3,9 +3,11 @@ import { clock } from '#lib/shared/time/clock.ts';
 import { gameStartsAt } from './schedule.ts';
 
 /**
- * Un match se note une fois qu'il a été joué. La date et l'heure de départ
- * décident ensemble : un match de 9 h n'est pas jouable à 8 h le même jour.
- * Un match annulé ne se note jamais, même s'il est déjà passé.
+ * Un match se note et sa feuille se remplit une fois qu'il a été joué. La
+ * date et l'heure de départ décident ensemble : un match de 9 h n'est pas
+ * jouable à 8 h le même jour. Un match annulé ne l'est jamais, même s'il est
+ * déjà passé. Un match terminé reste corrigeable. C'est l'unique règle de
+ * visibilité de la feuille et des notes; aucun écran ne la refait.
  */
 export type PlayableGame = {
 	status: string;

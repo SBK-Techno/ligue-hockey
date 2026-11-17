@@ -38,6 +38,8 @@ const {
 	updatePenalty
 } = await import('./service.ts');
 const { deletePlayerAccount } = await import('#lib/domain/players/queries.ts');
+const { cancelRequestByAdmin } = await import('#lib/domain/subs/service.ts');
+const { getGame } = await import('#lib/domain/games/service.ts');
 
 const manager: Actor = {
 	kind: 'user', active: true,
@@ -64,6 +66,17 @@ const TEMPLATE = JSON.stringify({
 	goaliesPerTeam: 0,
 	forwardsPerTeam: 2,
 	defensePerTeam: 0
+});
+
+const SNAPSHOT = JSON.stringify({
+	skillDiff: 0,
+	ageDiff: 0,
+	sizeDiff: 0,
+	warnings: [],
+	ruleViolations: [],
+	bench: [],
+	candidateKey: '',
+	generatedAt: 1
 });
 
 function captureError(run: () => unknown): unknown {
@@ -140,6 +153,11 @@ function addSlot(
 			 on conflict (game_id, player_id) do update set status = 'present'`
 		)
 		.run(gameId, playerId);
+	sqlite
+		.prepare(
+			'update games set generated_at = 1, generation_json = ? where id = ?'
+		)
+		.run(SNAPSHOT, gameId);
 }
 
 beforeEach(() => {
@@ -379,6 +397,24 @@ describe('feuille de match', () => {
 });
 
 describe('pénalités', () => {
+	it('refuse la feuille d’un match qui n’a pas d’alignement', () => {
+		addGame('ungenerated', 'scheduled', '2026-11-14');
+
+		expect(
+			captureError(() =>
+				addGoal(manager, 'ungenerated', {
+					team: 'white',
+					period: 1,
+					clock: '10:00',
+					kind: 'even',
+					scorerPlayerId: 'a',
+					assist1PlayerId: null,
+					assist2PlayerId: null
+				})
+			)
+		).toMatchObject({ code: 'CONFLICT', key: 'games.notStarted' });
+	});
+
 	it('ajoute, modifie et supprime une pénalité', () => {
 		const penalty = addPenalty(manager, 'started', {
 			team: 'white',
@@ -464,6 +500,57 @@ describe('pénalités', () => {
 });
 
 describe('score et totaux', () => {
+	it('refuse un but contre son camp dont le buteur est du camp crédité', () => {
+		const error = captureError(() =>
+			addGoal(manager, 'started', {
+				team: 'white',
+				period: 1,
+				clock: '05:00',
+				kind: 'own_goal',
+				scorerPlayerId: 'a'
+			})
+		);
+
+		expect(error).toMatchObject({
+			code: 'VALIDATION',
+			key: 'gamesheet.scorerNotDressed'
+		});
+		expect(getGameSheet(playerActor, 'started').score).toEqual({
+			white: 0,
+			black: 0
+		});
+	});
+
+	it('accepte deux joueurs du même nom comme buteur et aide', () => {
+		addPlayer('jumeau1', 'forward', 30);
+		addPlayer('jumeau2', 'forward', 31);
+		sqlite
+			.prepare(
+				"update players set first_name = 'Alex', last_name = 'Tremblay' where user_id in ('jumeau1', 'jumeau2')"
+			)
+			.run();
+		addSlot('started', 'white', 2, 'jumeau1');
+		addSlot('started', 'white', 3, 'jumeau2');
+
+		const goal = addGoal(manager, 'started', {
+			team: 'white',
+			period: 1,
+			clock: '04:00',
+			kind: 'even',
+			scorerPlayerId: 'jumeau1',
+			assist1PlayerId: 'jumeau2'
+		});
+
+		expect(goal.scorer).toMatchObject({
+			playerId: 'jumeau1',
+			fullName: 'Alex Tremblay'
+		});
+		expect(goal.assists[0]).toMatchObject({
+			playerId: 'jumeau2',
+			fullName: 'Alex Tremblay'
+		});
+	});
+
 	it('compte les buts contre son camp pour l’équipe créditée et remplit les joueurs habillés', () => {
 		addGoal(manager, 'started', {
 			team: 'white',
@@ -521,7 +608,8 @@ describe('score et totaux', () => {
 		expect(sheet.goals.find((goal) => goal.kind === 'own_goal')).toMatchObject({
 			ownGoal: true,
 			penaltyShot: false,
-			team: 'white'
+			team: 'white',
+			scorer: { playerId: 'c', team: 'black' }
 		});
 		expect(sheet.totals).toEqual([
 			{
@@ -629,5 +717,57 @@ describe('finalisation', () => {
 			)
 			.get() as { count: number };
 		expect(audit.count).toBe(1);
+	});
+
+	it('refuse d’annuler une demande après le début du match', () => {
+		sqlite
+			.prepare(
+				`insert into sub_requests
+				 (id, game_id, requested_by_player_id, created_by_user_id, position, reason,
+				  status, created_at, filled_by_player_id, filled_at, cancelled_at)
+				 values ('open', 'started', 'a', null, 'forward', 'manual', 'open', 0, null, null, null)`
+			)
+			.run();
+
+		expect(
+			captureError(() =>
+				cancelRequestByAdmin(manager, getGame(manager, 'started'), 'open')
+			)
+		).toMatchObject({ code: 'CONFLICT', key: 'subs.requestNotActive' });
+		const row = sqlite
+			.prepare("select status from sub_requests where id = 'open'")
+			.get() as { status: string };
+		expect(row.status).toBe('open');
+	});
+
+	it('ferme les demandes ouvertes et comblées dans la transaction', () => {
+		sqlite
+			.prepare(
+				`insert into sub_requests
+				 (id, game_id, requested_by_player_id, created_by_user_id, position, reason,
+				  status, created_at, filled_by_player_id, filled_at, cancelled_at)
+				 values
+				 ('open', 'started', 'b', null, 'forward', 'manual', 'open', 0, null, null, null),
+				 ('filled', 'started', null, null, 'forward', 'manual', 'filled', 0, 'a', 0, null)`
+			)
+			.run();
+
+		finalizeGame(manager, 'started');
+
+		const remaining = sqlite
+			.prepare(
+				"select count(*) as count from sub_requests where game_id = 'started' and status in ('open', 'filled')"
+			)
+			.get() as { count: number };
+		expect(remaining.count).toBe(0);
+		const audit = sqlite
+			.prepare(
+				"select metadata_json from audit_log where action = 'sub.requests_cancelled' and entity_id = 'started'"
+			)
+			.get() as { metadata_json: string } | undefined;
+		expect(JSON.parse(audit?.metadata_json ?? '{}')).toEqual({
+			count: 2,
+			reason: 'finalized'
+		});
 	});
 });

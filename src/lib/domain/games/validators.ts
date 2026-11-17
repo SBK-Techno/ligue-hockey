@@ -55,12 +55,17 @@ export type GenerationSnapshot = z.infer<typeof generationSnapshotSchema>;
 export const manualLineupInputSchema = z.object({
 	/** Jeton de concurrence : génération lue par le gestionnaire, null si aucune. */
 	expectedGeneratedAt: z.number().int().nullable(),
+	/**
+	 * Une formation complète : chaque place du modèle est envoyée, avec
+	 * `null` pour une place vide. Le service compare les clés au modèle du
+	 * match; un envoi partiel ne peut donc pas effacer l'alignement.
+	 */
 	assignments: z.array(
 		z.object({
 			team: z.enum(TEAM_KEYS),
 			position: z.enum(POSITION_KEYS),
 			slotIndex: z.number().int().min(0),
-			playerId: z.string().trim().min(1)
+			playerId: z.string().trim().min(1).nullable()
 		})
 	)
 });

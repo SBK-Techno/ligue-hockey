@@ -341,7 +341,7 @@
 			{/if}
 		</SectionCard>
 
-		{#if game.status === 'scheduled'}
+		{#if game.status === 'scheduled' && data.editable}
 			<SectionCard title={t('admin.dangerZone')}>
 				<p class="text-body text-muted">{t('admin.cancelHelp')}</p>
 				<form method="POST" action="?/cancel" use:progressiveForm class="mt-4">

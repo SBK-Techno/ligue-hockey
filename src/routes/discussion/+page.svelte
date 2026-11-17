@@ -15,6 +15,7 @@
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { prefersReducedMotion, scrollBehavior } from '#lib/ui/scroll.ts';
+	import { initialPillState, nextPillState } from '#lib/ui/chat-scroll.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -62,7 +63,8 @@
 	// La page s'ouvre sur le dernier message, mais un lecteur qui remonte
 	// l'historique n'est jamais ramené de force : un bouton l'avertit.
 	const NEAR_BOTTOM_PX = 160;
-	let newMessages = $state(0);
+	// svelte-ignore state_referenced_locally
+	let pillState = $state(initialPillState(messages.length));
 
 	function nearBottom(): boolean {
 		const root = document.documentElement;
@@ -78,23 +80,19 @@
 	onMount(() => {
 		void document.fonts.ready.then(() =>
 			requestAnimationFrame(() => {
-				if (nearBottom()) scrollToLatest();
+				if (messages.length > 0) scrollToLatest();
 			})
 		);
 	});
 
-	let previousCount = 0;
 	$effect(() => {
 		const count = messages.length;
-		if (count > previousCount) {
-			if (nearBottom()) scrollToLatest();
-			else newMessages += count - previousCount;
-		}
-		previousCount = count;
+		if (count > pillState.previousCount && nearBottom()) scrollToLatest();
+		pillState = nextPillState(pillState, count, nearBottom());
 	});
 
 	function showNewMessages() {
-		newMessages = 0;
+		pillState = { ...pillState, newMessages: 0 };
 		scrollToLatest();
 	}
 
@@ -107,12 +105,16 @@
 	}
 </script>
 
-{#if newMessages > 0}
+{#if pillState.newMessages > 0}
 	<div
 		class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+var(--bottom-bar-height))] z-30 mx-auto flex max-w-md justify-center lg:bottom-[var(--bottom-bar-offset)]"
 	>
 		<button class="btn-primary btn-sm" type="button" onclick={showNewMessages}>
-			{formatCount(newMessages, 'chat.newMessages.one', 'chat.newMessages.many')}
+			{formatCount(
+				pillState.newMessages,
+				'chat.newMessages.one',
+				'chat.newMessages.many'
+			)}
 		</button>
 	</div>
 {/if}

@@ -83,17 +83,18 @@ export function removePlayer(
 	return { ...map, [key]: null };
 }
 
-/** Le format attendu par `saveManualLineup`, sans les places vides. */
+/**
+ * Le format attendu par `saveManualLineup` : une formation complète, chaque
+ * place du modèle étant envoyée avec `null` quand elle est vide.
+ */
 export function assignmentsForSave(
 	slots: readonly GameSlotView[],
 	map: LineupAssignmentMap
 ) {
-	return slots
-		.filter((slot) => map[slotKey(slot)])
-		.map((slot) => ({
-			team: slot.team,
-			position: slot.position,
-			slotIndex: slot.slotIndex,
-			playerId: map[slotKey(slot)] as string
-		}));
+	return slots.map((slot) => ({
+		team: slot.team,
+		position: slot.position,
+		slotIndex: slot.slotIndex,
+		playerId: map[slotKey(slot)] ?? null
+	}));
 }
