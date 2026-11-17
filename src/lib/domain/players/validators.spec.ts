@@ -37,6 +37,29 @@ describe('jersey number', () => {
 	});
 });
 
+describe('avatar', () => {
+	it('accepts a catalogue id and rejects an unknown one', () => {
+		expect(
+			updateOwnProfileSchema.safeParse({ ...base, jerseyNumber: 9, avatarId: 'tuque-rouge' })
+				.success
+		).toBe(true);
+		expect(
+			updateOwnProfileSchema.safeParse({ ...base, jerseyNumber: 9, avatarId: 'inconnu' })
+				.success
+		).toBe(false);
+	});
+
+	it('leaves the avatar unchanged when the admin form omits it', () => {
+		const parsed = adminUpdatePlayerSchema.safeParse({ firstName: 'Alex' });
+		expect(parsed.success).toBe(true);
+		if (parsed.success) expect(parsed.data.avatarId).toBeUndefined();
+	});
+
+	it('rejects an unknown avatar in the admin form', () => {
+		expect(adminUpdatePlayerSchema.safeParse({ avatarId: 'inconnu' }).success).toBe(false);
+	});
+});
+
 describe('rule modes', () => {
 	it('round-trips every mode to a stored kind and strength', () => {
 		for (const mode of ['together', 'apart', 'preferTogether', 'preferApart'] as const) {

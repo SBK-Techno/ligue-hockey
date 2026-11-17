@@ -11,7 +11,7 @@
 	import HomeHero from '#lib/ui/home/HomeHero.svelte';
 	import LeaguePanel from '#lib/ui/home/LeaguePanel.svelte';
 	import ManagerPanel from '#lib/ui/home/ManagerPanel.svelte';
-	import MonthCalendar from '#lib/ui/home/MonthCalendar.svelte';
+	import SeasonAgenda from '#lib/ui/home/SeasonAgenda.svelte';
 	import PollPanel from '#lib/ui/home/PollPanel.svelte';
 	import SubstitutesPanel from '#lib/ui/home/SubstitutesPanel.svelte';
 	import TeamPanel from '#lib/ui/home/TeamPanel.svelte';
@@ -77,10 +77,8 @@
 							actorId={actor?.userId ?? ''}
 						/>
 					{/if}
-				{:else if panel.kind === 'calendar'}
-					{#if data.calendar}
-						<MonthCalendar calendar={data.calendar} />
-					{/if}
+				{:else if panel.kind === 'agenda'}
+					<SeasonAgenda upcoming={data.agenda.upcoming} past={data.agenda.past} />
 				{:else if panel.kind === 'upcoming'}
 					<SectionCard
 						title={t('home.upcoming')}

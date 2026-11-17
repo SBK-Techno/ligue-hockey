@@ -4,13 +4,19 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## Release in progress
 
-- Branch: `feat/home-1.4.0`.
-- Target version: `1.4.0`.
-- Shipped: identity, navigation, evaluations, smart sheet, locations, `1.3.0`; initial-paint fix, `1.3.1`; natural rink, auth hero, shared Black/White sheet, `1.3.2`; warm blue-white-red theme, dressing-room login, inline substitute actions, `1.3.3` (live).
-- In flight: the home situation board and month calendar, plus one shared UI system across every route: one page header, one section body, one type scale, one chip, one empty state, one sticky bar, one row rhythm.
-- Next: the phase-aware match sheet and rink lineup board (`1.5.0`); avatars, evaluation redesign and the real-ice material pass (`1.6.0`).
-- Verification: `npm run gate` green at `e202dd6`, 393 tests in 46 files, 242 architecture files, generated assets and the documentation site; the admin surface migration lands on top and runs the gate again.
-- Next release step: final gate, PR, merge, tag `v1.4.0`, release, promote and verify health.
+- Branch: `feat/match-1.5.0`, based on `1.4.0` (merged, tagged, released, live).
+- Target version: `1.5.0`.
+- Shipped in `1.4.0`: identity, navigation, evaluations, smart sheet, locations; initial-paint fix; shared Black/White sheet; warm theme and dressing-room login.
+- In flight for `1.5.0`: season agenda replacing the month calendar; chat rebuilt around player colour, avatar and jersey with grouped days, menus and readable polls; phase-aware game sheet with goals, penalties, totals and finalization; player avatars with unique colours and jerseys; paper and ice material pass; desktop compositions for home, match, schedule, balance, notifications, substitutes and profile.
+- Verified in this slice: `npm run gate` green (452 tests, 51 files), generated assets and documentation site current, production build served against a copy of the seeded database, home/discussion/match/schedule/admin pages fetched, and a goal written through the real action then read back from the sheet.
+- Next release step: commit, push, open the PR, merge after review, tag `v1.5.0`, release, promote and verify health.
+
+## 1.5.0 decisions
+
+- `config/goal-kinds.ts` is the single owner of goal kinds and their labels; the sheet schema re-exports it.
+- `availability.myAvailabilityByGame` and `gamesheet.listGameScores` read many games in one query for the home agenda.
+- `ChatMessageView` carries `authorAvatarId`, `authorJerseyNumber`, `authorPosition` and `isOwn`; deleted polls reject votes at the service.
+- `SectionCard` takes `clip` and `class`: a menu-bearing sheet can let its menu escape, and every route composes spans on the existing 12-column grid.
 
 ## Verified milestones
 

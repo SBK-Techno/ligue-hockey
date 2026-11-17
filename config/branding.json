@@ -15,6 +15,10 @@
   "authSource": "config/branding/auth-source.jpg",
   "socialImage": "/social/apercu.jpg",
   "socialSource": "config/branding/social-source-2026.jpg",
+  "textures": {
+    "paper": "config/branding/paper-source.png",
+    "ice": "config/branding/ice-source.jpg"
+  },
   "icons": {
     "favicon": 32,
     "appleTouch": 180,

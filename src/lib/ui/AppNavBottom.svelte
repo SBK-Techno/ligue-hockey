@@ -14,25 +14,25 @@
 
 {#if !path.startsWith('/admin')}
 	<nav
-		class="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 rounded-card border border-line bg-surface shadow-lift lg:hidden"
+		class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
 		aria-label={t('nav.mainMenu')}
 	>
-		<ul class="mx-auto flex max-w-lg items-stretch gap-1 p-1.5">
+		<ul class="mx-auto flex max-w-lg items-stretch px-2 pt-1">
 			{#each items as item (item.key)}
 				{@const active = isActiveHref(path, item.href)}
 				<li class="min-w-0 flex-1">
 					<a
 						href={item.href}
-						class="flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-control px-0.5 py-1.5 text-center no-underline transition-colors {active
-							? 'bg-ice-soft text-ice-deep'
-							: 'text-muted hover:bg-ice-soft/60 hover:text-ice-deep'}"
+						class="relative flex min-h-[3.25rem] flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-center no-underline transition-colors {active
+							? 'text-ink'
+							: 'text-muted hover:text-ink'}"
 						aria-current={active ? 'page' : undefined}
 					>
+						{#if active}
+							<span class="absolute inset-x-3 top-0 h-0.5 bg-ice" aria-hidden="true"></span>
+						{/if}
 						<NavIcon icon={item.icon} class="h-5 w-5" />
-						<span
-							class="max-w-full truncate text-stamp font-semibold leading-tight tracking-tight"
-							style="font-stretch: 92%"
-						>
+						<span class="max-w-full truncate text-caption font-semibold leading-tight">
 							{t(item.shortLabelKey ?? item.labelKey)}
 						</span>
 					</a>

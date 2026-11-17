@@ -11,7 +11,7 @@ import { PAYMENT_METHOD_KEYS } from '#config/payment-methods.ts';
 import { POSITION_KEYS } from '#config/positions.ts';
 import { INFRACTION_KEYS, PENALTY_MINUTES } from '#config/infractions.ts';
 import { PERIOD_NUMBERS } from '#config/periods.ts';
-import { GOAL_KIND_KEYS } from '#lib/domain/gamesheet/schema.ts';
+import { GOAL_KIND_KEYS } from '#config/goal-kinds.ts';
 import {
 	RATING_ATTRIBUTE_KEYS,
 	POSITION_RATING_KEYS,
@@ -274,6 +274,30 @@ describe('migrations vs registres', () => {
 			'user',
 			'verification'
 		]);
+	});
+
+	it('inventorie les colonnes des joueurs', () => {
+		const columns = sqlite
+			.prepare("select name, type, \"notnull\" from pragma_table_info('players')")
+			.all() as { name: string; type: string; notnull: number }[];
+
+		expect(columns.map((column) => column.name).sort()).toEqual([
+			'active',
+			'age',
+			'avatar_id',
+			'created_at',
+			'first_name',
+			'is_substitute',
+			'jersey_number',
+			'last_name',
+			'position',
+			'updated_at',
+			'user_id'
+		]);
+		expect(columns.find((column) => column.name === 'avatar_id')).toMatchObject({
+			type: 'TEXT',
+			notnull: 0
+		});
 	});
 
 	it('la dernière migration accepte les données écrites par la précédente', () => {

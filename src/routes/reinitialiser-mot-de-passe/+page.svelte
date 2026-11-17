@@ -12,7 +12,7 @@
 	const expired = $derived(!data.token || data.invalid || form?.expired === true);
 </script>
 
-<div class="card">
+<div class="card mx-auto max-w-md">
 	<h1 class="text-figure">{t(resetTitleKey(data.mode))}</h1>
 
 	{#if expired}

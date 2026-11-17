@@ -9,6 +9,7 @@ const row = {
 	position: 'forward' as const,
 	age: 30,
 	jerseyNumber: null,
+	avatarId: null,
 	isSubstitute: false,
 	active: true,
 	role: 'player' as const
@@ -31,6 +32,7 @@ vi.mock('./queries.ts', () => ({
 	insertPlayer: vi.fn(),
 	listActivePlayers: vi.fn(() => []),
 	listAllPlayersWithEmail: vi.fn(() => [row]),
+	listActiveAvatarAssignments: vi.fn(() => []),
 	updatePlayer: vi.fn(),
 	deletePlayerAccount: (...args: [string]) => deletePlayerAccount(...args)
 }));

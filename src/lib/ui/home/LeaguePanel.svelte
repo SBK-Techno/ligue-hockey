@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ChatMessageView } from '#lib/domain/chat/service.ts';
 	import { formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import Avatar from '#lib/ui/Avatar.svelte';
 	import PollOptions from '#lib/ui/PollOptions.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 
@@ -8,8 +9,18 @@
 </script>
 
 <SectionCard title={t('home.chatPreview')}>
-	<p class="text-meta text-muted">
-		{message.authorName} · {formatTimestamp(message.createdAt)}
+	<p class="flex min-w-0 items-center gap-2 text-meta text-muted">
+		<Avatar
+			player={{
+				fullName: message.authorName,
+				userId: message.authorUserId,
+				avatarId: message.authorAvatarId
+			}}
+			size={24}
+		/>
+		<span class="min-w-0 break-words">
+			{message.authorName} · {formatTimestamp(message.createdAt)}
+		</span>
 	</p>
 
 	{#if message.deleted}

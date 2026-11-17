@@ -5,11 +5,16 @@
 	import type { UserActor } from '#lib/domain/auth/types.ts';
 	import { roleDefinition } from '#config/roles.ts';
 	import { formatCount, t } from '#lib/shared/i18n/index.ts';
+	import Avatar from '#lib/ui/Avatar.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
 	import NavIcon from '#lib/ui/NavIcon.svelte';
 	import { isActiveHref } from '#lib/ui/nav.ts';
 
-	let { actor, unread }: { actor: UserActor; unread: number } = $props();
+	let {
+		actor,
+		unread,
+		avatarId = null
+	}: { actor: UserActor; unread: number; avatarId?: string | null } = $props();
 
 	const path = $derived(page.url.pathname);
 	const items = $derived(primarySurfaces(actor));
@@ -23,15 +28,6 @@
 	);
 
 	const roleLabel = $derived(t(roleDefinition(actor.role)?.labelKey ?? 'admin.role.player'));
-
-	const initials = $derived(
-		actor.name
-			.trim()
-			.split(/\s+/)
-			.slice(0, 2)
-			.map((part) => part[0]?.toUpperCase() ?? '')
-			.join('')
-	);
 
 	let open = $state(false);
 	let trigger = $state<HTMLButtonElement | null>(null);
@@ -77,9 +73,9 @@
 </script>
 
 <header
-	class="sticky top-0 z-30 border-b border-line bg-paper/95 pt-[env(safe-area-inset-top)] backdrop-blur-md"
+	class="sticky top-0 z-30 border-b border-line bg-paper pt-[env(safe-area-inset-top)]"
 >
-	<div class="mx-auto flex h-[3.75rem] w-full max-w-6xl items-center gap-3 px-4">
+	<div class="mx-auto flex h-[3.75rem] w-full max-w-6xl xl:max-w-7xl items-center gap-3 px-4">
 		<BrandLockup href="/" size="sm" />
 
 		{#if !inAdmin}
@@ -88,9 +84,9 @@
 				{@const active = isActiveHref(path, item.href)}
 				<a
 					href={item.href}
-					class="flex h-9 items-center whitespace-nowrap rounded-full px-3 text-meta font-medium no-underline transition-colors {active
-						? 'bg-ice-soft text-ice-deep'
-						: 'text-muted hover:bg-ice-soft/60 hover:text-ice-deep'}"
+					class="flex h-9 items-center whitespace-nowrap border-b-2 px-3 text-meta font-medium no-underline transition-colors {active
+						? 'border-ice text-ink'
+						: 'border-transparent text-muted hover:text-ink'}"
 					aria-current={active ? 'page' : undefined}
 				>
 					{t(item.labelKey)}
@@ -114,7 +110,7 @@
 				<NavIcon icon="bell" />
 				{#if unread > 0}
 					<span
-						class="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-stamp font-bold leading-4 text-on-brand"
+						class="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-caption font-bold leading-4 text-on-brand"
 					>
 						{unreadBadge}
 					</span>
@@ -125,17 +121,16 @@
 				<button
 					bind:this={trigger}
 					type="button"
-					class="flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-2.5 text-ink transition-colors hover:border-ice"
+					class="flex min-h-11 cursor-pointer items-center gap-2 rounded-[0.375rem] border border-line bg-surface py-1 pl-1 pr-2.5 text-ink transition-colors hover:border-ice"
 					aria-expanded={open}
 					aria-controls="menu-compte"
 					aria-label="{t('nav.accountMenu')} · {actor.name}"
 					onclick={() => (open = !open)}
 				>
-					<span
-						class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ice text-caption font-semibold tracking-wide text-on-brand"
-					>
-						{initials}
-					</span>
+					<Avatar
+						player={{ fullName: actor.name, userId: actor.userId, avatarId }}
+						size={32}
+					/>
 					<span class="hidden max-w-40 truncate text-body font-semibold xl:block">{actor.name}</span>
 					<svg
 						viewBox="0 0 24 24"

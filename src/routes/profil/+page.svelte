@@ -7,6 +7,8 @@
 	import { POSITIONS, positionDefinition } from '#config/positions.ts';
 	import { roleDefinition } from '#config/roles.ts';
 	import { formatCount, formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import Avatar from '#lib/ui/Avatar.svelte';
+	import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
@@ -194,15 +196,19 @@
 		<p class="text-body text-muted">{t('error.accountNotFound')}</p>
 	</div>
 {:else}
-	<div class="grid gap-4 lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
-		<aside class="page-stack lg:sticky lg:top-[calc(3.75rem+1px+env(safe-area-inset-top)+1rem)]">
+	<div class="grid gap-4 lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8 xl:grid-cols-[21rem_minmax(0,1fr)]">
+		<aside class="page-stack lg:sticky lg:top-[var(--anchor-offset)]">
 			<section class="scoreboard p-5">
 				<div class="flex items-start gap-4">
-					<span
-						class="grid h-16 w-16 shrink-0 place-items-center rounded-pill border border-paper/25 bg-paper/10 text-section font-semibold tracking-tight"
-					>
-						{initials}
-					</span>
+					{#if profile}
+						<Avatar player={profile} size={64} decorative={false} />
+					{:else}
+						<span
+							class="grid h-16 w-16 shrink-0 place-items-center rounded-pill border border-paper/25 bg-paper/10 text-section font-semibold tracking-tight"
+						>
+							{initials}
+						</span>
+					{/if}
 					<div class="min-w-0">
 						<p class="break-words text-section font-semibold leading-tight">
 							{account.name}
@@ -265,366 +271,379 @@
 			</nav>
 		</aside>
 
-		<div class="page-stack">
-			<div id="compte" class="scroll-mt-[var(--anchor-offset)]">
-				<SectionCard title={t('profile.account')}>
-					<p class="hint">{t('profile.accountHelp')}</p>
-					<FormFeedback {form} section="compte" class="mt-3" />
+		<div class="grid gap-4 lg:items-start xl:grid-cols-[minmax(0,1fr)_20rem]">
+			<div class="page-stack min-w-0">
+				<div id="compte" class="scroll-mt-[var(--anchor-offset)]">
+					<SectionCard title={t('profile.account')}>
+						<p class="hint">{t('profile.accountHelp')}</p>
+						<FormFeedback {form} section="compte" class="mt-3" />
 
-					{#if profile}
-						<dl class="mt-3">
-							<div class="fact">
-								<dt>{t('profile.displayName')}</dt>
-								<dd>{account.name}</dd>
-							</div>
-							<div class="fact">
-								<dt>{t('profile.email')}</dt>
-								<dd>{account.email}</dd>
-							</div>
-						</dl>
-						<p class="hint mt-2">{t('profile.playerNameManaged')}</p>
-					{:else}
-						<form method="POST" action="?/identity" use:progressiveForm class="mt-3 space-y-3">
-							<div>
-								<label class="label" for="displayName">{t('profile.displayName')}</label>
-								<input
-									class="input"
-									id="displayName"
-									name="displayName"
-									value={account.name}
-									maxlength={ACCOUNT_LIMITS.displayNameMax}
-									autocomplete="name"
-									required
-								/>
-								<p class="hint">{t('profile.displayNameHelp')}</p>
-							</div>
-							<dl class="fact">
-								<dt>{t('profile.email')}</dt>
-								<dd>{account.email}</dd>
+						{#if profile}
+							<dl class="mt-3">
+								<div class="fact">
+									<dt>{t('profile.displayName')}</dt>
+									<dd>{account.name}</dd>
+								</div>
+								<div class="fact">
+									<dt>{t('profile.email')}</dt>
+									<dd>{account.email}</dd>
+								</div>
 							</dl>
-							<p class="hint">{t('profile.emailReadOnly')}</p>
-							<button class="btn-primary" type="submit">{t('common.save')}</button>
-						</form>
-					{/if}
-				</SectionCard>
-			</div>
-
-			{#if profile}
-				<div id="joueur" class="scroll-mt-[var(--anchor-offset)]">
-					<SectionCard title={t('profile.playerSection')}>
-						<p class="hint">{t('profile.playerSectionHelp')}</p>
-						<FormFeedback {form} section="joueur" class="mt-3" />
-						<form
-							method="POST"
-							action="?/profile"
-							use:progressiveForm
-							class="mt-4 grid gap-4 sm:grid-cols-2"
-						>
-							<div>
-								<label class="label" for="firstName">{t('profile.firstName')}</label>
-								<input
-									class="input"
-									id="firstName"
-									name="firstName"
-									value={profile.firstName}
-									required
-									maxlength={PLAYER_LIMITS.nameMax}
-									autocomplete="given-name"
-								/>
-							</div>
-							<div>
-								<label class="label" for="lastName">{t('profile.lastName')}</label>
-								<input
-									class="input"
-									id="lastName"
-									name="lastName"
-									value={profile.lastName}
-									required
-									maxlength={PLAYER_LIMITS.nameMax}
-									autocomplete="family-name"
-								/>
-							</div>
-							<div>
-								<label class="label" for="age">{t('profile.age')}</label>
-								<input
-									class="input"
-									id="age"
-									name="age"
-									type="number"
-									inputmode="numeric"
-									min={PLAYER_LIMITS.ageMin}
-									max={PLAYER_LIMITS.ageMax}
-									value={profile.age}
-									required
-								/>
-								<p class="hint">{t('profile.ageHelp')}</p>
-							</div>
-							<div>
-								<label class="label" for="position">{t('position.label')}</label>
-								<select class="input" id="position" name="position" required>
-									{#each POSITIONS as position (position.key)}
-										<option value={position.key} selected={profile.position === position.key}>
-											{t(position.labelKey)}
-										</option>
-									{/each}
-								</select>
-								<p class="hint">{t('profile.positionHelp')}</p>
-							</div>
-							<div>
-								<label class="label" for="jerseyNumber">{t('profile.jersey')}</label>
-								<input
-									class="input"
-									id="jerseyNumber"
-									name="jerseyNumber"
-									type="number"
-									inputmode="numeric"
-									min={PLAYER_LIMITS.jerseyMin}
-									max={PLAYER_LIMITS.jerseyMax}
-									value={profile.jerseyNumber ?? ''}
-									placeholder={String(PLAYER_LIMITS.jerseyExample)}
-								/>
-								<p class="hint">
-									{t('profile.jerseyHelp', {
-										min: PLAYER_LIMITS.jerseyMin,
-										max: PLAYER_LIMITS.jerseyMax
-									})}
-								</p>
-							</div>
-							<div class="sm:col-span-2">
+							<p class="hint mt-2">{t('profile.playerNameManaged')}</p>
+						{:else}
+							<form method="POST" action="?/identity" use:progressiveForm class="mt-3 space-y-3">
+								<div>
+									<label class="label" for="displayName">{t('profile.displayName')}</label>
+									<input
+										class="input"
+										id="displayName"
+										name="displayName"
+										value={account.name}
+										maxlength={ACCOUNT_LIMITS.displayNameMax}
+										autocomplete="name"
+										required
+									/>
+									<p class="hint">{t('profile.displayNameHelp')}</p>
+								</div>
+								<dl class="fact">
+									<dt>{t('profile.email')}</dt>
+									<dd>{account.email}</dd>
+								</dl>
+								<p class="hint">{t('profile.emailReadOnly')}</p>
 								<button class="btn-primary" type="submit">{t('common.save')}</button>
-							</div>
-						</form>
-						{#if !canSeeRatings}
-							<p class="hint mt-4 border-t border-line pt-4">{t('profile.ratingsHidden')}</p>
+							</form>
 						{/if}
 					</SectionCard>
 				</div>
 
-				{#if data.isSubstitute}
-					<div id="positions" class="scroll-mt-[var(--anchor-offset)]">
-						<SectionCard title={t('subs.positions')}>
-							<p class="hint">{t('subs.positionsHelp')}</p>
-							<FormFeedback {form} section="positions" class="mt-3" />
-							<form method="POST" action="?/positions" use:progressiveForm class="mt-4 space-y-4">
-								<PositionChips
-									name="positions"
-									selected={data.positions}
-									legend={t('subs.positions')}
-								/>
-								<button class="btn-primary" type="submit">{t('common.save')}</button>
+				{#if profile}
+					<div id="joueur" class="scroll-mt-[var(--anchor-offset)]">
+						<SectionCard title={t('profile.playerSection')}>
+							<p class="hint">{t('profile.playerSectionHelp')}</p>
+							<FormFeedback {form} section="joueur" class="mt-3" />
+							<form
+								method="POST"
+								action="?/profile"
+								use:progressiveForm
+								class="mt-4 grid gap-4 sm:grid-cols-2"
+							>
+								<div>
+									<label class="label" for="firstName">{t('profile.firstName')}</label>
+									<input
+										class="input"
+										id="firstName"
+										name="firstName"
+										value={profile.firstName}
+										required
+										maxlength={PLAYER_LIMITS.nameMax}
+										autocomplete="given-name"
+									/>
+								</div>
+								<div>
+									<label class="label" for="lastName">{t('profile.lastName')}</label>
+									<input
+										class="input"
+										id="lastName"
+										name="lastName"
+										value={profile.lastName}
+										required
+										maxlength={PLAYER_LIMITS.nameMax}
+										autocomplete="family-name"
+									/>
+								</div>
+								<div>
+									<label class="label" for="age">{t('profile.age')}</label>
+									<input
+										class="input"
+										id="age"
+										name="age"
+										type="number"
+										inputmode="numeric"
+										min={PLAYER_LIMITS.ageMin}
+										max={PLAYER_LIMITS.ageMax}
+										value={profile.age}
+										required
+									/>
+									<p class="hint">{t('profile.ageHelp')}</p>
+								</div>
+								<div>
+									<label class="label" for="position">{t('position.label')}</label>
+									<select class="input" id="position" name="position" required>
+										{#each POSITIONS as position (position.key)}
+											<option value={position.key} selected={profile.position === position.key}>
+												{t(position.labelKey)}
+											</option>
+										{/each}
+									</select>
+									<p class="hint">{t('profile.positionHelp')}</p>
+								</div>
+								<div>
+									<label class="label" for="jerseyNumber">{t('profile.jersey')}</label>
+									<input
+										class="input"
+										id="jerseyNumber"
+										name="jerseyNumber"
+										type="number"
+										inputmode="numeric"
+										min={PLAYER_LIMITS.jerseyMin}
+										max={PLAYER_LIMITS.jerseyMax}
+										value={profile.jerseyNumber ?? ''}
+										placeholder={String(PLAYER_LIMITS.jerseyExample)}
+									/>
+									<p class="hint">
+										{t('profile.jerseyHelp', {
+											min: PLAYER_LIMITS.jerseyMin,
+											max: PLAYER_LIMITS.jerseyMax
+										})}
+									</p>
+								</div>
+								<div class="sm:col-span-2">
+									{#if data.avatarPicker}
+										<AvatarPicker
+											name="avatarId"
+											selected={data.avatarPicker.selected}
+											taken={data.avatarPicker.taken}
+										/>
+									{/if}
+								</div>
+								<div class="sm:col-span-2">
+									<button class="btn-primary" type="submit">{t('common.save')}</button>
+								</div>
 							</form>
+							{#if !canSeeRatings}
+								<p class="hint mt-4 border-t border-line pt-4">{t('profile.ratingsHidden')}</p>
+							{/if}
 						</SectionCard>
 					</div>
+
+					{#if data.isSubstitute}
+						<div id="positions" class="scroll-mt-[var(--anchor-offset)]">
+							<SectionCard title={t('subs.positions')}>
+								<p class="hint">{t('subs.positionsHelp')}</p>
+								<FormFeedback {form} section="positions" class="mt-3" />
+								<form method="POST" action="?/positions" use:progressiveForm class="mt-4 space-y-4">
+									<PositionChips
+										name="positions"
+										selected={data.positions}
+										legend={t('subs.positions')}
+									/>
+									<button class="btn-primary" type="submit">{t('common.save')}</button>
+								</form>
+							</SectionCard>
+						</div>
+					{/if}
 				{/if}
-			{/if}
 
-			<div id="notifications" class="scroll-mt-[var(--anchor-offset)]">
-				<SectionCard title={t('profile.notifications')}>
-					<p class="hint">{t('profile.notificationsHelp')}</p>
-					<FormFeedback {form} section="notifications" class="mt-3" />
-					<form method="POST" action="?/notifications" use:progressiveForm class="mt-4 space-y-3">
-						<label class="flex min-h-11 items-center gap-3 text-body font-medium">
-							<input
-								type="checkbox"
-								name="emailEnabled"
-								checked={data.notifications.emailEnabled}
-								class="h-4 w-4"
-							/>
-							{t('profile.emailNotifications')}
-						</label>
-						<label class="flex min-h-11 items-center gap-3 text-body font-medium">
-							<input
-								type="checkbox"
-								name="pushEnabled"
-								checked={data.notifications.pushEnabled}
-								class="h-4 w-4"
-							/>
-							{t('profile.pushNotifications')}
-						</label>
-						<button class="btn-primary" type="submit">{t('common.save')}</button>
-					</form>
-
-					<div class="mt-5 border-t border-line pt-4">
-						{#if pushStatus === 'unsupported'}
-							<p class="hint">{t('profile.pushUnsupported')}</p>
-						{:else if pushStatus === 'unconfigured'}
-							<p class="hint">{t('profile.pushUnconfigured')}</p>
-						{:else if isIos}
-							<p class="hint">{t('profile.pushIosInstall')}</p>
-						{:else if pushStatus === 'denied'}
-							<p class="notice">{t('profile.pushDenied')}</p>
-						{:else if pushStatus === 'on'}
-							<div class="flex flex-wrap items-center gap-2">
-								<span class="badge-ok">{t('profile.pushEnabled')}</span>
-								<button class="btn-ghost btn-sm" type="button" onclick={disablePush}>
-									{t('profile.pushDisable')}
-								</button>
-							</div>
-						{:else if pushStatus === 'off'}
-							<button class="btn-primary btn-sm" type="button" onclick={enablePush}>
-								{t('profile.pushEnable')}
-							</button>
-						{:else}
-							<p class="hint">{t('common.loading')}</p>
+				{#if !profile && isManager}
+					<SectionCard title={t('profile.playerSection')}>
+						<p class="text-body text-muted">{t('profile.noPlayerSheetAdmin')}</p>
+						{#if actor && can(actor, 'managePlayers')}
+							<a class="btn-secondary btn-sm mt-3" href="/admin/joueurs">
+								{t('profile.createPlayerSheet')}
+							</a>
 						{/if}
-						{#if pushError}
-							<p class="field-error" role="alert">{pushError}</p>
-						{/if}
-					</div>
-
-					<div class="mt-5 border-t border-line pt-4">
-						<a class="btn-secondary btn-sm" href="/notifications">
-							{t('profile.notificationsInbox')}
-						</a>
-						<p class="hint">{t('profile.inboxHelp')}</p>
-					</div>
-				</SectionCard>
+					</SectionCard>
+				{/if}
 			</div>
 
-			<div id="securite" class="scroll-mt-[var(--anchor-offset)]">
-				<SectionCard title={t('profile.security')}>
-					<p class="hint">{t('profile.securityHelp')}</p>
-					<FormFeedback {form} section="securite" class="mt-3" />
-
-					<details class="mt-4">
-						<summary
-							class="link flex min-h-11 cursor-pointer list-none items-center text-body font-semibold marker:content-none"
-						>
-							{t('profile.changePassword')}
-						</summary>
-						<form method="POST" action="?/password" use:progressiveForm class="mt-1 space-y-4">
-							<PasswordField
-								id="currentPassword"
-								name="currentPassword"
-								label={t('profile.currentPassword')}
-								autocomplete="current-password"
-								error={passwordError}
-							/>
-							<PasswordField
-								id="newPassword"
-								name="newPassword"
-								label={t('profile.newPassword')}
-								autocomplete="new-password"
-								minlength={data.minLength}
-								hint={t('invite.tooShort', { count: data.minLength })}
-								error={fieldErrorFor(form, 'securite', 'newPassword')}
-							/>
-							<PasswordField
-								id="confirmPassword"
-								name="confirm"
-								label={t('invite.confirm')}
-								autocomplete="new-password"
-								error={fieldErrorFor(form, 'securite', 'confirmPassword')}
-							/>
+			<div class="page-stack min-w-0">
+				<div id="notifications" class="scroll-mt-[var(--anchor-offset)]">
+					<SectionCard title={t('profile.notifications')}>
+						<p class="hint">{t('profile.notificationsHelp')}</p>
+						<FormFeedback {form} section="notifications" class="mt-3" />
+						<form method="POST" action="?/notifications" use:progressiveForm class="mt-4 space-y-3">
+							<label class="flex min-h-11 items-center gap-3 text-body font-medium">
+								<input
+									type="checkbox"
+									name="emailEnabled"
+									checked={data.notifications.emailEnabled}
+									class="h-4 w-4"
+								/>
+								{t('profile.emailNotifications')}
+							</label>
+							<label class="flex min-h-11 items-center gap-3 text-body font-medium">
+								<input
+									type="checkbox"
+									name="pushEnabled"
+									checked={data.notifications.pushEnabled}
+									class="h-4 w-4"
+								/>
+								{t('profile.pushNotifications')}
+							</label>
 							<button class="btn-primary" type="submit">{t('common.save')}</button>
 						</form>
-					</details>
 
-					<div class="mt-5 border-t border-line pt-4">
-						<h3 class="text-subhead">{t('profile.sessions')}</h3>
-						<p class="hint">{t('profile.sessionsHelp')}</p>
-						<ul role="list" class="mt-3 divide-y divide-line">
-							{#if currentSession}
-								<li class="py-3">
-									<div class="flex flex-wrap items-center justify-between gap-2">
-										<div class="min-w-0">
-											<p class="break-words text-body font-semibold">
-												{deviceLabel(currentSession.userAgent)}
-											</p>
-											<p class="hint">
-												{formatTimestamp(currentSession.updatedAt)}
-											</p>
-										</div>
-										<span class="badge-ok">{t('profile.currentDevice')}</span>
-									</div>
-								</li>
+						<div class="mt-5 border-t border-line pt-4">
+							{#if pushStatus === 'unsupported'}
+								<p class="hint">{t('profile.pushUnsupported')}</p>
+							{:else if pushStatus === 'unconfigured'}
+								<p class="hint">{t('profile.pushUnconfigured')}</p>
+							{:else if isIos}
+								<p class="hint">{t('profile.pushIosInstall')}</p>
+							{:else if pushStatus === 'denied'}
+								<p class="notice">{t('profile.pushDenied')}</p>
+							{:else if pushStatus === 'on'}
+								<div class="flex flex-wrap items-center gap-2">
+									<span class="badge-ok">{t('profile.pushEnabled')}</span>
+									<button class="btn-ghost btn-sm" type="button" onclick={disablePush}>
+										{t('profile.pushDisable')}
+									</button>
+								</div>
+							{:else if pushStatus === 'off'}
+								<button class="btn-primary btn-sm" type="button" onclick={enablePush}>
+									{t('profile.pushEnable')}
+								</button>
+							{:else}
+								<p class="hint">{t('common.loading')}</p>
 							{/if}
-							{#each otherSessions.slice(0, 2) as session (session.id)}
-								<li class="py-3">
-									<div class="min-w-0">
-										<p class="break-words text-body font-semibold">
-											{deviceLabel(session.userAgent)}
-										</p>
-										<p class="hint">
-											{formatTimestamp(session.updatedAt)}
-										</p>
-									</div>
-								</li>
-							{/each}
-						</ul>
+							{#if pushError}
+								<p class="field-error" role="alert">{pushError}</p>
+							{/if}
+						</div>
 
-						{#if otherSessions.length > 2}
-							<details class="mt-1">
-								<summary
-									class="link flex min-h-11 cursor-pointer list-none items-center text-body marker:content-none"
-								>
-									{formatCount(
-										otherSessions.length - 2,
-										'profile.moreSessions.one',
-										'profile.moreSessions.many'
-									)}
-								</summary>
-								<ul role="list" class="divide-y divide-line">
-									{#each otherSessions.slice(2) as session (session.id)}
-										<li class="py-3">
-											<p class="break-words text-body font-semibold">
-												{deviceLabel(session.userAgent)}
-											</p>
-											<p class="hint">{formatTimestamp(session.updatedAt)}</p>
-										</li>
-									{/each}
-								</ul>
-							</details>
-						{/if}
-
-						{#if otherSessions.length > 0}
-							<form method="POST" action="?/sessions" use:progressiveForm class="mt-3">
-								<ConfirmSubmit
-									label={t('profile.revokeOthers')}
-									question={t('profile.revokeOthersConfirm')}
-								/>
-							</form>
-						{:else}
-							<p class="hint mt-3">{t('profile.noOtherSessions')}</p>
-						{/if}
-					</div>
-
-					<div class="mt-5 border-t border-line pt-4">
-						<p class="hint">{t('profile.signOutHelp')}</p>
-						<form method="POST" action="/deconnexion" class="mt-2">
-							<button class="btn-secondary" type="submit">{t('nav.logout')}</button>
-						</form>
-					</div>
-				</SectionCard>
-			</div>
-
-			{#if !profile && isManager}
-				<SectionCard title={t('profile.playerSection')}>
-					<p class="text-body text-muted">{t('profile.noPlayerSheetAdmin')}</p>
-					{#if actor && can(actor, 'managePlayers')}
-						<a class="btn-secondary btn-sm mt-3" href="/admin/joueurs">
-							{t('profile.createPlayerSheet')}
-						</a>
-					{/if}
-				</SectionCard>
-			{/if}
-
-			<div class="lg:hidden">
-				<InstallPrompt variant="full" />
-			</div>
-
-			{#if isManager}
-				<div id="administration" class="scroll-mt-[var(--anchor-offset)]">
-					<SectionCard title={t('profile.adminSection')}>
-						<p class="hint">{t('profile.adminHelp')}</p>
-						<div class="mt-4 grid gap-2 sm:grid-cols-2">
-							{#each managementLinks as link (link.href)}
-								<a class="btn-secondary justify-start" href={link.href}>{t(link.labelKey)}</a>
-							{/each}
+						<div class="mt-5 border-t border-line pt-4">
+							<a class="btn-secondary btn-sm" href="/notifications">
+								{t('profile.notificationsInbox')}
+							</a>
+							<p class="hint">{t('profile.inboxHelp')}</p>
 						</div>
 					</SectionCard>
 				</div>
-			{/if}
+
+				<div id="securite" class="scroll-mt-[var(--anchor-offset)]">
+					<SectionCard title={t('profile.security')}>
+						<p class="hint">{t('profile.securityHelp')}</p>
+						<FormFeedback {form} section="securite" class="mt-3" />
+
+						<details class="mt-4">
+							<summary
+								class="link flex min-h-11 cursor-pointer list-none items-center text-body font-semibold marker:content-none"
+							>
+								{t('profile.changePassword')}
+							</summary>
+							<form method="POST" action="?/password" use:progressiveForm class="mt-1 space-y-4">
+								<PasswordField
+									id="currentPassword"
+									name="currentPassword"
+									label={t('profile.currentPassword')}
+									autocomplete="current-password"
+									error={passwordError}
+								/>
+								<PasswordField
+									id="newPassword"
+									name="newPassword"
+									label={t('profile.newPassword')}
+									autocomplete="new-password"
+									minlength={data.minLength}
+									hint={t('invite.tooShort', { count: data.minLength })}
+									error={fieldErrorFor(form, 'securite', 'newPassword')}
+								/>
+								<PasswordField
+									id="confirmPassword"
+									name="confirm"
+									label={t('invite.confirm')}
+									autocomplete="new-password"
+									error={fieldErrorFor(form, 'securite', 'confirmPassword')}
+								/>
+								<button class="btn-primary" type="submit">{t('common.save')}</button>
+							</form>
+						</details>
+
+						<div class="mt-5 border-t border-line pt-4">
+							<h3 class="text-subhead">{t('profile.sessions')}</h3>
+							<p class="hint">{t('profile.sessionsHelp')}</p>
+							<ul role="list" class="mt-3 divide-y divide-line">
+								{#if currentSession}
+									<li class="py-3">
+										<div class="flex flex-wrap items-center justify-between gap-2">
+											<div class="min-w-0">
+												<p class="break-words text-body font-semibold">
+													{deviceLabel(currentSession.userAgent)}
+												</p>
+												<p class="hint">
+													{formatTimestamp(currentSession.updatedAt)}
+												</p>
+											</div>
+											<span class="badge-ok">{t('profile.currentDevice')}</span>
+										</div>
+									</li>
+								{/if}
+								{#each otherSessions.slice(0, 2) as session (session.id)}
+									<li class="py-3">
+										<div class="min-w-0">
+											<p class="break-words text-body font-semibold">
+												{deviceLabel(session.userAgent)}
+											</p>
+											<p class="hint">
+												{formatTimestamp(session.updatedAt)}
+											</p>
+										</div>
+									</li>
+								{/each}
+							</ul>
+
+							{#if otherSessions.length > 2}
+								<details class="mt-1">
+									<summary
+										class="link flex min-h-11 cursor-pointer list-none items-center text-body marker:content-none"
+									>
+										{formatCount(
+											otherSessions.length - 2,
+											'profile.moreSessions.one',
+											'profile.moreSessions.many'
+										)}
+									</summary>
+									<ul role="list" class="divide-y divide-line">
+										{#each otherSessions.slice(2) as session (session.id)}
+											<li class="py-3">
+												<p class="break-words text-body font-semibold">
+													{deviceLabel(session.userAgent)}
+												</p>
+												<p class="hint">{formatTimestamp(session.updatedAt)}</p>
+											</li>
+										{/each}
+									</ul>
+								</details>
+							{/if}
+
+							{#if otherSessions.length > 0}
+								<form method="POST" action="?/sessions" use:progressiveForm class="mt-3">
+									<ConfirmSubmit
+										label={t('profile.revokeOthers')}
+										question={t('profile.revokeOthersConfirm')}
+									/>
+								</form>
+							{:else}
+								<p class="hint mt-3">{t('profile.noOtherSessions')}</p>
+							{/if}
+						</div>
+
+						<div class="mt-5 border-t border-line pt-4">
+							<p class="hint">{t('profile.signOutHelp')}</p>
+							<form method="POST" action="/deconnexion" class="mt-2">
+								<button class="btn-secondary" type="submit">{t('nav.logout')}</button>
+							</form>
+						</div>
+					</SectionCard>
+				</div>
+
+				<div class="lg:hidden">
+					<InstallPrompt variant="full" />
+				</div>
+
+				{#if isManager}
+					<div id="administration" class="scroll-mt-[var(--anchor-offset)]">
+						<SectionCard title={t('profile.adminSection')}>
+							<p class="hint">{t('profile.adminHelp')}</p>
+							<div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+								{#each managementLinks as link (link.href)}
+									<a class="btn-secondary justify-start" href={link.href}>{t(link.labelKey)}</a>
+								{/each}
+							</div>
+						</SectionCard>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 {/if}

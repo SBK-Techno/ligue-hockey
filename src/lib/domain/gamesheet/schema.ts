@@ -6,7 +6,12 @@ import {
 	sqliteTable,
 	text
 } from 'drizzle-orm/sqlite-core';
-import { INFRACTION_KEYS, PENALTY_MINUTES } from '#config/infractions.ts';
+import { GOAL_KIND_KEYS, type GoalKind } from '#config/goal-kinds.ts';
+import {
+	INFRACTION_KEYS,
+	PENALTY_MINUTES,
+	type InfractionKey
+} from '#config/infractions.ts';
 import { PERIOD_NUMBERS } from '#config/periods.ts';
 import {
 	GAME_CLOCK_GLOB,
@@ -23,17 +28,10 @@ const INFRACTION_SQL = INFRACTION_KEYS.map((key) => `'${key}'`).join(', ');
 const MINUTES_SQL = PENALTY_MINUTES.join(', ');
 const PERIOD_SQL = PERIOD_NUMBERS.join(', ');
 
-export const GOAL_KINDS = [
-	'even',
-	'power_play',
-	'short_handed',
-	'penalty_shot',
-	'own_goal'
-] as const;
-export type GoalKind = (typeof GOAL_KINDS)[number];
-export const GOAL_KIND_KEYS = [...GOAL_KINDS] as [GoalKind, ...GoalKind[]];
+export { GOAL_KIND_KEYS, GOAL_KINDS, goalKindDefinition } from '#config/goal-kinds.ts';
+export type { GoalKind } from '#config/goal-kinds.ts';
 
-const GOAL_KIND_SQL = GOAL_KINDS.map((key) => `'${key}'`).join(', ');
+const GOAL_KIND_SQL = GOAL_KIND_KEYS.map((key) => `'${key}'`).join(', ');
 
 export const gameGoals = sqliteTable(
 	'game_goals',
@@ -98,7 +96,7 @@ export const gamePenalties = sqliteTable(
 		}),
 		playerName: text('player_name').notNull(),
 		playerNumber: integer('player_number'),
-		infraction: text('infraction').notNull(),
+		infraction: text('infraction').$type<InfractionKey>().notNull(),
 		minutes: integer('minutes').notNull(),
 		coincidental: integer('coincidental', { mode: 'boolean' })
 			.notNull()

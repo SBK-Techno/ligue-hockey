@@ -59,7 +59,7 @@ const cases: Case[] = [
 		hero: 'profile',
 		manager: true,
 		actions: [],
-		panels: ['manager', 'calendar', 'install'],
+		panels: ['manager', 'agenda', 'install'],
 		spans: [12, 12, 12]
 	},
 	{
@@ -75,7 +75,7 @@ const cases: Case[] = [
 		hero: 'no-game',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'install'],
+		panels: ['agenda', 'install'],
 		spans: [12, 12]
 	},
 	{
@@ -93,7 +93,23 @@ const cases: Case[] = [
 		hero: 'no-game',
 		manager: false,
 		actions: ['balance', 'poll'],
-		panels: ['calendar', 'actions', 'install'],
+		panels: ['agenda', 'actions', 'league', 'install'],
+		spans: [8, 4, 12, 12]
+	},
+	{
+		name: 'sans match ni action, la discussion occupe la colonne libre',
+		input: {
+			hasGame: false,
+			gameStatus: null,
+			availability: null,
+			teamsGenerated: false,
+			latestMessage: true
+		},
+		mode: 'no-game',
+		hero: 'no-game',
+		manager: false,
+		actions: [],
+		panels: ['agenda', 'league', 'install'],
 		spans: [8, 4, 12]
 	},
 	{
@@ -134,7 +150,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'attendance', 'install'],
+		panels: ['agenda', 'attendance', 'install'],
 		spans: [7, 5, 12]
 	},
 	{
@@ -144,7 +160,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'attendance', 'install'],
+		panels: ['agenda', 'attendance', 'install'],
 		spans: [7, 5, 12]
 	},
 	{
@@ -158,7 +174,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: [],
-		panels: ['team', 'calendar', 'attendance', 'install'],
+		panels: ['team', 'agenda', 'attendance', 'install'],
 		spans: [5, 7, 12, 12]
 	},
 	{
@@ -172,7 +188,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: [],
-		panels: ['team', 'calendar', 'attendance', 'install'],
+		panels: ['team', 'agenda', 'attendance', 'install'],
 		spans: [5, 7, 12, 12]
 	},
 	{
@@ -187,7 +203,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: ['balance'],
-		panels: ['team', 'actions', 'calendar', 'attendance', 'install'],
+		panels: ['team', 'actions', 'agenda', 'attendance', 'install'],
 		spans: [5, 7, 7, 5, 12]
 	},
 	{
@@ -197,7 +213,7 @@ const cases: Case[] = [
 		hero: 'absent',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'attendance', 'install'],
+		panels: ['agenda', 'attendance', 'install'],
 		spans: [7, 5, 12]
 	},
 	{
@@ -210,7 +226,7 @@ const cases: Case[] = [
 		hero: 'absent',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'attendance', 'install'],
+		panels: ['agenda', 'attendance', 'install'],
 		spans: [7, 5, 12]
 	},
 	{
@@ -238,7 +254,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: ['claim'],
-		panels: ['actions', 'calendar', 'attendance', 'install'],
+		panels: ['actions', 'agenda', 'attendance', 'install'],
 		spans: [12, 7, 5, 12]
 	},
 	{
@@ -252,7 +268,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: ['claim'],
-		panels: ['actions', 'calendar', 'attendance', 'substitutes', 'install'],
+		panels: ['actions', 'agenda', 'attendance', 'substitutes', 'install'],
 		spans: [12, 7, 5, 12, 12]
 	},
 	{
@@ -268,7 +284,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: ['balance', 'own-request', 'evaluations'],
-		panels: ['actions', 'calendar', 'attendance', 'poll', 'install'],
+		panels: ['actions', 'agenda', 'attendance', 'poll', 'install'],
 		spans: [12, 7, 5, 12, 12]
 	},
 	{
@@ -284,7 +300,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: ['claim', 'balance', 'poll'],
-		panels: ['actions', 'calendar', 'attendance', 'install'],
+		panels: ['actions', 'agenda', 'attendance', 'install'],
 		spans: [12, 7, 5, 12]
 	},
 	{
@@ -294,7 +310,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: true,
 		actions: [],
-		panels: ['manager', 'calendar', 'attendance', 'install'],
+		panels: ['manager', 'agenda', 'attendance', 'install'],
 		spans: [12, 7, 5, 12]
 	},
 	{
@@ -304,7 +320,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'attendance', 'league', 'install'],
+		panels: ['agenda', 'attendance', 'league', 'install'],
 		spans: [7, 5, 12, 12]
 	},
 	{
@@ -314,7 +330,7 @@ const cases: Case[] = [
 		hero: 'cancelled',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'attendance', 'install'],
+		panels: ['agenda', 'attendance', 'install'],
 		spans: [7, 5, 12]
 	},
 	{
@@ -330,7 +346,7 @@ const cases: Case[] = [
 		hero: 'no-game',
 		manager: false,
 		actions: [],
-		panels: ['calendar', 'install'],
+		panels: ['agenda', 'install'],
 		spans: [12, 12]
 	},
 	{
@@ -361,7 +377,7 @@ const cases: Case[] = [
 		hero: 'upcoming',
 		manager: false,
 		actions: ['claim'],
-		panels: ['team', 'actions', 'calendar', 'attendance', 'substitutes', 'install'],
+		panels: ['team', 'actions', 'agenda', 'attendance', 'substitutes', 'install'],
 		spans: [5, 7, 7, 5, 12, 12]
 	}
 ];
@@ -380,7 +396,7 @@ describe('composition de l’accueil', () => {
 		const kinds = result.panels.map((panel) => panel.kind);
 		expect(new Set(kinds).size).toBe(kinds.length);
 		expect(result.panels.at(-1)?.kind).toBe('install');
-		expect(kinds.includes('calendar') && kinds.includes('upcoming')).toBe(false);
+		expect(kinds.includes('agenda') && kinds.includes('upcoming')).toBe(false);
 		for (const panel of result.panels) {
 			expect(PANEL_SPANS).toContain(panel.span);
 		}

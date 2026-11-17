@@ -28,6 +28,7 @@ import {
 	findGame,
 	insertGameWithSlots,
 	listAvailability,
+	listAvailabilityForPlayer,
 	listGames,
 	listSlotAssignments,
 	saveAssignments,
@@ -88,7 +89,15 @@ function snapshotFrom(row: GameRow): GenerationSnapshot | null {
 
 function generationView(
 	row: GameRow,
-	names: Map<string, { fullName: string; position: Position; jerseyNumber: number | null }>,
+	names: Map<
+		string,
+		{
+			fullName: string;
+			position: Position;
+			jerseyNumber: number | null;
+			avatarId: string | null;
+		}
+	>,
 	includeMetrics: boolean
 ): GameGenerationView | null {
 	const snapshot = snapshotFrom(row);
@@ -154,7 +163,8 @@ export function getGame(actor: Actor, gameId: string): GameView {
 			{
 				fullName: player.fullName,
 				position: player.position,
-				jerseyNumber: player.jerseyNumber
+				jerseyNumber: player.jerseyNumber,
+				avatarId: player.avatarId
 			}
 		])
 	);
@@ -170,6 +180,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 						fullName: names.get(assignment.playerId)?.fullName ?? assignment.playerId,
 						position: assignment.position,
 						jerseyNumber: names.get(assignment.playerId)?.jerseyNumber ?? null,
+						avatarId: names.get(assignment.playerId)?.avatarId ?? null,
 						kind: assignment.assignmentKind
 					}
 				: null
@@ -259,7 +270,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 	if (!row) {
 		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
 	}
-	if (row.status !== 'scheduled') {
+	if (!isLineupEditable(row)) {
 		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
 	}
 	const parsed = parseSchema(gameInputSchema, input);
@@ -309,6 +320,12 @@ export function cancelGame(actor: Actor, gameId: string): void {
 		throw new AppError('NOT_FOUND', { key: 'games.noMatch' });
 	}
 	if (row.status === 'cancelled') return;
+	if (row.status === 'completed' || row.completedAt !== null) {
+		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
+	}
+	if (!isLineupEditable(row)) {
+		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
+	}
 
 	const updatedAt = clock.nowMs();
 	cancelGameRow(gameId, updatedAt);
@@ -447,7 +464,8 @@ export function regenerateGame(
 			{
 				fullName: player.fullName,
 				position: player.position,
-				jerseyNumber: player.jerseyNumber
+				jerseyNumber: player.jerseyNumber,
+				avatarId: player.avatarId
 			}
 		])
 	);
@@ -490,6 +508,11 @@ export function regenerateAsAdmin(actor: Actor, gameId: string): GenerationResul
 
 export function listGamePresence(gameId: string) {
 	return listAvailability(gameId);
+}
+
+/** La réponse d'un joueur pour une série de matchs, sans charger les feuilles. */
+export function listPlayerAvailability(gameIds: readonly string[], playerId: string) {
+	return listAvailabilityForPlayer(gameIds, playerId);
 }
 
 /**

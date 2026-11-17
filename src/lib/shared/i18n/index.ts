@@ -86,6 +86,17 @@ export function formatTimestamp(ms: number): string {
 	return timestampFormat.format(toDate(ms));
 }
 
+const timeOfDayFormat = new Intl.DateTimeFormat(branding.locale, {
+	hour: '2-digit',
+	minute: '2-digit',
+	timeZone: branding.timezone
+});
+
+/** L'heure seule, quand le jour est déjà écrit au-dessus. */
+export function formatTimeOfDay(ms: number): string {
+	return timeOfDayFormat.format(toDate(ms));
+}
+
 const monthYearFormat = new Intl.DateTimeFormat(branding.locale, {
 	month: 'long',
 	year: 'numeric',
@@ -173,6 +184,17 @@ export function formatCount(
 		count,
 		...params
 	});
+}
+
+const percentFormat = new Intl.NumberFormat(branding.locale, {
+	style: 'percent',
+	maximumFractionDigits: 0
+});
+
+/** Une part entière, jamais un faux décimal : 0,34 devient 34 %. */
+export function formatPercent(part: number, whole: number): string {
+	if (whole <= 0) return percentFormat.format(0);
+	return percentFormat.format(part / whole);
 }
 
 export function formatDecimal(value: number, digits: number): string {

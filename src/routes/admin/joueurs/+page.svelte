@@ -2,6 +2,7 @@
 	import { roleDefinition } from '#config/roles.ts';
 	import { positionDefinition } from '#config/positions.ts';
 	import { formatAge, formatCount, t } from '#lib/shared/i18n/index.ts';
+	import Avatar from '#lib/ui/Avatar.svelte';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FilterChips from '#lib/ui/FilterChips.svelte';
@@ -107,7 +108,7 @@
 	{:else if filtered.length === 0}
 		<EmptyState title={t('admin.noResults')} />
 	{:else}
-		<SectionCard title={t('admin.players')} flush>
+		<SectionCard title={t('admin.players')} flush clip={false}>
 			<ul role="list" class="divide-y divide-line">
 				{#each filtered as player, index (player.userId)}
 					{@const menuUp = index >= filtered.length - 2}
@@ -115,6 +116,7 @@
 						<span class="relative z-10 w-7 shrink-0 text-right font-mono text-caption text-muted">
 							{player.jerseyNumber ?? '-'}
 						</span>
+						<span class="relative z-10 shrink-0"><Avatar player={player} size={32} /></span>
 						<div class="min-w-0 flex-1">
 							<a
 								class="absolute inset-0 z-0"

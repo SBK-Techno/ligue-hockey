@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { insertAudit, type AuditEntry } from '#lib/domain/audit/queries.ts';
 import {
@@ -14,6 +14,17 @@ export function listGoals(gameId: string) {
 		.from(gameGoals)
 		.where(eq(gameGoals.gameId, gameId))
 		.orderBy(asc(gameGoals.period), desc(gameGoals.clock), asc(gameGoals.createdAt))
+		.all();
+}
+
+/** Le total de buts par équipe pour plusieurs matchs, en une lecture. */
+export function listGoalTotals(gameIds: readonly string[]) {
+	if (gameIds.length === 0) return [];
+	return db
+		.select({ gameId: gameGoals.gameId, team: gameGoals.team, goals: count() })
+		.from(gameGoals)
+		.where(inArray(gameGoals.gameId, [...gameIds]))
+		.groupBy(gameGoals.gameId, gameGoals.team)
 		.all();
 }
 

@@ -1,3 +1,4 @@
+import type { Position } from '#config/positions.ts';
 import { canCreatePoll, can, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
@@ -40,6 +41,12 @@ export type ChatMessageView = {
 	id: string;
 	authorUserId: string;
 	authorName: string;
+	/** Identité visuelle : la même partout dans l'application. */
+	authorAvatarId: string | null;
+	authorJerseyNumber: number | null;
+	authorPosition: Position | null;
+	/** Un message du membre connecté se lit d'un coup d'œil. */
+	isOwn: boolean;
 	kind: 'text' | 'poll';
 	body: string | null;
 	createdAt: number;
@@ -73,6 +80,10 @@ function toViews(actor: Actor, userId: string): ChatMessageView[] {
 			id: message.id,
 			authorUserId: message.authorUserId,
 			authorName: message.authorName,
+			authorAvatarId: message.authorAvatarId,
+			authorJerseyNumber: message.authorJerseyNumber,
+			authorPosition: message.authorPosition,
+			isOwn: message.authorUserId === userId,
 			kind: message.kind,
 			body: deleted ? null : message.body,
 			createdAt: message.createdAt,
@@ -175,6 +186,13 @@ export function castPollVote(
 ): void {
 	const user = requireUser(actor);
 	const parsed = parseSchema(voteInputSchema, input);
+	const message = findMessage(parsed.messageId);
+	if (!message) {
+		throw new AppError('NOT_FOUND', { key: 'chat.messageNotFound' });
+	}
+	if (message.deletedAt !== null) {
+		throw new AppError('NOT_FOUND', { key: 'chat.messageNotFound' });
+	}
 	const poll = findPoll(parsed.messageId);
 	if (!poll) {
 		throw new AppError('NOT_FOUND', { key: 'chat.pollNotFound' });

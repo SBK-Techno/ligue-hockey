@@ -8,11 +8,13 @@
     "static/icons/icon-512-512.904ac52376ea.png": "904ac52376eaeb02303f8823cbf0e045adcdf1ed3ec75f77cadbe60659c597b1",
     "static/icons/maskable-512-512.5c023d038900.png": "5c023d03890083491048c095c2200b59fa3d60a4a950031fe15158bb4a8a839e",
     "static/manifest.webmanifest": "8bc2b5af4ff652be2b15fd5d5803f40744328b9c63216dcbdf15b2ee111ae020",
-    "src/app.html": "b13f1e24fa6697640a1b698a3eaa0c6f89eb061b2cb73c5e92f452d83042418b",
+    "src/app.html": "d32b65ffe8eb25f684791b9fa6a5b20351456b078bd87dc29cfd3489670eca77",
     "static/robots.txt": "815bcd053b51b42648ea3f8103c8c9f86eb64d2d6eaad8f3b45b673b47f959b7",
     "static/offline.html": "cfb47ac1ce31ce89d8f08a894a38e69f582bd79298dcb362dcf75f0f09a3139b",
     "static/auth/dressing-room-0397f5db9c38.webp": "0397f5db9c3888b1f1dd67a856f0467619f13e1fc5c8413c0b9fa1ff4bac28bc",
-    "src/lib/generated/branding.ts": "0b585982bb7003481d0cb2d839d7581872f6b8be2c0a8b2b995b4fe079ac4dbb",
+    "static/textures/paper-b0f353d27755.webp": "b0f353d27755856fdba753cc0bceff783b8988356df9ea56243221e40ea9331d",
+    "static/textures/ice-91bfe133b755.webp": "91bfe133b755c69db37ee90bc371e6fa402385dfeb01cee210b046903147e3a8",
+    "src/lib/generated/branding.ts": "58f26dbe897e76d4c4a5a90a0fde8beb6051e690bb97c535b1f7d735c51e8d59",
     "static/social/apercu.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02"
   }
 }

@@ -27,6 +27,7 @@ export function findPlayerWithEmail(playerId: string): PlayerWithEmail | undefin
 			position: players.position,
 			age: players.age,
 			jerseyNumber: players.jerseyNumber,
+			avatarId: players.avatarId,
 			isSubstitute: players.isSubstitute,
 			active: players.active,
 			createdAt: players.createdAt,
@@ -58,6 +59,20 @@ export function listActivePlayers(): PlayerRow[] {
 		.all();
 }
 
+export type PlayerAvatarAssignment = {
+	userId: string;
+	avatarId: string | null;
+};
+
+/** Every active player, including those whose avatar is still derived. */
+export function listActiveAvatarAssignments(): PlayerAvatarAssignment[] {
+	return db
+		.select({ userId: players.userId, avatarId: players.avatarId })
+		.from(players)
+		.where(eq(players.active, true))
+		.all();
+}
+
 export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 	return db
 		.select({
@@ -67,6 +82,7 @@ export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 			position: players.position,
 			age: players.age,
 			jerseyNumber: players.jerseyNumber,
+			avatarId: players.avatarId,
 			isSubstitute: players.isSubstitute,
 			active: players.active,
 			createdAt: players.createdAt,
@@ -87,7 +103,14 @@ export function insertPlayer(row: NewPlayerRow): void {
 export type PlayerPatch = Partial<
 	Pick<
 		PlayerRow,
-		'firstName' | 'lastName' | 'position' | 'age' | 'jerseyNumber' | 'isSubstitute' | 'active'
+		| 'firstName'
+		| 'lastName'
+		| 'position'
+		| 'age'
+		| 'jerseyNumber'
+		| 'avatarId'
+		| 'isSubstitute'
+		| 'active'
 	>
 >;
 

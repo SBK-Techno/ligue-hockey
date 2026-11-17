@@ -16,18 +16,6 @@
 		font-size: var(--text-body);
 		line-height: 1.5;
 		font-feature-settings: 'kern' 1, 'liga' 1;
-		background-image:
-			radial-gradient(
-				55rem 32rem at 8% -12%,
-				color-mix(in srgb, var(--color-ice-soft) 75%, transparent),
-				transparent 70%
-			),
-			radial-gradient(
-				42rem 26rem at 102% -8%,
-				color-mix(in srgb, var(--color-accent-soft) 55%, transparent),
-				transparent 70%
-			);
-		background-attachment: fixed;
 	}
 	h1,
 	h2,
@@ -113,11 +101,30 @@
 }
 
 @layer components {
+	/* Le papier de la page : une seule texture fixe, sous tout le contenu. */
+	.app-shell {
+		position: relative;
+		isolation: isolate;
+		min-height: 100dvh;
+	}
+	.page-ground {
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		pointer-events: none;
+		background-color: var(--color-paper);
+		background-image: var(--page-texture);
+		background-position: center;
+		background-size: cover;
+		background-repeat: no-repeat;
+	}
+
 	/* Une feuille : papier chaud posé sur la page, coins ronds et ombre douce. */
 	.sheet {
 		@apply border border-line bg-surface;
 		border-radius: var(--radius-card);
-		box-shadow: var(--shadow-card);
+		/* Une feuille posée sur le papier : une tranche d'un pixel, pas un flottement. */
+		box-shadow: 0 1px 0 color-mix(in srgb, var(--color-ink) 5%, transparent);
 	}
 	.card {
 		@apply border border-line bg-surface p-4 sm:p-5;
@@ -237,7 +244,7 @@
 		animation: page-rise var(--duration-base) var(--ease-out-expo) both;
 	}
 	.reveal {
-		animation: page-rise var(--duration-slow) var(--ease-spring) both;
+		animation: page-rise var(--duration-slow) var(--ease-out-expo) both;
 		animation-delay: calc(var(--i, 0) * 45ms);
 	}
 	@keyframes page-rise {
@@ -246,21 +253,15 @@
 			transform: translateY(8px);
 		}
 	}
-	/* Tableau indicateur : la surface de match, bleu profond et ligne de centre. */
+	/* Tableau indicateur : une planche peinte, bleu profond et ligne de centre. */
 	.scoreboard {
 		position: relative;
 		overflow: hidden;
-		border: 1px solid color-mix(in srgb, var(--color-ice) 40%, var(--color-ink));
+		border: 1px solid color-mix(in srgb, var(--color-ice) 30%, var(--color-ink));
 		border-radius: var(--radius-sheet);
-		background:
-			radial-gradient(
-				80% 130% at 88% 0%,
-				color-mix(in srgb, var(--color-ice) 58%, transparent),
-				transparent 62%
-			),
-			linear-gradient(155deg, var(--color-ice-deep), var(--color-ink) 64%);
+		background: var(--color-ink);
 		color: var(--color-on-brand);
-		box-shadow: var(--shadow-lift);
+		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-on-brand) 8%, transparent);
 	}
 	.scoreboard::after {
 		content: '';
@@ -275,17 +276,15 @@
 		);
 	}
 
-	/* Connexion : la photo porte l'identité, la feuille se pose dessus. */
+	/* Connexion : la photo de vestiaire, puis la même feuille que le reste. */
 	.auth-shell {
-		--auth-hero-height: max(42dvh, 18rem);
 		position: relative;
 		min-height: 100dvh;
 		background: var(--color-paper);
 	}
 	.auth-hero {
-		position: absolute;
-		inset: 0 0 auto;
-		height: var(--auth-hero-height);
+		position: relative;
+		height: max(28dvh, 11rem);
 		overflow: hidden;
 	}
 	.auth-hero img {
@@ -294,16 +293,30 @@
 		object-fit: cover;
 		object-position: 68% 50%;
 	}
+	.auth-scrim {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--color-ink) 78%, transparent),
+			transparent 72%
+		);
+	}
 	.auth-header {
 		position: absolute;
 		inset: 0 0 auto;
 		z-index: 1;
 		padding: 1.25rem;
 	}
+	.auth-body {
+		position: relative;
+		margin-top: -2rem;
+		padding: 0 0.75rem calc(env(safe-area-inset-bottom) + 1.5rem);
+	}
 	.auth-main {
 		position: relative;
 		z-index: 1;
-		padding: calc(var(--auth-hero-height) - 1.5rem) 0.75rem 1rem;
+		padding: 0;
 	}
 	.auth-panel {
 		width: 100%;
@@ -312,58 +325,79 @@
 	}
 	.auth-panel .card {
 		padding: 1.5rem;
-		box-shadow: var(--shadow-lift);
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-card);
+		background: var(--color-surface);
+		box-shadow: none;
 	}
 	.auth-caption {
-		display: none;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		max-width: 24rem;
+		margin: 1.25rem auto 0;
+		color: var(--color-muted);
+	}
+	/* Un téléphone court garde le bouton de connexion au-dessus de la ligne. */
+	@media (max-height: 720px) {
+		.auth-hero {
+			height: 9rem;
+		}
+		.auth-body {
+			margin-top: -1.5rem;
+		}
 	}
 	@media (min-width: 640px) {
-		.auth-header {
-			padding: 2.25rem;
+		.auth-hero {
+			height: max(32dvh, 14rem);
 		}
-		.auth-main {
-			padding-inline: 1.5rem;
-			padding-bottom: 1.5rem;
+		.auth-header {
+			padding: 1.75rem;
+		}
+		.auth-body {
+			padding: 0 1.5rem 2rem;
+		}
+		.auth-panel .card {
+			padding: 1.75rem;
 		}
 	}
 	@media (min-width: 1024px) {
 		.auth-shell {
 			display: grid;
-			grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
-			grid-template-rows: auto minmax(min-content, 1fr) auto;
-			background: var(--color-ink);
+			grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 0.85fr);
+			background: var(--color-paper);
 		}
 		.auth-hero {
-			inset: 0;
-			height: 100%;
+			grid-column: 1;
+			grid-row: 1;
+			height: 100dvh;
+			position: sticky;
+			top: 0;
 		}
 		.auth-hero img {
 			object-position: center;
 		}
 		.auth-header {
-			position: relative;
-			inset: auto;
-			grid-column: 1;
-			grid-row: 1;
-			padding: 3rem 3rem 0;
+			padding: 2.5rem;
 		}
-		.auth-main {
+		.auth-body {
 			display: flex;
 			flex-direction: column;
-			grid-column: 1;
-			grid-row: 2;
-			padding: 2rem 3rem;
+			grid-column: 2;
+			grid-row: 1;
+			justify-content: center;
+			min-height: 100dvh;
+			margin-top: 0;
+			padding: 3rem;
 		}
 		.auth-panel {
-			margin-block: auto;
+			max-width: 25rem;
+		}
+		.auth-panel .card {
+			padding: 2rem;
 		}
 		.auth-caption {
-			display: flex;
-			align-items: center;
-			gap: 0.75rem;
-			grid-column: 1;
-			grid-row: 3;
-			padding: 0 3rem 3rem;
+			margin-top: 1.75rem;
 		}
 	}
 
@@ -422,14 +456,18 @@
 		max-width: var(--measure);
 	}
 
+	/* Un bouton est une touche peinte : remplissage plein, tranche sombre,
+	   six pixels de rayon. Aucun dégradé, aucun halo, aucune ombre portée. */
 	.btn,
 	.btn-primary,
 	.btn-secondary,
 	.btn-ghost,
 	.btn-danger,
 	.btn-on-ink {
-		@apply inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 text-body font-semibold no-underline transition disabled:cursor-not-allowed disabled:opacity-50;
-		border-radius: var(--radius-control);
+		@apply inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 text-body font-semibold no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+		border: 1px solid transparent;
+		border-bottom-width: 2px;
+		border-radius: 0.375rem;
 		transition-duration: var(--duration-fast);
 		transition-timing-function: var(--ease-out-expo);
 	}
@@ -439,56 +477,50 @@
 	.btn-ghost:active,
 	.btn-danger:active,
 	.btn-on-ink:active {
+		border-bottom-width: 1px;
 		transform: translateY(1px);
 	}
 	.btn-primary {
 		@apply text-on-brand;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-ice) 84%, var(--color-surface)),
-			var(--color-ice)
-		);
-		border: 1px solid var(--color-ice-deep);
-		box-shadow: var(--shadow-button), 0 10px 22px -16px var(--color-ice-deep);
+		background: var(--color-ice);
+		border-color: var(--color-ice-deep);
 	}
 	.btn-primary:hover {
 		background: var(--color-ice-deep);
-		transform: translateY(-1px);
-	}
-	.btn-primary:active {
-		transform: translateY(1px);
-		box-shadow: var(--shadow-button);
 	}
 	.btn-secondary {
-		@apply border border-line-strong bg-surface text-ink;
+		@apply bg-surface text-ink;
+		border-color: var(--color-line-strong);
 	}
 	.btn-secondary:hover {
-		border-color: var(--color-ice);
-		color: var(--color-ice-deep);
-		background: var(--color-ice-soft);
+		background: var(--color-paper-deep);
+		border-color: var(--color-ink);
 	}
 	.btn-ghost {
-		@apply text-muted;
+		@apply text-ink;
+		border-color: transparent;
+		border-bottom-width: 1px;
 	}
 	.btn-ghost:hover {
 		@apply bg-ice-soft text-ice-deep;
 	}
 	.btn-danger {
-		@apply bg-alert text-on-brand;
-		border: 1px solid var(--color-alert);
+		@apply text-on-brand;
+		background: var(--color-alert);
+		border-color: var(--color-alert-deep);
 	}
 	.btn-danger:hover {
-		@apply bg-alert-deep;
+		background: var(--color-alert-deep);
 	}
 	.btn-on-ink {
 		@apply bg-paper text-ink;
-		border: 1px solid var(--color-paper);
+		border-color: var(--color-paper);
 	}
 	.btn-on-ink:hover {
-		background: color-mix(in srgb, var(--color-paper) 88%, var(--color-ice-soft));
+		background: var(--color-paper-deep);
 	}
 	.btn-sm {
-		@apply min-h-11 px-3 py-1.5 text-body;
+		@apply min-h-10 px-3 py-1.5 text-meta;
 	}
 
 	.input {
@@ -510,19 +542,19 @@
 		@apply mt-1.5 text-body font-medium text-alert;
 	}
 
-	/* Pastilles d'état : courtes, lisibles, jamais un rectangle imprimé. */
+	/* Pastilles d'état : une phrase courte, jamais un code de machine. */
 	.badge,
 	.badge-ok,
 	.badge-alert,
 	.badge-ice {
-		@apply inline-flex items-center gap-1.5 border px-2 py-0.5;
+		@apply inline-flex items-center gap-1.5 border px-2.5 py-0.5;
 		border-radius: var(--radius-pill);
-		font-family: var(--font-mono);
-		font-size: var(--text-stamp);
+		font-family: var(--font-sans);
+		font-size: var(--text-caption);
 		font-weight: 600;
-		line-height: 1.2;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
+		line-height: 1.25;
+		letter-spacing: 0;
+		text-transform: none;
 	}
 	.badge {
 		@apply border-line-strong bg-paper-deep text-ink;
@@ -676,8 +708,7 @@
 		padding: 0.375rem 0.75rem;
 	}
 	.ledger-row[data-you='true'] {
-		box-shadow: inset 3px 0 var(--color-ice);
-		background: color-mix(in srgb, var(--color-ice) 7%, transparent);
+		background: color-mix(in srgb, var(--color-ice) 8%, transparent);
 	}
 	.jersey {
 		display: grid;
@@ -698,6 +729,174 @@
 		height: 0.5rem;
 		border-radius: var(--radius-pill);
 		background: currentColor;
+	}
+
+	/* Discussion : un mur de vestiaire, pas une pile de bulles. Chaque joueur
+	   garde son avatar, son numéro et sa couleur; ta ligne s'éclaire. */
+	.chat-row {
+		position: relative;
+		display: grid;
+		grid-template-columns: 2.75rem minmax(0, 1fr);
+		grid-template-areas:
+			'avatar meta'
+			'avatar body';
+		column-gap: 0.75rem;
+		row-gap: 0.4rem;
+		padding: 0.875rem 1rem;
+		border-bottom: 1px solid var(--color-line);
+	}
+	.chat-row:last-child {
+		border-bottom: 0;
+	}
+	.chat-row[data-own='true'] {
+		background: color-mix(in srgb, var(--color-ice) 7%, transparent);
+	}
+	.chat-avatar {
+		grid-area: avatar;
+	}
+	.chat-meta {
+		grid-area: meta;
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.5rem;
+		min-width: 0;
+		padding-right: 2.5rem;
+	}
+	.chat-body {
+		grid-area: body;
+		min-width: 0;
+	}
+	.chat-time {
+		font-family: var(--font-mono);
+		font-size: var(--text-caption);
+		font-variant-numeric: tabular-nums;
+		color: var(--color-muted);
+	}
+	/* Au grand écran, le menu d'un message s'efface tant qu'on ne le vise pas. */
+	@media (hover: hover) and (min-width: 1024px) {
+		.chat-row .action-menu {
+			opacity: 0;
+			transition: opacity var(--duration-fast) var(--ease-out-expo);
+		}
+		.chat-row:hover .action-menu,
+		.chat-row:focus-within .action-menu {
+			opacity: 1;
+		}
+	}
+	@media (min-width: 1024px) {
+		.chat-row {
+			grid-template-columns: 3rem 12.5rem minmax(0, 1fr);
+			grid-template-areas: 'avatar meta body';
+			column-gap: 1.25rem;
+			padding: 1rem 1.25rem;
+		}
+		.chat-meta {
+			align-content: start;
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.25rem;
+			padding-right: 0;
+		}
+		.chat-body {
+			max-width: 70ch;
+		}
+	}
+
+	/* Menu d'actions d'une ligne : replié par défaut, jamais un bouton nu
+	   à côté de chaque contenu. */
+	.action-menu {
+		position: relative;
+	}
+	.action-menu > summary {
+		display: grid;
+		place-items: center;
+		min-width: 2.75rem;
+		min-height: 2.75rem;
+		cursor: pointer;
+		border-radius: var(--radius-control);
+		color: var(--color-muted);
+		list-style: none;
+		transition: background-color var(--duration-fast) var(--ease-out-expo);
+	}
+	.action-menu > summary::-webkit-details-marker {
+		display: none;
+	}
+	.action-menu > summary:hover,
+	.action-menu[open] > summary {
+		background: color-mix(in srgb, var(--color-ink) 6%, transparent);
+		color: var(--color-ink);
+	}
+	.action-menu-panel {
+		position: absolute;
+		top: calc(100% + 0.25rem);
+		right: 0;
+		z-index: 30;
+		width: min(16rem, calc(100vw - 2rem));
+		padding: 0.25rem;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-control);
+		background: var(--color-surface);
+		box-shadow: var(--shadow-lift);
+	}
+	.action-menu-panel .btn {
+		justify-content: flex-start;
+		width: 100%;
+	}
+
+	/* Sondage : la part de chacun remplit la ligne qu'il a choisie. */
+	.poll-option {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		width: 100%;
+		min-height: 2.75rem;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-control);
+		background: var(--color-surface);
+		text-align: left;
+		isolation: isolate;
+		overflow: hidden;
+		transition: border-color var(--duration-fast) var(--ease-out-expo);
+	}
+	button.poll-option:hover {
+		border-color: var(--color-line-strong);
+	}
+	.poll-option[data-mine='true'] {
+		border-color: var(--color-ice-deep);
+	}
+	.poll-option[data-closed='true'] {
+		background: var(--color-paper);
+	}
+	.poll-fill {
+		position: absolute;
+		inset: 0 auto 0 0;
+		z-index: -1;
+		width: calc(var(--share) * 100%);
+		background: color-mix(in srgb, var(--color-ice) 14%, transparent);
+		transition: width var(--duration-slow) var(--ease-out-expo);
+	}
+	.poll-option[data-mine='true'] .poll-fill {
+		background: color-mix(in srgb, var(--color-ice) 26%, transparent);
+	}
+	.poll-label {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		min-width: 0;
+		flex: 1;
+		font-size: var(--text-body);
+	}
+	.poll-score {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.375rem;
+		flex-shrink: 0;
+		font-family: var(--font-mono);
+		font-size: var(--text-meta);
+		font-variant-numeric: tabular-nums;
 	}
 
 	/* Tableau de situation : 12 colonnes au grand écran, une seule sur mobile.
@@ -736,7 +935,7 @@
 	.metric-cell:first-child {
 		border-left: 0;
 	}
-	@media (max-width: 560px) {
+	@media (max-width: 700px) {
 		.metric-strip {
 			grid-auto-flow: row;
 			grid-template-columns: repeat(2, minmax(0, 1fr));

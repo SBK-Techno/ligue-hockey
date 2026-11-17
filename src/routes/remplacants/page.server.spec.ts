@@ -124,6 +124,7 @@ beforeEach(() => {
 	for (const [id, date, status] of [
 		['future', '2099-01-05', 'scheduled'],
 		['past', '2020-01-05', 'scheduled'],
+		['completed', '2020-01-06', 'completed'],
 		['cancelled', '2099-02-02', 'cancelled']
 	] as const) {
 		sqlite
@@ -233,6 +234,23 @@ describe('places à combler', () => {
 		).toEqual({ gameId: 'future', position: 'defense', reason: 'manual', status: 'open' });
 	});
 
+	it.each([
+		['un match commencé', 'past'],
+		['un match terminé', 'completed']
+	])('refuse une demande manuelle pour %s', async (_, gameId) => {
+		const result = await actions.request!(
+			actionEvent(manager, { gameId, position: 'defense' })
+		);
+
+		expect(result).toMatchObject({
+			status: 409,
+			data: { ok: false, key: 'subs.gameNotScheduled' }
+		});
+		expect(
+			sqlite.prepare('select count(*) as count from sub_requests where game_id = ?').get(gameId)
+		).toEqual({ count: 0 });
+	});
+
 	it('refuse une demande à un joueur', async () => {
 		const result = await actions.request!(
 			actionEvent(player, { gameId: 'future', position: 'defense' })
@@ -325,6 +343,7 @@ describe('places à combler', () => {
 describe('chargement de la page', () => {
 	type LoadResult = {
 		games: { id: string }[];
+		requests: { id: string; game: { id: string } }[];
 		canManageRequests: boolean;
 		canManagePool: boolean;
 	};
@@ -344,5 +363,23 @@ describe('chargement de la page', () => {
 		expect(playerData.games).toEqual([]);
 		expect(playerData.canManageRequests).toBe(false);
 		expect(playerData.canManagePool).toBe(false);
+	});
+
+	it('ne montre que les places encore réclamables', async () => {
+		for (const [id, gameId] of [
+			['open-future', 'future'],
+			['open-past', 'past'],
+			['open-completed', 'completed']
+		]) {
+			sqlite
+				.prepare(
+					`insert into sub_requests (id, game_id, position, reason, status, created_at)
+					 values (?, ?, 'defense', 'manual', 'open', 0)`
+				)
+				.run(id, gameId);
+		}
+
+		const data = (await load({ locals: { actor: player } } as never)) as LoadResult;
+		expect(data.requests.map((request) => request.id)).toEqual(['open-future']);
 	});
 });

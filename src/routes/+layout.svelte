@@ -80,55 +80,52 @@
 	<div class="auth-shell">
 		<div class="auth-hero">
 			<img src={branding.authImage} alt="" fetchpriority="high" decoding="async" />
-			<div
-				class="absolute inset-0 bg-gradient-to-b from-ink/95 via-ink/85 via-25% to-ink/20 lg:bg-gradient-to-r lg:from-ink/90 lg:via-ink/35 lg:via-50% lg:to-ink/15"
-				aria-hidden="true"
-			></div>
-			<div
-				class="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-ink/85 via-ink/20 to-transparent"
-				aria-hidden="true"
-			></div>
+			<div class="auth-scrim" aria-hidden="true"></div>
+			<header class="auth-header">
+				<BrandLockup size="md" tone="dark" />
+			</header>
 		</div>
 
-		<header class="auth-header">
-			<BrandLockup size="md" tone="dark" />
-		</header>
+		<div class="auth-body">
+			<main id="contenu" tabindex="-1" class="auth-main">
+				<div class="auth-panel page-enter">
+					{@render children()}
+				</div>
+			</main>
 
-		<main id="contenu" tabindex="-1" class="auth-main">
-			<div class="auth-panel page-enter">
-				{@render children()}
-			</div>
-		</main>
-
-		<p class="auth-caption">
-			<span class="h-px w-10 bg-paper/40" aria-hidden="true"></span>
-			<span class="micro-label text-paper/75">{t('auth.afterGame')}</span>
-		</p>
+			<p class="auth-caption">
+				<span class="h-px w-10 bg-line-strong" aria-hidden="true"></span>
+				<span class="micro-label text-muted">{t('auth.afterGame')}</span>
+			</p>
+		</div>
 	</div>
 {:else}
-	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
-	<AppNav actor={data.actor} unread={data.unread} />
-	<main
-		id="contenu"
-		tabindex="-1"
-		class="mx-auto w-full max-w-6xl scroll-mt-[var(--anchor-offset)] px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
-	>
-		{#key page.url.pathname}
-			<div class="page-enter">{@render children()}</div>
-		{/key}
-		<div aria-live="polite" class="sr-only">{pageTitle}</div>
-	</main>
-	<AppNavBottom actor={data.actor} />
-	<footer
-		class="mx-auto w-full max-w-6xl px-4 pt-2 lg:pb-8 {showBottomBar
-			? 'pb-[calc(var(--bottom-bar-offset)+0.5rem)]'
-			: 'pb-2'}"
-	>
-		<div
-			class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-caption font-medium text-muted"
+	<div class="app-shell" style="--page-texture: url({branding.textures.paper})">
+		<div class="page-ground" aria-hidden="true"></div>
+		<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
+		<AppNav actor={data.actor} unread={data.unread} avatarId={data.avatarId} />
+		<main
+			id="contenu"
+			tabindex="-1"
+			class="mx-auto w-full max-w-6xl xl:max-w-7xl scroll-mt-[var(--anchor-offset)] px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
 		>
-			<p>{branding.name}</p>
-			<p>{t('brand.presentedBy', { name: branding.organisation })}</p>
-		</div>
-	</footer>
+			{#key page.url.pathname}
+				<div class="page-enter">{@render children()}</div>
+			{/key}
+			<div aria-live="polite" class="sr-only">{pageTitle}</div>
+		</main>
+		<AppNavBottom actor={data.actor} />
+		<footer
+			class="mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pt-2 lg:pb-8 {showBottomBar
+				? 'pb-[calc(var(--bottom-bar-offset)+0.5rem)]'
+				: 'pb-2'}"
+		>
+			<div
+				class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-caption font-medium text-muted"
+			>
+				<p>{branding.name}</p>
+				<p>{t('brand.presentedBy', { name: branding.organisation })}</p>
+			</div>
+		</footer>
+	</div>
 {/if}

@@ -7,6 +7,7 @@ import {
 	listSchedule,
 	regenerateIfGenerated
 } from '#lib/domain/games/service.ts';
+import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { splitSchedule } from '#lib/domain/games/schedule.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import {
@@ -62,7 +63,11 @@ export function listOpenRequests(
 	schedule: readonly GameSummary[] = listSchedule(actor)
 ): SubRequestWithGame[] {
 	requireUser(actor);
-	return withGames(listOpenRequestsForMember(actor), schedule);
+	// Une place ouverte sur un match commencé ne se réclame plus : la demande
+	// reste en base pour l'historique, mais elle quitte le bassin visible.
+	return withGames(listOpenRequestsForMember(actor), schedule).filter(
+		(entry) => !isGameStarted(entry.game)
+	);
 }
 
 export function listMyRequests(

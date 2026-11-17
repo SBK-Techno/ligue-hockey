@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { GOAL_KIND_KEYS } from '#config/goal-kinds.ts';
 import { INFRACTION_KEYS, PENALTY_MINUTES } from '#config/infractions.ts';
+import { PERIOD_NUMBERS } from '#config/periods.ts';
 import { TEAM_KEYS } from '#config/teams.ts';
 import { isValidGameClock } from '#config/time.ts';
-import { GOAL_KIND_KEYS } from './schema.ts';
 
 const clockSchema = z
 	.string()
@@ -70,3 +71,51 @@ export const penaltyInputSchema = z.object({
 
 export type GoalInput = z.infer<typeof goalInputSchema>;
 export type PenaltyInput = z.infer<typeof penaltyInputSchema>;
+
+/*
+ * Forme de transport des mêmes contrats : un formulaire HTML envoie du texte.
+ * La conversion vit ici, à côté du schéma métier, pour que les noms de champs
+ * et les bornes aient un seul propriétaire.
+ */
+const periodField = z.coerce
+	.number()
+	.int()
+	.refine(
+		(value) => (PERIOD_NUMBERS as readonly number[]).includes(value),
+		'invalid-period'
+	);
+
+const optionalPlayerField = z
+	.string()
+	.trim()
+	.optional()
+	.default('');
+
+export const goalFormInputSchema = z.object({
+	team: z.enum(TEAM_KEYS),
+	period: periodField,
+	clock: clockSchema,
+	kind: z.enum(GOAL_KIND_KEYS),
+	scorerPlayerId: z.string().trim().min(1),
+	assist1PlayerId: optionalPlayerField,
+	assist2PlayerId: optionalPlayerField
+});
+
+export const penaltyFormInputSchema = z.object({
+	team: z.enum(TEAM_KEYS),
+	period: periodField,
+	clock: clockSchema,
+	playerId: z.string().trim().min(1),
+	infraction: z.enum(INFRACTION_KEYS),
+	minutes: z.coerce
+		.number()
+		.int()
+		.refine(
+			(value) => (PENALTY_MINUTES as readonly number[]).includes(value),
+			'invalid-minutes'
+		),
+	coincidental: z.preprocess(
+		(value) => value === 'on' || value === 'true' || value === true,
+		z.boolean()
+	)
+});

@@ -57,7 +57,7 @@
 </script>
 
 <a
-	class="flex min-h-14 items-center gap-2 px-4 py-2 no-underline transition-colors hover:bg-ice-soft/60"
+	class="flex min-h-14 items-center gap-2 focus-visible:outline-offset-[-2px] px-4 py-2 no-underline transition-colors hover:bg-ice-soft/60"
 	href={href ?? `/matchs/${game.id}`}
 	aria-current={next ? 'true' : undefined}
 >

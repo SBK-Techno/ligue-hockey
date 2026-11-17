@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ChatPollView } from '#lib/domain/chat/service.ts';
-	import { formatCount, t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, formatPercent, t } from '#lib/shared/i18n/index.ts';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	let {
@@ -19,15 +19,14 @@
 	} = $props();
 
 	const questionId = $props.id();
+	const total = $derived(poll.options.reduce((sum, option) => sum + option.votes, 0));
+	const myOption = $derived(poll.options.find((option) => option.myVote) ?? null);
+	const open = $derived(!poll.closed);
 </script>
 
 <div class={className}>
 	{#if showQuestion}
-		<p id={questionId} class="break-words font-semibold">{poll.question}</p>
-	{/if}
-
-	{#if poll.closed}
-		<p class="badge mt-2">{t('chat.pollClosed')}</p>
+		<p id={questionId} class="break-words text-body font-semibold">{poll.question}</p>
 	{/if}
 
 	<div
@@ -35,28 +34,79 @@
 		aria-labelledby={showQuestion ? questionId : undefined}
 		aria-label={showQuestion ? undefined : t('chat.pollTag')}
 	>
-		<ul role="list" class="mt-3 space-y-2">
-		{#each poll.options as option (option.id)}
-			<li>
-				<form method="POST" {action} use:progressiveForm class="flex items-center gap-2">
-					<input type="hidden" name="messageId" value={messageId} />
-					<input type="hidden" name="optionId" value={option.id} />
-					<button
-						class="flex min-h-11 flex-1 items-center justify-between gap-3 rounded-control border px-3 py-2 text-left text-body transition-colors disabled:opacity-60 {option.myVote
-							? 'border-ice bg-ice-soft font-semibold text-ice-deep'
-							: 'border-line-strong bg-paper'}"
-						type="submit"
-						disabled={poll.closed}
-						aria-pressed={option.myVote}
-					>
-						<span class="min-w-0 break-words">{option.label}</span>
-						<span class="badge shrink-0">
-							{formatCount(option.votes, 'chat.votes.one', 'chat.votes.many')}
-						</span>
-					</button>
-				</form>
-			</li>
-		{/each}
-	</ul>
+		<ul role="list" class="mt-3 space-y-1.5">
+			{#each poll.options as option (option.id)}
+				{@const share = total > 0 ? option.votes / total : 0}
+				<li>
+					{#if open}
+						<form method="POST" action={action} use:progressiveForm>
+							<input type="hidden" name="messageId" value={messageId} />
+							<input type="hidden" name="optionId" value={option.id} />
+							<button
+								type="submit"
+								class="poll-option"
+								data-mine={option.myVote}
+								aria-pressed={option.myVote}
+							>
+								<span class="poll-fill" style="--share: {share}" aria-hidden="true"></span>
+								<span class="poll-label">
+									{#if option.myVote}
+										<svg viewBox="0 0 16 16" class="h-4 w-4 shrink-0" aria-hidden="true">
+											<path
+												d="M3 8.5 6.2 12 13 4.5"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+									{/if}
+									<span class="min-w-0 break-words">{option.label}</span>
+								</span>
+								<span class="poll-score">
+									{formatPercent(option.votes, total)}
+									<span class="text-muted">{option.votes}</span>
+								</span>
+							</button>
+						</form>
+					{:else}
+						<div class="poll-option" data-mine={option.myVote} data-closed="true">
+							<span class="poll-fill" style="--share: {share}" aria-hidden="true"></span>
+							<span class="poll-label">
+								{#if option.myVote}
+									<svg viewBox="0 0 16 16" class="h-4 w-4 shrink-0" aria-hidden="true">
+										<path
+											d="M3 8.5 6.2 12 13 4.5"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										/>
+									</svg>
+								{/if}
+								<span class="min-w-0 break-words">{option.label}</span>
+							</span>
+							<span class="poll-score">
+								{formatPercent(option.votes, total)}
+								<span class="text-muted">{option.votes}</span>
+							</span>
+						</div>
+					{/if}
+				</li>
+			{/each}
+		</ul>
+	</div>
+
+	<div class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-muted">
+		<span>{formatCount(total, 'chat.votes.one', 'chat.votes.many')}</span>
+		{#if poll.closed}
+			<span class="badge">{t('chat.pollClosed')}</span>
+		{:else if myOption}
+			<span>{t('chat.myVote', { option: myOption.label })}</span>
+		{:else}
+			<span>{t('chat.voteHint')}</span>
+		{/if}
 	</div>
 </div>

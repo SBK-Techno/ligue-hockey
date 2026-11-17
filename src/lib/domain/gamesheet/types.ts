@@ -1,4 +1,5 @@
 import type { Team } from '#config/teams.ts';
+import type { InfractionKey } from '#config/infractions.ts';
 import type { GoalKind } from './schema.ts';
 
 /**
@@ -32,7 +33,7 @@ export type GamePenaltyView = {
 	period: number;
 	clock: string;
 	player: GamePlayerRef;
-	infraction: string;
+	infraction: InfractionKey;
 	minutes: number;
 	coincidental: boolean;
 };

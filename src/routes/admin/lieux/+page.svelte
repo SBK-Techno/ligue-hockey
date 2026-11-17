@@ -140,7 +140,7 @@
 							</div>
 
 							{#if location.notes}
-								<p class="mt-2 whitespace-pre-wrap text-body text-muted">{location.notes}</p>
+								<p class="mt-2 whitespace-pre-wrap break-words text-body text-muted">{location.notes}</p>
 							{/if}
 
 							<details class="group mt-2 border-t border-line pt-1">

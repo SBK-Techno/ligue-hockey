@@ -3,7 +3,12 @@ import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { fr } from '#config/i18n/fr.ts';
-import { brandingSchema, type Branding } from '#config/branding-schema.ts';
+import {
+	TEXTURE_KEYS,
+	brandingSchema,
+	type Branding,
+	type TextureKey
+} from '#config/branding-schema.ts';
 import { emailPaletteFrom, parsePalette, type EmailPalette, type Palette } from './palette.ts';
 
 export type GeneratedFile = {
@@ -181,7 +186,7 @@ function buildAppShell(branding: Branding, palette: EmailPalette): string {
 <html lang="${branding.locale}" style="background-color: ${palette.paper}; color-scheme: light">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content, viewport-fit=cover" />
 		<meta name="text-scale" content="scale" />
 		<meta name="color-scheme" content="light" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
@@ -248,7 +253,8 @@ function buildBrandingModule(
 	branding: Branding,
 	icons: Record<IconRole, string>,
 	palette: EmailPalette,
-	authImage: string
+	authImage: string,
+	textures: Record<TextureKey, string>
 ) {
 	const value = {
 		name: branding.name,
@@ -269,7 +275,8 @@ function buildBrandingModule(
 		manifestPath: MANIFEST_PATH,
 		offlinePath: OFFLINE_PATH,
 		cachePrefix: cachePrefix(branding),
-		icons
+		icons,
+		textures
 	};
 
 	return `${GENERATED_HEADER}export const branding = ${JSON.stringify(
@@ -284,6 +291,27 @@ const SOCIAL_HEIGHT = 630;
 const SOCIAL_CREST = 184;
 const AUTH_WIDTH = 1200;
 const AUTH_HEIGHT = 800;
+const TEXTURE_SIZE = 1024;
+
+/**
+ * Les sources sont photographiées; un gain linéaire ramène leur moyenne sur le
+ * papier ou la glace du thème pour qu'une texture posée à pleine opacité ne
+ * change pas la couleur de la surface.
+ */
+const TEXTURE_BRIGHTNESS: Record<TextureKey, number> = { paper: 1.06, ice: 1.08 };
+
+async function renderTexture(
+	root: string,
+	sourcePath: string,
+	brightness: number
+): Promise<Buffer> {
+	const source = await readFile(path.join(root, sourcePath));
+	return sharp(source)
+		.resize(TEXTURE_SIZE, TEXTURE_SIZE, { fit: 'cover', position: 'centre' })
+		.linear(brightness)
+		.webp({ quality: 78, effort: 6 })
+		.toBuffer();
+}
 
 async function renderAuthImage(root: string, branding: Branding): Promise<Buffer> {
 	const source = await readFile(path.join(root, branding.authSource));
@@ -377,7 +405,19 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 	const authImage = `/auth/dressing-room-${sha256(auth).slice(0, 12)}.webp`;
 	files.push({ path: `static${authImage}`, contents: auth });
 
-	const moduleSource = buildBrandingModule(branding, icons, palette, authImage);
+	const textures = {} as Record<TextureKey, string>;
+	for (const key of TEXTURE_KEYS) {
+		const contents = await renderTexture(
+			root,
+			branding.textures[key],
+			TEXTURE_BRIGHTNESS[key]
+		);
+		const publicPath = `/textures/${key}-${sha256(contents).slice(0, 12)}.webp`;
+		textures[key] = publicPath;
+		files.push({ path: `static${publicPath}`, contents });
+	}
+
+	const moduleSource = buildBrandingModule(branding, icons, palette, authImage, textures);
 	files.push({ path: 'src/lib/generated/branding.ts', contents: moduleSource });
 
 	const social = await renderSocialImage(root, branding, svg, palette);
@@ -408,11 +448,11 @@ export async function writeGeneratedFiles(
 		await writeFile(target, file.contents);
 	}
 
-	// Les icônes et la photo de connexion sont nommées par contenu : une
-	// régénération laisse sinon des fichiers orphelins que le service worker
-	// précacherait pour rien.
+	// Les icônes, la photo de connexion et les textures sont nommées par
+	// contenu : une régénération laisse sinon des fichiers orphelins que le
+	// service worker précacherait pour rien.
 	const expected = new Set(files.map((file) => file.path.split(path.sep).join('/')));
-	for (const dir of ['static/icons', 'static/auth']) {
+	for (const dir of ['static/icons', 'static/auth', 'static/textures']) {
 		for (const name of await readdir(path.join(root, dir)).catch(() => [])) {
 			const relative = `${dir}/${name}`;
 			if (!expected.has(relative)) {

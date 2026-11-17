@@ -17,6 +17,7 @@ import {
 	findPenalty,
 	insertGoal,
 	insertPenalty,
+	listGoalTotals,
 	listGoals,
 	listPenalties,
 	updateGoal as updateGoalRow,
@@ -237,6 +238,27 @@ function startedGame(actor: Actor, gameId: string): GameView {
  * Feuille de match complète : buts, pénalités, score et totaux par joueur
  * habillé. Aucune note et aucun solde n'entrent dans ce modèle.
  */
+export type GameScore = Record<Team, number>;
+
+/**
+ * Le score de plusieurs matchs sans charger les feuilles complètes : l'accueil
+ * affiche le résultat des derniers matchs, pas leurs 30 buts un par un.
+ */
+export function listGameScores(
+	actor: Actor,
+	gameIds: readonly string[]
+): Map<string, GameScore> {
+	requireUser(actor);
+	const scores = new Map<string, GameScore>(
+		gameIds.map((gameId) => [gameId, { black: 0, white: 0 }])
+	);
+	for (const row of listGoalTotals(gameIds)) {
+		const score = scores.get(row.gameId);
+		if (score) score[row.team] = row.goals;
+	}
+	return scores;
+}
+
 export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
 	requireUser(actor);
 	const game = getGame(actor, gameId);

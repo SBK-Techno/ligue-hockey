@@ -25,7 +25,12 @@
 </PageHeader>
 
 <div class="page-stack">
-	<SectionCard title="{t('games.upcoming')} ({data.upcoming.length})" flush>
+	<div class="board-grid">
+	<SectionCard
+		class={data.past.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12'}
+		title="{t('games.upcoming')} ({data.upcoming.length})"
+		flush
+	>
 		{#if data.upcoming.length === 0}
 			<div class="section-body">
 				<EmptyState title={t('games.empty')} help={isManager ? t('home.noGameHelpAdmin') : t('games.emptyHelp')}>
@@ -54,7 +59,7 @@
 	</SectionCard>
 
 	{#if data.past.length > 0}
-		<SectionCard title="{t('games.past')} ({data.past.length})" flush>
+		<SectionCard class="lg:col-span-6" title="{t('games.past')} ({data.past.length})" flush>
 			<ul role="list" class="divide-y divide-line">
 				{#each visiblePast as game (game.id)}
 					<li><GameRow {game} past /></li>
@@ -92,4 +97,5 @@
 			{/if}
 		</SectionCard>
 	{/if}
+	</div>
 </div>

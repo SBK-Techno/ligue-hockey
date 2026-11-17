@@ -26,7 +26,7 @@
 />
 
 <form method="POST" action="?/save" use:progressiveForm={{ reset: false }} class="space-y-4">
-	<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+	<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
 		<div class="space-y-4">
 			<SectionCard title={t('rating.seasonTitle')}>
 				<p class="text-meta leading-snug text-muted">{t('rating.scaleHelp')}</p>

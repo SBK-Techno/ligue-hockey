@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
@@ -226,6 +226,21 @@ export function listAvailability(gameId: string) {
 		.select()
 		.from(gameAvailability)
 		.where(eq(gameAvailability.gameId, gameId))
+		.all();
+}
+
+/** La réponse d'un joueur pour plusieurs matchs, en une seule lecture. */
+export function listAvailabilityForPlayer(gameIds: readonly string[], playerId: string) {
+	if (gameIds.length === 0) return [];
+	return db
+		.select()
+		.from(gameAvailability)
+		.where(
+			and(
+				inArray(gameAvailability.gameId, [...gameIds]),
+				eq(gameAvailability.playerId, playerId)
+			)
+		)
 		.all();
 }
 

@@ -28,7 +28,7 @@ export const PANEL_KINDS = [
 	'manager',
 	'actions',
 	'team',
-	'calendar',
+	'agenda',
 	'upcoming',
 	'attendance',
 	'poll',
@@ -171,7 +171,7 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 	const actioned = new Set(actions.map((action) => action.kind));
 
 	const pollPanel = Boolean(input.openPoll) && !actioned.has('poll');
-	const leaguePanel = input.latestMessage && actions.length === 0 && !pollPanel;
+	const leaguePanel = input.latestMessage;
 
 	const claimInActions = actioned.has('claim');
 	const ownRequestInActions = actioned.has('own-request');
@@ -190,7 +190,7 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 		input.hasPlayerProfile &&
 		input.availability?.own !== 'absent';
 
-	const calendarPanel = input.hasGame
+	const agendaPanel = input.hasGame
 		? !input.gameToday
 		: input.hasPlayerProfile;
 
@@ -205,17 +205,18 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 	if (manager) add('manager', 12);
 
 	if (mode === 'no-profile') {
-		if (manager && calendarPanel) add('calendar', 12);
+		if (manager && agendaPanel) add('agenda', 12);
 		add('install', 12);
 		return { mode, manager, hero: selectHero(input, mode), actions, panels };
 	}
 
 	if (mode === 'no-game') {
 		const side = actions.length > 0 || pollPanel || leaguePanel;
-		add('calendar', side ? 8 : 12);
+		add('agenda', side ? 8 : 12);
 		if (actions.length > 0) add('actions', 4);
 		if (pollPanel) add('poll', actions.length > 0 ? 12 : 4);
-		if (leaguePanel) add('league', 12);
+		// Seule à côté de l'agenda, la discussion occupe la colonne libre.
+		if (leaguePanel) add('league', actions.length > 0 || pollPanel ? 12 : 4);
 		add('install', 12);
 		return { mode, manager, hero: selectHero(input, mode), actions, panels };
 	}
@@ -250,7 +251,7 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 	if (mode === 'lineup') {
 		if (teamPanel) add('team', 5);
 		if (actions.length > 0) add('actions', teamPanel ? 7 : 12);
-		if (calendarPanel) add('calendar', 7);
+		if (agendaPanel) add('agenda', 7);
 
 		if (attendancePanel && pollPanel) {
 			add('attendance', 5);
@@ -262,7 +263,7 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 		}
 	} else {
 		if (actions.length > 0) add('actions', 12);
-		if (calendarPanel) add('calendar', 7);
+		if (agendaPanel) add('agenda', 7);
 		if (attendancePanel) add('attendance', 5);
 
 		if (pollPanel && substitutesPanel) {

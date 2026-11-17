@@ -14,6 +14,7 @@ import {
 import {
 	adminUpdatePlayer,
 	deletePlayer,
+	getAdminAvatarPicker,
 	getAdminPlayer,
 	resendInvite,
 	setPlayerRole
@@ -69,6 +70,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 	if (actor.kind !== 'user' || !params.id) {
 		return {
 			player: null,
+			avatarPicker: null,
 			ratings: null,
 			balance: null,
 			payments: [],
@@ -85,6 +87,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		if (isAppError(cause) && cause.code === 'NOT_FOUND') {
 			return {
 				player: null,
+				avatarPicker: null,
 				ratings: null,
 				balance: null,
 				payments: [],
@@ -112,6 +115,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 
 	return {
 		player,
+		avatarPicker: getAdminAvatarPicker(actor, params.id),
 		ratings: getRatings(actor, params.id),
 		balance,
 		payments: listPlayerPayments(actor, params.id),

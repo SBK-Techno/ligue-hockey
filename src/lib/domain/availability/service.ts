@@ -6,6 +6,7 @@ import { recordAudit } from '#lib/domain/audit/service.ts';
 import {
 	getGame,
 	listGamePresence,
+	listPlayerAvailability,
 	regenerateIfGenerated,
 	setGamePresence
 } from '#lib/domain/games/service.ts';
@@ -48,6 +49,20 @@ export type AvailabilityView = {
 	substitute: boolean;
 	closesAtLabel: string;
 };
+
+/**
+ * La situation personnelle sur plusieurs matchs, pour un agenda qui montre
+ * la réponse de chacun sans ouvrir chaque feuille de présence.
+ */
+export function myAvailabilityByGame(
+	actor: Actor,
+	gameIds: readonly string[]
+): Map<string, AvailabilityStatus> {
+	const user = requireUser(actor);
+	return new Map(
+		listPlayerAvailability(gameIds, user.userId).map((row) => [row.gameId, row.status])
+	);
+}
 
 export type AvailabilityResult = {
 	status: AvailabilityStatus;

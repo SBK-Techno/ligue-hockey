@@ -359,7 +359,7 @@ export function createManualRequest(
 	position: Position
 ): SubRequestView {
 	requirePermission(actor, 'manageSubs');
-	if (game.status !== 'scheduled') {
+	if (!isLineupEditable(game)) {
 		throw new AppError('CONFLICT', { key: 'subs.gameNotScheduled' });
 	}
 
@@ -475,6 +475,10 @@ export function releaseSubstitute(
 	const request = findRequest(requestId);
 	if (!request || request.gameId !== game.id) {
 		throw new AppError('NOT_FOUND', { key: 'subs.requestNotFound' });
+	}
+	// Une place ne se libère pas une fois le match commencé.
+	if (!isLineupEditable(game)) {
+		throw new AppError('CONFLICT', { key: 'subs.gameStarted' });
 	}
 
 	if (!releaseRequest(requestId, user.userId)) {

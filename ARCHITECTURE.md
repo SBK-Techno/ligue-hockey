@@ -50,6 +50,7 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
+| Player avatar catalogue (identity, colours, appearance) | `config/avatars.ts` | profile picker, lineups, admin lists | catalogue test + no-raw-colour scan |
 | Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | `migrations.spec.ts` drift guard |
 
 Static literals for these facts are prohibited. A repeated value gets an owner and a derived consumer; it is never copied.
@@ -83,6 +84,12 @@ Colour is semantic:
 Dark surfaces use an opacity ladder on `paper` (55% to 90%) rather than ad-hoc greys; every step was checked against `ink` for 4.5:1 body contrast.
 
 The anonymous auth shell uses one generated photograph as its only visual: a dressing room at dawn with two beers, gloves, a white jersey and the rink window. The source is `config/branding/auth-source.jpg`, the served form is the content-hashed WebP under `static/auth/`, and `config/branding.json` owns the source. The brand lockup and the short `auth.afterGame` caption are the only identity text; the shell never repeats the league name or promises features already stated by the form.
+
+## Player identity
+
+Every player shows one of 28 curated vector avatars from `config/avatars.ts`: skin tone, hair, background, hairstyle, facial hair and glasses. The catalogue owns the appearance; `src/lib/ui/avatar-art.ts` renders it as an SVG built only from that fixed data and from CSS custom properties, never from a player string, an image model or a raw colour. `src/lib/ui/Avatar.svelte` owns sizing and accessibility, and the lineup, profile and admin surfaces consume it without their own colour map.
+
+`players.avatar_id` stores the chosen id and may be null. A null or retired id resolves through FNV-1a from the account id in `src/lib/domain/players/identity.ts`, so an existing profile keeps a stable appearance without a migration write. The service reserves an avatar against the resolved identity of every active player, so two active players cannot share one; a new profile takes the first free catalogue entry. The service validates every choice against `AVATAR_IDS`.
 
 ## Configuration
 

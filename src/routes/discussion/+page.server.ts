@@ -10,9 +10,11 @@ import {
 } from '#lib/domain/chat/service.ts';
 import { canCreatePoll } from '#lib/domain/auth/policy.ts';
 import { CHAT_LIMITS, voteInputSchema } from '#lib/domain/chat/validators.ts';
+import { branding } from '#lib/generated/branding.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
+import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
 const messageSchema = z.object({
@@ -29,11 +31,18 @@ export const load: ServerLoad = ({ locals }) => {
 		pollMinOptions: settings['chat.pollMinOptions'],
 		pollMaxOptions: settings['chat.maxPollOptions']
 	};
-	if (locals.actor.kind !== 'user') return { messages: [], limits, canCreatePoll: false };
+	const days = {
+		today: todayInZone(branding.timezone),
+		yesterday: todayInZone(branding.timezone, clock.nowMs() - 86_400_000)
+	};
+	if (locals.actor.kind !== 'user') {
+		return { messages: [], limits, canCreatePoll: false, ...days };
+	}
 	return {
 		messages: listChat(locals.actor),
 		limits,
-		canCreatePoll: canCreatePoll(locals.actor, settings['chat.allowPlayerPolls'])
+		canCreatePoll: canCreatePoll(locals.actor, settings['chat.allowPlayerPolls']),
+		...days
 	};
 };
 
