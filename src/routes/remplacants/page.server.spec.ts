@@ -281,6 +281,45 @@ describe('places à combler', () => {
 			sqlite.prepare('select status from sub_requests where id = ?').get(request.id)
 		).toEqual({ status: 'open' });
 	});
+
+	it('laisse un joueur annuler sa propre demande', async () => {
+		sqlite
+			.prepare(
+				`insert into sub_requests (id, game_id, requested_by_player_id, created_by_user_id, position, reason, status, created_at, filled_by_player_id, filled_at, cancelled_at)
+				 values ('own', 'future', 'player', null, 'forward', 'absence', 'open', 0, null, null, null)`
+			)
+			.run();
+
+		const result = await actions.cancelOwn!(
+			actionEvent(player, { gameId: 'future', requestId: 'own' })
+		);
+
+		expect(result).toMatchObject({ ok: true });
+		expect(sqlite.prepare('select status from sub_requests where id = ?').get('own')).toEqual({
+			status: 'cancelled'
+		});
+	});
+
+	it('refuse la demande d’un autre joueur', async () => {
+		sqlite
+			.prepare(
+				`insert into sub_requests (id, game_id, requested_by_player_id, created_by_user_id, position, reason, status, created_at, filled_by_player_id, filled_at, cancelled_at)
+				 values ('foreign', 'future', 'substitute', null, 'forward', 'absence', 'open', 0, null, null, null)`
+			)
+			.run();
+
+		const result = await actions.cancelOwn!(
+			actionEvent(player, { gameId: 'future', requestId: 'foreign' })
+		);
+
+		expect(result).toMatchObject({
+			status: 403,
+			data: { ok: false, key: 'subs.notRequester' }
+		});
+		expect(
+			sqlite.prepare('select status from sub_requests where id = ?').get('foreign')
+		).toEqual({ status: 'open' });
+	});
 });
 
 describe('chargement de la page', () => {

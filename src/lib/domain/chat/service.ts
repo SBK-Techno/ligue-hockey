@@ -186,7 +186,9 @@ export function castPollVote(
 	if (!option || option.messageId !== parsed.messageId) {
 		throw new AppError('VALIDATION', { key: 'chat.pollNotFound' });
 	}
-	castVote(parsed.messageId, parsed.optionId, user.userId, clock.nowMs());
+	if (!castVote(parsed.messageId, parsed.optionId, user.userId, clock.nowMs())) {
+		throw new AppError('CONFLICT', { key: 'chat.voteClosed' });
+	}
 }
 
 export function closePollAsAdmin(actor: Actor, messageId: string): void {

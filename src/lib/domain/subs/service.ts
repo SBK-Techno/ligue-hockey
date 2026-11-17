@@ -14,6 +14,7 @@ import {
 import { notify } from '#lib/domain/notifications/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
+import { isLineupEditable } from '#lib/domain/games/playability.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { clock, todayInZone, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
@@ -503,9 +504,39 @@ export function cancelRequestByAdmin(
 	if (!request || request.gameId !== game.id) {
 		throw new AppError('NOT_FOUND', { key: 'subs.requestNotFound' });
 	}
+	return cancelRequestWithEffects(actor, game, request);
+}
 
+/**
+ * Un joueur peut retirer sa propre demande tant que le match n'a pas commencé.
+ * La permission de gestion reste réservée aux gestionnaires.
+ */
+export function cancelOwnRequest(
+	actor: Actor,
+	game: GameSummary,
+	requestId: string
+): string | null {
+	const user = requireUser(actor);
+	const request = findRequest(requestId);
+	if (!request || request.gameId !== game.id) {
+		throw new AppError('NOT_FOUND', { key: 'subs.requestNotFound' });
+	}
+	if (request.requestedByPlayerId !== user.userId) {
+		throw new AppError('FORBIDDEN', { key: 'subs.notRequester' });
+	}
+	if (!isLineupEditable(game)) {
+		throw new AppError('CONFLICT', { key: 'subs.requestNotActive' });
+	}
+	return cancelRequestWithEffects(actor, game, request);
+}
+
+function cancelRequestWithEffects(
+	actor: Actor,
+	game: GameSummary,
+	request: NonNullable<ReturnType<typeof findRequest>>
+): string | null {
 	const bumpedPlayerId = request.filledByPlayerId;
-	if (!cancelRequest(requestId, clock.nowMs())) {
+	if (!cancelRequest(request.id, clock.nowMs())) {
 		throw new AppError('CONFLICT', { key: 'subs.requestNotActive' });
 	}
 
@@ -519,14 +550,14 @@ export function cancelRequestByAdmin(
 				gameDate: game.gameDate,
 				startTime: game.startTime
 			},
-			{ dedupeKey: `sub_bumped:${requestId}:cancelled` }
+			{ dedupeKey: `sub_bumped:${request.id}:cancelled` }
 		);
 	}
 
 	recordAudit(actor, {
 		action: 'sub.request_cancelled',
 		entityType: 'sub_request',
-		entityId: requestId
+		entityId: request.id
 	});
 	return bumpedPlayerId;
 }

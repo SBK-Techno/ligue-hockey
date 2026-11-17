@@ -19,7 +19,7 @@
 <header class="mb-6">
 	{#if back}
 		<a
-			class="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted no-underline hover:text-ink"
+			class="mb-2 inline-flex min-h-11 items-center gap-1.5 text-body font-semibold text-muted no-underline hover:text-ink"
 			href={back.href}
 		>
 			<svg
@@ -43,7 +43,7 @@
 			{/if}
 			<h1 class="first-letter:uppercase {eyebrow ? 'mt-1' : ''}">{title}</h1>
 			{#if meta}
-				<p class="mt-1.5 text-sm text-muted">{meta}</p>
+				<p class="mt-1.5 text-meta text-muted">{meta}</p>
 			{/if}
 		</div>
 

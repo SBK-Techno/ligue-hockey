@@ -81,7 +81,7 @@
 		<div class="auth-hero">
 			<img src={branding.authImage} alt="" fetchpriority="high" decoding="async" />
 			<div
-				class="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/20 to-ink/55 lg:bg-gradient-to-r lg:from-ink/90 lg:via-ink/35 lg:to-ink/15"
+				class="absolute inset-0 bg-gradient-to-b from-ink/95 via-ink/85 via-25% to-ink/20 lg:bg-gradient-to-r lg:from-ink/90 lg:via-ink/35 lg:via-50% lg:to-ink/15"
 				aria-hidden="true"
 			></div>
 			<div
@@ -125,7 +125,7 @@
 			: 'pb-2'}"
 	>
 		<div
-			class="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 pt-5 text-[11px] font-medium text-muted"
+			class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-caption font-medium text-muted"
 		>
 			<p>{branding.name}</p>
 			<p>{t('brand.presentedBy', { name: branding.organisation })}</p>

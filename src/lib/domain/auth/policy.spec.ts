@@ -77,4 +77,10 @@ describe('role surfaces', () => {
 		const keys = primarySurfaces(actor('manager')).map((surface) => surface.key);
 		expect(keys).toContain('subs');
 	});
+
+	it('gives the substitute bank a short label for the five-slot mobile bar', () => {
+		const subs = primarySurfaces(actor('player')).find((surface) => surface.key === 'subs');
+		expect(subs?.shortLabelKey).toBe('subs.short');
+		expect(subs?.labelKey).toBe('subs.title');
+	});
 });

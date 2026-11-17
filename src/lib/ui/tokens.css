@@ -57,8 +57,14 @@
 	--text-subhead: 1rem;
 	--text-body: 0.9375rem;
 	--text-meta: 0.8125rem;
+	/* Libellé dense : une seule taille entre la méta et le tampon. */
+	--text-caption: 0.6875rem;
 	--text-stamp: 0.625rem;
 	--text-clock: clamp(3.5rem, 9vw, 5.5rem);
+	/* Unité du cadran : relative à l'horloge, jamais une taille de texte. */
+	--text-clock-unit: 0.45em;
+	/* Chiffre de bandeau : s'adapte à la largeur de la cellule. */
+	--text-metric: clamp(1.15rem, 5vw, 1.5rem);
 	--text-figure: 1.75rem;
 	--text-figure-sm: 0.9375rem;
 
@@ -68,7 +74,7 @@
 
 :root {
 	/* Une seule source pour la barre mobile : hauteur utile + zone sûre iOS. */
-	--bottom-bar-height: 4.25rem;
+	--bottom-bar-height: 4.125rem;
 	--bottom-bar-offset: calc(
 		var(--bottom-bar-height) + max(0.5rem, env(safe-area-inset-bottom))
 	);

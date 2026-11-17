@@ -88,7 +88,7 @@
 				{@const active = isActiveHref(path, item.href)}
 				<a
 					href={item.href}
-					class="flex h-9 items-center whitespace-nowrap rounded-full px-3 text-[13px] font-medium no-underline transition-colors {active
+					class="flex h-9 items-center whitespace-nowrap rounded-full px-3 text-meta font-medium no-underline transition-colors {active
 						? 'bg-ice-soft text-ice-deep'
 						: 'text-muted hover:bg-ice-soft/60 hover:text-ice-deep'}"
 					aria-current={active ? 'page' : undefined}
@@ -114,7 +114,7 @@
 				<NavIcon icon="bell" />
 				{#if unread > 0}
 					<span
-						class="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-on-brand"
+						class="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-stamp font-bold leading-4 text-on-brand"
 					>
 						{unreadBadge}
 					</span>
@@ -132,11 +132,11 @@
 					onclick={() => (open = !open)}
 				>
 					<span
-						class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ice text-[11px] font-semibold tracking-wide text-on-brand"
+						class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ice text-caption font-semibold tracking-wide text-on-brand"
 					>
 						{initials}
 					</span>
-					<span class="hidden max-w-40 truncate text-sm font-semibold xl:block">{actor.name}</span>
+					<span class="hidden max-w-40 truncate text-body font-semibold xl:block">{actor.name}</span>
 					<svg
 						viewBox="0 0 24 24"
 						class="hidden h-3.5 w-3.5 shrink-0 text-muted transition-transform duration-200 xl:block {open
@@ -155,16 +155,16 @@
 					<div
 						bind:this={panel}
 						id="menu-compte"
-						class="absolute right-0 top-[calc(100%+0.5rem)] z-40 max-h-[70dvh] w-72 overflow-y-auto rounded-card border border-line bg-surface p-2 shadow-lift"
+						class="card-flush absolute right-0 top-[calc(100%+0.5rem)] z-40 max-h-[70dvh] w-72 overflow-y-auto p-2"
 					>
 						<div class="border-b border-line px-2.5 pb-2.5 pt-1">
-							<p class="truncate text-sm font-semibold">{actor.name}</p>
-							<p class="mt-0.5 text-xs text-muted">{roleLabel}</p>
+							<p class="truncate text-body font-semibold">{actor.name}</p>
+							<p class="mt-0.5 text-meta text-muted">{roleLabel}</p>
 						</div>
 						<nav class="mt-1 flex flex-col" aria-label={t('nav.accountMenu')}>
 							{#if account}
 								<a
-									class="flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-sm font-medium no-underline hover:bg-ice-soft"
+									class="flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-body font-medium no-underline hover:bg-ice-soft/60"
 									href={account.href}
 									onclick={() => (open = false)}
 								>
@@ -173,7 +173,7 @@
 								</a>
 							{/if}
 							<a
-								class="flex min-h-11 items-center rounded-control px-2.5 pl-10 text-sm font-medium no-underline hover:bg-ice-soft"
+								class="flex min-h-11 items-center rounded-control px-2.5 pl-10 text-body font-medium no-underline hover:bg-ice-soft/60"
 								href="/solde"
 								onclick={() => (open = false)}
 							>
@@ -182,7 +182,7 @@
 						</nav>
 						<form method="POST" action="/deconnexion" class="mt-1 border-t border-line pt-1">
 							<button
-								class="flex min-h-11 w-full items-center px-2.5 text-left text-sm font-medium text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+								class="flex min-h-11 w-full items-center px-2.5 text-left text-body font-medium text-muted transition-colors hover:bg-ice-soft/60 hover:text-ink"
 								type="submit"
 							>
 								{t('nav.logout')}

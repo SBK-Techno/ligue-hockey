@@ -18,7 +18,7 @@
 		size === 'lg' ? 'h-12' : size === 'sm' ? 'h-8' : 'h-10'
 	);
 	const nameSize = $derived(
-		size === 'lg' ? 'text-xl' : size === 'sm' ? 'text-[15px]' : 'text-base'
+		size === 'lg' ? 'text-section' : size === 'sm' ? 'text-body' : 'text-subhead'
 	);
 </script>
 
@@ -39,9 +39,9 @@
 		</span>
 		{#if caption}
 			<span
-				class="mt-0.5 block truncate font-mono text-[10px] font-medium uppercase leading-tight tracking-[0.08em] {tone ===
+				class="mt-0.5 block truncate font-mono text-stamp font-medium uppercase leading-tight tracking-[0.08em] {tone ===
 				'dark'
-					? 'text-paper/60'
+					? 'text-paper/80'
 					: 'text-muted'}"
 			>
 				{t('brand.presentedBy', { name: branding.organisation })}

@@ -6,48 +6,82 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Tu es hors ligne · Ligue de hockey du dimanche matin</title>
 		<style>
+			:root {
+				color-scheme: light;
+			}
+			* {
+				box-sizing: border-box;
+			}
 			body {
 				margin: 0;
 				min-height: 100dvh;
 				display: grid;
 				place-items: center;
+				padding: 1.5rem;
 				background: #f6f1e7;
 				color: #12283a;
-				font-family: 'Anybody Variable', 'Anybody', ui-sans-serif, system-ui, sans-serif;
-				padding: 24px;
+				font-family: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
+				font-size: 0.9375rem;
+				line-height: 1.5;
+				font-feature-settings: 'kern' 1, 'liga' 1;
 			}
 			main {
-				max-width: 420px;
+				width: 100%;
+				max-width: 32rem;
+				padding: 1.5rem;
+				border: 1px solid #ddd2bf;
+				border-radius: 1rem;
+				background: #fffdf8;
+				box-shadow:
+					0 1px 2px color-mix(in srgb, #12283a 5%, transparent),
+					0 14px 34px -24px color-mix(in srgb, #12283a 26%, transparent);
 				text-align: center;
 			}
 			.brand {
-				font-family: 'Spline Sans Mono Variable', ui-monospace, monospace;
+				margin: 0;
+				font-family: 'Spline Sans Mono Variable', 'Spline Sans Mono', ui-monospace, monospace;
+				font-size: 0.625rem;
 				font-weight: 600;
 				letter-spacing: 0.12em;
 				text-transform: uppercase;
-				font-size: 0.625rem;
 				color: #5e6a6a;
 			}
 			h1 {
-				font-size: 1.75rem;
+				margin: 0.75rem 0 0.5rem;
+				font-size: clamp(1.75rem, 1.25rem + 1.7vw, 2.5rem);
 				font-weight: 650;
 				font-stretch: 112%;
-				margin: 12px 0 8px;
+				line-height: 1;
 				letter-spacing: -0.015em;
+				text-wrap: balance;
 			}
 			p {
+				margin: 0;
 				color: #5e6a6a;
+				font-size: 0.9375rem;
 				line-height: 1.6;
 			}
 			a {
-				display: inline-block;
-				margin-top: 20px;
-				background: #12283a;
+				display: inline-flex;
+				min-height: 2.75rem;
+				align-items: center;
+				justify-content: center;
+				margin-top: 1.25rem;
+				padding: 0 1rem;
+				border: 1px solid #173f6b;
+				border-radius: 0.75rem;
+				background: #1f5c99;
 				color: #fffdf8;
-				text-decoration: none;
-				padding: 13px 22px;
-				border-radius: 2px;
+				font-size: 0.9375rem;
 				font-weight: 600;
+				text-decoration: none;
+			}
+			a:hover {
+				background: #173f6b;
+			}
+			a:focus-visible {
+				outline: 2px solid #1f5c99;
+				outline-offset: 2px;
 			}
 		</style>
 	</head>

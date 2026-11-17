@@ -24,7 +24,7 @@
 	cells={[
 		{ value: availability.present, label: t('home.present') },
 		{ value: availability.absent, label: t('home.absent') },
-		{ value: availability.unknown, label: t('home.pending') }
+		{ value: availability.unknown, label: t('availability.unknown') }
 	]}
 />
 
@@ -53,7 +53,7 @@
 
 {#if present.length > 0}
 	<details class="group mt-2">
-		<summary class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm marker:content-none">
+		<summary class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body marker:content-none">
 			<svg
 				viewBox="0 0 24 24"
 				class="h-3.5 w-3.5 transition-transform group-open:rotate-90"
@@ -66,9 +66,9 @@
 			</svg>
 			{formatCount(present.length, 'home.showPresent.one', 'home.showPresent.many')}
 		</summary>
-		<ul role="list" class="mt-1 grid gap-x-4 pb-1 text-sm sm:grid-cols-2">
+		<ul role="list" class="mt-1 grid gap-x-4 pb-1 text-body sm:grid-cols-2">
 			{#each present as row (row.playerId)}
-				<li class="flex min-h-9 items-center gap-2 border-b border-line/70 py-1">
+				<li class="flex min-h-9 items-center gap-2 border-b border-line py-1">
 					<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ice"></span>
 					<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
 						{row.fullName}

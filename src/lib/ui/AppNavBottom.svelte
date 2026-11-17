@@ -14,7 +14,7 @@
 
 {#if !path.startsWith('/admin')}
 	<nav
-		class="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 rounded-card border border-line bg-surface/95 shadow-lift backdrop-blur-md lg:hidden"
+		class="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 rounded-card border border-line bg-surface shadow-lift lg:hidden"
 		aria-label={t('nav.mainMenu')}
 	>
 		<ul class="mx-auto flex max-w-lg items-stretch gap-1 p-1.5">
@@ -25,15 +25,15 @@
 						href={item.href}
 						class="flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-control px-0.5 py-1.5 text-center no-underline transition-colors {active
 							? 'bg-ice-soft text-ice-deep'
-							: 'text-muted hover:bg-ice-soft/50 hover:text-ice-deep'}"
+							: 'text-muted hover:bg-ice-soft/60 hover:text-ice-deep'}"
 						aria-current={active ? 'page' : undefined}
 					>
 						<NavIcon icon={item.icon} class="h-5 w-5" />
 						<span
-							class="max-w-full truncate text-[10px] font-semibold leading-tight tracking-tight"
+							class="max-w-full truncate text-stamp font-semibold leading-tight tracking-tight"
 							style="font-stretch: 92%"
 						>
-							{t(item.labelKey)}
+							{t(item.shortLabelKey ?? item.labelKey)}
 						</span>
 					</a>
 				</li>

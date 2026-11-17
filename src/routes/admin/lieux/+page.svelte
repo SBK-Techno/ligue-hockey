@@ -4,6 +4,7 @@
 	import { LOCATION_LIMITS } from '#lib/domain/locations/validators.ts';
 	import { formatCount, formatDate, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
@@ -58,67 +59,69 @@
 	}
 </script>
 
-<FormFeedback {form} class="mb-4" />
-
 <PageHeader title={t('admin.locationsTitle')} meta={t('admin.locationsHelp')} />
 
-<SectionCard title={t('admin.addLocation')}>
-	<form method="POST" action="?/create" use:progressiveForm class="grid gap-3 p-4 sm:grid-cols-2">
-		<div>
-			<label class="label" for="new-location-name">{t('admin.locationName')}</label>
-			<input
-				class="input"
-				id="new-location-name"
-				name="name"
-				maxlength={LOCATION_LIMITS.nameMax}
-				required
-			/>
-		</div>
-		<div>
-			<label class="label" for="new-location-address">{t('admin.locationAddress')}</label>
-			<input
-				class="input"
-				id="new-location-address"
-				name="address"
-				maxlength={LOCATION_LIMITS.addressMax}
-			/>
-		</div>
-		<div class="sm:col-span-2">
-			<label class="label" for="new-location-map">{t('admin.locationMap')}</label>
-			<input
-				class="input"
-				id="new-location-map"
-				name="mapUrl"
-				type="url"
-				maxlength={LOCATION_LIMITS.mapUrlMax}
-				placeholder="https://"
-			/>
-			<p class="hint">{t('admin.locationMapHelp')}</p>
-		</div>
-		<div class="sm:col-span-2">
-			<label class="label" for="new-location-notes">{t('admin.locationNotes')}</label>
-			<textarea
-				class="input"
-				id="new-location-notes"
-				name="notes"
-				rows="2"
-				maxlength={LOCATION_LIMITS.notesMax}
-			></textarea>
-		</div>
-		<div class="sm:col-span-2">
-			<button class="btn-primary" type="submit">{t('admin.addLocation')}</button>
-		</div>
-	</form>
-</SectionCard>
+<div class="page-stack">
+	<FormFeedback {form} />
 
-<div class="mt-4">
-	<SectionCard title="{t('admin.locations')} ({data.locations.length})">
-		{#if data.locations.length === 0}
-			<div class="px-4 py-3">
-				<p class="text-sm text-muted">{t('admin.locationsEmpty')}</p>
+	<SectionCard title={t('admin.addLocation')}>
+		<form method="POST" action="?/create" use:progressiveForm class="grid gap-3 sm:grid-cols-2">
+			<div>
+				<label class="label" for="new-location-name">{t('admin.locationName')}</label>
+				<input
+					class="input"
+					id="new-location-name"
+					name="name"
+					maxlength={LOCATION_LIMITS.nameMax}
+					required
+				/>
 			</div>
-		{:else}
-			<ul role="list" class="divide-y divide-line/70">
+			<div>
+				<label class="label" for="new-location-address">{t('admin.locationAddress')}</label>
+				<input
+					class="input"
+					id="new-location-address"
+					name="address"
+					maxlength={LOCATION_LIMITS.addressMax}
+				/>
+			</div>
+			<div class="sm:col-span-2">
+				<label class="label" for="new-location-map">{t('admin.locationMap')}</label>
+				<input
+					class="input"
+					id="new-location-map"
+					name="mapUrl"
+					type="url"
+					maxlength={LOCATION_LIMITS.mapUrlMax}
+					placeholder="https://"
+				/>
+				<p class="hint">{t('admin.locationMapHelp')}</p>
+			</div>
+			<div class="sm:col-span-2">
+				<label class="label" for="new-location-notes">{t('admin.locationNotes')}</label>
+				<textarea
+					class="input"
+					id="new-location-notes"
+					name="notes"
+					rows="2"
+					maxlength={LOCATION_LIMITS.notesMax}
+				></textarea>
+			</div>
+			<div class="sm:col-span-2">
+				<button class="btn-primary" type="submit">{t('admin.addLocation')}</button>
+			</div>
+		</form>
+	</SectionCard>
+
+	{#if data.locations.length === 0}
+		<EmptyState title={t('admin.locationsEmpty')}>
+			{#snippet action()}
+				<a class="btn-secondary" href="#new-location-name">{t('admin.addLocation')}</a>
+			{/snippet}
+		</EmptyState>
+	{:else}
+		<SectionCard title="{t('admin.locations')} ({data.locations.length})" flush>
+			<ul role="list" class="divide-y divide-line">
 				{#each data.locations as location (location.id)}
 					{@const metric = metricsById.get(location.id)}
 					{@const href = mapHref(location)}
@@ -127,7 +130,7 @@
 						<div class="px-4 pb-3">
 							<div class="flex flex-wrap items-center gap-3">
 								{#if href}
-									<a class="link text-sm" href={href} target="_blank" rel="noreferrer">
+									<a class="link text-body" href={href} target="_blank" rel="noreferrer">
 										{t('games.openMap')}
 									</a>
 								{/if}
@@ -137,12 +140,12 @@
 							</div>
 
 							{#if location.notes}
-								<p class="mt-2 whitespace-pre-wrap text-sm text-muted">{location.notes}</p>
+								<p class="mt-2 whitespace-pre-wrap text-body text-muted">{location.notes}</p>
 							{/if}
 
-							<details class="group mt-2 border-t border-line/70 pt-1">
+							<details class="group mt-2 border-t border-line pt-1">
 								<summary
-									class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm marker:content-none"
+									class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body marker:content-none"
 								>
 									<svg
 										viewBox="0 0 24 24"
@@ -252,6 +255,6 @@
 					</li>
 				{/each}
 			</ul>
-		{/if}
-	</SectionCard>
+		</SectionCard>
+	{/if}
 </div>

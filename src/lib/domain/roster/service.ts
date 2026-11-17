@@ -40,10 +40,12 @@ export type RosterActionResult = {
 
 export type ClaimActionResult = ClaimResult & RosterActionResult;
 
-export function listOpenRequests(actor: Actor): SubRequestWithGame[] {
-	requireUser(actor);
-	const games = new Map(listSchedule(actor).map((game) => [game.id, game]));
-	return listOpenRequestsForMember(actor)
+function withGames(
+	requests: readonly SubRequestView[],
+	schedule: readonly GameSummary[]
+): SubRequestWithGame[] {
+	const games = new Map(schedule.map((game) => [game.id, game]));
+	return requests
 		.map((request) => {
 			const game = games.get(request.gameId);
 			return game ? { ...request, game } : null;
@@ -51,15 +53,24 @@ export function listOpenRequests(actor: Actor): SubRequestWithGame[] {
 		.filter((entry): entry is SubRequestWithGame => entry !== null);
 }
 
-export function listMyRequests(actor: Actor): SubRequestWithGame[] {
+/**
+ * Le schedule est déjà chargé par l'appelant quand la page le possède. La
+ * valeur par défaut garde l'API simple pour les autres surfaces.
+ */
+export function listOpenRequests(
+	actor: Actor,
+	schedule: readonly GameSummary[] = listSchedule(actor)
+): SubRequestWithGame[] {
 	requireUser(actor);
-	const games = new Map(listSchedule(actor).map((game) => [game.id, game]));
-	return listOwnSubRequests(actor)
-		.map((request) => {
-			const game = games.get(request.gameId);
-			return game ? { ...request, game } : null;
-		})
-		.filter((entry): entry is SubRequestWithGame => entry !== null);
+	return withGames(listOpenRequestsForMember(actor), schedule);
+}
+
+export function listMyRequests(
+	actor: Actor,
+	schedule: readonly GameSummary[] = listSchedule(actor)
+): SubRequestWithGame[] {
+	requireUser(actor);
+	return withGames(listOwnSubRequests(actor), schedule);
 }
 
 export function listRequestsForGame(

@@ -9,7 +9,7 @@ import {
 	sendMessage
 } from '#lib/domain/chat/service.ts';
 import { canCreatePoll } from '#lib/domain/auth/policy.ts';
-import { CHAT_LIMITS } from '#lib/domain/chat/validators.ts';
+import { CHAT_LIMITS, voteInputSchema } from '#lib/domain/chat/validators.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
@@ -17,10 +17,6 @@ import { parseForm } from '#lib/shared/validation.ts';
 
 const messageSchema = z.object({
 	body: z.string().trim().min(1).max(CHAT_LIMITS.messageMax)
-});
-const voteSchema = z.object({
-	messageId: z.string().min(1),
-	optionId: z.string().min(1)
 });
 const idSchema = z.object({ messageId: z.string().min(1) });
 
@@ -67,7 +63,7 @@ export const actions: Actions = {
 	},
 	vote: async ({ request, locals }) => {
 		try {
-			const parsed = parseForm(voteSchema, await request.formData());
+			const parsed = parseForm(voteInputSchema, await request.formData());
 			castPollVote(locals.actor, parsed);
 			return { ok: true, message: t('chat.voteSaved') };
 		} catch (cause) {

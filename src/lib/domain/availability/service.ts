@@ -95,10 +95,9 @@ function isLocked(game: GameSummary): boolean {
 	return clock.nowMs() >= closesAtMs(game);
 }
 
-export function getAvailability(actor: Actor, gameId: string): AvailabilityView {
+export function availabilityForGame(actor: Actor, game: GameSummary): AvailabilityView {
 	const user = requireUser(actor);
-	const game = getGame(actor, gameId);
-	const rows = listGamePresence(gameId);
+	const rows = listGamePresence(game.id);
 	const names = new Map(
 		playersByIds(rows.map((row) => row.playerId)).map((player) => [
 			player.userId,
@@ -143,6 +142,10 @@ export function getAvailability(actor: Actor, gameId: string): AvailabilityView 
 		substitute: profile?.isSubstitute ?? false,
 		closesAtLabel: formatTimestamp(closesAtMs(game))
 	};
+}
+
+export function getAvailability(actor: Actor, gameId: string): AvailabilityView {
+	return availabilityForGame(actor, getGame(actor, gameId));
 }
 
 export function markAvailability(

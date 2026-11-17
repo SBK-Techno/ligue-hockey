@@ -13,15 +13,14 @@
 </script>
 
 <div class="card">
+	<h1 class="text-figure">{t(resetTitleKey(data.mode))}</h1>
+
 	{#if expired}
-		<h1 class="text-2xl">{t(resetTitleKey(data.mode))}</h1>
-		<p class="alert mt-5" role="alert">{t('invite.expired')}</p>
-		<p class="mt-4 text-sm leading-relaxed text-muted">{t('invite.expiredHelp')}</p>
+		<p class="notice mt-5" role="status">{t('invite.expired')}</p>
+		<p class="mt-4 text-body leading-relaxed text-muted">{t('invite.expiredHelp')}</p>
 		<a class="btn-primary mt-6 w-full" href="/mot-de-passe-oublie">{t('auth.reset.submit')}</a>
-		<a class="link mt-4 block text-center text-sm" href="/connexion">{t('auth.reset.back')}</a>
 	{:else}
-		<h1 class="text-2xl">{t(resetTitleKey(data.mode))}</h1>
-		<p class="mt-1 text-sm leading-relaxed text-muted">{t(resetLeadKey(data.mode))}</p>
+		<p class="mt-1 text-body leading-relaxed text-muted">{t(resetLeadKey(data.mode))}</p>
 
 		<FormFeedback {form} section="mot-de-passe" class="mt-5" />
 
@@ -45,8 +44,9 @@
 			/>
 			<button class="btn-primary w-full" type="submit">{t('invite.submit')}</button>
 		</form>
-		<div class="mt-5 text-center">
-			<a class="action-link text-sm" href="/connexion">{t('auth.reset.back')}</a>
-		</div>
 	{/if}
+
+	<div class="mt-5 text-center">
+		<a class="action-link text-body" href="/connexion">{t('auth.reset.back')}</a>
+	</div>
 </div>

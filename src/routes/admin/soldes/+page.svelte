@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { balanceStatusDefinition } from '#config/balance-status.ts';
-	import { formatMoney, t } from '#lib/shared/i18n/index.ts';
-	import { badgeClass } from '#lib/ui/badge-tone.ts';
+	import { formatCount, formatMoney, t } from '#lib/shared/i18n/index.ts';
+	import EmptyState from '#lib/ui/EmptyState.svelte';
+	import FilterChips from '#lib/ui/FilterChips.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import RecordRow from '#lib/ui/RecordRow.svelte';
+	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import StatStrip from '#lib/ui/StatStrip.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -35,96 +39,74 @@
 
 <PageHeader title={t('admin.balances')} meta={t('admin.balancesHelp')} />
 
-<div class="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-sheet border border-line bg-line lg:grid-cols-4">
-	<div class="bg-surface px-4 py-3">
-		<p class="numeric text-xl">{formatMoney(data.totals.total ?? 0, data.currency)}</p>
-		<p class="mt-0.5 text-xs text-muted">{t('balance.total')}</p>
-	</div>
-	<div class="bg-surface px-4 py-3">
-		<p class="numeric text-xl">{formatMoney(data.totals.paid ?? 0, data.currency)}</p>
-		<p class="mt-0.5 text-xs text-muted">{t('balance.paid')}</p>
-	</div>
-	<div class="bg-surface px-4 py-3">
-		<p class="numeric text-xl">{formatMoney(data.totals.outstanding ?? 0, data.currency)}</p>
-		<p class="mt-0.5 text-xs text-muted">{t('balance.outstanding')}</p>
-	</div>
-	<div class="bg-surface px-4 py-3">
-		<p class="numeric text-xl {(data.totals.overdue ?? 0) > 0 ? 'text-alert' : ''}">
-			{data.totals.overdue ?? 0}
-		</p>
-		<p class="mt-0.5 text-xs text-muted">{t('admin.overdueBalances')}</p>
-	</div>
+<div class="page-stack">
+	<StatStrip
+		cells={[
+			{ value: formatMoney(data.totals.total ?? 0, data.currency), label: t('balance.total') },
+			{ value: formatMoney(data.totals.paid ?? 0, data.currency), label: t('balance.paid') },
+			{
+				value: formatMoney(data.totals.outstanding ?? 0, data.currency),
+				label: t('balance.outstanding')
+			},
+			{
+				value: data.totals.overdue ?? 0,
+				label: t('admin.overdueBalances'),
+				tone: (data.totals.overdue ?? 0) > 0 ? ('alert' as const) : undefined
+			}
+		]}
+	/>
+
+	{#if data.balances.length > 0}
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+			<FilterChips
+				items={filters.map((option) => ({ key: option.key, label: t(option.labelKey) }))}
+				active={filter}
+				label={t('admin.filter')}
+				onselect={(key) => (filter = key as Filter)}
+			/>
+			<p class="text-meta text-muted sm:ml-auto" aria-live="polite">
+				{formatCount(rows.length, 'common.playerCount.one', 'common.playerCount.many')}
+			</p>
+		</div>
+	{/if}
+
+	{#if data.balances.length === 0}
+		<EmptyState title={t('admin.noPlayers')} />
+	{:else if rows.length === 0}
+		<EmptyState title={t('admin.noResults')}>
+			{#snippet action()}
+				<button class="btn-secondary" type="button" onclick={() => (filter = 'all')}>
+					{t('admin.filterAll')}
+				</button>
+			{/snippet}
+		</EmptyState>
+	{:else}
+		<SectionCard title={t('admin.balances')} flush>
+			<ul role="list" class="divide-y divide-line">
+				{#each rows as row (row.playerId)}
+					{@const status = balanceStatusDefinition(row.status)}
+					<li>
+						<RecordRow
+							href="/admin/joueurs/{row.playerId}#solde"
+							title={row.playerName}
+							meta={[
+								!row.active ? t('admin.inactive') : null,
+								row.hasPlan
+									? t('balance.paidOf', {
+											paid: formatMoney(row.paidCents, row.currency),
+											total: formatMoney(row.totalCents, row.currency)
+										})
+									: null
+							]
+								.filter(Boolean)
+								.join(' · ')}
+							trailing={formatMoney(row.outstandingCents, row.currency)}
+							badge={row.hasPlan ? t(status.labelKey) : t('balance.noPlanShort')}
+							badgeTone={row.hasPlan ? status.tone : 'neutral'}
+						/>
+					</li>
+				{/each}
+			</ul>
+		</SectionCard>
+	{/if}
 </div>
-
-{#if data.balances.length > 0}
-	<div class="mb-3 flex flex-wrap items-center gap-1">
-		{#each filters as option (option.key)}
-			<button
-				type="button"
-				class="min-h-11 rounded-control border px-2.5 text-[13px] font-medium transition-colors {filter ===
-				option.key
-					? 'border-ice bg-ice text-on-brand'
-					: 'border-line-strong bg-surface text-muted hover:bg-paper'}"
-				aria-pressed={filter === option.key}
-				onclick={() => (filter = option.key)}
-			>
-				{t(option.labelKey)}
-			</button>
-		{/each}
-	</div>
-{/if}
-
-{#if data.balances.length === 0}
-	<div class="card">
-		<p class="text-sm text-muted">{t('admin.noPlayers')}</p>
-	</div>
-{:else if rows.length === 0}
-	<div class="card">
-		<p class="text-sm text-muted">{t('admin.noResults')}</p>
-	</div>
-{:else}
-	<div class="card-flush overflow-hidden">
-		<ul role="list" class="divide-y divide-line/70">
-			{#each rows as row (row.playerId)}
-				<li>
-					<a
-						class="flex min-h-14 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-ink/[0.03]"
-						href="/admin/joueurs/{row.playerId}"
-					>
-						<span class="min-w-0 flex-1">
-							<span class="flex min-w-0 items-center gap-2">
-								<span class="truncate font-semibold text-ink">{row.playerName}</span>
-								{#if !row.active}
-									<span class="badge shrink-0">{t('admin.status.inactive')}</span>
-								{/if}
-							</span>
-							<span class="mt-0.5 block truncate text-xs text-muted">
-								{#if row.hasPlan}
-									{t('balance.paidOf', {
-										paid: formatMoney(row.paidCents, row.currency),
-										total: formatMoney(row.totalCents, row.currency)
-									})}
-								{:else}
-									{t('balance.noPlanShort')}
-								{/if}
-							</span>
-						</span>
-						<span class="shrink-0 text-right">
-							<span class="numeric block text-base {row.isOverdue ? 'text-alert' : 'text-ink'}">
-								{formatMoney(row.outstandingCents, row.currency)}
-							</span>
-							<span class="mt-0.5 block">
-								{#if !row.hasPlan}
-									<span class="badge">{t('balance.noPlanShort')}</span>
-								{:else}
-									{@const status = balanceStatusDefinition(row.status)}
-									<span class={badgeClass(status.tone)}>{t(status.labelKey)}</span>
-								{/if}
-							</span>
-						</span>
-					</a>
-				</li>
-			{/each}
-		</ul>
-	</div>
-{/if}
