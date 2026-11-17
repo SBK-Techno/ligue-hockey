@@ -61,7 +61,18 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}', 'scripts/**/*.spec.ts'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.client.spec.ts']
+				}
+			},
+			{
+				extends: './vite.config.ts',
+				// Le montage d'un composant exige la version client de Svelte; le
+				// projet serveur garde la résolution Node par défaut.
+				resolve: { conditions: ['browser'] },
+				test: {
+					name: 'client',
+					environment: 'happy-dom',
+					include: ['src/**/*.client.spec.ts']
 				}
 			}
 		]

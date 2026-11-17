@@ -347,7 +347,7 @@
 
 		<div class="grid gap-4 lg:items-start xl:grid-cols-[minmax(0,1fr)_20rem]">
 			<div class="page-stack min-w-0">
-				<div id="compte" class="scroll-mt-[var(--anchor-offset)]">
+				<div id="compte">
 					<SectionCard title={t('profile.account')}>
 						<p class="hint">{t('profile.accountHelp')}</p>
 						<FormFeedback {form} section="compte" class="mt-3" />
@@ -391,7 +391,7 @@
 				</div>
 
 				{#if profile}
-					<div id="joueur" class="scroll-mt-[var(--anchor-offset)]">
+					<div id="joueur">
 						<SectionCard title={t('profile.playerSection')}>
 							<p class="hint">{t('profile.playerSectionHelp')}</p>
 							<FormFeedback {form} section="joueur" class="mt-3" />
@@ -487,7 +487,7 @@
 					</div>
 
 					{#if data.isSubstitute}
-						<div id="positions" class="scroll-mt-[var(--anchor-offset)]">
+						<div id="positions">
 							<SectionCard title={t('subs.positions')}>
 								<p class="hint">{t('subs.positionsHelp')}</p>
 								<FormFeedback {form} section="positions" class="mt-3" />
@@ -520,7 +520,7 @@
 
 			<div class="page-stack min-w-0">
 				{#if data.stats}
-					<div id="stats" class="scroll-mt-[var(--anchor-offset)]">
+					<div id="stats">
 						<SectionCard title={t('stats.title')}>
 							{#if data.stats.games === 0}
 								<p class="text-body text-muted">{t('stats.empty')}</p>
@@ -539,7 +539,7 @@
 					</div>
 				{/if}
 
-				<div id="notifications" class="scroll-mt-[var(--anchor-offset)]">
+				<div id="notifications">
 					<SectionCard title={t('profile.notifications')}>
 						<p class="hint">{t('profile.notificationsHelp')}</p>
 						<FormFeedback {form} section="notifications" class="mt-3" />
@@ -614,7 +614,7 @@
 					</SectionCard>
 				</div>
 
-				<div id="securite" class="scroll-mt-[var(--anchor-offset)]">
+				<div id="securite">
 					<SectionCard title={t('profile.security')}>
 						<p class="hint">{t('profile.securityHelp')}</p>
 						<FormFeedback {form} section="securite" class="mt-3" />
@@ -742,7 +742,7 @@
 				</div>
 
 				{#if isManager}
-					<div id="administration" class="scroll-mt-[var(--anchor-offset)]">
+					<div id="administration">
 						<SectionCard title={t('profile.adminSection')}>
 							<p class="hint">{t('profile.adminHelp')}</p>
 							<div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">

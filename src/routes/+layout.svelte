@@ -179,7 +179,7 @@
 		<main
 			id="contenu"
 			tabindex="-1"
-			class="mx-auto w-full max-w-6xl xl:max-w-7xl scroll-mt-[var(--anchor-offset)] px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
+			class="mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
 		>
 			{#key page.url.pathname}
 				<div class="page-enter">{@render children()}</div>

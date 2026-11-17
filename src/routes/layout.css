@@ -7,8 +7,8 @@
 	html {
 		color-scheme: light;
 		background: var(--color-paper);
-		scroll-padding-top: var(--anchor-offset);
-		scroll-padding-bottom: var(--bottom-bar-offset);
+		scroll-padding-top: calc(var(--anchor-offset) + var(--surface-top-inset, 0px));
+		scroll-padding-bottom: calc(var(--bottom-bar-offset) + var(--surface-bottom-inset, 0px));
 		scrollbar-color: var(--color-line) transparent;
 		-webkit-tap-highlight-color: color-mix(in srgb, var(--color-ice) 12%, transparent);
 	}

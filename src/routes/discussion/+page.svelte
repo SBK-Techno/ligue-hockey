@@ -7,6 +7,7 @@
 	import { toDate, todayInZone } from '#lib/shared/time/clock.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
 	import ChatNewMessages from '#lib/ui/ChatNewMessages.svelte';
+	import { publishChromeInset } from '#lib/ui/chrome-inset.svelte.ts';
 
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
@@ -18,6 +19,14 @@
 
 	let { data, form }: PageProps = $props();
 	let showPoll = $state(false);
+	// Le compositeur collant s'ajoute à la barre mobile : sa hauteur mesurée
+	// rejoint l'unique décalage composé par `layout.css`.
+	let composerHeight = $state(0);
+
+	$effect(() => {
+		publishChromeInset('bottom', composerHeight);
+		return () => publishChromeInset('bottom', 0);
+	});
 	// Seeded once from the server limits; the user owns the list afterwards.
 	// svelte-ignore state_referenced_locally
 	let pollOptions = $state<string[]>(
@@ -342,6 +351,7 @@
 			use:progressiveForm
 			aria-label={t('chat.writeTitle')}
 			class="sticky bottom-[var(--bottom-bar-offset)] z-20 w-full lg:bottom-4"
+			bind:clientHeight={composerHeight}
 		>
 			<label class="sr-only" for="chat-body">{t('chat.messageLabel')}</label>
 			<div class="sheet flex items-end gap-2 p-2">

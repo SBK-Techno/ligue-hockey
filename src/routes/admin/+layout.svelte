@@ -4,6 +4,7 @@
 	import { ADMIN_TABS } from '#config/admin-tabs.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import { publishChromeInset } from '#lib/ui/chrome-inset.svelte.ts';
 	import { isActiveHref } from '#lib/ui/nav.ts';
 
 	let {
@@ -18,12 +19,18 @@
 	}
 
 	const selected = $derived(tabs.find((tab) => active(tab.href))?.href ?? tabs[0]?.href ?? '/admin');
+
+	// La sous-barre mobile recouvre le document sous l'en-tête : sa hauteur
+	// mesurée rejoint l'unique décalage composé par `layout.css`.
+	let subBarHeight = $state(0);
+
+	$effect(() => {
+		publishChromeInset('top', subBarHeight);
+		return () => publishChromeInset('top', 0);
+	});
 </script>
 
-<div
-	class="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:items-start lg:gap-8"
-	style="--anchor-offset: calc(3.75rem + 3.5rem + env(safe-area-inset-top) + 0.75rem)"
->
+<div class="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:items-start lg:gap-8">
 	<aside
 		class="hidden lg:sticky lg:top-[calc(3.75rem+1px+env(safe-area-inset-top)+1rem)] lg:block lg:border-r lg:border-line lg:pr-4"
 	>
@@ -60,6 +67,7 @@
 	<div class="min-w-0">
 		<div
 			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-paper px-4 py-2 lg:hidden"
+			bind:clientHeight={subBarHeight}
 		>
 			<a
 				href="/"

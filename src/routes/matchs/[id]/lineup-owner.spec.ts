@@ -202,13 +202,14 @@ describe('propriétaire de la régénération d’alignement', () => {
 		});
 		const feedback = page.body.indexOf(message);
 		const title = page.body.indexOf(t('games.roster'));
-		const card = page.body.lastIndexOf('<section class="sheet', feedback);
+		const boundary = page.body.indexOf('<section', title);
 
 		expect(title).toBeGreaterThan(-1);
+		expect(boundary).toBeGreaterThan(title);
 		expect(feedback).toBeGreaterThan(title);
-		expect(card).toBeGreaterThan(-1);
-		expect(page.body.slice(card, feedback)).not.toContain('</section>');
-		expect(page.body.slice(feedback - 300, feedback)).toContain('tabindex="-1"');
+		expect(feedback).toBeLessThan(boundary);
+		const card = page.body.slice(title, boundary);
+		expect(card).toContain('tabindex="-1"');
 		expect(page.body.split(message)).toHaveLength(2);
 	});
 });

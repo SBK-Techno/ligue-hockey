@@ -279,7 +279,7 @@
 			</SectionCard>
 		</div>
 
-		<div id="solde" class="scroll-mt-[var(--anchor-offset)]">
+		<div id="solde">
 			<SectionCard title={t('balance.title')}>
 				<div class="mb-3 flex flex-wrap justify-end">
 					<form method="POST" action="?/applyDefaults" use:progressiveForm>

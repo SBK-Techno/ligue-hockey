@@ -204,7 +204,7 @@ export const playerPeek = {
 export function installPlayerPeekTriggers(): () => void {
 	function triggerFrom(target: EventTarget | null): HTMLElement | null {
 		if (!(target instanceof Element)) return null;
-		const trigger = target.closest<HTMLElement>('[data-player-id]');
+		const trigger = target.closest<HTMLElement>('[data-player-peek]');
 		if (!trigger || trigger.closest('[data-player-peek-card]')) return null;
 		return trigger.dataset.playerId ? trigger : null;
 	}
@@ -268,7 +268,7 @@ export function installPlayerPeekTriggers(): () => void {
 		if (event.target instanceof Element && event.target.closest('[data-player-peek-card]')) {
 			return;
 		}
-		if (event.target instanceof Element && event.target.closest('[data-player-id]')) return;
+		if (event.target instanceof Element && event.target.closest('[data-player-peek]')) return;
 		closePlayerPeek();
 	}
 

@@ -148,7 +148,7 @@
 		>
 			<ul
 				role="list"
-				class="scroll-mt-[calc(var(--anchor-offset)+0.5rem)] divide-y divide-line"
+				class="divide-y divide-line"
 				id="archive"
 			>
 				{#each data.past as game (game.id)}
