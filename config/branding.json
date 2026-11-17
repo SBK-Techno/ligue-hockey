@@ -16,8 +16,8 @@
   "socialImage": "/social/apercu.jpg",
   "socialSource": "config/branding/social-source-2026.jpg",
   "textures": {
-    "paper": "config/branding/paper-source.png",
-    "ice": "config/branding/ice-source.jpg"
+    "paper": "config/branding/paper-source-2026.webp",
+    "ice": "config/branding/ice-source-2026.webp"
   },
   "icons": {
     "favicon": 32,

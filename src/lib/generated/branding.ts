@@ -27,7 +27,7 @@ export const branding = {
     "width": 1200,
     "height": 800
   },
-  "identitySprite": "/identities/identities-edd83902f68c.svg",
+  "identitySheet": "/identities/identities-cef75f290495.webp",
   "manifestPath": "/manifest.webmanifest",
   "offlinePath": "/offline.html",
   "publicPaths": [
@@ -40,14 +40,14 @@ export const branding = {
     "/auth/dressing-room-640-ef36f1188f7d.webp",
     "/auth/dressing-room-960-430e80cf4704.webp",
     "/auth/dressing-room-1200-3012b5b41fdc.webp",
-    "/identities/identities-edd83902f68c.svg",
+    "/identities/identities-cef75f290495.webp",
     "/icons/favicon-32.4c6787c2333a.png",
     "/icons/apple-touch-180.aff87536bf7c.png",
     "/icons/icon-192-192.073945cb4e02.png",
     "/icons/icon-512-512.904ac52376ea.png",
     "/icons/maskable-512-512.5c023d038900.png",
-    "/textures/paper-fc4ef8d7aad2.webp",
-    "/textures/ice-e5f5845016e5.webp"
+    "/textures/paper-5d144676dd63.webp",
+    "/textures/ice-4aef57e48b6b.webp"
   ],
   "cachePrefix": "lhdm",
   "icons": {
@@ -58,8 +58,8 @@ export const branding = {
     "maskable": "/icons/maskable-512-512.5c023d038900.png"
   },
   "textures": {
-    "paper": "/textures/paper-fc4ef8d7aad2.webp",
-    "ice": "/textures/ice-e5f5845016e5.webp"
+    "paper": "/textures/paper-5d144676dd63.webp",
+    "ice": "/textures/ice-4aef57e48b6b.webp"
   }
 } as const;
 

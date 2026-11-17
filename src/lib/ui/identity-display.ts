@@ -1,9 +1,38 @@
+import { IDENTITY_IDS } from '#config/identities.ts';
+import { IDENTITY_SHEET } from '#config/identity-sheet.ts';
+import { branding } from '#lib/generated/branding.ts';
+
 /**
- * L'identifiant stable d'un symbole dans la planche SVG des identités. Le
- * générateur et le composant Avatar partagent cette seule convention.
+ * La position d'une identité dans la planche unique. La colonne et la ligne
+ * viennent du même catalogue que le générateur; aucun composant ne recompose
+ * un nom de fichier ni un indice de tuile.
  */
-export function identitySymbolId(identityId: string): string {
-	return `identity-${identityId}`;
+const columns = IDENTITY_SHEET.columns;
+const rows = Math.ceil(IDENTITY_IDS.length / columns);
+const positions = new Map<string, { x: number; y: number }>(
+	IDENTITY_IDS.map((identityId, index) => [
+		identityId,
+		{
+			x: ((index % columns) / (columns - 1)) * 100,
+			y: (Math.floor(index / columns) / (rows - 1)) * 100
+		}
+	])
+);
+
+/**
+ * Le style de la tuile d'une identité dans la planche. Une image, une taille
+ * de fond commune, une position par identité : le navigateur ne télécharge
+ * jamais 58 fichiers.
+ */
+export function identitySheetStyle(identityId: string): string {
+	const position = positions.get(identityId);
+	if (!position) return '';
+	return [
+		`background-image: url(${branding.identitySheet})`,
+		`background-size: ${columns * 100}% ${rows * 100}%`,
+		`background-position: ${position.x}% ${position.y}%`,
+		'background-repeat: no-repeat'
+	].join('; ');
 }
 
 /**

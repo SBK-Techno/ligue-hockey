@@ -1,14 +1,15 @@
 import { positionDefinition, type Position } from '#config/positions.ts';
-import { rinkRole, type RinkPlacement } from '#config/rink.ts';
+import { rinkRole, type RinkPlacement, type RinkRoleKey } from '#config/rink.ts';
 import { slotKey } from '#config/slot.ts';
 import { teamDefinition, type Team } from '#config/teams.ts';
+import type { I18nKey } from '#config/i18n/fr.ts';
 import type { GameSlotView } from '#lib/domain/games/types.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 
 type NamedPlacement = {
 	position: Position;
 	slotIndex: number;
-	role: Pick<RinkPlacement, 'labelKey' | 'line' | 'pair'> | null;
+	role: Pick<RinkPlacement, 'key' | 'labelKey' | 'line' | 'pair'> | null;
 };
 
 /** Le nom de famille affiché sous le numéro, sur un jeton de la glace. */
@@ -22,6 +23,24 @@ export function rinkTokenText(player: {
 	fullName: string;
 }): string {
 	return `${player.jerseyNumber ?? '?'} ${rinkPlayerLastName(player.fullName)}`;
+}
+
+/**
+ * L'abréviation visible d'une place vide. Elle reste courte pour tenir dans le
+ * jeton de 44 px, et le nom accessible la reprend pour que le libellé visible
+ * soit toujours contenu dans le nom accessible.
+ */
+const ROLE_SHORT_LABEL: Record<RinkRoleKey, I18nKey> = {
+	G: 'rink.short.goalie',
+	LD: 'rink.short.leftDefense',
+	RD: 'rink.short.rightDefense',
+	C: 'rink.short.center',
+	LW: 'rink.short.leftWing',
+	RW: 'rink.short.rightWing'
+};
+
+export function rinkRoleShortLabel(role: Pick<RinkPlacement, 'key'>): string {
+	return t(ROLE_SHORT_LABEL[role.key]);
 }
 
 /**
@@ -40,6 +59,7 @@ export function slotAriaLabel(
 ): string {
 	const parts = [t(teamDefinition(team).labelKey)];
 	if (placement.role) {
+		parts.push(rinkRoleShortLabel(placement.role));
 		parts.push(t(placement.role.labelKey));
 		if (placement.position === 'forward') {
 			parts.push(t('rink.line', { line: placement.role.line }));
@@ -176,16 +196,31 @@ export function selectPlace(
 			assignments: state.assignments
 		};
 	}
+	return dropOnPlace(state, key);
+}
+
+/**
+ * Le dépôt d'un joueur sélectionné sur une place, pour le glisser-déposer.
+ * Contrairement au second clic, déposer un joueur sur sa propre place ne le
+ * relâche pas : c'est un geste sans effet, pas une annulation.
+ */
+export function dropOnPlace(
+	state: LineupSelection,
+	target: string
+): LineupSelection {
+	if (!(target in state.assignments) || state.selected === null) return state;
+	if (state.selected === target) return state;
 	const playerId = benchPlayerId(state.selected);
 	if (playerId !== null) {
 		return {
 			selected: null,
-			assignments: placeFromBench(state.assignments, playerId, key)
+			assignments: placeFromBench(state.assignments, playerId, target)
 		};
 	}
+	if (!(state.selected in state.assignments)) return state;
 	return {
 		selected: null,
-		assignments: swapPlayers(state.assignments, state.selected, key)
+		assignments: swapPlayers(state.assignments, state.selected, target)
 	};
 }
 

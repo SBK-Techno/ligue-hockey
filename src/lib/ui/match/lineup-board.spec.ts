@@ -10,9 +10,11 @@ import {
 	benchPlayerId,
 	boardPlacements,
 	clearSelectedPlace,
+	dropOnPlace,
 	initialAssignments,
 	placeFromBench,
 	removePlayer,
+	rinkRoleShortLabel,
 	selectBenchPlayer,
 	selectPlace,
 	slotAriaLabel,
@@ -248,5 +250,99 @@ describe('sélection de la carte', () => {
 		const bench = { selected: benchKey('d'), assignments: initialAssignments(slots) };
 		expect(clearSelectedPlace(bench)).toBe(bench);
 		expect(clearSelectedPlace({ selected: null, assignments: initialAssignments(slots) }).selected).toBeNull();
+	});
+});
+
+describe('dépôt sur la glace', () => {
+	const base = initialAssignments(slots);
+
+	it('pose un joueur du banc sur une place vide sans toucher aux autres', () => {
+		const dropped = dropOnPlace(
+			{ selected: benchKey('d'), assignments: base },
+			'black:goalie:0'
+		);
+
+		expect(dropped.selected).toBeNull();
+		expect(dropped.assignments['black:goalie:0']).toBe('d');
+		expect(dropped.assignments['white:forward:0']).toBe('a');
+	});
+
+	it('déplace un joueur de la glace vers une place vide', () => {
+		const dropped = dropOnPlace(
+			{ selected: 'white:forward:0', assignments: base },
+			'black:goalie:0'
+		);
+
+		expect(dropped.assignments['black:goalie:0']).toBe('a');
+		expect(dropped.assignments['white:forward:0']).toBeNull();
+	});
+
+	it('échange deux joueurs quand la place est occupée', () => {
+		const dropped = dropOnPlace(
+			{ selected: 'white:forward:0', assignments: base },
+			'black:forward:0'
+		);
+
+		expect(dropped.assignments['white:forward:0']).toBe('c');
+		expect(dropped.assignments['black:forward:0']).toBe('a');
+	});
+
+	it('ne relâche pas la sélection en déposant sur sa propre place', () => {
+		const state = { selected: 'white:forward:0', assignments: base };
+
+		expect(dropOnPlace(state, 'white:forward:0')).toBe(state);
+	});
+
+	it('ignore une place inconnue et garde la sélection', () => {
+		const state = { selected: 'white:forward:0', assignments: base };
+
+		expect(dropOnPlace(state, 'nope')).toBe(state);
+	});
+
+	it('ignore une sélection dont la place n’existe plus', () => {
+		const state = { selected: 'white:forward:7', assignments: base };
+
+		expect(dropOnPlace(state, 'black:forward:0')).toBe(state);
+	});
+
+	it('replace un joueur du banc déjà sur la glace en échangeant sa place', () => {
+		const dropped = dropOnPlace(
+			{ selected: benchKey('a'), assignments: base },
+			'black:forward:0'
+		);
+
+		expect(dropped.assignments['black:forward:0']).toBe('a');
+		expect(dropped.assignments['white:forward:0']).toBe('c');
+	});
+});
+
+describe('abréviations des places', () => {
+	it('nomme chaque rôle avec son abréviation française', () => {
+		const cases = [
+			['goalie', 0, 'G'],
+			['defense', 0, 'DG'],
+			['defense', 1, 'DD'],
+			['forward', 0, 'C'],
+			['forward', 1, 'AG'],
+			['forward', 2, 'AD']
+		] as const;
+
+		for (const [position, slotIndex, expected] of cases) {
+			const role = rinkRole(position, slotIndex);
+			expect(role, `${position}:${slotIndex}`).not.toBeNull();
+			expect(rinkRoleShortLabel(role!)).toBe(expected);
+		}
+	});
+
+	it('garde l’abréviation visible dans le nom accessible d’une place vide', () => {
+		const role = rinkRole('forward', 1)!;
+		const label = slotAriaLabel(
+			'white',
+			{ position: 'forward', slotIndex: 1, role },
+			null
+		);
+
+		expect(label).toContain('AG');
+		expect(label).toContain(t('rink.emptySlot'));
 	});
 });

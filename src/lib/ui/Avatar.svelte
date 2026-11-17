@@ -1,10 +1,9 @@
 <script lang="ts">
-	import type { AvatarArt } from '#config/avatars.ts';
-	import { identityById, isIdentityId } from '#config/identities.ts';
+	import { isIdentityId } from '#config/identities.ts';
 	import { avatarColor, resolveAvatarId } from '#lib/domain/players/identity.ts';
-	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
-	import { identitySymbolId, monogram } from './identity-display.ts';
+	import IdentityPortrait from './IdentityPortrait.svelte';
+	import { monogram } from './identity-display.ts';
 
 	type AvatarSize = 24 | 32 | 40 | 48 | 64 | 96;
 
@@ -21,15 +20,10 @@
 	} = $props();
 
 	const avatarId = $derived(resolveAvatarId(player.userId, player.avatarId));
-	const variant = $derived(variantFor(avatarId));
 	const boxStyle = $derived(
 		`--player-color: var(${avatarColor(avatarId)}); width: ${size}px; height: ${size}px; font-size: ${Math.round(size * 0.34)}px;`
 	);
 	const initials = $derived(monogram(player.fullName));
-
-	function variantFor(id: string): AvatarArt | undefined {
-		return isIdentityId(id) ? identityById[id] : undefined;
-	}
 
 </script>
 
@@ -37,7 +31,7 @@
      the catalogue stays an image otherwise. -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <span
-	class="inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-paper-deep align-middle"
+	class="avatar-frame inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-paper-deep align-middle"
 	style={boxStyle}
 	role={decorative ? undefined : peek ? 'button' : 'img'}
 	aria-hidden={decorative ? 'true' : undefined}
@@ -52,11 +46,10 @@
 	aria-haspopup={peek && !decorative ? 'dialog' : undefined}
 	aria-expanded={peek && !decorative ? 'false' : undefined}
 >
-	{#if variant}
-		<!-- Le catalogue fixe est chargé une fois; chaque avatar n'est qu'une référence. -->
-		<svg viewBox="0 0 512 512" class="h-full w-full" aria-hidden="true" focusable="false">
-			<use href={`${branding.identitySprite}#${identitySymbolId(avatarId)}`}></use>
-		</svg>
+	{#if isIdentityId(avatarId)}
+		<!-- La planche fixe est chargée une fois; chaque avatar n'est qu'une
+		     position dans cette image. -->
+		<IdentityPortrait {avatarId} />
 	{:else}
 		<span class="font-semibold tracking-wide text-ink">{initials}</span>
 	{/if}

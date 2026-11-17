@@ -132,6 +132,34 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).not.toContain('aria-haspopup="dialog"');
 	});
 
+	it('affiche un portrait par joueur et le guide des trois gestes', () => {
+		const { body } = render(LineupBoard, {
+			props: { slots: fullSlots, bench, canEdit: true, expectedGeneratedAt: 123 }
+		});
+
+		expect((body.match(/class="identity-portrait"/g) ?? []).length).toBe(37);
+		expect(body).toMatch(/background-image: url\(\/identities\/identities-[0-9a-f]{12}\.webp\)/);
+		expect(body).toContain(t('rink.stepPick'));
+		expect(body).toContain(t('rink.stepPlace'));
+		expect(body).toContain(t('rink.stepSave'));
+		expect(body).toContain(t('rink.undo'));
+		expect(body).toContain('data-bench-drop="true"');
+
+		const keys = [...body.matchAll(/data-lineup-key="([^"]*)"/g)].map((match) => match[1]);
+		expect(keys).toHaveLength(38);
+		expect(new Set(keys).size).toBe(keys.length);
+	});
+
+	it('masque le guide et la cible du banc en lecture seule', () => {
+		const { body } = render(LineupBoard, {
+			props: { slots: fullSlots, bench, canEdit: false, expectedGeneratedAt: 123 }
+		});
+
+		expect(body).not.toContain(t('rink.stepPick'));
+		expect(body).not.toContain('data-bench-drop');
+		expect(body).not.toContain(t('rink.undo'));
+	});
+
 	it('annonce une fiche de joueur sur le banc en lecture seule, pas une sélection', () => {
 		const { body } = render(LineupBoard, {
 			props: {

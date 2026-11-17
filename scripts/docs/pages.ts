@@ -37,6 +37,10 @@ export const EXCLUDED_ROOT_PAGES: readonly { source: string; reason: string }[] 
 		reason: 'Consignes de l’agent, pas une page destinée aux lecteurs.'
 	},
 	{
+		source: 'PRODUCT.md',
+		reason: 'Contexte produit interne, hors du site public.'
+	},
+	{
 		source: 'PROGRESS.md',
 		reason: 'Suivi interne des lots et des vérifications, hors du site.'
 	}
