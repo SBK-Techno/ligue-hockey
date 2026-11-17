@@ -1,6 +1,6 @@
 import type { Position } from '#config/positions.ts';
 import { DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
-import type { AvatarId } from '#config/avatars.ts';
+import type { IdentityId } from '#config/identities.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
@@ -83,22 +83,22 @@ function toAdmin(row: ReturnType<typeof findPlayerWithEmail>): AdminPlayer {
 }
 
 export type AvatarPickerView = {
-	selected: AvatarId;
-	taken: AvatarId[];
+	selected: IdentityId;
+	taken: IdentityId[];
 };
 
 /**
  * The displayed identity of every active player, whether the avatar is stored
  * or derived. Two active players must never share the same appearance.
  */
-function activeAvatarUsage(): { userId: string; avatarId: AvatarId }[] {
+function activeAvatarUsage(): { userId: string; avatarId: IdentityId }[] {
 	return listActiveAvatarAssignments().map((row) => ({
 		userId: row.userId,
 		avatarId: resolveAvatarId(row.userId, row.avatarId)
 	}));
 }
 
-function takenAvatarIds(playerId: string): AvatarId[] {
+function takenAvatarIds(playerId: string): IdentityId[] {
 	return [
 		...new Set(
 			activeAvatarUsage()
@@ -108,13 +108,13 @@ function takenAvatarIds(playerId: string): AvatarId[] {
 	];
 }
 
-function assertAvatarAvailable(playerId: string, avatarId: AvatarId): void {
+function assertAvatarAvailable(playerId: string, avatarId: IdentityId): void {
 	if (takenAvatarIds(playerId).includes(avatarId)) {
 		throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
 	}
 }
 
-function nextFreeAvatarId(): AvatarId | null {
+function nextFreeAvatarId(): IdentityId | null {
 	return firstFreeAvatarId(activeAvatarUsage().map((entry) => entry.avatarId));
 }
 

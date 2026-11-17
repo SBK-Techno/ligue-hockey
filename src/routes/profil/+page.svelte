@@ -4,7 +4,8 @@
 	import { page } from '$app/state';
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
 	import { PLAYER_LIMITS } from '#config/players.ts';
-	import { POSITIONS, positionDefinition } from '#config/positions.ts';
+	import { POSITIONS, positionDefinition, type Position } from '#config/positions.ts';
+	import { legendForIdentity } from '#config/identities.ts';
 	import { roleDefinition } from '#config/roles.ts';
 	import { formatCount, formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
@@ -27,6 +28,10 @@
 	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
 	const account = $derived(data.account);
 	const profile = $derived(data.profile);
+	const legend = $derived(legendForIdentity(profile?.avatarId));
+	// Le poste suit le formulaire : la liste de légendes se filtre tout de suite.
+	// svelte-ignore state_referenced_locally
+	let position = $state<Position | null>(profile?.position ?? null);
 	const isManager = $derived(actor !== null && can(actor, 'viewAdmin'));
 	const canSeeRatings = $derived(actor !== null && can(actor, 'editRatings'));
 	const managementLinks = $derived(actor ? managementTabs(actor) : []);
@@ -227,6 +232,14 @@
 							{/if}
 						</span>
 					{/if}
+					{#if legend}
+						<span class="stamp border-paper/25 text-paper/80">
+							{t('profile.legendIdentity', {
+								name: legend.name,
+								number: legend.number
+							})}
+						</span>
+					{/if}
 				</div>
 
 				<p class="mt-5 border-t border-paper/10 pt-3 text-meta text-paper/55">
@@ -368,11 +381,9 @@
 								</div>
 								<div>
 									<label class="label" for="position">{t('position.label')}</label>
-									<select class="input" id="position" name="position" required>
-										{#each POSITIONS as position (position.key)}
-											<option value={position.key} selected={profile.position === position.key}>
-												{t(position.labelKey)}
-											</option>
+									<select class="input" id="position" name="position" required bind:value={position}>
+										{#each POSITIONS as entry (entry.key)}
+											<option value={entry.key}>{t(entry.labelKey)}</option>
 										{/each}
 									</select>
 									<p class="hint">{t('profile.positionHelp')}</p>
@@ -403,6 +414,7 @@
 											name="avatarId"
 											selected={data.avatarPicker.selected}
 											taken={data.avatarPicker.taken}
+											position={position}
 										/>
 									{/if}
 								</div>

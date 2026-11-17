@@ -1,4 +1,4 @@
-import type { AvatarVariant } from '#config/avatars.ts';
+import type { AvatarArt } from '#config/avatars.ts';
 
 /**
  * Renders an avatar from the catalogue. The SVG contains only custom
@@ -18,7 +18,7 @@ const HEAD =
 const BODY =
 	'M 34 512 C 42 450 76 412 138 394 L 198 376 C 219 394 236 400 256 400 C 276 400 293 394 314 376 L 374 394 C 436 412 470 450 478 512 Z';
 
-function hairBack(style: AvatarVariant['style']): string {
+function hairBack(style: AvatarArt['style']): string {
 	if (style === 'long') {
 		return `<path d="M 150 176 C 142 260 146 320 152 352 L 186 352 C 172 300 170 236 176 178 Z" fill="h"/>
 		        <path d="M 362 176 C 370 260 366 320 360 352 L 326 352 C 340 300 342 236 336 178 Z" fill="h"/>`;
@@ -29,7 +29,7 @@ function hairBack(style: AvatarVariant['style']): string {
 	return '';
 }
 
-function hairFront(style: AvatarVariant['style']): string {
+function hairFront(style: AvatarArt['style']): string {
 	switch (style) {
 		case 'bald':
 			return '';
@@ -52,7 +52,7 @@ function hairFront(style: AvatarVariant['style']): string {
 	}
 }
 
-function beard(style: AvatarVariant['facial'], hair: string): string {
+function beard(style: AvatarArt['facial'], hair: string): string {
 	if (style === 'none') return '';
 	if (style === 'moustache') {
 		return `<path d="M 228 272 C 240 264 272 264 284 272 C 276 280 236 280 228 272 Z" fill="${hair}"/>`;
@@ -78,7 +78,7 @@ function mask(): string {
 	</g>`;
 }
 
-export function avatarSvg(variant: AvatarVariant): string {
+export function avatarSvg(variant: AvatarArt): string {
 	const skin = `var(--color-avatar-skin-${variant.skin})`;
 	const hair = `var(--color-avatar-hair-${variant.hair})`;
 	const background = `var(--color-avatar-bg-${variant.bg})`;

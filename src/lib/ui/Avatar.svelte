@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { avatarById, isAvatarId, type AvatarVariant } from '#config/avatars.ts';
+	import type { AvatarArt } from '#config/avatars.ts';
+	import { identityById, isIdentityId } from '#config/identities.ts';
 	import { avatarColor, resolveAvatarId } from '#lib/domain/players/identity.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import { avatarSvg } from './avatar-art.ts';
@@ -23,8 +24,8 @@
 	);
 	const initials = $derived(monogram(player.fullName));
 
-	function variantFor(id: string): AvatarVariant | undefined {
-		return isAvatarId(id) ? avatarById[id] : undefined;
+	function variantFor(id: string): AvatarArt | undefined {
+		return isIdentityId(id) ? identityById[id] : undefined;
 	}
 
 	function monogram(name: string): string {

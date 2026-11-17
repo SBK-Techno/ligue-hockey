@@ -50,7 +50,7 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
-| Player avatar catalogue (identity, colours, appearance) | `config/avatars.ts` | profile picker, lineups, admin lists | catalogue test + no-raw-colour scan |
+| Player identity catalogue (league faces, tribute legends, colours, appearance) | `config/avatars.ts` and `config/legends.ts` → `config/identities.ts` | profile picker, lineups, admin lists | catalogue tests + no-raw-colour scan |
 | Database shape | `src/lib/domain/*/schema.ts` | migrations, services, types | `migrations.spec.ts` drift guard |
 
 Static literals for these facts are prohibited. A repeated value gets an owner and a derived consumer; it is never copied.
@@ -87,9 +87,11 @@ The anonymous auth shell uses one generated photograph as its only visual: a dre
 
 ## Player identity
 
-Every player shows one of 28 curated vector avatars from `config/avatars.ts`: skin tone, hair, background, hairstyle, facial hair and glasses. The catalogue owns the appearance; `src/lib/ui/avatar-art.ts` renders it as an SVG built only from that fixed data and from CSS custom properties, never from a player string, an image model or a raw colour. `src/lib/ui/Avatar.svelte` owns sizing and accessibility, and the lineup, profile and admin surfaces consume it without their own colour map.
+Every player shows one of 43 curated vector identities. `config/avatars.ts` owns the 28 league faces; `config/legends.ts` owns the 15 tribute legends. Both satisfy the same drawing contract, and `config/identities.ts` is the one catalogue that composes them, indexes them and colours them. `src/lib/ui/avatar-art.ts` renders either family as an SVG built only from that fixed data and from CSS custom properties, never from a player string, an image model or a raw colour. `src/lib/ui/Avatar.svelte` owns sizing and accessibility, and the lineup, profile and admin surfaces consume it without their own colour map.
 
-`players.avatar_id` stores the chosen id and may be null. A null or retired id resolves through FNV-1a from the account id in `src/lib/domain/players/identity.ts`, so an existing profile keeps a stable appearance without a migration write. The service reserves an avatar against the resolved identity of every active player, so two active players cannot share one; a new profile takes the first free catalogue entry. The service validates every choice against `AVATAR_IDS`.
+A legend is an identity, not a decoration: its name, jersey number, position and era are historical facts about a Montréal Canadiens alumnus, its portrait is an original stylised vector, and no photograph, logo or official mark is used. The picker offers only the five legends that played the position currently selected in the form, so the list always matches the player. The disclaimer next to the list is the single notice for the whole family.
+
+`players.avatar_id` stores the chosen id and may be null. A null or retired id resolves through FNV-1a from the account id in `src/lib/domain/players/identity.ts`, so an existing profile keeps a stable appearance without a migration write. The service reserves an identity against the resolved identity of every active player, so two active players cannot share one; a new profile takes the first free catalogue entry, league faces before legends. The service validates every choice against `IDENTITY_IDS`.
 
 ## Configuration
 

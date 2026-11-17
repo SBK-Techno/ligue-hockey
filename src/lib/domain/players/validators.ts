@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AVATAR_IDS } from '#config/avatars.ts';
+import { IDENTITY_IDS } from '#config/identities.ts';
 import { PLAYER_LIMITS } from '#config/players.ts';
 import { POSITION_KEYS } from '#config/positions.ts';
 import { checkboxToBoolean } from '#lib/shared/validation.ts';
@@ -8,7 +8,7 @@ const name = z.string().trim().min(1).max(PLAYER_LIMITS.nameMax);
 const age = z.coerce.number().int().min(PLAYER_LIMITS.ageMin).max(PLAYER_LIMITS.ageMax);
 
 const playerIdSchema = z.string().trim().min(1);
-const avatarId = z.enum(AVATAR_IDS);
+const avatarId = z.enum(IDENTITY_IDS);
 
 export const playerIdInputSchema = z.object({
 	playerId: playerIdSchema

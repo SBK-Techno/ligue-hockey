@@ -23,7 +23,12 @@ export type AvatarSkin = 1 | 2 | 3 | 4 | 5 | 6;
 export type AvatarHair = 1 | 2 | 3 | 4 | 5 | 6;
 export type AvatarBackground = 1 | 2 | 3 | 4 | 5 | 6;
 
-type AvatarVariantShape = {
+/**
+ * The drawing contract shared by every identity family. The base league
+ * avatars and the tribute legends both satisfy it, so the renderer has one
+ * input shape and no knowledge of where an identity comes from.
+ */
+export type AvatarArt = {
   id: string;
   color: number;
   skin: AvatarSkin;
@@ -64,7 +69,7 @@ export const AVATARS = [
   { id: 'casque-ardent', color: 26, skin: 1, hair: 3, bg: 4, style: 'helmet', facial: 'none', glasses: true, mouth: 'flat' },
   { id: 'masque-final', color: 27, skin: 6, hair: 3, bg: 5, style: 'mask', facial: 'none', glasses: false, mouth: 'grin' },
   { id: 'chignon-de-nuit', color: 28, skin: 4, hair: 6, bg: 2, style: 'bun', facial: 'none', glasses: false, mouth: 'smile' }
-] as const satisfies readonly AvatarVariantShape[];
+] as const satisfies readonly AvatarArt[];
 
 export type AvatarVariant = (typeof AVATARS)[number];
 export type AvatarId = AvatarVariant['id'];

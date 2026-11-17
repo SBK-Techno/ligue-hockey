@@ -7,7 +7,7 @@
 	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { capabilityDefinition } from '#config/capabilities.ts';
 	import { ROLES, roleDefinition, type Role } from '#config/roles.ts';
-	import { POSITIONS, positionDefinition } from '#config/positions.ts';
+	import { POSITIONS, positionDefinition, type Position } from '#config/positions.ts';
 	import { SETTINGS } from '#config/settings-registry.ts';
 	import {
 		currencySymbol,
@@ -31,6 +31,9 @@
 	let { data, form }: PageProps = $props();
 	const player = $derived(data.player);
 	let selectedRole = $state<Role | null>(null);
+	// Le poste pilote la liste de légendes offerte, sans attendre l’enregistrement.
+	// svelte-ignore state_referenced_locally
+	let position = $state<Position | null>(player?.position ?? null);
 	const activeRole = $derived(selectedRole ?? player?.role ?? 'player');
 	const selectedRoleDefinition = $derived(roleDefinition(activeRole));
 	const isSelf = $derived(
@@ -188,11 +191,9 @@
 					</div>
 					<div>
 						<label class="label" for="position">{t('profile.position')}</label>
-						<select class="input" id="position" name="position">
-							{#each POSITIONS as position (position.key)}
-								<option value={position.key} selected={position.key === player.position}>
-									{t(position.labelKey)}
-								</option>
+						<select class="input" id="position" name="position" bind:value={position}>
+							{#each POSITIONS as entry (entry.key)}
+								<option value={entry.key}>{t(entry.labelKey)}</option>
 							{/each}
 						</select>
 					</div>
@@ -217,6 +218,7 @@
 								selected={data.avatarPicker.selected}
 								taken={data.avatarPicker.taken}
 								help={t('admin.avatarHelp')}
+								position={position}
 							/>
 						{/if}
 					</div>
