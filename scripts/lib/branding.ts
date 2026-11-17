@@ -169,6 +169,15 @@ function buildOfflinePage(branding: Branding, palette: Palette): string {
  */
 export const OFFLINE_PATH = '/offline.html';
 export const MANIFEST_PATH = '/manifest.webmanifest';
+/**
+ * Le robots est écrit par ce générateur; le service worker est produit par
+ * SvelteKit. Leur URL publique appartient au même propriétaire : le
+ * consommateur qui décide quels fichiers coûtent une session lit
+ * `branding.publicPaths`.
+ */
+export const ROBOTS_PATH = '/robots.txt';
+export const SERVICE_WORKER_PATH = '/service-worker.js';
+export const GENERATED_ASSETS_PATH = '/generated-assets.json';
 
 function cachePrefix(branding: Branding): string {
 	const slug = branding.shortName
@@ -274,6 +283,23 @@ function buildBrandingModule(
 		authImage,
 		manifestPath: MANIFEST_PATH,
 		offlinePath: OFFLINE_PATH,
+		/**
+		 * Tous les fichiers publics servis sans session : le manifeste, la page
+		 * hors ligne, le robots, le service worker, le manifeste des actifs
+		 * générés et les médias nommés par contenu. Un consommateur ne complète
+		 * jamais cette liste lui-même.
+		 */
+		publicPaths: [
+			MANIFEST_PATH,
+			OFFLINE_PATH,
+			ROBOTS_PATH,
+			SERVICE_WORKER_PATH,
+			GENERATED_ASSETS_PATH,
+			branding.socialImage,
+			authImage,
+			...Object.values(icons),
+			...Object.values(textures)
+		],
 		cachePrefix: cachePrefix(branding),
 		icons,
 		textures
@@ -395,7 +421,7 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 	files.push({ path: `static${MANIFEST_PATH}`, contents: manifest });
 
 	files.push({ path: 'src/app.html', contents: buildAppShell(branding, palette) });
-	files.push({ path: 'static/robots.txt', contents: buildRobots(branding) });
+	files.push({ path: `static${ROBOTS_PATH}`, contents: buildRobots(branding) });
 	files.push({
 		path: `static${OFFLINE_PATH}`,
 		contents: buildOfflinePage(branding, appPalette)
@@ -431,7 +457,7 @@ export async function generateBranding(root: string): Promise<GeneratedFile[]> {
 		)
 	};
 	files.push({
-		path: 'static/generated-assets.json',
+		path: `static${GENERATED_ASSETS_PATH}`,
 		contents: `${JSON.stringify(checksums, null, 2)}\n`
 	});
 

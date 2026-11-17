@@ -2,6 +2,8 @@ import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { actorFromUser } from '#lib/domain/auth/types.ts';
+import { isAccountActive } from '#lib/domain/players/account-status.ts';
+import { actorContextRequired } from '#lib/server/actor-context.ts';
 import { auth } from '#lib/server/auth.ts';
 import { startup } from '#lib/server/startup.ts';
 import { isAppError } from '#lib/shared/errors.ts';
@@ -30,8 +32,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 	await startup();
 
 	const startedAt = clock.nowMs();
-	const session = await auth.api.getSession({ headers: event.request.headers });
-	event.locals.actor = actorFromUser(session?.user);
+	// Assets never read the actor: skip both the session lookup and the player
+	// activity read so an immutable file costs no SQLite query.
+	const session = actorContextRequired(event.url.pathname)
+		? await auth.api.getSession({ headers: event.request.headers })
+		: null;
+	event.locals.actor = session?.user
+		? actorFromUser({
+				...session.user,
+				active: isAccountActive(session.user.id)
+			})
+		: actorFromUser(null);
 	event.locals.sessionId = session?.session?.id ?? null;
 
 	const response = await svelteKitHandler({

@@ -7,6 +7,7 @@ import {
 import {
 	IDENTITIES,
 	IDENTITY_IDS,
+	identityAllowedForPosition,
 	identityById,
 	isIdentityId,
 	legendForIdentity
@@ -219,5 +220,38 @@ describe('résolution de l’identité', () => {
 		expect(firstFreeAvatarId([AVATAR_IDS[0], AVATAR_IDS[1]])).toBe(AVATAR_IDS[2]);
 		expect(firstFreeAvatarId(AVATAR_IDS)).toBe(LEGEND_IDS[0]);
 		expect(firstFreeAvatarId(IDENTITY_IDS)).toBeNull();
+	});
+
+	it('ne donne jamais une légende d’un autre poste', () => {
+		for (const position of POSITION_KEYS) {
+			expect(firstFreeAvatarId(AVATAR_IDS, position), position).toBe(
+				legendsForPosition(position)[0]?.id
+			);
+		}
+		expect(firstFreeAvatarId(AVATAR_IDS, 'forward')).toBe('legende-maurice-richard');
+		expect(firstFreeAvatarId(IDENTITY_IDS, 'forward')).toBeNull();
+	});
+});
+
+describe('position des identités', () => {
+	it('accepte chaque visage de la ligue à tous les postes', () => {
+		for (const avatarId of AVATAR_IDS) {
+			for (const position of POSITION_KEYS) {
+				expect(identityAllowedForPosition(avatarId, position), avatarId).toBe(true);
+			}
+		}
+	});
+
+	it('réserve chaque légende à son poste', () => {
+		for (const legend of LEGENDS) {
+			for (const position of POSITION_KEYS) {
+				expect(
+					identityAllowedForPosition(legend.id, position),
+					`${legend.id}:${position}`
+				).toBe(legend.position === position);
+			}
+		}
+		expect(identityAllowedForPosition('legende-lafleur', 'goalie')).toBe(false);
+		expect(identityAllowedForPosition('legende-plante', 'goalie')).toBe(true);
 	});
 });

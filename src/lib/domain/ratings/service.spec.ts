@@ -68,9 +68,9 @@ vi.mock('#lib/domain/games/upcoming.ts', () => ({
 	regenerateUpcomingGeneratedGames: vi.fn()
 }));
 
-const admin: Actor = { kind: 'user', userId: 'admin', name: 'Admin', role: 'admin' };
-const player: Actor = { kind: 'user', userId: 'player', name: 'Player', role: 'player' };
-const manager: Actor = { kind: 'user', userId: 'manager', name: 'Manager', role: 'manager' };
+const admin: Actor = { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' };
+const player: Actor = { kind: 'user', active: true, userId: 'player', name: 'Player', role: 'player' };
+const manager: Actor = { kind: 'user', active: true, userId: 'manager', name: 'Manager', role: 'manager' };
 
 function completeRatings(): RatingsInput {
 	return Object.fromEntries(

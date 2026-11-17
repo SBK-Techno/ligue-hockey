@@ -15,15 +15,15 @@ vi.mock('#lib/server/db/index.ts', async () => {
 const { sqlite } = await import('#lib/server/db/index.ts');
 const { actions, load } = await import('./+page.server.ts');
 
-const admin: Actor = { kind: 'user', userId: 'admin', name: 'Admin', role: 'admin' };
-const player: Actor = { kind: 'user', userId: 'player', name: 'Joueur', role: 'player' };
+const admin: Actor = { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' };
+const player: Actor = { kind: 'user', active: true, userId: 'player', name: 'Joueur', role: 'player' };
 const substitute: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'substitute',
 	name: 'Remplaçant',
 	role: 'player'
 };
-const other2: Actor = { kind: 'user', userId: 'other2', name: 'Autre', role: 'player' };
+const other2: Actor = { kind: 'user', active: true, userId: 'other2', name: 'Autre', role: 'player' };
 
 function insertUser(id: string, role: string) {
 	sqlite

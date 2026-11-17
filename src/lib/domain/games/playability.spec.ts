@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isGamePlayable, isLineupEditable } from './playability.ts';
+import { isGamePlayable, isLineupEditable, visibleParticipants } from './playability.ts';
 
 /** 16 novembre 2026, 13 h à Toronto (UTC-5). */
 const NOW = Date.UTC(2026, 10, 16, 18, 0);
@@ -44,5 +44,22 @@ describe('isLineupEditable', () => {
 		['sans alignement généré', game({ generated: false, gameDate: '2026-12-01' }), true]
 	])('%s', (_label, value, expected) => {
 		expect(isLineupEditable(value, NOW, ZONE)).toBe(expected);
+	});
+});
+
+describe('visibleParticipants', () => {
+	const participants = [{ playerId: 'active' }, { playerId: 'inactive' }];
+	const isActive = (playerId: string) => playerId === 'active';
+
+	it.each([
+		['à venir plus tard aujourd’hui', game({ startTime: '14:00' }), ['active']],
+		['à venir demain', game({ gameDate: '2026-11-17', startTime: '09:00' }), ['active']],
+		['commencé plus tôt aujourd’hui', game({ startTime: '12:00' }), ['active', 'inactive']],
+		['exactement à l’heure de départ', game({ startTime: '13:00' }), ['active', 'inactive']],
+		['terminé', game({ status: 'completed', gameDate: '2026-11-01' }), ['active', 'inactive']],
+		['annulé à venir', game({ status: 'cancelled', startTime: '14:00' }), ['active']]
+	])('%s', (_label, value, expected) => {
+		const visible = visibleParticipants(value, participants, isActive, NOW, ZONE);
+		expect(visible.map((participant) => participant.playerId)).toEqual(expected);
 	});
 });

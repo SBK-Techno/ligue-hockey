@@ -1,12 +1,20 @@
-import { and, asc, eq, gt, inArray, or } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, ne, or, sql } from 'drizzle-orm';
+import {
+	identityAllowedForPosition,
+	isIdentityId,
+	type IdentityId
+} from '#config/identities.ts';
+import type { Position } from '#config/positions.ts';
+import { ADMIN_ROLE } from '#config/roles.ts';
 import { positionRatingKeysToClear } from '#config/rating-attributes.ts';
 import { db } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { paymentPlans, payments } from '#lib/domain/finance/schema.ts';
-import { gameSlots, games } from '#lib/domain/games/schema.ts';
+import { gameAvailability, gameSlots, games } from '#lib/domain/games/schema.ts';
 import { subRequests } from '#lib/domain/subs/schema.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { playerRatings, type PlayerRatingRow } from '#lib/domain/ratings/schema.ts';
+import { firstFreeAvatarId } from './identity.ts';
 import { players, type NewPlayerRow, type PlayerRow } from './schema.ts';
 
 export type PlayerWithEmail = PlayerRow & {
@@ -96,8 +104,66 @@ export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 		.all();
 }
 
-export function insertPlayer(row: NewPlayerRow): void {
-	db.insert(players).values(row).run();
+export type InsertPlayerResult =
+	| { status: 'inserted'; avatarId: IdentityId }
+	| { status: 'no-identity' }
+	| { status: 'avatar-taken' };
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type ReadExecutor = Transaction | typeof db;
+
+function activeAvatarIds(executor: ReadExecutor): string[] {
+	return executor
+		.select({ avatarId: players.avatarId })
+		.from(players)
+		.where(and(eq(players.active, true), isNotNull(players.avatarId)))
+		.all()
+		.map((row) => row.avatarId)
+		.filter((avatarId): avatarId is string => avatarId !== null);
+}
+
+function isUniqueConstraint(error: unknown): boolean {
+	const code = (error as { code?: string }).code;
+	return (
+		code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+		(error instanceof Error && error.message.includes('UNIQUE constraint failed'))
+	);
+}
+
+/**
+ * Choisit la première identité libre pour le poste et l'écrit dans la même
+ * transaction. Le catalogue épuisé est une erreur explicite : une fiche active
+ * ne porte jamais une identité nulle.
+ */
+export function insertPlayerWithNextAvatar(
+	row: Omit<NewPlayerRow, 'avatarId'>,
+	position: Position
+): InsertPlayerResult {
+	try {
+		return db.transaction((tx) => {
+			const avatarId = firstFreeAvatarId(activeAvatarIds(tx), position);
+			if (!avatarId) return { status: 'no-identity' as const };
+			tx.insert(players).values({ ...row, avatarId }).run();
+			return { status: 'inserted' as const, avatarId };
+		});
+	} catch (error) {
+		if (isUniqueConstraint(error)) return { status: 'avatar-taken' };
+		throw error;
+	}
+}
+
+export function hasFreeAvatarForPosition(position: Position): boolean {
+	return firstFreeAvatarId(activeAvatarIds(db), position) !== null;
+}
+
+export function countActiveAdmins(): number {
+	const row = db
+		.select({ count: sql<number>`count(*)` })
+		.from(players)
+		.innerJoin(user, eq(user.id, players.userId))
+		.where(and(eq(players.active, true), eq(user.role, ADMIN_ROLE)))
+		.get();
+	return row?.count ?? 0;
 }
 
 export type PlayerPatch = Partial<
@@ -114,29 +180,96 @@ export type PlayerPatch = Partial<
 	>
 >;
 
+export type PlayerUpdateOptions = {
+	deactivate?: {
+		today: string;
+		nowTime: string;
+	};
+};
+
+export type PlayerUpdateResult =
+	| { status: 'updated'; cleared: string[] }
+	| { status: 'not-found' }
+	| { status: 'identity-position' }
+	| { status: 'avatar-taken' }
+	| { status: 'no-identity' };
+
 /**
  * Met à jour le joueur et, si son poste change, supprime dans la même
- * transaction les critères de position qui ne s'appliquent plus. Retourne les
- * critères supprimés pour que le service puisse les auditer.
+ * transaction les critères de position qui ne s'appliquent plus. Une identité
+ * choisie est réservée dans cette même transaction : la lecture de
+ * disponibilité et l'écriture ne peuvent pas être séparées par une autre
+ * réservation. La désactivation retire aussi, atomiquement, les engagements
+ * futurs du joueur.
  */
-export function updatePlayer(playerId: string, patch: PlayerPatch): string[] {
-	if (Object.keys(patch).length === 0) return [];
-	return db.transaction((tx) => {
-		let cleared: string[] = [];
-		if (patch.position !== undefined) {
+export function updatePlayer(
+	playerId: string,
+	patch: PlayerPatch,
+	options: PlayerUpdateOptions = {}
+): PlayerUpdateResult {
+	try {
+		return db.transaction((tx): PlayerUpdateResult => {
 			const current = tx
-				.select({ position: players.position })
+				.select()
 				.from(players)
 				.where(eq(players.userId, playerId))
 				.get();
-			if (current && current.position !== patch.position) {
+			if (!current) return { status: 'not-found' };
+
+			const next = { ...patch };
+			const positionTouched =
+				(next.position !== undefined && next.position !== current.position) ||
+				(next.avatarId !== undefined && next.avatarId !== current.avatarId);
+			const effectivePosition = next.position ?? current.position;
+			const currentAvatar = next.avatarId !== undefined ? next.avatarId : current.avatarId;
+			if (
+				positionTouched &&
+				currentAvatar !== null &&
+				!identityAllowedForPosition(currentAvatar as IdentityId, effectivePosition)
+			) {
+				return { status: 'identity-position' };
+			}
+
+			// Une identité retirée du catalogue ou absente ne peut pas redevenir
+			// active telle quelle : l'activation en réserve une libre.
+			const validAvatar =
+				currentAvatar !== null && isIdentityId(currentAvatar) ? currentAvatar : null;
+			if (next.active === true && validAvatar === null) {
+				const free = firstFreeAvatarId(activeAvatarIds(tx), effectivePosition);
+				if (!free) return { status: 'no-identity' };
+				next.avatarId = free;
+			}
+
+			const claimedAvatar =
+				next.avatarId !== undefined
+					? next.avatarId
+					: next.active === true
+						? validAvatar
+						: null;
+			if (claimedAvatar !== null) {
+				const conflict = tx
+					.select({ userId: players.userId })
+					.from(players)
+					.where(
+						and(
+							eq(players.active, true),
+							eq(players.avatarId, claimedAvatar),
+							ne(players.userId, playerId)
+						)
+					)
+					.get();
+				if (conflict) return { status: 'avatar-taken' };
+			}
+
+			let cleared: string[] = [];
+			if (next.position !== undefined && current.position !== next.position) {
 				const stored = tx
 					.select({ attribute: playerRatings.attribute })
 					.from(playerRatings)
 					.where(eq(playerRatings.playerId, playerId))
 					.all()
 					.map((row) => row.attribute);
-				cleared = positionRatingKeysToClear(patch.position, stored);
+				cleared = positionRatingKeysToClear(next.position, stored);
 				if (cleared.length > 0) {
 					tx.delete(playerRatings)
 						.where(
@@ -148,13 +281,78 @@ export function updatePlayer(playerId: string, patch: PlayerPatch): string[] {
 						.run();
 				}
 			}
-		}
-		tx.update(players)
-			.set({ ...patch, updatedAt: clock.nowMs() })
-			.where(eq(players.userId, playerId))
-			.run();
-		return cleared;
-	});
+
+			if (Object.keys(next).length > 0) {
+				tx.update(players)
+					.set({ ...next, updatedAt: clock.nowMs() })
+					.where(eq(players.userId, playerId))
+					.run();
+			}
+
+			if (options.deactivate) {
+				clearFutureCommitments(tx, playerId, options.deactivate);
+			}
+
+			return { status: 'updated', cleared };
+		});
+	} catch (error) {
+		if (isUniqueConstraint(error)) return { status: 'avatar-taken' };
+		throw error;
+	}
+}
+
+/**
+ * Retire le joueur des matchs qui n'ont pas commencé. Les faits historiques
+ * (matchs passés, terminés ou annulés) restent intacts.
+ */
+function clearFutureCommitments(
+	tx: Transaction,
+	playerId: string,
+	window: NonNullable<PlayerUpdateOptions['deactivate']>
+): void {
+	const now = clock.nowMs();
+	const futureIds = tx
+		.select({ id: games.id })
+		.from(games)
+		.where(
+			and(
+				eq(games.status, 'scheduled'),
+				or(
+					gt(games.gameDate, window.today),
+					and(eq(games.gameDate, window.today), gt(games.startTime, window.nowTime))
+				)
+			)
+		)
+		.all()
+		.map((row) => row.id);
+	if (futureIds.length === 0) return;
+
+	tx.update(gameSlots)
+		.set({ assignedPlayerId: null, assignmentKind: null, updatedAt: now })
+		.where(
+			and(
+				eq(gameSlots.assignedPlayerId, playerId),
+				inArray(gameSlots.gameId, futureIds)
+			)
+		)
+		.run();
+	tx.delete(gameAvailability)
+		.where(
+			and(
+				eq(gameAvailability.playerId, playerId),
+				inArray(gameAvailability.gameId, futureIds)
+			)
+		)
+		.run();
+	tx.update(subRequests)
+		.set({ status: 'open', filledByPlayerId: null, filledAt: null })
+		.where(
+			and(
+				eq(subRequests.filledByPlayerId, playerId),
+				inArray(subRequests.gameId, futureIds)
+			)
+		)
+		.run();
 }
 
 /**

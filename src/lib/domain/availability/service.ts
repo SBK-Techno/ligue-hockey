@@ -1,7 +1,7 @@
 import type { I18nKey } from '#config/i18n/fr.ts';
 import { HOUR_MS } from '#config/time.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
-import { isGameStarted } from '#lib/domain/games/playability.ts';
+import { isGameStarted, visibleParticipants } from '#lib/domain/games/playability.ts';
 import { requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
@@ -111,14 +111,20 @@ function isLocked(game: GameSummary): boolean {
 
 export function availabilityForGame(actor: Actor, game: GameSummary): AvailabilityView {
 	const user = requireUser(actor);
-	const rows = listGamePresence(game.id);
+	const candidates = generationCandidates();
+	const activeIds = new Set(candidates.map((player) => player.userId));
+	// Un match à venir cache les joueurs désactivés; un match passé garde les
+	// présences enregistrées. La règle appartient à `visibleParticipants`.
+	const rows = visibleParticipants(game, listGamePresence(game.id), (playerId) =>
+		activeIds.has(playerId)
+	);
 	const names = new Map(
 		playersByIds(rows.map((row) => row.playerId)).map((player) => [
 			player.userId,
 			player.fullName
 		])
 	);
-	const roster = generationCandidates().filter((player) => !player.isSubstitute);
+	const roster = candidates.filter((player) => !player.isSubstitute);
 	const answered = new Set(rows.map((row) => row.playerId));
 	const own = rows.find((row) => row.playerId === user.userId)?.status ?? null;
 	const present = rows.filter((row) => row.status === 'present').length;

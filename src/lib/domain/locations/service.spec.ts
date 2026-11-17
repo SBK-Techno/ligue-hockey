@@ -50,7 +50,7 @@ const {
 } = await import('./service.ts');
 
 const actor: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'admin'

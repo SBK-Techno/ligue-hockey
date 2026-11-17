@@ -29,7 +29,9 @@ vi.mock('./queries.ts', () => ({
 	findPlayer: (...args: [string]) => findPlayer(...args),
 	findPlayerWithEmail: (...args: [string]) => findPlayerWithEmail(...args),
 	findPlayersByIds: vi.fn(() => []),
-	insertPlayer: vi.fn(),
+	hasFreeAvatarForPosition: () => true,
+	insertPlayerWithNextAvatar: vi.fn(),
+	countActiveAdmins: () => 1,
 	listActivePlayers: vi.fn(() => []),
 	listAllPlayersWithEmail: vi.fn(() => [row]),
 	listActiveAvatarAssignments: vi.fn(() => []),
@@ -60,13 +62,14 @@ vi.mock('./../auth/identity.ts', async (importOriginal) => {
 			deleteUser: identitySpy,
 			updateName: vi.fn(),
 			setRole: vi.fn(),
+			revokeSessions: vi.fn(),
 			requestPasswordReset: vi.fn()
 		})
 	};
 });
 
-const admin: Actor = { kind: 'user', userId: 'admin', name: 'Admin', role: 'admin' };
-const manager: Actor = { kind: 'user', userId: 'manager', name: 'Manager', role: 'manager' };
+const admin: Actor = { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' };
+const manager: Actor = { kind: 'user', active: true, userId: 'manager', name: 'Manager', role: 'manager' };
 
 describe('deletePlayer', () => {
 	beforeEach(() => {

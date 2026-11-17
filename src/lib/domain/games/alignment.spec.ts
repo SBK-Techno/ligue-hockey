@@ -55,21 +55,21 @@ const { markAvailability } = await import('#lib/domain/availability/service.ts')
 const { applyBestSwap, fillOpenSlots, lineupIntelligence } = await import('./alignment.ts');
 
 const admin: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'admin'
 };
 
 const manager: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'manager'
 };
 
 const playerActor: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'member',
 	name: 'Member',
 	role: 'player'
@@ -356,7 +356,7 @@ describe('presence recalibration', () => {
 		expect(before.slots.some((slot) => slot.player?.playerId === 'a')).toBe(true);
 		expect(before.slots.filter((slot) => slot.player !== null)).toHaveLength(4);
 
-		const actorA: Actor = { kind: 'user', userId: 'a', name: 'a', role: 'player' };
+		const actorA: Actor = { kind: 'user', active: true, userId: 'a', name: 'a', role: 'player' };
 		const result = markAvailability(actorA, gameId, 'absent');
 
 		expect(result.regenerated).toBe(true);

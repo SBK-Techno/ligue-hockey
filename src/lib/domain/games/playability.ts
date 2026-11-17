@@ -46,3 +46,23 @@ export function isLineupEditable(
 ): boolean {
 	return game.status === 'scheduled' && gameStartsAt(game, timeZone) > at;
 }
+
+type ParticipationGame = Pick<PlayableGame, 'status' | 'gameDate' | 'startTime'>;
+
+/**
+ * La seule règle d'éligibilité des vues de match. Un match à venir montre son
+ * bassin vivant : un joueur désactivé n'y figure plus. Un match commencé ou
+ * terminé est un dossier : ses participants réels y restent visibles même si
+ * leur compte a été désactivé depuis. Aucun composant ne filtre à nouveau.
+ */
+export function visibleParticipants<T extends { playerId: string }>(
+	game: ParticipationGame,
+	participants: readonly T[],
+	isActive: (playerId: string) => boolean,
+	at: number = clock.nowMs(),
+	timeZone: string = branding.timezone
+): T[] {
+	const recorded = game.status === 'completed' || isGameStarted(game, at, timeZone);
+	if (recorded) return [...participants];
+	return participants.filter((participant) => isActive(participant.playerId));
+}

@@ -24,6 +24,8 @@ export type IdentityProvider = {
 	updateName(userId: string, name: string): Promise<void>;
 	deleteUser(userId: string): Promise<void>;
 	setRole(userId: string, role: IdentityUserInput['role']): Promise<void>;
+	/** Ferme toutes les sessions d'un compte, sans supprimer le compte. */
+	revokeSessions(userId: string): Promise<void>;
 	requestPasswordReset(email: string, purpose: PasswordLinkPurpose): Promise<void>;
 };
 

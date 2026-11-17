@@ -24,7 +24,7 @@ const { sqlite } = await import('#lib/server/db/index.ts');
 const { recordPayment } = await import('./service.ts');
 
 const actor: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'admin'

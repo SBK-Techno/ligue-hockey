@@ -36,6 +36,7 @@ vi.mock('#lib/domain/auth/identity.ts', async (importOriginal) => {
 			updateName: vi.fn(),
 			deleteUser: vi.fn(),
 			setRole: vi.fn(),
+			revokeSessions: vi.fn(),
 			requestPasswordReset: vi.fn()
 		})
 	};
@@ -44,9 +45,9 @@ vi.mock('#lib/domain/auth/identity.ts', async (importOriginal) => {
 const { sqlite } = await import('#lib/server/db/index.ts');
 const { actions, load } = await import('./+page.server.ts');
 
-const admin: Actor = { kind: 'user', userId: 'admin', name: 'Admin', role: 'admin' };
-const manager: Actor = { kind: 'user', userId: 'manager', name: 'Gérant', role: 'manager' };
-const player: Actor = { kind: 'user', userId: 'player', name: 'Joueur', role: 'player' };
+const admin: Actor = { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' };
+const manager: Actor = { kind: 'user', active: true, userId: 'manager', name: 'Gérant', role: 'manager' };
+const player: Actor = { kind: 'user', active: true, userId: 'player', name: 'Joueur', role: 'player' };
 
 type FormFields = Record<string, string>;
 

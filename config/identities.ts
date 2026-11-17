@@ -1,5 +1,6 @@
 import { AVATARS, type AvatarId, type AvatarVariant } from './avatars.ts';
 import { LEGENDS, type Legend, type LegendId } from './legends.ts';
+import type { Position } from './positions.ts';
 
 /**
  * The one player identity catalogue.
@@ -37,4 +38,17 @@ export function legendForIdentity(
 ): Legend | null {
   if (!identityId) return null;
   return LEGENDS.find((legend) => legend.id === identityId) ?? null;
+}
+
+/**
+ * A league face belongs to every position; a tribute legend belongs only to
+ * the position it played. This is the single position rule for the catalogue,
+ * used by automatic assignment, profile updates and the admin editor.
+ */
+export function identityAllowedForPosition(
+  identityId: IdentityId,
+  position: Position
+): boolean {
+  const legend = legendForIdentity(identityId);
+  return legend === null || legend.position === position;
 }

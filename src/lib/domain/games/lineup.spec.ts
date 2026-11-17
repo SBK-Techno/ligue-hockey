@@ -51,21 +51,21 @@ const { regenerateIfGenerated } = await import('./service.ts');
 const { markAvailability } = await import('#lib/domain/availability/service.ts');
 
 const manager: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'manager',
 	name: 'Gérant',
 	role: 'manager'
 };
 
 const admin: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'admin'
 };
 
 const playerActor: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'a',
 	name: 'A',
 	role: 'player'

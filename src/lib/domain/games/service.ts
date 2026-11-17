@@ -4,7 +4,7 @@ import { requirePermission, requireUser, can } from '#lib/domain/auth/policy.ts'
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
 import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
-import { isGameStarted, isLineupEditable } from './playability.ts';
+import { isGameStarted, isLineupEditable, visibleParticipants } from './playability.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
@@ -96,6 +96,7 @@ function generationView(
 			position: Position;
 			jerseyNumber: number | null;
 			avatarId: string | null;
+			active: boolean;
 		}
 	>,
 	includeMetrics: boolean
@@ -124,7 +125,13 @@ function generationView(
 					]
 				}))
 			: [],
-		bench: snapshot.bench.map((entry) => ({
+		// Un joueur désactivé ne reste pas sur le banc d'un match à venir, mais
+		// un match commencé ou terminé garde les participants qui ont joué.
+		bench: visibleParticipants(
+			row,
+			snapshot.bench,
+			(playerId) => names.get(playerId)?.active !== false
+		).map((entry) => ({
 			playerId: entry.playerId,
 			fullName: names.get(entry.playerId)?.fullName ?? entry.playerId,
 			position: entry.position,
@@ -164,7 +171,8 @@ export function getGame(actor: Actor, gameId: string): GameView {
 				fullName: player.fullName,
 				position: player.position,
 				jerseyNumber: player.jerseyNumber,
-				avatarId: player.avatarId
+				avatarId: player.avatarId,
+				active: player.active
 			}
 		])
 	);

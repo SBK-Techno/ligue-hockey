@@ -1,6 +1,12 @@
 import { sql } from 'drizzle-orm';
 import { PLAYER_LIMITS } from '#config/players.ts';
-import { check, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+	check,
+	integer,
+	sqliteTable,
+	text,
+	uniqueIndex
+} from 'drizzle-orm/sqlite-core';
 import { POSITION_KEYS, type Position } from '#config/positions.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 
@@ -24,6 +30,10 @@ export const players = sqliteTable(
 		updatedAt: integer('updated_at').notNull()
 	},
 	(table) => [
+		/** Un joueur actif porte toujours une identité, et une seule fois. */
+		uniqueIndex('players_active_avatar_unique')
+			.on(table.avatarId)
+			.where(sql`"active" = 1 and "avatar_id" is not null`),
 		check('players_position_check', sql.raw(`"position" in (${POSITION_SQL})`)),
 		check(
 			'players_age_check',

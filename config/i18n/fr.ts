@@ -1014,8 +1014,13 @@ export const fr = {
     'Pour garder l’historique, désactive le joueur au lieu de le supprimer.',
   'admin.roleSelf': 'Tu ne peux pas changer ton propre rôle.',
   'admin.deleteSelf': 'Tu ne peux pas supprimer ton propre compte.',
+  'admin.deactivateSelf': 'Tu ne peux pas désactiver ton propre compte.',
+  'admin.deactivateLastAdmin':
+    'Garde au moins un administrateur actif avant de désactiver ce compte.',
   'admin.deleteAdmin': 'Retire le rôle d’admin avant de supprimer ce compte.',
   'admin.playerDeleteFailed': 'Le joueur n’a pas pu être supprimé.',
+  'admin.playerDeactivateFailed':
+    'Le joueur est désactivé, mais ses sessions n’ont pas pu être fermées. Réessaie.',
   'admin.jerseyNumber': 'Numéro de chandail',
 
   'admin.dashboard': 'Cette semaine',
@@ -1240,6 +1245,10 @@ export const fr = {
   'error.invalidTime': 'Heure invalide.',
   'error.playerNotFound': 'Joueur introuvable.',
   'error.avatarTaken': 'Cette identité est déjà portée par un autre joueur.',
+  'error.identityWrongPosition':
+    'Cette identité hommage n’est pas celle du poste choisi.',
+  'error.noIdentityAvailable':
+    'Toutes les identités sont prises. Désactive un joueur avant d’en inviter un autre.',
   'error.accountNotFound': 'Compte introuvable.',
   'admin.emailExists': 'Un compte existe déjà avec ce courriel.',
   'admin.playerCreateFailed': 'Le joueur n’a pas pu être créé.',

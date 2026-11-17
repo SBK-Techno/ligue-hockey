@@ -40,21 +40,21 @@ const {
 const { deletePlayerAccount } = await import('#lib/domain/players/queries.ts');
 
 const manager: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'manager',
 	name: 'Gérant',
 	role: 'manager'
 };
 
 const playerActor: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'viewer',
 	name: 'Membre',
 	role: 'player'
 };
 
 const admin: Actor = {
-	kind: 'user',
+	kind: 'user', active: true,
 	userId: 'admin',
 	name: 'Admin',
 	role: 'admin'

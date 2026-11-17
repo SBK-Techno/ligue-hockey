@@ -5,10 +5,12 @@ import {
 } from '#config/avatars.ts';
 import {
 	IDENTITY_IDS,
+	identityAllowedForPosition,
 	identityById,
 	isIdentityId,
 	type IdentityId
 } from '#config/identities.ts';
+import type { Position } from '#config/positions.ts';
 
 /**
  * Player visual identity.
@@ -45,11 +47,22 @@ export function avatarColor(avatarId: IdentityId): string {
 /**
  * First free identity in catalogue order. League faces come before legends, so
  * automatic assignment only reaches a tribute identity once every face is
- * taken. The caller decides what to do with a null result.
+ * taken. With a position, legends that played another position are skipped, so
+ * a forward never receives a goalie. The caller decides what to do with a null
+ * result: an exhausted catalogue is never stored as a null identity.
  */
-export function firstFreeAvatarId(used: Iterable<string>): IdentityId | null {
+export function firstFreeAvatarId(
+	used: Iterable<string>,
+	position?: Position
+): IdentityId | null {
 	const taken = new Set(used);
-	return IDENTITY_IDS.find((avatarId) => !taken.has(avatarId)) ?? null;
+	return (
+		IDENTITY_IDS.find(
+			(avatarId) =>
+				!taken.has(avatarId) &&
+				(position === undefined || identityAllowedForPosition(avatarId, position))
+		) ?? null
+	);
 }
 
 export type { AvatarId, IdentityId };

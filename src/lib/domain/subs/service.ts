@@ -406,7 +406,7 @@ export function claimSubstitute(
 ): ClaimResult {
 	const user = requireUser(actor);
 	const player = getOwnProfile(actor);
-	if (!player.isSubstitute) {
+	if (!player.isSubstitute || !player.active) {
 		throw new AppError('FORBIDDEN', { key: 'subs.notEligible' });
 	}
 

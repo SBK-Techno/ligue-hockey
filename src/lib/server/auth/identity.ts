@@ -32,6 +32,16 @@ export const betterAuthIdentity: IdentityProvider = {
 		await context.internalAdapter.updateUser(userId, { role });
 	},
 
+	async revokeSessions(userId) {
+		// Better Auth's admin plugin revokes every session of a user through
+		// this same adapter call (`dist/plugins/admin/routes.mjs`,
+		// `revokeUserSessions`). The plugin endpoint requires an acting admin
+		// session; the provider port is already called from an authorized use
+		// case, so it uses the adapter directly.
+		const context = await auth.$context;
+		await context.internalAdapter.deleteUserSessions(userId);
+	},
+
 	async requestPasswordReset(email, purpose) {
 		const target = new URL(RESET_PATH, env.origin);
 		target.searchParams.set('mode', purpose);

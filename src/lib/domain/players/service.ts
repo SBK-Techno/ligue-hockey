@@ -1,5 +1,5 @@
 import type { Position } from '#config/positions.ts';
-import { DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
+import { ADMIN_ROLE, DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
 import type { IdentityId } from '#config/identities.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
@@ -7,21 +7,24 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 import { identity } from '#lib/domain/auth/identity.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
-import { AppError } from '#lib/shared/errors.ts';
+import { AppError, isAppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock, timeInZone, todayInZone } from '#lib/shared/time/clock.ts';
 import {
+	countActiveAdmins,
 	deletePlayerAccount,
 	findPlayer,
 	findPlayerWithEmail,
-	insertPlayer,
+	hasFreeAvatarForPosition,
+	insertPlayerWithNextAvatar,
 	listActiveAvatarAssignments,
 	listActivePlayers,
 	listAllPlayersWithEmail,
-	updatePlayer
+	updatePlayer,
+	type PlayerUpdateResult
 } from './queries.ts';
-import { firstFreeAvatarId, resolveAvatarId } from './identity.ts';
+import { resolveAvatarId } from './identity.ts';
 import { toPublic } from './public.ts';
 import type {
 	AdminUpdatePlayerInput,
@@ -108,14 +111,19 @@ function takenAvatarIds(playerId: string): IdentityId[] {
 	];
 }
 
-function assertAvatarAvailable(playerId: string, avatarId: IdentityId): void {
-	if (takenAvatarIds(playerId).includes(avatarId)) {
-		throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+function applyPlayerUpdate(result: PlayerUpdateResult): string[] {
+	switch (result.status) {
+		case 'updated':
+			return result.cleared;
+		case 'not-found':
+			throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+		case 'identity-position':
+			throw new AppError('VALIDATION', { key: 'error.identityWrongPosition' });
+		case 'avatar-taken':
+			throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+		case 'no-identity':
+			throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
 	}
-}
-
-function nextFreeAvatarId(): IdentityId | null {
-	return firstFreeAvatarId(activeAvatarUsage().map((entry) => entry.avatarId));
 }
 
 export function isSubstitutePlayer(actor: Actor): boolean {
@@ -209,6 +217,12 @@ export async function invitePlayer(
 ): Promise<{ userId: string; inviteQueued: boolean }> {
 	requirePermission(actor, 'managePlayers');
 
+	// Refus précoce avant de créer un compte : la réservation réelle reste
+	// l'insertion transactionnelle ci-dessous.
+	if (!hasFreeAvatarForPosition(input.position)) {
+		throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
+	}
+
 	let created: { id: string };
 	try {
 		created = await identity().createUser({
@@ -226,19 +240,27 @@ export async function invitePlayer(
 
 	try {
 		const now = clock.nowMs();
-		insertPlayer({
-			userId: created.id,
-			firstName: input.firstName,
-			lastName: input.lastName,
-			position: input.position,
-			age: input.age,
-			jerseyNumber: input.jerseyNumber ?? null,
-			avatarId: nextFreeAvatarId(),
-			isSubstitute: input.isSubstitute,
-			active: true,
-			createdAt: now,
-			updatedAt: now
-		});
+		const inserted = insertPlayerWithNextAvatar(
+			{
+				userId: created.id,
+				firstName: input.firstName,
+				lastName: input.lastName,
+				position: input.position,
+				age: input.age,
+				jerseyNumber: input.jerseyNumber ?? null,
+				isSubstitute: input.isSubstitute,
+				active: true,
+				createdAt: now,
+				updatedAt: now
+			},
+			input.position
+		);
+		if (inserted.status === 'no-identity') {
+			throw new AppError('CONFLICT', { key: 'error.noIdentityAvailable' });
+		}
+		if (inserted.status === 'avatar-taken') {
+			throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+		}
 	} catch (cause) {
 		try {
 			await identity().deleteUser(created.id);
@@ -252,6 +274,7 @@ export async function invitePlayer(
 				cause
 			});
 		}
+		if (isAppError(cause)) throw cause;
 		throw new AppError('CONFLICT', {
 			key: 'admin.playerCreateFailed',
 			cause
@@ -317,11 +340,10 @@ export async function updateOwnProfile(
 		position: input.position,
 		jerseyNumber: input.jerseyNumber
 	};
-	if (input.avatarId !== undefined && input.avatarId !== row.avatarId) {
-		assertAvatarAvailable(user.userId, input.avatarId);
+	if (input.avatarId !== undefined) {
 		patch.avatarId = input.avatarId;
 	}
-	const cleared = updatePlayer(user.userId, patch);
+	const cleared = applyPlayerUpdate(updatePlayer(user.userId, patch));
 	await identity().updateName(user.userId, `${input.firstName} ${input.lastName}`);
 	recordAudit(actor, {
 		action: 'player.self_update',
@@ -344,6 +366,16 @@ export async function adminUpdatePlayer(
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 
+	if (input.active === false) {
+		if (actor.kind === 'user' && actor.userId === playerId) {
+			throw new AppError('FORBIDDEN', { key: 'admin.deactivateSelf' });
+		}
+		const role = row.role && isRole(row.role) ? row.role : DEFAULT_ROLE;
+		if (role === ADMIN_ROLE && countActiveAdmins() <= 1) {
+			throw new AppError('FORBIDDEN', { key: 'admin.deactivateLastAdmin' });
+		}
+	}
+
 	const patch: Parameters<typeof updatePlayer>[1] = {};
 	if (input.firstName !== undefined) patch.firstName = input.firstName;
 	if (input.lastName !== undefined) patch.lastName = input.lastName;
@@ -351,13 +383,40 @@ export async function adminUpdatePlayer(
 	if (input.position !== undefined) patch.position = input.position;
 	if (input.jerseyNumber !== undefined) patch.jerseyNumber = input.jerseyNumber;
 	if (input.avatarId !== undefined && input.avatarId !== row.avatarId) {
-		assertAvatarAvailable(playerId, input.avatarId);
 		patch.avatarId = input.avatarId;
 	}
 	if (input.isSubstitute !== undefined) patch.isSubstitute = input.isSubstitute;
 	if (input.active !== undefined) patch.active = input.active;
 
-	const cleared = updatePlayer(playerId, patch);
+	const now = clock.nowMs();
+	const cleared = applyPlayerUpdate(
+		updatePlayer(
+			playerId,
+			patch,
+			input.active === false
+				? {
+						deactivate: {
+							today: todayInZone(branding.timezone, now),
+							nowTime: timeInZone(branding.timezone, now)
+						}
+					}
+				: {}
+		)
+	);
+	if (input.active === false) {
+		try {
+			await identity().revokeSessions(playerId);
+		} catch (cause) {
+			logger.error('players.session_revoke_failed', {
+				userId: playerId,
+				error: cause
+			});
+			throw new AppError('INTERNAL', {
+				key: 'admin.playerDeactivateFailed',
+				cause
+			});
+		}
+	}
 	if (input.firstName !== undefined || input.lastName !== undefined) {
 		const updated = findPlayerWithEmail(playerId);
 		if (updated) {

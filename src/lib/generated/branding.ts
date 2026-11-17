@@ -24,6 +24,22 @@ export const branding = {
   "authImage": "/auth/dressing-room-0397f5db9c38.webp",
   "manifestPath": "/manifest.webmanifest",
   "offlinePath": "/offline.html",
+  "publicPaths": [
+    "/manifest.webmanifest",
+    "/offline.html",
+    "/robots.txt",
+    "/service-worker.js",
+    "/generated-assets.json",
+    "/social/apercu.jpg",
+    "/auth/dressing-room-0397f5db9c38.webp",
+    "/icons/favicon-32.4c6787c2333a.png",
+    "/icons/apple-touch-180.aff87536bf7c.png",
+    "/icons/icon-192-192.073945cb4e02.png",
+    "/icons/icon-512-512.904ac52376ea.png",
+    "/icons/maskable-512-512.5c023d038900.png",
+    "/textures/paper-b0f353d27755.webp",
+    "/textures/ice-91bfe133b755.webp"
+  ],
   "cachePrefix": "lhdm",
   "icons": {
     "favicon": "/icons/favicon-32.4c6787c2333a.png",

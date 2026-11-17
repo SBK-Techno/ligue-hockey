@@ -24,7 +24,7 @@ vi.mock('#lib/domain/settings/service.ts', () => ({
 }));
 
 vi.mock('#lib/domain/auth/policy.ts', () => ({
-	requireUser: () => ({ kind: 'user', userId: 'me', role: 'player', name: 'Moi' }),
+	requireUser: () => ({ kind: 'user', active: true, userId: 'me', role: 'player', name: 'Moi' }),
 	can: () => false,
 	canCreatePoll: () => false
 }));
@@ -64,7 +64,7 @@ describe('discussion', () => {
 
 	it('expose l’avatar, le chandail, le poste et le message du membre', () => {
 		const [view] = listChat({
-			kind: 'user',
+			kind: 'user', active: true,
 			userId: 'me',
 			role: 'player',
 			name: 'Moi'
@@ -94,7 +94,7 @@ describe('discussion', () => {
 		]);
 
 		const [view] = listChat({
-			kind: 'user',
+			kind: 'user', active: true,
 			userId: 'me',
 			role: 'player',
 			name: 'Moi'
@@ -111,7 +111,7 @@ describe('discussion', () => {
 
 		expect(() =>
 			castPollVote(
-				{ kind: 'user', userId: 'me', role: 'player', name: 'Moi' },
+				{ kind: 'user', active: true, userId: 'me', role: 'player', name: 'Moi' },
 				{ messageId: 'msg_1', optionId: 'opt_1' }
 			)
 		).toThrowError();
