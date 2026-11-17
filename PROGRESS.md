@@ -4,7 +4,7 @@ This file tracks the current milestone, verified evidence, and the work that is 
 
 ## A1 design pass 1.8.0 (in progress)
 
-- Branch `feat/a1-pass-1.8.0`, stacked on `feat/realism-1.7.0` (PR #21). The pass follows the independent critique that scored the app 22/40: the login, home hero and desktop rink were reference-grade, while the mobile lineup, admin tables, settings, notifications and profile body were not.
+- Branch `feat/a1-pass-1.8.0`, branched from `feat/realism-1.7.0` (PR #21, merged). The pass follows the independent critique that scored the app 22/40: the login, home hero and desktop rink were reference-grade, while the mobile lineup, admin tables, settings, notifications and profile body were not.
 - **Milestone 1, mobile lineup.** An upcoming match now opens with the alignment, not the attendance roster. Presence is a compact strip above the board, with the deadline and the two responses; the named attendance list follows the alignment. The board shows a "Ton poste" summary (team, position, trio or pair), a visible role label on every filled token, a "Toi" ring and hidden accessible marker, and a "Toi" stamp in the bench and the text roster.
 - **Mobile adaptation.** Under 640 px the board shows one team at a time with a two-button switcher and a named roster grouped by position under the rink. Names remain on the rink tokens. The canonical roster was extracted to `TeamRoster.svelte`; `TeamLineup.svelte` keeps the admin text roster, and the board reuses the same component.
 - **Evidence.** `npm run gate` exit 0 after the milestone: 1108 tests in 149 files, svelte-check 0/0, architecture 387 files, generated assets current, 93 client chunks without zod. Headless Chromium at 1440, 390 and 320 verified the order, the compact presence strip, the one-team switcher, the named roster, the "Ton poste" summary for a player in the lineup, and the "Toi" ring and stamp.
@@ -16,7 +16,12 @@ This file tracks the current milestone, verified evidence, and the work that is 
 - **Desktop evidence.** At 1440 the completed sheet drops from 2612 to 2004 px, admin Joueurs from 2484 to 1372, the player page from 3286 to 2168, Soldes from 1450 to 995, Matchs from 1775 to 1195, the evaluation match from 1806 to 1216, Lieux to 900 and the dashboard from 2192 to 1337. Headless Chromium at 1440, 1024, 390 and 320 reports no document overflow and no console errors; the only flagged overflow entries belong to the intentional horizontally scrolling admin tab strip.
 - **Gate.** `npm run gate` exit 0 after the desktop pass: 1123 tests in 155 files, svelte-check 0/0, architecture 394 files, generated assets and documentation current, 92 client chunks without zod.
 - **Review fixes.** The independent review closed six minor findings: odd ledgers now keep the penultimate row's rule, an empty upcoming or past list takes the full width, player rows keep all badges on the metadata line so both columns align, the location form stacks once it sits in its narrow column, the assessment grid moved to the single layout owner, and the sheet test no longer duplicates the full class list.
-- **Next.** Both A1 milestones, the mechanical pass and the desktop pass are complete on `feat/a1-pass-1.8.0`. After #21 merges, retarget #22 to `main`, merge, and let the automatic release produce `1.8.0`; no further design work is planned in this branch.
+- **Next.** PR #21 merged and `1.7.0` was released; this branch merges that release and targets `main` directly. Merging it lets the automatic release produce `1.8.0`; no further design work is planned in this branch.
+
+## Release 1.7.0 (in progress)
+
+- **Dependency override.** `drizzle-kit@0.31.11` still depends on the deprecated `@esbuild-kit/esm-loader`, which pins `esbuild@0.18.20` through `@esbuild-kit/core-utils`. The root `overrides` entry lifts that nested copy to `0.25.12`, the version `drizzle-kit` already resolves at its own level, so the development server advisory disappears and `npm audit` reports zero vulnerabilities. Generated migrations were rechecked after the change: `drizzle-kit generate` reads the TypeScript config and reports no schema changes.
+- **Override exit.** Remove the `overrides` entry once `drizzle-kit` drops `@esbuild-kit/esm-loader`; until then the nested copy stays on the patched line.
 
 ## Release 1.6.0 (shipped)
 
