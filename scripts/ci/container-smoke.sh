@@ -132,10 +132,12 @@ budget inline-css "$TMP/connexion.body" authInlineCssBytes
 
 signin_status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
 	-c "$COOKIES" \
-	-H 'Content-Type: application/json' \
-	--data "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" \
-	"$BASE/api/auth/sign-in/email")"
-if [ "$signin_status" != 200 ]; then
+	-H "Origin: $ORIGIN" \
+	-H 'Content-Type: application/x-www-form-urlencoded' \
+	--data-urlencode "email=$ADMIN_EMAIL" \
+	--data-urlencode "password=$ADMIN_PASSWORD" \
+	"$BASE/connexion")"
+if [ "$signin_status" != 200 ] && [ "$signin_status" != 303 ]; then
 	docker logs "$NAME" >&2 || true
 	printf 'erreur: connexion admin refusée (%s)\n' "$signin_status" >&2
 	exit 1
@@ -207,10 +209,12 @@ fi
 
 player_signin="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
 	-c "$PLAYER_COOKIES" \
-	-H 'Content-Type: application/json' \
-	--data "{\"email\":\"$PLAYER_EMAIL\",\"password\":\"$PLAYER_PASSWORD\"}" \
-	"$BASE/api/auth/sign-in/email")"
-if [ "$player_signin" != 200 ]; then
+	-H "Origin: $ORIGIN" \
+	-H 'Content-Type: application/x-www-form-urlencoded' \
+	--data-urlencode "email=$PLAYER_EMAIL" \
+	--data-urlencode "password=$PLAYER_PASSWORD" \
+	"$BASE/connexion")"
+if [ "$player_signin" != 200 ] && [ "$player_signin" != 303 ]; then
 	printf 'erreur: connexion du joueur refusée (%s)\n' "$player_signin" >&2
 	exit 1
 fi
