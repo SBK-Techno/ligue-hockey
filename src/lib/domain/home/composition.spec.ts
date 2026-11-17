@@ -192,6 +192,22 @@ const cases: Case[] = [
 		spans: [5, 7, 12, 12]
 	},
 	{
+		name: 'un sondage et la discussion partagent la dernière ligne en alignement',
+		input: {
+			availability: { own: 'present', canRespond: true, canWithdraw: false },
+			teamsGenerated: true,
+			ownSlot: true,
+			openPoll: { unvoted: false },
+			latestMessage: true
+		},
+		mode: 'lineup',
+		hero: 'upcoming',
+		manager: false,
+		actions: [],
+		panels: ['team', 'agenda', 'attendance', 'poll', 'league', 'install'],
+		spans: [5, 7, 12, 6, 6, 12]
+	},
+	{
 		name: 'un joueur aligné avec un solde garde son équipe à côté des actions',
 		input: {
 			availability: { own: 'present', canRespond: true, canWithdraw: false },
@@ -337,6 +353,20 @@ const cases: Case[] = [
 		actions: [],
 		panels: ['agenda', 'attendance', 'league', 'install'],
 		spans: [7, 5, 12, 12]
+	},
+	{
+		name: 'un sondage et la discussion partagent la dernière ligne avant l’alignement',
+		input: {
+			availability: { own: 'present', canRespond: true, canWithdraw: false },
+			openPoll: { unvoted: false },
+			latestMessage: true
+		},
+		mode: 'announced',
+		hero: 'upcoming',
+		manager: false,
+		actions: [],
+		panels: ['agenda', 'attendance', 'poll', 'league', 'install'],
+		spans: [7, 5, 6, 6, 12]
 	},
 	{
 		name: 'un match annulé change la tête sans changer la situation du membre',

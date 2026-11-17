@@ -183,6 +183,15 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 				!ownRequestInActions &&
 				mode !== 'absent' &&
 				input.availability?.own !== 'absent'));
+	// Le sondage et la discussion ferment la page ensemble : deux panneaux
+	// pleine largeur l'un sous l'autre laissaient une seule colonne visible
+	// sur un écran large. Une liste de remplaçants garde sa propre ligne, et
+	// le jour du match le sondage partage déjà la ligne des présences.
+	const leagueBesidePoll =
+		leaguePanel &&
+		pollPanel &&
+		!substitutesPanel &&
+		(mode === 'lineup' || mode === 'announced' || mode === 'presence' || mode === 'absent');
 
 	const teamPanel =
 		input.hasGame &&
@@ -258,9 +267,8 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 		if (agendaPanel) add('agenda', attendancePanel ? 7 : 12);
 
 		if (attendancePanel) add('attendance', actions.length > 0 ? 5 : 12);
-		// Le sondage suit toujours une ligne déjà pleine (équipe + agenda +
-		// présences), donc il occupe la ligne entière.
-		if (pollPanel) add('poll', 12);
+		// Le sondage ferme la page avec la discussion quand elle est là.
+		if (pollPanel) add('poll', leagueBesidePoll ? 6 : 12);
 	} else {
 		if (actions.length > 0) add('actions', 12);
 		if (agendaPanel) add('agenda', attendancePanel ? 7 : 12);
@@ -270,14 +278,14 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 			add('poll', 6);
 			add('substitutes', 6);
 		} else if (pollPanel) {
-			add('poll', 12);
+			add('poll', leagueBesidePoll ? 6 : 12);
 		} else if (substitutesPanel) {
 			add('substitutes', 12);
 		}
 	}
 
 	if (mode === 'lineup' && substitutesPanel) add('substitutes', 12);
-	if (leaguePanel) add('league', 12);
+	if (leaguePanel) add('league', leagueBesidePoll ? 6 : 12);
 	add('install', 12);
 
 	return { mode, manager, hero: selectHero(input, mode), actions, panels };
