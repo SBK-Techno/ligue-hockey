@@ -84,11 +84,10 @@ describe('rendu de la carte d’alignement', () => {
 		expect(tokens).toHaveLength(34);
 		for (const token of tokens) {
 			const label = token[0].match(/aria-label="([^"]*)"/)?.[1] ?? '';
-			const visible = token[1]
-				.replace(/<!--[\s\S]*?-->/g, '')
-				.replace(/<[^>]*>/g, '')
-				.replace(/\s+/g, ' ')
-				.trim();
+			const jersey = token[1].match(/class="rink-number">([^<]*)</)?.[1].trim() ?? '';
+			const surname = token[1].match(/class="rink-name">([^<]*)</)?.[1].trim() ?? '';
+			const visible = `${jersey} ${surname}`;
+			expect(visible, token[0]).not.toBe(' ');
 			expect(label, visible).toContain(visible);
 		}
 	});
