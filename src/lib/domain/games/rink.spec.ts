@@ -30,7 +30,6 @@ describe('patinoire', () => {
 		expect(RINK.faceoffSpotOffset).toBeLessThan(RINK.width / 2);
 		expect(RINK.endSpot).toBeLessThan(RINK.goalLine + RINK.blueLine);
 		expect(RINK.neutralSpot).toBeLessThan(RINK.blueLine);
-		expect(RINK.circleRadius * 2).toBeLessThan(RINK.width);
 		expect(RINK.cornerRadius * 2).toBeLessThan(RINK.width);
 		expect(RINK.crease).toBeLessThan(RINK.goalLine);
 
@@ -40,7 +39,6 @@ describe('patinoire', () => {
 		expect(lines.blueRight).toBe(percentOfLength(RINK.length - RINK.blueLine));
 		expect(lines.goalLeft).toBe(percentOfLength(RINK.goalLine));
 		expect(lines.goalRight).toBe(percentOfLength(RINK.length - RINK.goalLine));
-		expect(lines.circle).toBe(percentOfLength(RINK.circleRadius * 2));
 	});
 
 	it('garde les coordonnées historiques du 3F et du 2D', () => {
@@ -96,8 +94,7 @@ describe('patinoire', () => {
 			blueLeft: percentOfLength(RINK.blueLine),
 			blueRight: percentOfLength(RINK.length - RINK.blueLine),
 			goalLeft: percentOfLength(RINK.goalLine),
-			goalRight: percentOfLength(RINK.length - RINK.goalLine),
-			circle: percentOfLength(RINK.circleRadius * 2)
+			goalRight: percentOfLength(RINK.length - RINK.goalLine)
 		});
 
 		const shifted = rinkLineVariables({ ...RINK, blueLine: 30, goalLine: 6 });
@@ -115,10 +112,10 @@ describe('patinoire', () => {
 		// Le gardien est à 8 % de la bande : à 320 px, un jeton de 44 px et
 		// son anneau de focus de 4 px dépassent sans cet inset de position.
 		expect(tokenBlock).toContain(
-			'top: clamp(2.25rem, var(--y), calc(100% - 2.25rem))'
+			'top: clamp(2.5rem, var(--y), calc(100% - 2.5rem))'
 		);
 		expect(tokenBlock).toContain(
-			'left: clamp(2.25rem, var(--x), calc(100% - 2.25rem))'
+			'left: clamp(2.5rem, var(--x), calc(100% - 2.5rem))'
 		);
 	});
 
@@ -126,7 +123,6 @@ describe('patinoire', () => {
 		const style = rinkGeometryStyle();
 		expect(style).toContain(`--rink-blue-left: ${percentOfLength(RINK.blueLine)}`);
 		expect(style).toContain('--rink-center: 50%');
-		expect(style).toContain(`--rink-circle: ${percentOfLength(RINK.circleRadius * 2)}`);
 		expect(rinkGeometryStyle({ ...RINK, blueLine: 30 })).toContain(
 			'--rink-blue-left: 50%'
 		);
@@ -138,13 +134,13 @@ describe('patinoire', () => {
 			'--rink-blue-left',
 			'--rink-blue-right',
 			'--rink-goal-left',
-			'--rink-goal-right',
-			'--rink-circle'
+			'--rink-goal-right'
 		]) {
 			expect(rinkBlock).toContain(`var(${variable})`);
 		}
 		expect(rinkBlock).not.toContain('24.7%');
 		expect(rinkBlock).not.toContain('49.7%');
 		expect(rinkBlock).not.toContain('width: 22%');
+		expect(css).not.toContain('.rink::after');
 	});
 });

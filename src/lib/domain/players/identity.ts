@@ -10,7 +10,7 @@ import { branding } from '#lib/generated/branding.ts';
  * same appearance across sessions without a database write.
  *
  * The lookups read the compact index generated from the catalogue, so an
- * avatar surface never imports the names, numbers and eras of 58 identities.
+ * avatar surface never imports the names, numbers and eras of every identity.
  * The catalogue remains the only source of that index.
  */
 

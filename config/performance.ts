@@ -169,7 +169,8 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 	{
 		name: 'admin-lieux',
 		path: '/admin/lieux',
-		maxRequests: 30,
+		// Le champ d'adresse ajoute un morceau; le poids reste sous le plafond.
+		maxRequests: 31,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},

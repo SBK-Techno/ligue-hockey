@@ -173,11 +173,12 @@ describe('lisibilité des jetons sur la glace', () => {
 	const baseStart = css.indexOf('.rink-name {');
 	const base = css.slice(baseStart, css.indexOf('.rink-empty {', baseStart));
 
-	it('tronque le nom au complet sans insérer de trait d’union', () => {
-		expect(base).toContain('hyphens: none');
+	it('garde le nom entier et ne coupe qu’au trait d’union existant', () => {
+		expect(base).toContain('hyphens: manual');
 		expect(base).not.toContain('hyphens: auto');
-		expect(base).toContain('text-overflow: ellipsis');
-		expect(base).toContain('white-space: nowrap');
+		expect(base).not.toContain('text-overflow: ellipsis');
+		expect(base).toContain('white-space: normal');
+		expect(base).toContain('overflow-wrap: normal');
 	});
 
 	it('garde le nom visible sur un jeton mobile', () => {

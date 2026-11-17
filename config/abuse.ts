@@ -7,6 +7,8 @@ export const ABUSE_LIMITS = {
 	memberAction: { limit: 40, windowMs: 60_000 },
 	/** Les fiches de joueur ouvertes par un même membre. */
 	peek: { limit: 120, windowMs: 60_000 },
+	/** Les recherches d'adresse d'un même gestionnaire. */
+	addressSearch: { limit: 60, windowMs: 60_000 },
 	/** Les appareils push enregistrés par un même membre. */
 	pushSubscription: { limit: 10 }
 } as const;

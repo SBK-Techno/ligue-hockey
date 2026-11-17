@@ -39,15 +39,14 @@ describe('catalogue des visages de la ligue', () => {
 });
 
 describe('identités hommage', () => {
-	it('offre trente légendes au prorata des postes de la ligue', () => {
-		expect(LEGENDS).toHaveLength(30);
-		expect(LEGEND_IDS).toHaveLength(30);
-		expect(new Set(LEGEND_IDS).size).toBe(30);
-		// La ligue compte 14 attaquants, 10 défenseurs et 4 gardiens : la
-		// répartition des hommages suit le même rapport.
-		expect(legendsForPosition('forward')).toHaveLength(15);
-		expect(legendsForPosition('defense')).toHaveLength(11);
-		expect(legendsForPosition('goalie')).toHaveLength(4);
+	it('couvre le poste le plus large avec les légendes seules', () => {
+		expect(LEGENDS).toHaveLength(38);
+		expect(LEGEND_IDS).toHaveLength(38);
+		expect(new Set(LEGEND_IDS).size).toBe(38);
+		// Deux équipes de 8 attaquants, 8 défenseurs et 3 gardiens.
+		expect(legendsForPosition('forward')).toHaveLength(16);
+		expect(legendsForPosition('defense')).toHaveLength(16);
+		expect(legendsForPosition('goalie')).toHaveLength(6);
 	});
 
 	it('donne un numéro et une époque crédibles à chaque légende', () => {
@@ -71,6 +70,8 @@ describe('identités hommage', () => {
 			['legende-dryden', 'Ken Dryden', 29, 'goalie', '1970-1979'],
 			['legende-roy', 'Patrick Roy', 33, 'goalie', '1984-1996'],
 			['legende-price', 'Carey Price', 31, 'goalie', '2007-2022'],
+			['legende-vezina', 'Georges Vézina', 1, 'goalie', '1910-1925'],
+			['legende-durnan', 'Bill Durnan', 1, 'goalie', '1943-1950'],
 			['legende-harvey', 'Doug Harvey', 2, 'defense', '1947-1961'],
 			['legende-savard', 'Serge Savard', 18, 'defense', '1966-1981'],
 			['legende-robinson', 'Larry Robinson', 19, 'defense', '1972-1989'],
@@ -82,6 +83,11 @@ describe('identités hommage', () => {
 			['legende-subban', 'P.K. Subban', 76, 'defense', '2009-2016'],
 			['legende-weber', 'Shea Weber', 6, 'defense', '2016-2021'],
 			['legende-tremblay', 'J.C. Tremblay', 3, 'defense', '1959-1972'],
+			['legende-johnson', 'Tom Johnson', 10, 'defense', '1947-1963'],
+			['legende-talbot', 'Jean-Guy Talbot', 17, 'defense', '1954-1967'],
+			['legende-langway', 'Rod Langway', 17, 'defense', '1978-1982'],
+			['legende-ludwig', 'Craig Ludwig', 17, 'defense', '1982-1990'],
+			['legende-brisebois', 'Patrice Brisebois', 43, 'defense', '1991-2009'],
 			['legende-maurice-richard', 'Maurice Richard', 9, 'forward', '1942-1960'],
 			['legende-beliveau', 'Jean Béliveau', 4, 'forward', '1950-1971'],
 			['legende-lafleur', 'Guy Lafleur', 10, 'forward', '1971-1985'],
@@ -96,6 +102,7 @@ describe('identités hommage', () => {
 			['legende-lemaire', 'Jacques Lemaire', 25, 'forward', '1967-1979'],
 			['legende-shutt', 'Steve Shutt', 22, 'forward', '1972-1985'],
 			['legende-damphousse', 'Vincent Damphousse', 25, 'forward', '1992-1999'],
+			['legende-carbonneau', 'Guy Carbonneau', 21, 'forward', '1980-1994'],
 			['legende-morenz', 'Howie Morenz', 7, 'forward', '1923-1937']
 		];
 
@@ -128,11 +135,11 @@ describe('identités hommage', () => {
 
 describe('catalogue des identités', () => {
 	it('réunit les deux familles sans doublon', () => {
-		expect(IDENTITIES).toHaveLength(58);
-		expect(IDENTITY_IDS).toHaveLength(58);
-		expect(new Set(IDENTITY_IDS).size).toBe(58);
-		expect(IDENTITY_IDS.slice(0, 28)).toEqual(AVATAR_IDS);
-		expect(IDENTITY_IDS.slice(28)).toEqual(LEGEND_IDS);
+		expect(IDENTITIES).toHaveLength(66);
+		expect(IDENTITY_IDS).toHaveLength(66);
+		expect(new Set(IDENTITY_IDS).size).toBe(66);
+		expect(IDENTITY_IDS.slice(0, AVATAR_IDS.length)).toEqual(AVATAR_IDS);
+		expect(IDENTITY_IDS.slice(AVATAR_IDS.length)).toEqual(LEGEND_IDS);
 	});
 
 	it('indexe chaque identité par son identifiant', () => {
@@ -171,20 +178,20 @@ describe('résolution de l’identité', () => {
 		expect(AVATAR_IDS).toContain(first);
 	});
 
-	it('choisit le premier visage libre, puis la première légende libre', () => {
-		expect(firstFreeAvatarId([])).toBe(AVATAR_IDS[0]);
-		expect(firstFreeAvatarId([AVATAR_IDS[0], AVATAR_IDS[1]])).toBe(AVATAR_IDS[2]);
-		expect(firstFreeAvatarId(AVATAR_IDS)).toBe(LEGEND_IDS[0]);
+	it('choisit la première légende libre, puis le premier visage libre', () => {
+		expect(firstFreeAvatarId([])).toBe(LEGEND_IDS[0]);
+		expect(firstFreeAvatarId([LEGEND_IDS[0], LEGEND_IDS[1]])).toBe(LEGEND_IDS[2]);
+		expect(firstFreeAvatarId(LEGEND_IDS)).toBe(AVATAR_IDS[0]);
 		expect(firstFreeAvatarId(IDENTITY_IDS)).toBeNull();
 	});
 
 	it('ne donne jamais une légende d’un autre poste', () => {
 		for (const position of POSITION_KEYS) {
-			const assigned = firstFreeAvatarId(AVATAR_IDS, position);
+			const assigned = firstFreeAvatarId([], position);
 			expect(assigned, position).not.toBeNull();
 			expect(identityAllowedForPosition(assigned!, position), position).toBe(true);
 		}
-		expect(firstFreeAvatarId(AVATAR_IDS, 'forward')).toBe('legende-maurice-richard');
+		expect(firstFreeAvatarId([], 'forward')).toBe('legende-maurice-richard');
 		expect(firstFreeAvatarId(IDENTITY_IDS, 'forward')).toBeNull();
 	});
 });

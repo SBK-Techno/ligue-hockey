@@ -18,7 +18,6 @@ export const RINK = {
 	endSpot: 6,
 	/** Point d'engagement neutre, à 1,5 m de la ligne bleue. */
 	neutralSpot: 1.5,
-	circleRadius: 4.5,
 	cornerRadius: 8.5,
 	/** Profondeur du demi-cercle du gardien. */
 	crease: 1.8
@@ -245,7 +244,6 @@ type RinkMeasures = {
 	length: number;
 	goalLine: number;
 	blueLine: number;
-	circleRadius: number;
 };
 
 export type RinkLineVariables = {
@@ -254,7 +252,6 @@ export type RinkLineVariables = {
 	blueRight: string;
 	goalLeft: string;
 	goalRight: string;
-	circle: string;
 };
 
 function lengthPercent(meters: number, length: number): string {
@@ -271,8 +268,7 @@ export function rinkLineVariables(rink: RinkMeasures = RINK): RinkLineVariables 
 		blueLeft: lengthPercent(rink.blueLine, rink.length),
 		blueRight: lengthPercent(rink.length - rink.blueLine, rink.length),
 		goalLeft: lengthPercent(rink.goalLine, rink.length),
-		goalRight: lengthPercent(rink.length - rink.goalLine, rink.length),
-		circle: lengthPercent(rink.circleRadius * 2, rink.length)
+		goalRight: lengthPercent(rink.length - rink.goalLine, rink.length)
 	};
 }
 
@@ -284,7 +280,6 @@ export function rinkGeometryStyle(rink: RinkMeasures = RINK): string {
 		`--rink-blue-left: ${lines.blueLeft}`,
 		`--rink-blue-right: ${lines.blueRight}`,
 		`--rink-goal-left: ${lines.goalLeft}`,
-		`--rink-goal-right: ${lines.goalRight}`,
-		`--rink-circle: ${lines.circle}`
+		`--rink-goal-right: ${lines.goalRight}`
 	].join('; ');
 }

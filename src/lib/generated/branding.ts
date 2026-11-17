@@ -27,7 +27,7 @@ export const branding = {
     "width": 1200,
     "height": 800
   },
-  "identitySheet": "/identities/identities-cef75f290495.webp",
+  "identitySheet": "/identities/identities-549421bbb32a.webp",
   "identities": {
     "ids": [
       "capitaine-navy",
@@ -87,7 +87,15 @@ export const branding = {
       "legende-lemaire",
       "legende-shutt",
       "legende-damphousse",
-      "legende-morenz"
+      "legende-morenz",
+      "legende-vezina",
+      "legende-durnan",
+      "legende-johnson",
+      "legende-talbot",
+      "legende-langway",
+      "legende-ludwig",
+      "legende-brisebois",
+      "legende-carbonneau"
     ],
     "leagueFaces": 28
   },
@@ -103,7 +111,7 @@ export const branding = {
     "/auth/dressing-room-640-ef36f1188f7d.webp",
     "/auth/dressing-room-960-430e80cf4704.webp",
     "/auth/dressing-room-1200-3012b5b41fdc.webp",
-    "/identities/identities-cef75f290495.webp",
+    "/identities/identities-549421bbb32a.webp",
     "/icons/favicon-32.4c6787c2333a.png",
     "/icons/apple-touch-180.aff87536bf7c.png",
     "/icons/icon-192-192.073945cb4e02.png",
