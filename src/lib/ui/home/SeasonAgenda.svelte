@@ -82,11 +82,11 @@
 						<li class="border-t border-line first:border-t-0">
 							<a
 								href="/matchs/{game.id}"
-								class="flex min-h-14 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-paper-deep/40"
+								class="flex min-h-14 flex-wrap items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-paper-deep/40"
 							>
 								<span class="record-date">{formatWeekdayShort(game.gameDate)} {dayNumber(game.gameDate)}</span>
-								<span class="min-w-0 flex-1">
-									<span class="block truncate text-body font-semibold">
+								<span class="order-4 min-w-0 flex-1 basis-full sm:order-none sm:basis-0">
+									<span class="block break-words text-body font-semibold">
 										{formatTime(game.startTime)} · {game.location}
 									</span>
 									{#if game.requestOpen}
@@ -96,17 +96,17 @@
 									{/if}
 								</span>
 								{#if game.status === 'cancelled'}
-									<span class="{badgeClass(gameStatus(game.status).tone)} shrink-0">
+									<span class="{badgeClass(gameStatus(game.status).tone)} order-2 ml-auto shrink-0 sm:order-none sm:ml-0">
 										{t(gameStatus(game.status).labelKey)}
 									</span>
 								{:else}
-									<span class="{badgeClass(attendanceTone(game.availability))} shrink-0">
+									<span class="{badgeClass(attendanceTone(game.availability))} order-2 ml-auto shrink-0 sm:order-none sm:ml-0">
 										{attendanceLabel(game.availability)}
 									</span>
 								{/if}
 								<svg
 									viewBox="0 0 24 24"
-									class="h-4 w-4 shrink-0 text-muted"
+									class="order-3 h-4 w-4 shrink-0 text-muted sm:order-none"
 									fill="none"
 									stroke="currentColor"
 									stroke-width="2"
@@ -140,7 +140,7 @@
 							>
 								<span class="record-date">{formatWeekdayShort(game.gameDate)} {dayNumber(game.gameDate)}</span>
 								<span class="min-w-0 flex-1">
-									<span class="block truncate text-body font-semibold">
+									<span class="block break-words text-body font-semibold">
 										{formatTime(game.startTime)} · {game.location}
 									</span>
 									<span class="mt-0.5 block truncate text-meta text-muted">

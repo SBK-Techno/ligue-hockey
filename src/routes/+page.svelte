@@ -105,7 +105,6 @@
 							startTime={data.game.startTime}
 							location={data.game.location}
 							showGameMeta={!data.hasPlayerProfile}
-							showAttendance={!data.hasPlayerProfile}
 						/>
 					{/if}
 				{:else if panel.kind === 'actions'}

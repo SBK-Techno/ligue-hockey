@@ -61,6 +61,31 @@
 	// Le poste suit le formulaire : la liste de légendes se filtre tout de suite.
 	// svelte-ignore state_referenced_locally
 	let position = $state<Position | null>(profile?.position ?? null);
+
+	type IdentityDraft = {
+		firstName: string;
+		lastName: string;
+		age: number | undefined;
+		jerseyNumber: number | undefined;
+	};
+
+	function identityDraft(current: typeof profile): IdentityDraft {
+		return {
+			firstName: current?.firstName ?? '',
+			lastName: current?.lastName ?? '',
+			age: current?.age,
+			jerseyNumber: current?.jerseyNumber ?? undefined
+		};
+	}
+
+	// Un brouillon local garde les champs de la fiche pendant qu'une autre
+	// section est enregistrée; seul le succès de la fiche le resynchronise.
+	// svelte-ignore state_referenced_locally
+	let identity = $state<IdentityDraft>(identityDraft(profile));
+
+	function syncIdentityDraft() {
+		identity = identityDraft(profile);
+	}
 	const isManager = $derived(data.nav.canViewAdmin);
 	const canSeeRatings = $derived(data.nav.canSeeRatings);
 	const managementLinks = $derived(data.nav.managementLinks);
@@ -373,7 +398,7 @@
 							<form
 								method="POST"
 								action="?/profile"
-								use:progressiveForm
+								use:progressiveForm={{ onSuccess: syncIdentityDraft }}
 								class="mt-4 grid gap-4 sm:grid-cols-2"
 							>
 								<div>
@@ -382,7 +407,7 @@
 										class="input"
 										id="firstName"
 										name="firstName"
-										value={profile.firstName}
+										bind:value={identity.firstName}
 										required
 										maxlength={data.limits.nameMax}
 										autocomplete="given-name"
@@ -394,7 +419,7 @@
 										class="input"
 										id="lastName"
 										name="lastName"
-										value={profile.lastName}
+										bind:value={identity.lastName}
 										required
 										maxlength={data.limits.nameMax}
 										autocomplete="family-name"
@@ -410,7 +435,7 @@
 										inputmode="numeric"
 										min={data.limits.ageMin}
 										max={data.limits.ageMax}
-										value={profile.age}
+										bind:value={identity.age}
 										required
 									/>
 									<p class="hint">{t('profile.ageHelp')}</p>
@@ -430,7 +455,7 @@
 										inputmode="numeric"
 										min={data.limits.jerseyMin}
 										max={data.limits.jerseyMax}
-										value={profile.jerseyNumber ?? ''}
+										bind:value={identity.jerseyNumber}
 										placeholder={String(data.limits.jerseyExample)}
 									/>
 									<p class="hint">

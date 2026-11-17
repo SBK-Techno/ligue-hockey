@@ -64,7 +64,42 @@
 	/>
 
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-		<div class="space-y-4">
+		{#if data.permissions.games}
+			<SectionCard class="lg:col-start-2 lg:row-start-1" title={t('home.nextGame')}>
+				{#if data.nextGame}
+					<p class="serial">{formatDate(data.nextGame.gameDate)}</p>
+					<p class="mt-1 font-display text-subhead font-semibold leading-tight">
+						{formatTime(data.nextGame.startTime)} · {data.nextGame.location}
+					</p>
+					<div class="mt-3 flex flex-wrap gap-1.5">
+						<span class={data.nextGame.generated ? 'badge-ok' : 'badge'}>
+							{data.nextGame.generated ? t('games.generated') : t('games.notGenerated')}
+						</span>
+						{#if openSlots > 0}
+							<span class="badge-ice">
+								{formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many')}
+							</span>
+						{/if}
+					</div>
+					{#if data.nextAvailability}
+						<p class="mt-3 font-mono text-meta text-muted">{data.nextAvailability.summary}</p>
+						{#if pendingNames.length > 0}
+							<p class="mt-1 text-meta leading-snug text-muted">
+								{t('admin.unansweredNames', { names: pendingNames.slice(0, 5).join(', ') })}
+							</p>
+						{/if}
+					{/if}
+					<a class="btn-primary mt-4 w-full" href="/admin/matchs/{data.nextGame.id}">
+						{t('admin.openSheet')}
+					</a>
+				{:else}
+					<p class="text-body text-muted">{t('home.noGame')}</p>
+					<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
+				{/if}
+			</SectionCard>
+		{/if}
+
+		<div class="space-y-4 lg:col-start-1 lg:row-start-1 lg:row-span-2">
 			<SectionCard title={t('admin.todo')} flush>
 				{#if hasTodo}
 					<ul role="list" class="divide-y divide-line">
@@ -129,42 +164,11 @@
 			{/if}
 		</div>
 
-		<div class="space-y-4">
-			{#if data.permissions.games}
-				<SectionCard title={t('home.nextGame')}>
-					{#if data.nextGame}
-						<p class="serial">{formatDate(data.nextGame.gameDate)}</p>
-						<p class="mt-1 font-display text-subhead font-semibold leading-tight">
-							{formatTime(data.nextGame.startTime)} · {data.nextGame.location}
-						</p>
-						<div class="mt-3 flex flex-wrap gap-1.5">
-							<span class={data.nextGame.generated ? 'badge-ok' : 'badge'}>
-								{data.nextGame.generated ? t('games.generated') : t('games.notGenerated')}
-							</span>
-							{#if openSlots > 0}
-								<span class="badge-ice">
-									{formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many')}
-								</span>
-							{/if}
-						</div>
-						{#if data.nextAvailability}
-							<p class="mt-3 font-mono text-meta text-muted">{data.nextAvailability.summary}</p>
-							{#if pendingNames.length > 0}
-								<p class="mt-1 text-meta leading-snug text-muted">
-									{t('admin.unansweredNames', { names: pendingNames.slice(0, 5).join(', ') })}
-								</p>
-							{/if}
-						{/if}
-						<a class="btn-primary mt-4 w-full" href="/admin/matchs/{data.nextGame.id}">
-							{t('admin.openSheet')}
-						</a>
-					{:else}
-						<p class="text-body text-muted">{t('home.noGame')}</p>
-						<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
-					{/if}
-				</SectionCard>
-			{/if}
-
+		<div
+			class="space-y-4 lg:col-start-2 {data.permissions.games
+				? 'lg:row-start-2'
+				: 'lg:row-start-1'}"
+		>
 			{#if data.upcoming.length > 0}
 				<SectionCard
 					title={t('home.upcoming')}

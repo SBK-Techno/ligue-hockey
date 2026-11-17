@@ -6,7 +6,7 @@
 	} = $props();
 </script>
 
-<dl class="metric-strip">
+<dl class="metric-strip" data-cells={cells.length}>
 	{#each cells as cell (cell.label)}
 		<div class="metric-cell">
 			<dt class="min-h-8 text-caption leading-tight text-muted [overflow-wrap:anywhere]">

@@ -95,9 +95,6 @@
 				</div>
 			{/each}
 		</div>
-		{#if completed}
-			<p class="mt-1 text-center text-caption text-paper/60">{t('gamesheet.finalized')}</p>
-		{/if}
 	</div>
 
 	<section>

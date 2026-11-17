@@ -271,7 +271,11 @@
 									{#if data.canManage && data.editable && request.status === 'open'}
 										<form method="POST" action="?/cancelRequest" use:progressiveForm>
 											<input type="hidden" name="requestId" value={request.id} />
-											<button class="btn-ghost btn-sm" type="submit">{t('subs.cancelRequest')}</button>
+											<ConfirmSubmit
+												label={t('subs.cancelRequest')}
+												question={t('subs.cancelRequestConfirm')}
+												confirmLabel={t('subs.cancelRequest')}
+											/>
 										</form>
 									{/if}
 								</div>
@@ -359,7 +363,7 @@
 		<SectionCard class="lg:col-span-12" title={t('gamesheet.title')} clip={false}>
 			{#snippet actions()}
 				{#if data.sheet?.finalized}
-					<span class="badge-ok">{t('gamesheet.finalized')}</span>
+					<span class="badge-ok">{t(gameStatus('completed').labelKey)}</span>
 				{/if}
 			{/snippet}
 			<GameSheet
@@ -450,7 +454,12 @@
 				{/if}
 				{#if data.canManage && data.editable}
 					<form method="POST" action="?/generate" use:progressiveForm class="mt-4">
-						<button class="btn-secondary btn-sm" type="submit">{t('games.regenerate')}</button>
+						<ConfirmSubmit
+							label={t('games.regenerate')}
+							question={t('games.regenerateConfirm')}
+							confirmLabel={t('games.regenerate')}
+							class="btn-secondary btn-sm"
+						/>
 					</form>
 				{/if}
 			</SectionCard>

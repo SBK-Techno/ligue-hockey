@@ -75,7 +75,7 @@
 		{/if}
 	</span>
 	<span class="min-w-0 flex-1">
-		<span class="block truncate text-body font-semibold">
+		<span class="block break-words text-body font-semibold">
 			{formatTime(game.startTime)} · {game.location}
 		</span>
 		{#if past && game.score && game.status === 'completed'}

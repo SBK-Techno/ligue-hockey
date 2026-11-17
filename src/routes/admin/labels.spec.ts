@@ -32,48 +32,52 @@ const agendaGame = {
 	score: null
 };
 
-function renderAdmin() {
+function adminData() {
+	return {
+		actor: { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' },
+		unread: 0,
+		hasPlayerProfile: true,
+		isSubstitute: false,
+		avatarId: null,
+		peekScope: 'ratings',
+		nav: {
+			primary: [],
+			mobile: [],
+			account: null,
+			roleLabelKey: 'admin.role.admin',
+			unreadCap: 9 as const
+		},
+		counts: {
+			active: 1,
+			subs: 0,
+			unpaid: 0,
+			overdue: 0,
+			noPlan: 0,
+			openRequests: 0,
+			unanswered: 1
+		},
+		currency: 'CAD',
+		nextAvailability: null,
+		nextGame: null,
+		notifications: null,
+		outstandingCents: 0,
+		permissions: { players: true, balances: false, games: true, subs: false },
+		players: [],
+		balances: [],
+		requests: [],
+		unpaid: [],
+		upcoming: [],
+		withoutPlan: []
+	};
+}
+
+function renderAdmin(overrides: Record<string, unknown> = {}) {
 	return render(AdminPage, {
 		props: {
-			data: {
-				actor: { kind: 'user', active: true, userId: 'admin', name: 'Admin', role: 'admin' },
-				unread: 0,
-				hasPlayerProfile: true,
-				isSubstitute: false,
-				avatarId: null,
-				peekScope: 'ratings',
-				nav: {
-					primary: [],
-					mobile: [],
-					account: null,
-					roleLabelKey: 'admin.role.admin',
-					unreadCap: 9 as const
-				},
-				counts: {
-					active: 1,
-					subs: 0,
-					unpaid: 0,
-					overdue: 0,
-					noPlan: 0,
-					openRequests: 0,
-					unanswered: 1
-				},
-				currency: 'CAD',
-				nextAvailability: null,
-				nextGame: null,
-				notifications: null,
-				outstandingCents: 0,
-				permissions: { players: true, balances: false, games: true, subs: false },
-				players: [],
-				balances: [],
-				requests: [],
-				unpaid: [],
-				upcoming: [],
-				withoutPlan: []
-			},
+			data: { ...adminData(), ...overrides },
 			form: null,
 			params: {}
-		}
+		} as never
 	});
 }
 
@@ -90,5 +94,64 @@ describe('libellé unique de l’absence de réponse', () => {
 		expect(roster.body).toContain(t('availability.noAnswer'));
 		expect(agenda.body).toContain(t('availability.noAnswer'));
 		expect(admin.body).toContain(t('availability.noAnswer'));
+	});
+});
+
+describe('ordre mobile du tableau de bord', () => {
+	it('place le prochain match avant la liste à faire', () => {
+		const admin = renderAdmin({
+			nextGame: {
+				id: agendaGame.id,
+				gameDate: agendaGame.gameDate,
+				startTime: agendaGame.startTime,
+				locationId: 'loc-1',
+				location: agendaGame.location,
+				status: 'scheduled',
+				notes: null,
+				locationAddress: null,
+				locationMapUrl: null,
+				slots: [],
+				generation: null,
+				completedAt: null,
+				lineupManualAt: null,
+				openSlots: 0,
+				openSlotsLabel: '',
+				lineupComplete: false,
+				generated: false,
+				updatedAt: 1
+			},
+			nextAvailability: availability,
+			requests: [
+				{
+					id: 'request-1',
+					gameId: agendaGame.id,
+					position: 'forward',
+					reason: 'manual',
+					status: 'open',
+					requestedByPlayerId: 'player-1',
+					requestedByName: 'Alex Tremblay',
+					filledByPlayerId: null,
+					filledByName: null,
+					createdAt: 1,
+					filledAt: null,
+					cancelledAt: null,
+					game: {
+						id: agendaGame.id,
+						gameDate: agendaGame.gameDate,
+						startTime: agendaGame.startTime,
+						locationId: 'loc-1',
+						location: agendaGame.location,
+						status: 'scheduled'
+					}
+				}
+			],
+			permissions: { players: true, balances: false, games: true, subs: true }
+		});
+
+		const next = admin.body.indexOf(t('home.nextGame'));
+		const todo = admin.body.indexOf(t('admin.todo'));
+
+		expect(next).toBeGreaterThanOrEqual(0);
+		expect(todo).toBeGreaterThan(next);
 	});
 });
