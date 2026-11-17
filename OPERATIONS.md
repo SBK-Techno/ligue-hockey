@@ -99,8 +99,8 @@ La cible ci-dessous a été vérifiée le 17 novembre 2026 sur l'hôte de réfé
 - Données : `/mnt/Docker/DockerApps/LigueHockey` monté sur `/app/data` (SQLite WAL).
 - URL publique : `https://hockey.sbktechno.com`.
 - CDN : Cloudflare répond devant l'hôte (`server: cloudflare`); les actifs à nom haché restent servis depuis le cache de bord après une mise à jour, ce qui couvre les documents encore ouverts.
-- Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.11.0`, publiée sur GHCR. Digest de l'hôte : `sha256:09008039a6ad82c5e440efdb1f747cc3a7f8a229ab8409d17402ef4c462298e7`; identifiant local : `sha256:3fe39b9da3ab6b6c5c31ebff284dc11acf41c093bc7506d84617d1b6c30d1dcc`. Le conteneur est sain depuis le 17 novembre 2026 à 19:41:51 UTC, sans redémarrage. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
-- Retour vérifié : `1.10.0`, digest hôte `sha256:ee76fb5c17abac50654d61a5435fc955a0798731520f3464bf264fbd9d6bb340`, identifiant local `sha256:dad41440fefeabdef7a4c81cb5edf86ea1db533bfa2cc5f362eb65bac98b5c2a`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.10.0.bak`; la base d'avant la mise à jour est `/home/jadorais/backups/ligue-20261117T142253.db`, vérifiée avec `integrity_check: ok`, 29 joueurs actifs et 30 comptes.
+- Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.12.0`, publiée sur GHCR. Digest de l'hôte : `sha256:dbf942fec29bc7c9c076b48b1083345500f54165f335a61d0fce836022bb7d31`; identifiant local : `sha256:0c37c70b91389b55393730d689742324373da50a3b1bf987deba4786f2336e5b`. Le conteneur est sain depuis le 17 novembre 2026 à 21:05:15 UTC, sans redémarrage, avec les 15 migrations appliquées. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
+- Retour vérifié : `1.11.0`, digest hôte `sha256:09008039a6ad82c5e440efdb1f747cc3a7f8a229ab8409d17402ef4c462298e7`, identifiant local `sha256:3fe39b9da3ab6b6c5c31ebff284dc11acf41c093bc7506d84617d1b6c30d1dcc`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.11.0.bak`; la base d'avant la mise à jour est `/home/jadorais/backups/ligue-20261117T155832.db`, vérifiée avec `integrity_check: ok`, 29 joueurs actifs, 30 comptes et 50 messages.
 - Environnement : le déploiement fournit un fichier `--env-file` hors dépôt, qui contient les secrets et n'est jamais versionné. Le coffre de l'hôte est `/home/jadorais/.env.ligue-hockey`, lisible par le seul propriétaire (`0600`), et toutes les commandes ci-dessous le passent à `--env-file`.
 
 Le projet Compose de l'hôte porte le nom `jadorais` et contient d'autres services. `docker compose up -d` peut afficher un avertissement d'orphelins; ne lancez jamais `--remove-orphans`, qui supprimerait ces autres conteneurs.
@@ -125,7 +125,7 @@ done
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
 ```
 
-Le contrôle de santé est le même prédicat que celui de `scripts/ci/container-smoke.sh` : requête `curl -fsS`, puis `jq` sur `status`, `database` et `migrations`. La boucle couvre les quelques secondes où le proxy répond encore 502 pendant le démarrage. La dernière commande doit afficher l'étiquette attendue, par exemple `1.11.0`.
+Le contrôle de santé est le même prédicat que celui de `scripts/ci/container-smoke.sh` : requête `curl -fsS`, puis `jq` sur `status`, `database` et `migrations`. La boucle couvre les quelques secondes où le proxy répond encore 502 pendant le démarrage. La dernière commande doit afficher l'étiquette attendue, par exemple `1.12.0`.
 
 Les migrations Drizzle sont appliquées au démarrage du conteneur. Elles ne sont pas réversibles : sauvegardez la base avant chaque mise à jour, et restaurez la sauvegarde correspondante lors d'un retour arrière.
 
