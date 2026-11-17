@@ -10,5 +10,8 @@ export const ABUSE_LIMITS = {
 	/** Les recherches d'adresse d'un même gestionnaire. */
 	addressSearch: { limit: 60, windowMs: 60_000 },
 	/** Les appareils push enregistrés par un même membre. */
-	pushSubscription: { limit: 10 }
+	pushSubscription: { limit: 10 },
+	/** Les lectures de l'historique et de la synchronisation de la discussion
+	 * pour un même membre. */
+	chatRead: { limit: 120, windowMs: 60_000 }
 } as const;

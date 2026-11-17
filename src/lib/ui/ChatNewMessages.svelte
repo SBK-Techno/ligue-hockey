@@ -9,7 +9,7 @@
 </script>
 
 <div
-	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+var(--bottom-bar-height))] z-30 mx-auto flex max-w-md justify-center lg:bottom-[var(--bottom-bar-offset)]"
+	class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+var(--bottom-bar-height))] z-30 mx-auto flex max-w-md justify-center lg:bottom-[calc(var(--footer-offset)+var(--surface-bottom-inset,0px)+1rem)]"
 >
 	{#if count > 0}
 		<button class="btn-primary btn-sm" type="button" onclick={onshow}>

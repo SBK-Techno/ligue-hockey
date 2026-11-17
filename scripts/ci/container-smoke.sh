@@ -258,7 +258,9 @@ done <<< "$pages"
 
 expect_header "$TMP/discussion.headers" 'content-encoding' '\(gzip\|br\)' 'discussion compressée'
 budget inline-css "$TMP/discussion.body" authInlineCssBytes
-expect_body "$TMP/discussion.body" 'Afficher les messages plus anciens' 'curseur de discussion'
+# Le chargement des messages plus anciens est automatique : la sentinelle
+# observée porte le curseur, et le bouton reste le repli après une erreur.
+expect_body "$TMP/discussion.body" 'data-chat-older-cursor' 'curseur de discussion'
 
 # Le dialogue de confirmation partagé est monté à la demande, donc zéro est
 # normal sur le premier rendu. Ce qui reste interdit, c'est un dialogue par

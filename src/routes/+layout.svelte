@@ -28,7 +28,10 @@
 		})
 	);
 
-	const showBottomBar = $derived(!page.url.pathname.startsWith('/admin'));
+	const isAdmin = $derived(page.url.pathname.startsWith('/admin'));
+	// La coquille de membre porte la barre mobile et le pied flottant; les
+	// pages d'administration ont leur propre chrome.
+	const memberShell = $derived(!isAdmin);
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
 	const openGraphLocale = $derived(branding.locale.replace('-', '_'));
 	const crawlDirective = $derived(branding.indexable ? 'index,follow' : 'noindex,nofollow');
@@ -150,7 +153,9 @@
 		</div>
 	</div>
 {:else}
-	<div class="app-shell" style="{materialVars('paper')}; {materialVars('ice')}">
+	<div class="app-shell" style="{materialVars('paper')}; {materialVars('ice')}; --footer-reserve: {memberShell
+		? 'var(--footer-offset)'
+		: '0px'}">
 		<div class="page-ground" aria-hidden="true"></div>
 		<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
 		<AppNav
@@ -166,26 +171,30 @@
 		<main
 			id="contenu"
 			tabindex="-1"
-			class="mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
+			class="app-main mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pt-6 sm:pt-8"
 		>
 			{#key page.url.pathname}
 				<div class="page-enter">{@render children()}</div>
 			{/key}
 			<div aria-live="polite" class="sr-only">{pageTitle}</div>
 		</main>
-		<AppNavBottom items={data.nav.mobile} />
+		<AppNavBottom items={data.nav.mobile} visible={memberShell} />
 		{#if peekHost}
 			{#await import('#lib/ui/PlayerPeek.svelte') then { default: PlayerPeek }}
 				<PlayerPeek />
 			{/await}
 		{/if}
 		<footer
-			class="mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pt-2 lg:pb-8 {showBottomBar
+			class="app-footer mx-auto w-full max-w-6xl px-4 pt-2 xl:max-w-7xl {memberShell
 				? 'pb-[calc(var(--bottom-bar-offset)+0.5rem)]'
-				: 'pb-2'}"
+				: 'pb-2'} {memberShell
+				? 'lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-30 lg:max-w-none lg:border-t lg:border-line lg:bg-paper lg:px-0 lg:pt-0 lg:pb-[env(safe-area-inset-bottom)]'
+				: 'lg:pb-8'}"
 		>
 			<div
-				class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-caption font-medium text-muted"
+				class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-caption font-medium text-muted {memberShell
+					? 'lg:mx-auto lg:min-h-[var(--footer-height)] lg:w-full lg:max-w-6xl lg:border-0 lg:px-4 lg:pt-0 lg:pb-0 xl:max-w-7xl'
+					: ''}"
 			>
 				<p>{branding.name}</p>
 				<p>{t('brand.presentedBy', { name: branding.organisation })}</p>

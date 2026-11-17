@@ -115,6 +115,23 @@
 	.app-shell > main {
 		flex: 1 0 auto;
 	}
+	/* Au bureau, le pied de page flotte comme l'en-tête : le contenu réserve
+	   sa hauteur pour que le dernier message ou le dernier bouton ne passe
+	   jamais dessous. Sur mobile, le pied reste dans le flux au-dessus de la
+	   barre. */
+	.app-main {
+		padding-bottom: 2rem;
+	}
+	@media (min-width: 900px) {
+		.app-main {
+			padding-bottom: calc(3rem + var(--footer-reserve, 0px));
+		}
+		html {
+			scroll-padding-bottom: calc(
+				var(--bottom-bar-offset) + var(--surface-bottom-inset, 0px) + var(--footer-offset)
+			);
+		}
+	}
 	.page-ground {
 		position: fixed;
 		inset: 0;
@@ -1601,6 +1618,20 @@
 	.btn-on-ink:hover,
 	.btn-on-ink:active {
 		transform: none;
+	}
+}
+
+/* Le pied flottant ne se répète pas sur une page imprimée. */
+@media print {
+	.app-footer {
+		position: static !important;
+		max-width: none;
+		border-top: 1px solid var(--color-line);
+		background: transparent;
+		padding: 0.5rem 1rem;
+	}
+	.app-main {
+		padding-bottom: 0 !important;
 	}
 }
 

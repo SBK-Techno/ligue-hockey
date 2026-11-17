@@ -39,6 +39,7 @@ const data = {
 	],
 	nextCursor: null,
 	before: null,
+	viewerId: 'player',
 	limits: {
 		messageMax: 2000,
 		questionMax: 200,
@@ -102,7 +103,7 @@ describe('page de discussion', () => {
 		const { body } = await render(Page, { props: { data, form: null, params: {} } });
 		const start = body.indexOf('mx-auto w-full max-w-4xl');
 		const openEnd = body.indexOf('>', start) + 1;
-		const sheet = body.indexOf('<section class="sheet"');
+		const sheet = body.search(/<section class="sheet\b/);
 		const composer = body.indexOf('action="?/send"');
 
 		expect(start).toBeGreaterThan(-1);

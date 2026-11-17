@@ -73,49 +73,54 @@ export type MeasuredPage = {
  * page de détail. Les six surfaces à paramètre (/matchs/[id], /equipes/[id],
  * /admin/matchs/[id], /admin/joueurs/[id], /admin/evaluations/[id],
  * /admin/evaluations/matchs/[id]) sont déclarées mais mesurées en préversion
- * avec les données de démonstration.
+ * avec les données de démonstration. Depuis la construction 1.12.0, le
+ * gestionnaire de déconnexion partagé est chargé à la demande : le smoke
+ * mesure une requête de plus sur chaque page et deux sur /discussion, où la
+ * copie locale est déjà chargée. Les valeurs viennent de l'image de la CI,
+ * sur une base vide.
  */
 export const MEASURED_PAGES: readonly MeasuredPage[] = [
 	{
 		name: 'connexion',
 		path: '/connexion',
-		maxRequests: 20,
+		maxRequests: 21,
 		maxBytes: 60 * 1024,
 		audience: 'anonymous'
 	},
 	{
 		name: 'mot-de-passe-oublie',
 		path: '/mot-de-passe-oublie',
-		maxRequests: 17,
+		maxRequests: 18,
 		maxBytes: 45 * 1024,
 		audience: 'anonymous'
 	},
 	{
 		name: 'reinitialiser-mot-de-passe',
 		path: '/reinitialiser-mot-de-passe',
-		maxRequests: 20,
+		maxRequests: 21,
 		maxBytes: 45 * 1024,
 		audience: 'anonymous'
 	},
-	{ name: 'home', path: '/', maxRequests: 20, maxBytes: 130 * 1024, audience: 'admin' },
+	{ name: 'home', path: '/', maxRequests: 21, maxBytes: 130 * 1024, audience: 'admin' },
 	{
 		name: 'profil',
 		path: '/profil',
-		maxRequests: 20,
+		maxRequests: 21,
 		maxBytes: 120 * 1024,
 		audience: 'player'
 	},
 	{
 		name: 'discussion',
 		path: '/discussion',
-		// Le module partagé `chrome-inset.svelte.ts` (coquille admin et
-		// discussion) ajoute une requête mesurée par le smoke du conteneur :
-		// 21 requêtes pour cette page, sans changement du plafond d'octets.
-		maxRequests: 21,
+		// La copie locale (cache IndexedDB, position, sondages) et le menu
+		// partagé des messages ajoutent des morceaux mesurés sur la
+		// construction 1.12.0 : 26 requêtes, 236 Ko JavaScript et 74 Ko HTML.
+		// Le plafond d'octets ne change pas; les requêtes restent des planchers.
+		maxRequests: 26,
 		maxBytes: 150 * 1024,
 		audience: 'admin'
 	},
-	{ name: 'matchs', path: '/matchs', maxRequests: 26, maxBytes: 110 * 1024, audience: 'admin' },
+	{ name: 'matchs', path: '/matchs', maxRequests: 27, maxBytes: 110 * 1024, audience: 'admin' },
 	{
 		name: 'equipes',
 		path: '/equipes',
@@ -127,15 +132,15 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 	{
 		name: 'remplacants',
 		path: '/remplacants',
-		maxRequests: 27,
+		maxRequests: 28,
 		maxBytes: 110 * 1024,
 		audience: 'admin'
 	},
-	{ name: 'solde', path: '/solde', maxRequests: 25, maxBytes: 110 * 1024, audience: 'admin' },
+	{ name: 'solde', path: '/solde', maxRequests: 26, maxBytes: 110 * 1024, audience: 'admin' },
 	{
 		name: 'notifications',
 		path: '/notifications',
-		maxRequests: 22,
+		maxRequests: 23,
 		maxBytes: 110 * 1024,
 		audience: 'admin'
 	},
@@ -144,8 +149,8 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 		path: '/admin',
 		// Le chunk partagé `chrome-inset.svelte.ts` (publication de
 		// `surface-top-inset`, coquille admin et discussion) ajoute une requête
-		// mesurée par le smoke : 29 requêtes, plafond d'octets inchangé.
-		maxRequests: 29,
+		// mesurée par le smoke : 30 requêtes, plafond d'octets inchangé.
+		maxRequests: 30,
 		maxBytes: 130 * 1024,
 		audience: 'admin'
 	},
@@ -155,14 +160,14 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 	{
 		name: 'admin-matchs',
 		path: '/admin/matchs',
-		maxRequests: 31,
+		maxRequests: 32,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},
 	{
 		name: 'admin-joueurs',
 		path: '/admin/joueurs',
-		maxRequests: 30,
+		maxRequests: 31,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},
@@ -170,35 +175,35 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 		name: 'admin-lieux',
 		path: '/admin/lieux',
 		// Le champ d'adresse ajoute un morceau; le poids reste sous le plafond.
-		maxRequests: 31,
+		maxRequests: 32,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},
 	{
 		name: 'admin-regles',
 		path: '/admin/regles',
-		maxRequests: 28,
+		maxRequests: 29,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},
 	{
 		name: 'admin-soldes',
 		path: '/admin/soldes',
-		maxRequests: 28,
+		maxRequests: 29,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},
 	{
 		name: 'admin-evaluations',
 		path: '/admin/evaluations',
-		maxRequests: 26,
+		maxRequests: 27,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},
 	{
 		name: 'admin-parametres',
 		path: '/admin/parametres',
-		maxRequests: 24,
+		maxRequests: 25,
 		maxBytes: 140 * 1024,
 		audience: 'admin'
 	},

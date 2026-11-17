@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
 import type { Cursor } from '#lib/shared/paging/cursor.ts';
 import { db } from '#lib/server/db/index.ts';
 import { insertAudit, type AuditEntry } from '#lib/domain/audit/queries.ts';
@@ -71,6 +71,48 @@ export function listMessages(
 		.all();
 }
 
+/**
+ * La fenêtre de synchronisation est le complément exact de la page
+ * précédente : strictement postérieure au curseur, du plus ancien au plus
+ * récent, avec le même départage (date, identifiant).
+ */
+export function listMessagesAfter(limit: number, after: Cursor): MessageRow[] {
+	return messageQuery()
+		.where(
+			or(
+				gt(chatMessages.createdAt, after.createdAt),
+				and(
+					eq(chatMessages.createdAt, after.createdAt),
+					gt(chatMessages.id, after.id)
+				)
+			)
+		)
+		.orderBy(asc(chatMessages.createdAt), asc(chatMessages.id))
+		.limit(limit)
+		.all();
+}
+
+/**
+ * Les identifiants supprimés depuis un instant, du plus ancien au plus
+ * récent. Une synchronisation n'a besoin que des identifiants : le contenu
+ * supprimé ne quitte jamais la base.
+ */
+export function listDeletedMessageIds(since: number, limit: number): string[] {
+	return db
+		.select({ id: chatMessages.id })
+		.from(chatMessages)
+		.where(
+			and(
+				isNotNull(chatMessages.deletedAt),
+				gt(chatMessages.deletedAt, since)
+			)
+		)
+		.orderBy(asc(chatMessages.deletedAt), asc(chatMessages.id))
+		.limit(limit)
+		.all()
+		.map((row) => row.id);
+}
+
 /** Le dernier message visible, sans charger l'historique. */
 export function listLatestVisibleMessage(): MessageRow | undefined {
 	return messageQuery()
@@ -93,6 +135,19 @@ export function listOpenPollMessages(now: number, limit: number): MessageRow[] {
 				or(isNull(polls.closesAt), gt(polls.closesAt, now))
 			)
 		)
+		.orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
+		.limit(limit)
+		.all();
+}
+
+/**
+ * Le catalogue borné de la colonne des sondages : les messages de sondage,
+ * du plus récent au plus ancien. Les lignes supprimées restent incluses pour
+ * que l'appareil puisse retirer un sondage de sa colonne.
+ */
+export function listPollMessageRows(limit: number): MessageRow[] {
+	return messageQuery()
+		.where(eq(chatMessages.kind, 'poll'))
 		.orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
 		.limit(limit)
 		.all();

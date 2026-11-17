@@ -7,6 +7,7 @@
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
 	import NavIcon from '#lib/ui/NavIcon.svelte';
 	import { isActiveHref } from '#lib/ui/nav.ts';
+	import { signOutWithCleanup } from '#lib/ui/sign-out.ts';
 
 	let {
 		name,
@@ -183,7 +184,12 @@
 								{t('balance.title')}
 							</a>
 						</nav>
-						<form method="POST" action="/deconnexion" class="mt-1 border-t border-line pt-1">
+						<form
+							method="POST"
+							action="/deconnexion"
+							class="mt-1 border-t border-line pt-1"
+							onsubmit={(event) => void signOutWithCleanup(event, userId)}
+						>
 							<button
 								class="flex min-h-11 w-full items-center px-2.5 text-left text-body font-medium text-muted transition-colors hover:bg-ice-soft/60 hover:text-ink"
 								type="submit"
