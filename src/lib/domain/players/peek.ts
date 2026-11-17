@@ -3,9 +3,9 @@ import type { Legend } from '#config/legends.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import {
-	playerSeasonStats,
-	type PlayerSeasonStats
-} from '#lib/domain/gamesheet/queries.ts';
+	seasonStatsFor,
+	type SeasonStats
+} from '#lib/domain/gamesheet/season-stats.ts';
 import { getRatings, type RatingsView } from '#lib/domain/ratings/service.ts';
 import { getPlayer, type PublicPlayer } from './service.ts';
 
@@ -21,7 +21,7 @@ import { getPlayer, type PublicPlayer } from './service.ts';
 export type PlayerPeekView = {
 	player: PublicPlayer;
 	legend: Legend | null;
-	stats: PlayerSeasonStats;
+	stats: SeasonStats;
 	ratings: RatingsView | null;
 };
 
@@ -45,7 +45,7 @@ export function getPlayerPeek(actor: Actor, playerId: string): PlayerPeekView {
 	return {
 		player,
 		legend: legendForIdentity(player.avatarId),
-		stats: playerSeasonStats(playerId),
+		stats: seasonStatsFor(playerId),
 		ratings
 	};
 }

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { gameStatus } from '#config/game-status.ts';
-	import { teamDefinition, type Team } from '#config/teams.ts';
 	import {
 		formatMonthLabel,
 		formatTime,
@@ -8,9 +7,8 @@
 		t
 	} from '#lib/shared/i18n/index.ts';
 	import { badgeClass, type BadgeTone } from '#lib/ui/badge-tone.ts';
+	import { scoreLine, type GameScore } from '#lib/ui/score.ts';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
-
-	type Score = Record<Team, number>;
 
 	type AgendaGame = {
 		id: string;
@@ -20,7 +18,7 @@
 		status: 'scheduled' | 'cancelled' | 'completed';
 		availability: 'present' | 'absent' | null;
 		requestOpen?: boolean;
-		score?: Score | null;
+		score?: GameScore | null;
 	};
 
 	type MonthGroup = { month: string; label: string; games: AgendaGame[] };
@@ -67,11 +65,6 @@
 		return String(Number(date.slice(8, 10)));
 	}
 
-	function scoreLine(score: Score): string {
-		return `${t(teamDefinition('white').shortLabelKey)} ${score.white} · ${t(
-			teamDefinition('black').shortLabelKey
-		)} ${score.black}`;
-	}
 </script>
 
 <SectionCard title={t('home.agenda')} href="/matchs" linkLabel={t('home.allGames')} flush>

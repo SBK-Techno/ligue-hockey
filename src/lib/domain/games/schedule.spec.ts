@@ -73,6 +73,40 @@ describe('splitSchedule', () => {
 	}
 });
 
+describe('ordre des listes', () => {
+	it('trie les matchs à venir du plus proche au plus lointain', () => {
+		const split = splitSchedule(
+			[
+				game('later', '2026-11-29', '19:00'),
+				game('sooner', '2026-11-17', '19:00'),
+				game('middle', '2026-11-22', '19:00')
+			],
+			at('2026-11-16', '09:00')
+		);
+		expect(split.upcoming.map((entry) => entry.id)).toEqual([
+			'sooner',
+			'middle',
+			'later'
+		]);
+	});
+
+	it('trie les matchs passés du plus récent au plus ancien', () => {
+		const split = splitSchedule(
+			[
+				game('old', '2026-11-01', '19:00', 'completed'),
+				game('recent', '2026-11-15', '19:00', 'completed'),
+				game('middle', '2026-11-08', '19:00', 'completed')
+			],
+			at('2026-11-16', '09:00')
+		);
+		expect(split.past.map((entry) => entry.id)).toEqual([
+			'recent',
+			'middle',
+			'old'
+		]);
+	});
+});
+
 describe('nextGameId', () => {
 	const now = at('2026-11-16', '09:00');
 

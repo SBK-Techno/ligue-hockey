@@ -191,7 +191,7 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 	// L'agenda de saison : les matchs qui suivent la tête, puis les derniers
 	// résultats. Le match de la tête n'est jamais répété dans la liste.
 	const agendaUpcoming = upcoming.filter((entry) => entry.id !== game?.id).slice(0, 4);
-	const agendaPast = past.slice(-3).reverse();
+	const agendaPast = past.slice(0, 3);
 	const agendaIds = [...agendaUpcoming, ...agendaPast].map((entry) => entry.id);
 	const myAvailability = hasPlayerProfile
 		? myAvailabilityByGame(actor, agendaIds)

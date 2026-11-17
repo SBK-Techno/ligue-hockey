@@ -239,9 +239,11 @@
 		min-width: 2.75rem;
 		padding-inline: 0;
 	}
-	/* Entrée de page : courte, commune à toutes les surfaces. */
+	/* Entrée de page : courte, commune à toutes les surfaces. Le remplissage
+	   s'arrête à la fin : aucun transform retenu ne transforme la page en bloc
+	   conteneur pour les éléments fixes (la pastille de nouveaux messages). */
 	.page-enter {
-		animation: page-rise var(--duration-base) var(--ease-out-expo) both;
+		animation: page-rise var(--duration-base) var(--ease-out-expo) backwards;
 	}
 	.reveal {
 		animation: page-rise var(--duration-slow) var(--ease-out-expo) both;
@@ -520,7 +522,7 @@
 		background: var(--color-paper-deep);
 	}
 	.btn-sm {
-		@apply min-h-10 px-3 py-1.5 text-meta;
+		@apply min-h-11 px-3 py-1.5 text-meta;
 	}
 
 	.input {
@@ -810,12 +812,19 @@
 	}
 	.rink-name {
 		max-width: 100%;
-		overflow: hidden;
 		font-size: clamp(0.5rem, 1.7vw, 0.625rem);
 		font-weight: 600;
-		line-height: 1.1;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		line-height: 1.05;
+		text-align: center;
+		hyphens: auto;
+		white-space: normal;
+	}
+	/* Sous 640 px, le jeton de 44 px ne peut pas porter un nom lisible :
+	   le numéro reste seul, le nom complet vit dans le libellé accessible. */
+	@media (max-width: 639px) {
+		.rink-name {
+			display: none;
+		}
 	}
 	.rink-empty {
 		font-size: 1.25rem;

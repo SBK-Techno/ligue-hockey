@@ -461,7 +461,8 @@ export const fr = {
   'games.adminEdit': 'Modifier le match',
   'games.adminCancel': 'Annuler le match',
   'games.notes': 'Note pour les joueurs',
-  'games.teamBalance': 'Écart de notes : {skill} · écart d’âge cumulé : {age} ans',
+  'games.balanceSkill': 'Écart de notes : {value}',
+  'games.balanceAge': 'Écart d’âge cumulé : {value} ans',
   'games.rulesConflict': 'Règles incompatibles',
   'games.warning.rulePreference':
     'Une préférence d’alignement n’a pas pu être respectée.',
@@ -831,6 +832,8 @@ export const fr = {
   'profile.pushUnconfigured':
     'Les notifications sur l’appareil ne sont pas activées pour la ligue.',
   'profile.pushFailed': 'Impossible d’activer les notifications. Réessaie.',
+  'profile.pushPreferenceHelp':
+    'Active cet appareil ci-dessous pour recevoir les notifications. La préférence reste enregistrée.',
   'profile.notificationsHelp':
     'Le courriel se règle ici. Pour recevoir les notifications sur cet appareil, active-les plus bas.',
   'profile.pushIosInstall':
@@ -892,6 +895,17 @@ export const fr = {
   'peek.points': 'Points',
   'peek.penalties': 'Pénalités',
   'peek.statsHelp': 'Matchs terminés seulement.',
+
+  'stats.title': 'Tes stats',
+  'stats.help': 'Tes totaux personnels, matchs terminés seulement. Aucune note, aucune habileté.',
+  'stats.games': 'Matchs',
+  'stats.goals': 'Buts',
+  'stats.assists': 'Aides',
+  'stats.points': 'Points',
+  'stats.penalties': 'Pénalités',
+  'stats.perGame': 'Points par match : {value}',
+  'stats.empty':
+    'Aucun match terminé pour l’instant. Tes premiers chiffres apparaîtront après ton premier match.',
   'peek.skills': 'Habiletés',
   'peek.positionSkills': 'Au poste',
   'peek.overall': 'Note globale',
@@ -905,6 +919,7 @@ export const fr = {
   'profile.tab.account': 'Compte',
   'profile.tab.player': 'Fiche de joueur',
   'profile.tab.notifications': 'Notifications',
+  'profile.tab.stats': 'Stats',
   'profile.tab.security': 'Sécurité',
   'profile.tab.admin': 'Administration',
   'profile.emailReadOnly':

@@ -70,7 +70,7 @@
 		back={{ href: '/admin/joueurs', label: t('admin.backToPlayers') }}
 	>
 		{#snippet leading()}
-			<Avatar player={player} size={48} decorative={false} />
+			<Avatar player={player} size={48} />
 		{/snippet}
 		{#snippet actions()}
 			{#if player.role !== 'player'}

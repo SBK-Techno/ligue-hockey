@@ -1,4 +1,5 @@
 import type { Position } from '#config/positions.ts';
+import { gameStartsAt } from '#lib/domain/games/schedule.ts';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -65,4 +66,20 @@ export function isTooLateForSubRequest(
 	lastCallMinutes: number
 ): boolean {
 	return nowMs >= gameStartMs - lastCallMinutes * MINUTE;
+}
+
+export type OpenRequestOrder = {
+	game: { gameDate: string; startTime: string };
+	createdAt: number;
+};
+
+/**
+ * L'ordre du bassin ouvert : le match le plus proche d'abord, puis la demande
+ * la plus ancienne. L'ordre ne dépend donc plus de l'ordre d'insertion.
+ */
+export function compareOpenRequests(
+	a: OpenRequestOrder,
+	b: OpenRequestOrder
+): number {
+	return gameStartsAt(a.game) - gameStartsAt(b.game) || a.createdAt - b.createdAt;
 }

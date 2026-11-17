@@ -180,7 +180,7 @@
 			{@const view = playerPeek.view}
 			{@const ratings = view.ratings}
 			<div class="flex items-start gap-3 pr-7">
-				<Avatar player={view.player} size={48} decorative={false} peek={false} />
+				<Avatar player={view.player} size={48} peek={false} />
 				<div class="min-w-0">
 					<p class="truncate text-section font-semibold">{view.player.fullName}</p>
 					<p class="mt-0.5 text-meta text-muted">

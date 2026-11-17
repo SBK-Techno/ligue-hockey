@@ -154,7 +154,6 @@ export type PlayerSeasonStats = {
 	games: number;
 	goals: number;
 	assists: number;
-	points: number;
 	penalties: number;
 };
 
@@ -213,13 +212,10 @@ export function playerSeasonStats(playerId: string): PlayerSeasonStats {
 		)
 		.get();
 
-	const goals = Number(goalsRow?.total ?? 0);
-	const assists = Number(assistsRow?.total ?? 0);
 	return {
 		games: Number(gamesRow?.total ?? 0),
-		goals,
-		assists,
-		points: goals + assists,
+		goals: Number(goalsRow?.total ?? 0),
+		assists: Number(assistsRow?.total ?? 0),
 		penalties: Number(penaltiesRow?.total ?? 0)
 	};
 }

@@ -7,7 +7,14 @@
 	import { POSITIONS, positionDefinition, type Position } from '#config/positions.ts';
 	import { legendForIdentity } from '#config/identities.ts';
 	import { roleDefinition } from '#config/roles.ts';
-	import { formatCount, formatMonthYear, formatMoney, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
+	import {
+		formatCount,
+		formatDecimal,
+		formatMonthYear,
+		formatMoney,
+		formatTimestamp,
+		t
+	} from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
 	import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
@@ -17,10 +24,12 @@
 	import PasswordField from '#lib/ui/PasswordField.svelte';
 	import PositionChips from '#lib/ui/PositionChips.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import StatStrip from '#lib/ui/StatStrip.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
 	import { managementTabs } from '#lib/domain/auth/destinations.ts';
 	import { can } from '#lib/domain/auth/policy.ts';
+	import { pushPreferenceState } from './push-preference.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -51,6 +60,9 @@
 		'checking' | 'off' | 'on' | 'denied' | 'unsupported' | 'unconfigured'
 	>('checking');
 	let pushError = $state<string | null>(null);
+	const pushPreference = $derived(
+		pushPreferenceState(pushStatus, data.notifications.pushEnabled)
+	);
 
 	function monogram(name: string): string {
 		return name
@@ -185,9 +197,22 @@
 		void tick().then(() => control?.focus());
 	});
 
+	const statsCells = $derived(
+		data.stats
+			? [
+					{ label: t('stats.games'), value: data.stats.games },
+					{ label: t('stats.goals'), value: data.stats.goals },
+					{ label: t('stats.assists'), value: data.stats.assists },
+					{ label: t('stats.points'), value: data.stats.points },
+					{ label: t('stats.penalties'), value: data.stats.penalties }
+				]
+			: []
+	);
+
 	const sections = $derived([
 		{ id: 'compte', label: t('profile.tab.account') },
 		...(profile ? [{ id: 'joueur', label: t('profile.tab.player') }] : []),
+		...(data.stats ? [{ id: 'stats', label: t('profile.tab.stats') }] : []),
 		{ id: 'notifications', label: t('profile.tab.notifications') },
 		{ id: 'securite', label: t('profile.tab.security') },
 		...(isManager ? [{ id: 'administration', label: t('profile.tab.admin') }] : [])
@@ -206,7 +231,7 @@
 			<section class="scoreboard p-5">
 				<div class="flex items-start gap-4">
 					{#if profile}
-						<Avatar player={profile} size={64} decorative={false} />
+						<Avatar player={profile} size={64} />
 					{:else}
 						<span
 							class="grid h-16 w-16 shrink-0 place-items-center rounded-pill border border-paper/25 bg-paper/10 text-section font-semibold tracking-tight"
@@ -460,6 +485,24 @@
 			</div>
 
 			<div class="page-stack min-w-0">
+				{#if data.stats}
+					<div id="stats" class="scroll-mt-[var(--anchor-offset)]">
+						<SectionCard title={t('stats.title')}>
+							{#if data.stats.games === 0}
+								<p class="text-body text-muted">{t('stats.empty')}</p>
+							{:else}
+								<StatStrip cells={statsCells} />
+								<p class="mt-3 text-body">
+									{t('stats.perGame', {
+										value: formatDecimal(data.stats.pointsPerGame, 2)
+									})}
+								</p>
+							{/if}
+							<p class="hint mt-3">{t('stats.help')}</p>
+						</SectionCard>
+					</div>
+				{/if}
+
 				<div id="notifications" class="scroll-mt-[var(--anchor-offset)]">
 					<SectionCard title={t('profile.notifications')}>
 						<p class="hint">{t('profile.notificationsHelp')}</p>
@@ -477,12 +520,24 @@
 							<label class="flex min-h-11 items-center gap-3 text-body font-medium">
 								<input
 									type="checkbox"
-									name="pushEnabled"
-									checked={data.notifications.pushEnabled}
+									name={pushPreference.disabled ? undefined : 'pushEnabled'}
+									checked={pushPreference.checked}
+									disabled={pushPreference.disabled}
+									aria-describedby={pushPreference.hint ? 'push-preference-help' : undefined}
 									class="h-4 w-4"
 								/>
 								{t('profile.pushNotifications')}
 							</label>
+							{#if pushPreference.disabled}
+								<input
+									type="hidden"
+									name="pushEnabled"
+									value={data.notifications.pushEnabled ? 'on' : ''}
+								/>
+								<p id="push-preference-help" class="hint">
+									{t('profile.pushPreferenceHelp')}
+								</p>
+							{/if}
 							<button class="btn-primary" type="submit">{t('common.save')}</button>
 						</form>
 

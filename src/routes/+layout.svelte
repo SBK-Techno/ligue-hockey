@@ -70,11 +70,13 @@
 	<meta property="og:title" content={pageTitle} />
 	<meta property="og:description" content={branding.description} />
 	<meta property="og:image" content={socialImage} />
+	<meta property="og:image:alt" content={branding.name} />
 	<meta property="og:locale" content={openGraphLocale} />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={pageTitle} />
 	<meta name="twitter:description" content={branding.description} />
 	<meta name="twitter:image" content={socialImage} />
+	<meta name="twitter:image:alt" content={branding.name} />
 </svelte:head>
 
 {#if data.actor.kind === 'anonymous'}

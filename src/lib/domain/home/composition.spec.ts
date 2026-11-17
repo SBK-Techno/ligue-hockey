@@ -304,6 +304,21 @@ const cases: Case[] = [
 		spans: [12, 7, 5, 12]
 	},
 	{
+		name: 'un sondage et une liste de remplaçants ferment les lignes complètes',
+		input: {
+			teamsGenerated: true,
+			isSubstitute: true,
+			claimableCount: 2,
+			openPoll: { unvoted: false }
+		},
+		mode: 'lineup',
+		hero: 'upcoming',
+		manager: false,
+		actions: ['claim'],
+		panels: ['team', 'actions', 'agenda', 'attendance', 'poll', 'substitutes', 'install'],
+		spans: [5, 7, 7, 5, 12, 12, 12]
+	},
+	{
 		name: 'un gestionnaire ajoute son bandeau au-dessus du membre',
 		input: { canManageGames: true },
 		mode: 'announced',
@@ -399,6 +414,23 @@ describe('composition de l’accueil', () => {
 		expect(kinds.includes('agenda') && kinds.includes('upcoming')).toBe(false);
 		for (const panel of result.panels) {
 			expect(PANEL_SPANS).toContain(panel.span);
+		}
+	});
+});
+
+describe('largeur de la grille d’accueil', () => {
+	it('ferme chaque ligne à douze colonnes, dans tous les cas', () => {
+		for (const entry of cases) {
+			const { panels } = composeHome({ ...base, ...entry.input });
+			let row = 0;
+			for (const { span } of panels) {
+				row += span;
+				if (row === 12) row = 0;
+				else if (row > 12) {
+					throw new Error(`${entry.name}: la ligne dépasse douze colonnes (${row})`);
+				}
+			}
+			expect(row, entry.name).toBe(0);
 		}
 	});
 });

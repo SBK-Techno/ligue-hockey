@@ -109,7 +109,6 @@ describe('totaux de saison du joueur', () => {
 			games: 1,
 			goals: 2,
 			assists: 2,
-			points: 4,
 			penalties: 1
 		});
 	});
@@ -136,7 +135,6 @@ describe('totaux de saison du joueur', () => {
 			games: 0,
 			goals: 0,
 			assists: 0,
-			points: 0,
 			penalties: 0
 		});
 	});

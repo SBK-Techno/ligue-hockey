@@ -41,6 +41,10 @@ export function splitSchedule<T extends ScheduleGame>(
 	for (const game of games) {
 		(isUpcoming(game, at, timeZone) ? upcoming : past).push(game);
 	}
+	// Les deux listes ont un seul ordre, quel que soit l'ordre d'entrée :
+	// le prochain match en tête, le dernier match joué en tête des archives.
+	upcoming.sort((a, b) => gameStartsAt(a, timeZone) - gameStartsAt(b, timeZone));
+	past.sort((a, b) => gameStartsAt(b, timeZone) - gameStartsAt(a, timeZone));
 	return { upcoming, past };
 }
 

@@ -127,7 +127,9 @@ function intelligenceFrom(pool: LineupPool): LineupIntelligence {
 	});
 
 	return {
-		complete: view.complete,
+		// Un alignement n'est complet que si chaque place du modèle est remplie;
+		// une équipe vide ou une place ouverte garde l'état incomplet.
+		complete: pool.openSlots.length === 0,
 		openSlots: pool.openSlots.length,
 		placed: pool.placed.length,
 		skillDiff: view.skillDiff,

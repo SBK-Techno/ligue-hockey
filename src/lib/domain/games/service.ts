@@ -56,6 +56,8 @@ export type GameView = GameSummary & {
 	lineupManualAt: number | null;
 	openSlots: number;
 	openSlotsLabel: string;
+	/** Toutes les places du modèle sont remplies : l'alignement est complet. */
+	lineupComplete: boolean;
 	generated: boolean;
 };
 
@@ -208,6 +210,7 @@ export function getGame(actor: Actor, gameId: string): GameView {
 		lineupManualAt: row.lineupManualAt,
 		openSlots,
 		openSlotsLabel: formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many'),
+		lineupComplete: openSlots === 0,
 		generated: snapshot !== null
 	};
 }

@@ -2,6 +2,7 @@
 	import { gameStatus } from '#config/game-status.ts';
 	import { formatDate, formatTime, formatWeekday, t } from '#lib/shared/i18n/index.ts';
 	import { badgeClass, type BadgeTone } from '#lib/ui/badge-tone.ts';
+	import { scoreLine, type GameScore } from '#lib/ui/score.ts';
 
 	export type GameRowBadge = { label: string; tone?: BadgeTone };
 
@@ -18,6 +19,7 @@
 			startTime: string;
 			location: string;
 			status: string;
+			score?: GameScore | null;
 			generated?: boolean;
 			openSlots?: number;
 			openSlotsLabel?: string;
@@ -76,6 +78,9 @@
 		<span class="block truncate text-body font-semibold">
 			{formatTime(game.startTime)} · {game.location}
 		</span>
+		{#if past && game.score && game.status === 'completed'}
+			<span class="mt-0.5 block truncate text-meta text-muted">{scoreLine(game.score)}</span>
+		{/if}
 		{#if badges.length > 0}
 			<span class="mt-1 flex flex-wrap items-center gap-1">
 				{#each badges as badge (badge.label)}

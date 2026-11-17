@@ -585,6 +585,18 @@ describe('lineup intelligence states', () => {
 	});
 });
 
+describe('état de publication de l’alignement', () => {
+	it('ne dit jamais complet un alignement généré sans joueur', () => {
+		const gameId = addGame();
+		const game = getGame(manager, gameId);
+
+		expect(game.generated).toBe(true);
+		expect(game.openSlots).toBeGreaterThan(0);
+		expect(game.lineupComplete).toBe(false);
+		expect(lineupIntelligence(manager, game).complete).toBe(false);
+	});
+});
+
 describe('applyBestSwap through the service', () => {
 	it('never introduces a strict violation while repairing a preference', () => {
 		for (const [id, overall] of [

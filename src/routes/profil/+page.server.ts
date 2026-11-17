@@ -9,6 +9,7 @@ import {
 	updateOwnDisplayName
 } from '#lib/domain/auth/service.ts';
 import { getMyBalance } from '#lib/domain/finance/service.ts';
+import { seasonStatsFor } from '#lib/domain/gamesheet/season-stats.ts';
 import {
 	getNotificationPreferences,
 	updateNotificationPreferences
@@ -52,6 +53,7 @@ export const load: ServerLoad = ({ locals }) => {
 			avatarPicker: null,
 			positions,
 			notifications: { emailEnabled: true, pushEnabled: true },
+			stats: null,
 			isSubstitute: false,
 			balance: null,
 			sessions: [],
@@ -68,6 +70,9 @@ export const load: ServerLoad = ({ locals }) => {
 		avatarPicker: profile ? getOwnAvatarPicker(actor) : null,
 		positions,
 		notifications: getNotificationPreferences(actor),
+		// Les chiffres du joueur seulement : aucune note ni habileté ne passe
+		// par cette donnée, même pour un acteur autorisé à modifier les notes.
+		stats: profile ? seasonStatsFor(profile.userId) : null,
 		isSubstitute: isSubstitutePlayer(actor),
 		balance: getMyBalance(actor),
 		sessions: listOwnSessions(actor),

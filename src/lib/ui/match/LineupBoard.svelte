@@ -232,8 +232,18 @@
 	{#if canEdit && selected}
 		<div class="flex flex-wrap items-center gap-2 border-t border-line pt-3" role="status">
 			{#if selected.startsWith('bench:')}
+				{@const selectedBench = benchPlayers.find(
+					(player) => `bench:${player.playerId}` === selected
+				)}
+				{#if selectedBench}
+					<p class="text-body font-semibold">{selectedBench.fullName}</p>
+				{/if}
 				<p class="text-meta text-muted">{t('rink.choosePlace')}</p>
 			{:else}
+				{@const selectedPlayer = playerAt(selected)}
+				{#if selectedPlayer}
+					<p class="text-body font-semibold">{selectedPlayer.fullName}</p>
+				{/if}
 				<p class="text-meta text-muted">{t('rink.chooseOther')}</p>
 				<button class="btn-ghost btn-sm" type="button" onclick={removeSelected}>
 					{t('rink.remove')}

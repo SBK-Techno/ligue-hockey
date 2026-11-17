@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { rinkRole } from '#config/rink.ts';
 import { TEAMS } from '#config/teams.ts';
@@ -145,5 +146,22 @@ describe('carte d’alignement', () => {
 		const labels = [...names];
 		expect(labels.some((label) => label.includes(t('rink.line', { line: 2 })))).toBe(true);
 		expect(labels.some((label) => label.includes(t('rink.pair', { pair: 2 })))).toBe(true);
+	});
+});
+
+describe('lisibilité des jetons sur la glace', () => {
+	const css = readFileSync('src/routes/layout.css', 'utf8');
+	const nameBlock = css.slice(css.indexOf('.rink-name {'), css.indexOf('.rink-empty {'));
+
+	it('ne coupe plus un nom au milieu d’un mot', () => {
+		expect(nameBlock).not.toContain('text-overflow: ellipsis');
+		expect(nameBlock).not.toContain('white-space: nowrap');
+		expect(nameBlock).toContain('hyphens: auto');
+	});
+
+	it('passe au numéro seul sur un jeton de 44 px', () => {
+		expect(css).toMatch(
+			/@media \(max-width: 639px\)[\s\S]{0,80}\.rink-name[\s\S]{0,40}display: none/
+		);
 	});
 });
