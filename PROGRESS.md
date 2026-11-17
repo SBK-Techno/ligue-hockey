@@ -2,7 +2,7 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release 1.11.0 (in progress)
+## Release 1.11.0 (shipped)
 
 - **Rink tokens.** The decorative centre faceoff ring is gone. A filled token clips only its painted portrait: the jersey number sits outside that clip and the last name below it, without ellipsis or an inserted hyphen. A rink narrower than 560 px switches to a three-column, two-row formation grid, so the six tokens never overlap at 320 px or in the 400 px rink at 900 px; empty slots keep their role initials. Long names keep their full markup and wrap only at a real hyphen.
 - **Menus.** An open `<details>` that owns a `.sheet` is lifted through the utilities layer above the row's `z-20`, so a three-dot menu paints above later rows instead of under them. The `menuUp` rule still flips the last two rows.
@@ -12,9 +12,9 @@ This file tracks the current milestone, verified evidence, and the work that is 
 - **Migration.** `0010_hesitant_lila_cheney.sql` is regenerated from the 66-identity catalogue, and the migration fixtures now assign all 66 identities or refuse an incomplete position.
 - **Gate.** `npm run gate` exit 0: 1187 tests in 165 files, svelte-check 0/0, architecture 418 files, generated assets and documentation current, 95 client chunks without zod.
 - **Browser evidence.** Chrome at 1440, 1024, 900, 640 and 320 reports zero horizontal overflow, zero console errors, zero rink-token overlaps and zero overflowing names. The three-dot menu paints above the next row at 900 and opens upward in the last row at 320. The defence picker shows 17 cards (16 legends plus the current face) with no clipped text and no “Indisponible” string. Address create, update and reset flows set and clear the hidden marker URL correctly; a saved location opens its marker link.
-- **Release.** Pending.
-- **Live.** Pending.
-- **Rollback.** Pending.
+- **Release.** PR #41 merged at `875e3fe`; release PR #42 merged at `9b04043`. The automatic workflow produced tag `v1.11.0`, the GitHub release and the GHCR image. As in 1.10.0, GitHub Actions could not open the release pull request, so the documented recovery opened #42 from the pushed `release/next` branch and the prepare job was rerun; the force-push parked the PR workflows at `action_required`, and approving the three runs let the required checks execute on the new head.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.11.0`, host digest `sha256:09008039a6ad82c5e440efdb1f747cc3a7f8a229ab8409d17402ef4c462298e7`, local id `sha256:3fe39b9da3ab6b6c5c31ebff284dc11acf41c093bc7506d84617d1b6c30d1dcc`, healthy since 2026-11-17T19:41:51Z with zero restarts. Public health reports `ok`/`ok`/`applied`, the database stays at its 15 recorded migrations and all 29 active players have an identity (the regenerated 0010 is the fresh-install path), and the first five minutes of logs carry no error. `/connexion` returns 200, `/api/address-search` returns 401 without a session, and the new identity sheet returns 200 with the one-year immutable cache and its 165 624 bytes; the superseded sheet stays a Cloudflare edge-cache HIT. The first probe immediately after `up -d` returned 502 while the container was starting, and the retry twelve seconds later returned the healthy payload.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261117T142253.db`, verified with `integrity_check: ok`, 29 active players and 30 accounts; the 1.10.0 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.10.0.bak`, and image `1.10.0` stays available at digest `sha256:ee76fb5c17abac50654d61a5435fc955a0798731520f3464bf264fbd9d6bb340` (local id `sha256:dad41440fefeabdef7a4c81cb5edf86ea1db533bfa2cc5f362eb65bac98b5c2a`).
 
 ## Release 1.10.0 (shipped)
 
