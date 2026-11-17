@@ -1,5 +1,3 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ABUSE_LIMITS } from '#config/abuse.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
@@ -68,22 +66,5 @@ describe('limiteur des gestes de membre', () => {
 		expect(memberActionExempt('/api/health')).toBe(true);
 		expect(isMemberWrite('POST', '/api/auth/sign-in/email')).toBe(false);
 		expect(isMemberWrite('POST', '/api/health')).toBe(false);
-	});
-});
-
-describe('propriétaire unique du seau', () => {
-	it('aucune route ne réserve un second seau', () => {
-		const offenders: string[] = [];
-		const walk = (dir: string) => {
-			for (const entry of readdirSync(dir)) {
-				const path = join(dir, entry);
-				if (statSync(path).isDirectory()) walk(path);
-				else if (path.endsWith('.ts') && readFileSync(path, 'utf8').includes('throttleMemberAction')) {
-					offenders.push(path);
-				}
-			}
-		};
-		walk(join(process.cwd(), 'src/routes'));
-		expect(offenders).toEqual([]);
 	});
 });

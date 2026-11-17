@@ -130,6 +130,15 @@ for (const file of sourceFiles) {
 			[],
 			'Return actionError(cause) so SvelteKit receives the failure.'
 		);
+		// Le seau de membre appartient au hook : une route qui le réserve
+		// elle-même compte deux fois la même requête.
+		check(
+			file,
+			'no-route-member-throttle',
+			/\bthrottleMemberAction\b/,
+			[],
+			'Member throttling belongs to hooks.server.ts; a route must not reserve a second bucket.'
+		);
 	}
 
 	if (file.startsWith(join(ROOT, 'src/lib/domain/'))) {
