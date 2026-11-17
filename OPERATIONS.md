@@ -98,8 +98,9 @@ La cible ci-dessous a été vérifiée le 17 novembre 2026 sur l'hôte de réfé
 - Répertoire Compose : `/home/jadorais`; fichier `/home/jadorais/compose.ligue-hockey.yml`; service et conteneur `ligue-hockey`.
 - Données : `/mnt/Docker/DockerApps/LigueHockey` monté sur `/app/data` (SQLite WAL).
 - URL publique : `https://hockey.sbktechno.com`.
-- Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.10.0`, publiée sur GHCR. Digest de l'hôte : `sha256:ee76fb5c17abac50654d61a5435fc955a0798731520f3464bf264fbd9d6bb340`; identifiant local : `sha256:dad41440fefeabdef7a4c81cb5edf86ea1db533bfa2cc5f362eb65bac98b5c2a`. Le conteneur est sain depuis le 17 novembre 2026 à 18:20:18 UTC, sans redémarrage. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
-- Retour vérifié : `1.9.1`, digest hôte `sha256:0c7415e1ac9dd4d0feef9c89bb121f3db0d184d30bfbfdf73d4f5ccdf5f8dfd3`, identifiant local `sha256:eb7558c44c0fdd9f5e45b040b4e784647a02f0558d4e7bf726a2f76c328acfef`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.9.1.bak`; la base d'avant la mise à jour est `/home/jadorais/backups/ligue-20261117T131955.db`.
+- CDN : Cloudflare répond devant l'hôte (`server: cloudflare`); les actifs à nom haché restent servis depuis le cache de bord après une mise à jour, ce qui couvre les documents encore ouverts.
+- Image déployée : `ghcr.io/sbk-techno/ligue-hockey:1.11.0`, publiée sur GHCR. Digest de l'hôte : `sha256:09008039a6ad82c5e440efdb1f747cc3a7f8a229ab8409d17402ef4c462298e7`; identifiant local : `sha256:3fe39b9da3ab6b6c5c31ebff284dc11acf41c093bc7506d84617d1b6c30d1dcc`. Le conteneur est sain depuis le 17 novembre 2026 à 19:41:51 UTC, sans redémarrage. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
+- Retour vérifié : `1.10.0`, digest hôte `sha256:ee76fb5c17abac50654d61a5435fc955a0798731520f3464bf264fbd9d6bb340`, identifiant local `sha256:dad41440fefeabdef7a4c81cb5edf86ea1db533bfa2cc5f362eb65bac98b5c2a`. Le fichier compose d'avant la mise à jour est conservé à `/home/jadorais/compose.ligue-hockey.yml.1.10.0.bak`; la base d'avant la mise à jour est `/home/jadorais/backups/ligue-20261117T142253.db`, vérifiée avec `integrity_check: ok`, 29 joueurs actifs et 30 comptes.
 - Environnement : le déploiement fournit un fichier `--env-file` hors dépôt, qui contient les secrets et n'est jamais versionné. Le coffre de l'hôte est `/home/jadorais/.env.ligue-hockey`, lisible par le seul propriétaire (`0600`), et toutes les commandes ci-dessous le passent à `--env-file`.
 
 Le projet Compose de l'hôte porte le nom `jadorais` et contient d'autres services. `docker compose up -d` peut afficher un avertissement d'orphelins; ne lancez jamais `--remove-orphans`, qui supprimerait ces autres conteneurs.
@@ -112,12 +113,19 @@ cd /home/jadorais
 # Le compose du dépôt, lui, reçoit cette étiquette par LIGUE_IMAGE.
 docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey pull
 docker compose -f compose.ligue-hockey.yml --env-file /home/jadorais/.env.ligue-hockey up -d
-curl -fsS https://hockey.sbktechno.com/api/health \
-  | jq -e '.status == "ok" and .database == "ok" and .migrations == "applied"'
+# Le proxy peut répondre 502 pendant le démarrage du conteneur.
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS https://hockey.sbktechno.com/api/health \
+    | jq -e '.status == "ok" and .database == "ok" and .migrations == "applied"'; then
+    break
+  fi
+  test "$attempt" -lt 10 || exit 1
+  sleep 3
+done
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
 ```
 
-Le contrôle de santé est le même prédicat que celui de `scripts/ci/container-smoke.sh` : requête `curl -fsS`, puis `jq` sur `status`, `database` et `migrations`. La dernière commande doit afficher l'étiquette attendue, par exemple `1.6.0`.
+Le contrôle de santé est le même prédicat que celui de `scripts/ci/container-smoke.sh` : requête `curl -fsS`, puis `jq` sur `status`, `database` et `migrations`. La boucle couvre les quelques secondes où le proxy répond encore 502 pendant le démarrage. La dernière commande doit afficher l'étiquette attendue, par exemple `1.11.0`.
 
 Les migrations Drizzle sont appliquées au démarrage du conteneur. Elles ne sont pas réversibles : sauvegardez la base avant chaque mise à jour, et restaurez la sauvegarde correspondante lors d'un retour arrière.
 
