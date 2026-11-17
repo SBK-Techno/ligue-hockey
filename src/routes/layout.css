@@ -1394,6 +1394,71 @@
 		}
 	}
 
+	/* L'accueil garde la même matière, mais change de composition sur un
+	   grand écran : une colonne principale porte le match et la saison, une
+	   colonne de situation porte la présence, le sondage et la discussion.
+	   Sous 1024 px, les deux conteneurs s'effacent : les panneaux retrouvent
+	   l'ordre du DOM et la grille à douze colonnes, donc le téléphone ne
+	   change pas. */
+	.home-dashboard {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1rem;
+	}
+	.home-main,
+	.home-rail {
+		display: contents;
+	}
+	@media (min-width: 900px) {
+		.home-dashboard {
+			grid-template-columns: repeat(12, minmax(0, 1fr));
+		}
+		.home-dashboard .home-panel {
+			grid-column: span var(--span, 12);
+			min-width: 0;
+		}
+	}
+	@media (min-width: 1024px) {
+		.home-dashboard {
+			grid-template-columns: minmax(0, 2fr) minmax(20rem, 1fr);
+			gap: 1.25rem;
+			align-items: start;
+		}
+		.home-dashboard[data-rail='false'] {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.home-main,
+		.home-rail {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1rem;
+			align-content: start;
+		}
+		.home-dashboard .home-panel {
+			grid-column: auto;
+		}
+	}
+	/* La saison se lit sur deux colonnes quand son panneau est assez large :
+	   à venir et derniers matchs se font face. La requête porte sur le
+	   panneau et non sur la fenêtre, donc la liste reste sur une colonne
+	   lorsqu'elle partage l'écran avec la colonne de situation. */
+	.agenda-split {
+		container-type: inline-size;
+	}
+	.agenda-columns {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+	}
+	@container (min-width: 60rem) {
+		.agenda-columns {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.agenda-columns > section + section {
+			border-top: 0;
+			border-left: 1px solid var(--color-line);
+		}
+	}
+
 	/* Les fiches d'évaluation repliées forment deux colonnes à partir de 1024 px;
 	   la fiche ouverte prend toute la largeur pour garder ses quatre échelles
 	   ensemble. Sous ce seuil, les libellés ont besoin de toute la rangée. */

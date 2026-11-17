@@ -1,8 +1,10 @@
 /**
- * La page d'accueil est un tableau de situation, pas un tableau de bord.
- * Ce module pur choisit la surface de tête, les panneaux et leur largeur à
- * partir de la situation réelle du membre. La route ne décide rien : elle
- * traduit les services en entrée typée et rend le résultat.
+ * La page d'accueil est un tableau de situation : une colonne principale
+ * porte le match et la saison, une colonne de droite porte la présence, le
+ * sondage et la discussion. Ce module pur choisit la surface de tête, les
+ * panneaux, leur largeur de grille et leur colonne à partir de la situation
+ * réelle du membre. La route ne décide rien : elle traduit les services en
+ * entrée typée et rend le résultat.
  */
 export const HOME_MODES = [
 	'no-profile',
@@ -43,9 +45,29 @@ export const PANEL_SPANS = [12, 8, 7, 6, 5, 4] as const;
 
 export type PanelSpan = (typeof PANEL_SPANS)[number];
 
+/** La colonne de droite reste une colonne de situation : on y lit et on y
+ * répond, on n'y prépare pas le match. Chaque panneau appartient à une seule
+ * colonne, et les deux colonnes réunies gardent l'ordre de la composition
+ * pour que la version téléphone ne change pas. */
+export type PanelZone = 'main' | 'rail';
+
+export const PANEL_ZONES: Record<PanelKind, PanelZone> = {
+	manager: 'main',
+	actions: 'main',
+	team: 'main',
+	agenda: 'main',
+	upcoming: 'main',
+	attendance: 'rail',
+	poll: 'rail',
+	substitutes: 'rail',
+	league: 'rail',
+	install: 'rail'
+};
+
 export type HomePanel = {
 	kind: PanelKind;
 	span: PanelSpan;
+	zone: PanelZone;
 };
 
 export const ACTION_KINDS = [
@@ -209,7 +231,8 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 		input.hasGame && input.hasPlayerProfile && input.availability !== null;
 
 	const panels: HomePanel[] = [];
-	const add = (kind: PanelKind, span: PanelSpan) => panels.push({ kind, span });
+	const add = (kind: PanelKind, span: PanelSpan) =>
+		panels.push({ kind, span, zone: PANEL_ZONES[kind] });
 
 	if (manager) add('manager', 12);
 

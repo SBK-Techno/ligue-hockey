@@ -2,6 +2,15 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.9.0 (in progress)
+
+- **Desktop Accueil.** At 1024 px and up, the home is a two-column situation board: the next match and the season in a 2fr main column, presence, poll and discussion in a 1fr rail. The scoreboard and presence now start on the same row instead of stacking, and the rail keeps the status surfaces together.
+- **Phone unchanged.** The composition owns each panel's column (`zone`): main for the match, manager preparation, team, actions, season and next games; rail for presence, poll, substitutes, discussion and install. Below 1024 px the two containers use `display: contents`, so the phone keeps the composition order and the 900 to 1023 px board keeps its 12-column spans exactly. A test asserts that flattening the columns reproduces the composition order.
+- **Wide season.** When no rail content exists beside the main column (an account without a player profile), the season splits upcoming and recent results into two columns through a container query instead of stretching one wide list.
+- **Evidence.** At 1440 px the player home drops from 1671 to 1437 px and the scoreboard and presence share the first row; at 1024 px it drops from 1668 to 1477. The 900 px layout is unchanged (1724 px), the 320 px home has no horizontal overflow (scroll width 320) and no audited width reports a console error. The manager home at 1440 px reads as a 2fr/1fr board with the manager panel, team and actions in the main column. The no-profile admin home at 1440 px uses the full width with the season split into upcoming and results.
+- **Gate.** `npm run gate` exit 0: 1129 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
+- **Next.** PR, release 1.9.0, deploy and record the live image.
+
 ## Release 1.8.2 (shipped)
 
 - **Home last row.** The poll and the discussion each took the full row on a wide home, so the page still ended as a single column of two panels. In lineup, announced, presence and absent modes, when no substitute list owns its own row, the poll and the discussion now share the last row at 6 and 6. The game-day poll keeps its place beside attendance, and the substitute list keeps its own row.

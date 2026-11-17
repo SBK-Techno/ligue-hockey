@@ -68,106 +68,110 @@
 </script>
 
 <SectionCard title={t('home.agenda')} href="/matchs" linkLabel={t('home.allGames')} flush>
-	<section>
-		<h3 class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted">
-			{t('home.upcoming')}
-		</h3>
-		{#if upcomingMonths.length === 0}
-			<p class="px-4 py-4 text-body text-muted">{t('home.noGame')}</p>
-		{:else}
-			{#each upcomingMonths as group (group.month)}
-				<h4 class="px-4 pb-1 pt-3 text-caption font-semibold text-muted">{group.label}</h4>
-				<ul role="list">
-					{#each group.games as game (game.id)}
-						<li class="border-t border-line first:border-t-0">
-							<a
-								href="/matchs/{game.id}"
-								class="flex min-h-14 flex-wrap items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-paper-deep/40"
-							>
-								<span class="record-date">{formatWeekdayShort(game.gameDate)} {dayNumber(game.gameDate)}</span>
-								<span class="order-4 min-w-0 flex-1 basis-full sm:order-none sm:basis-0">
-									<span class="block break-words text-body font-semibold">
-										{formatTime(game.startTime)} · {game.location}
-									</span>
-									{#if game.requestOpen}
-										<span class="mt-0.5 block text-meta text-accent-deep">
-											{t('subs.ownRequestOpen')}
+	<div class="agenda-split">
+		<div class="agenda-columns">
+			<section>
+				<h3 class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted">
+					{t('home.upcoming')}
+				</h3>
+				{#if upcomingMonths.length === 0}
+					<p class="px-4 py-4 text-body text-muted">{t('home.noGame')}</p>
+				{:else}
+					{#each upcomingMonths as group (group.month)}
+						<h4 class="px-4 pb-1 pt-3 text-caption font-semibold text-muted">{group.label}</h4>
+						<ul role="list">
+							{#each group.games as game (game.id)}
+								<li class="border-t border-line first:border-t-0">
+									<a
+										href="/matchs/{game.id}"
+										class="flex min-h-14 flex-wrap items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-paper-deep/40"
+									>
+										<span class="record-date">{formatWeekdayShort(game.gameDate)} {dayNumber(game.gameDate)}</span>
+										<span class="order-4 min-w-0 flex-1 basis-full sm:order-none sm:basis-0">
+											<span class="block break-words text-body font-semibold">
+												{formatTime(game.startTime)} · {game.location}
+											</span>
+											{#if game.requestOpen}
+												<span class="mt-0.5 block text-meta text-accent-deep">
+													{t('subs.ownRequestOpen')}
+												</span>
+											{/if}
 										</span>
-									{/if}
-								</span>
-								{#if game.status === 'cancelled'}
-									<span class="{badgeClass(gameStatus(game.status).tone)} order-2 ml-auto shrink-0 sm:order-none sm:ml-0">
-										{t(gameStatus(game.status).labelKey)}
-									</span>
-								{:else}
-									<span class="{badgeClass(attendanceTone(game.availability))} order-2 ml-auto shrink-0 sm:order-none sm:ml-0">
-										{attendanceLabel(game.availability)}
-									</span>
-								{/if}
-								<svg
-									viewBox="0 0 24 24"
-									class="order-3 h-4 w-4 shrink-0 text-muted sm:order-none"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									aria-hidden="true"
-								>
-									<path d="m9 6 6 6-6 6" />
-								</svg>
-							</a>
-						</li>
-					{/each}
-				</ul>
-			{/each}
-		{/if}
-	</section>
-
-	{#if past.length > 0}
-		<section class="border-t border-line">
-			<h3
-				class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted"
-			>
-				{t('home.results')}
-			</h3>
-			{#each pastMonths as group (group.month)}
-				<h4 class="px-4 pb-1 pt-3 text-caption font-semibold text-muted">{group.label}</h4>
-				<ul role="list">
-					{#each group.games as game (game.id)}
-						<li class="border-t border-line first:border-t-0">
-							<a
-								href="/matchs/{game.id}"
-								class="flex min-h-14 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-paper-deep/40"
-							>
-								<span class="record-date">{formatWeekdayShort(game.gameDate)} {dayNumber(game.gameDate)}</span>
-								<span class="min-w-0 flex-1">
-									<span class="block break-words text-body font-semibold">
-										{formatTime(game.startTime)} · {game.location}
-									</span>
-									<span class="mt-0.5 block truncate text-meta text-muted">
 										{#if game.status === 'cancelled'}
-											{t(gameStatus(game.status).labelKey)}
-										{:else if game.score}
-											{scoreLine(game.score)}
+											<span class="{badgeClass(gameStatus(game.status).tone)} order-2 ml-auto shrink-0 sm:order-none sm:ml-0">
+												{t(gameStatus(game.status).labelKey)}
+											</span>
 										{:else}
-											{attendanceLabel(game.availability)}
+											<span class="{badgeClass(attendanceTone(game.availability))} order-2 ml-auto shrink-0 sm:order-none sm:ml-0">
+												{attendanceLabel(game.availability)}
+											</span>
 										{/if}
-									</span>
-								</span>
-								<svg
-									viewBox="0 0 24 24"
-									class="h-4 w-4 shrink-0 text-muted"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									aria-hidden="true"
-								>
-									<path d="m9 6 6 6-6 6" />
-								</svg>
-							</a>
-						</li>
+										<svg
+											viewBox="0 0 24 24"
+											class="order-3 h-4 w-4 shrink-0 text-muted sm:order-none"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											aria-hidden="true"
+										>
+											<path d="m9 6 6 6-6 6" />
+										</svg>
+									</a>
+								</li>
+							{/each}
+						</ul>
 					{/each}
-				</ul>
-			{/each}
-		</section>
-	{/if}
+				{/if}
+			</section>
+
+			{#if past.length > 0}
+				<section class="border-t border-line">
+					<h3
+						class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted"
+					>
+						{t('home.results')}
+					</h3>
+					{#each pastMonths as group (group.month)}
+						<h4 class="px-4 pb-1 pt-3 text-caption font-semibold text-muted">{group.label}</h4>
+						<ul role="list">
+							{#each group.games as game (game.id)}
+								<li class="border-t border-line first:border-t-0">
+									<a
+										href="/matchs/{game.id}"
+										class="flex min-h-14 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-paper-deep/40"
+									>
+										<span class="record-date">{formatWeekdayShort(game.gameDate)} {dayNumber(game.gameDate)}</span>
+										<span class="min-w-0 flex-1">
+											<span class="block break-words text-body font-semibold">
+												{formatTime(game.startTime)} · {game.location}
+											</span>
+											<span class="mt-0.5 block truncate text-meta text-muted">
+												{#if game.status === 'cancelled'}
+													{t(gameStatus(game.status).labelKey)}
+												{:else if game.score}
+													{scoreLine(game.score)}
+												{:else}
+													{attendanceLabel(game.availability)}
+												{/if}
+											</span>
+										</span>
+										<svg
+											viewBox="0 0 24 24"
+											class="h-4 w-4 shrink-0 text-muted"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											aria-hidden="true"
+										>
+											<path d="m9 6 6 6-6 6" />
+										</svg>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					{/each}
+				</section>
+			{/if}
+		</div>
+	</div>
 </SectionCard>
