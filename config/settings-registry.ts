@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { FINANCE_LIMITS } from './finance.ts';
+import { LOCATION_LIMITS } from './games.ts';
+import { CHAT_PAGE_SIZE } from './chat.ts';
 import type { I18nKey } from './i18n/fr';
 import { TEAMS } from './teams.ts';
 import { DATE_PATTERN, TIME_PATTERN } from './time.ts';
@@ -65,9 +68,9 @@ export const SETTINGS = {
   'games.defaultLocation': defineSetting({
     group: 'games',
     kind: 'text',
-    schema: z.string().max(120),
+    schema: z.string().max(LOCATION_LIMITS.nameMax),
     defaultValue: '',
-    max: 120,
+    max: LOCATION_LIMITS.nameMax,
     labelKey: 'settings.defaultLocation.label',
     descriptionKey: 'settings.defaultLocation.description'
   }),
@@ -194,10 +197,14 @@ export const SETTINGS = {
   'finance.firstInstallmentPercent': defineSetting({
     group: 'finance',
     kind: 'number',
-    schema: z.number().int().min(1).max(99),
+    schema: z
+      .number()
+      .int()
+      .min(FINANCE_LIMITS.firstInstallmentPercent.min)
+      .max(FINANCE_LIMITS.firstInstallmentPercent.max),
     defaultValue: 50,
-    min: 1,
-    max: 99,
+    min: FINANCE_LIMITS.firstInstallmentPercent.min,
+    max: FINANCE_LIMITS.firstInstallmentPercent.max,
     step: 1,
     labelKey: 'settings.firstInstallmentPercent.label',
     descriptionKey: 'settings.firstInstallmentPercent.description'
@@ -329,10 +336,11 @@ export const SETTINGS = {
   'chat.pageSize': defineSetting({
     group: 'chat',
     kind: 'number',
-    schema: z.number().int().min(10).max(200),
-    defaultValue: 50,
+    // Le service plafonne à CHAT_PAGE_SIZE; le réglage ne peut donc que réduire.
+    schema: z.number().int().min(10).max(CHAT_PAGE_SIZE),
+    defaultValue: CHAT_PAGE_SIZE,
     min: 10,
-    max: 200,
+    max: CHAT_PAGE_SIZE,
     step: 10,
     labelKey: 'settings.chatPageSize.label',
     descriptionKey: 'settings.chatPageSize.description'

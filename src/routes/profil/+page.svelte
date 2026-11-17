@@ -5,8 +5,6 @@
 	import { ACCOUNT_LIMITS } from '#config/account.ts';
 	import { PLAYER_LIMITS } from '#config/players.ts';
 	import { positionDefinition, type Position } from '#config/positions.ts';
-	import { legendForIdentity } from '#config/identities.ts';
-	import { roleDefinition } from '#config/roles.ts';
 	import {
 		formatCount,
 		formatDecimal,
@@ -16,37 +14,57 @@
 		t
 	} from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
-	import AvatarPicker from '#lib/ui/AvatarPicker.svelte';
-	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
-	import InstallPrompt from '#lib/ui/InstallPrompt.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
-	import PasswordField from '#lib/ui/PasswordField.svelte';
-	import PositionChips from '#lib/ui/PositionChips.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
-	import StatStrip from '#lib/ui/StatStrip.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
-	import { managementTabs } from '#lib/domain/auth/destinations.ts';
-	import { can } from '#lib/domain/auth/policy.ts';
 	import { pushPreferenceState } from './push-preference.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	const actor = $derived(data.actor.kind === 'user' ? data.actor : null);
 	const account = $derived(data.account);
 	const profile = $derived(data.profile);
-	const legend = $derived(legendForIdentity(profile?.avatarId));
+	const legend = $derived(data.legend);
+
+	// Comme sur l'accueil, chaque îlot est importé au niveau du module : le
+	// serveur le rend, le navigateur ne le demande qu'après la peinture.
+	// svelte-ignore state_referenced_locally
+	const initial = data;
+	const hasOtherSessions = initial.sessions.some(
+		(session) => session.id !== initial.currentSessionId
+	);
+	const [
+		AvatarPicker,
+		PositionChips,
+		StatStrip,
+		PasswordField,
+		ConfirmSubmit,
+		InstallPrompt
+	] = await Promise.all([
+		initial.avatarPicker
+			? import('#lib/ui/AvatarPicker.svelte').then((module) => module.default)
+			: null,
+		initial.isSubstitute
+			? import('#lib/ui/PositionChips.svelte').then((module) => module.default)
+			: null,
+		initial.stats && initial.stats.games > 0
+			? import('#lib/ui/StatStrip.svelte').then((module) => module.default)
+			: null,
+		import('#lib/ui/PasswordField.svelte').then((module) => module.default),
+		hasOtherSessions
+			? import('#lib/ui/ConfirmSubmit.svelte').then((module) => module.default)
+			: null,
+		import('#lib/ui/InstallPrompt.svelte').then((module) => module.default)
+	]);
 	// Le poste suit le formulaire : la liste de légendes se filtre tout de suite.
 	// svelte-ignore state_referenced_locally
 	let position = $state<Position | null>(profile?.position ?? null);
-	const isManager = $derived(actor !== null && can(actor, 'viewAdmin'));
-	const canSeeRatings = $derived(actor !== null && can(actor, 'editRatings'));
-	const managementLinks = $derived(actor ? managementTabs(actor) : []);
-	const roleLabel = $derived(
-		account ? t(roleDefinition(account.role)?.labelKey ?? 'admin.role.player') : ''
-	);
+	const isManager = $derived(data.nav.canViewAdmin);
+	const canSeeRatings = $derived(data.nav.canSeeRatings);
+	const managementLinks = $derived(data.nav.managementLinks);
+	const roleLabel = $derived(account ? t(data.nav.roleLabelKey) : '');
 	const initials = $derived(account ? monogram(account.name) : '');
 	const otherSessions = $derived(
 		data.sessions.filter((session) => session.id !== data.currentSessionId)
@@ -431,7 +449,7 @@
 									</p>
 								</div>
 								<div class="sm:col-span-2">
-									{#if data.avatarPicker}
+									{#if data.avatarPicker && AvatarPicker}
 										<AvatarPicker
 											name="avatarId"
 											selected={data.avatarPicker.selected}
@@ -456,11 +474,13 @@
 								<p class="hint">{t('subs.positionsHelp')}</p>
 								<FormFeedback {form} section="positions" class="mt-3" />
 								<form method="POST" action="?/positions" use:progressiveForm class="mt-4 space-y-4">
-									<PositionChips
-										name="positions"
-										selected={data.positions}
-										legend={t('subs.positions')}
-									/>
+									{#if PositionChips}
+										<PositionChips
+											name="positions"
+											selected={data.positions}
+											legend={t('subs.positions')}
+										/>
+									{/if}
 									<button class="btn-primary" type="submit">{t('common.save')}</button>
 								</form>
 							</SectionCard>
@@ -471,7 +491,7 @@
 				{#if !profile && isManager}
 					<SectionCard title={t('profile.playerSection')}>
 						<p class="text-body text-muted">{t('profile.noPlayerSheetAdmin')}</p>
-						{#if actor && can(actor, 'managePlayers')}
+						{#if data.nav.canManagePlayers}
 							<a class="btn-secondary btn-sm mt-3" href="/admin/joueurs">
 								{t('profile.createPlayerSheet')}
 							</a>
@@ -487,7 +507,9 @@
 							{#if data.stats.games === 0}
 								<p class="text-body text-muted">{t('stats.empty')}</p>
 							{:else}
-								<StatStrip cells={statsCells} />
+								{#if StatStrip}
+									<StatStrip cells={statsCells} />
+								{/if}
 								<p class="mt-3 text-body">
 									{t('stats.perGame', {
 										value: formatDecimal(data.stats.pointsPerGame, 2)
@@ -586,29 +608,31 @@
 								{t('profile.changePassword')}
 							</summary>
 							<form method="POST" action="?/password" use:progressiveForm class="mt-1 space-y-4">
-								<PasswordField
-									id="currentPassword"
-									name="currentPassword"
-									label={t('profile.currentPassword')}
-									autocomplete="current-password"
-									error={passwordError}
-								/>
-								<PasswordField
-									id="newPassword"
-									name="newPassword"
-									label={t('profile.newPassword')}
-									autocomplete="new-password"
-									minlength={data.minLength}
-									hint={t('invite.tooShort', { count: data.minLength })}
-									error={fieldErrorFor(form, 'securite', 'newPassword')}
-								/>
-								<PasswordField
-									id="confirmPassword"
-									name="confirm"
-									label={t('invite.confirm')}
-									autocomplete="new-password"
-									error={fieldErrorFor(form, 'securite', 'confirmPassword')}
-								/>
+								{#if PasswordField}
+									<PasswordField
+										id="currentPassword"
+										name="currentPassword"
+										label={t('profile.currentPassword')}
+										autocomplete="current-password"
+										error={passwordError}
+									/>
+									<PasswordField
+										id="newPassword"
+										name="newPassword"
+										label={t('profile.newPassword')}
+										autocomplete="new-password"
+										minlength={data.minLength}
+										hint={t('invite.tooShort', { count: data.minLength })}
+										error={fieldErrorFor(form, 'securite', 'newPassword')}
+									/>
+									<PasswordField
+										id="confirmPassword"
+										name="confirm"
+										label={t('invite.confirm')}
+										autocomplete="new-password"
+										error={fieldErrorFor(form, 'securite', 'confirmPassword')}
+									/>
+								{/if}
 								<button class="btn-primary" type="submit">{t('common.save')}</button>
 							</form>
 						</details>
@@ -672,10 +696,12 @@
 
 							{#if otherSessions.length > 0}
 								<form method="POST" action="?/sessions" use:progressiveForm class="mt-3">
-									<ConfirmSubmit
-										label={t('profile.revokeOthers')}
-										question={t('profile.revokeOthersConfirm')}
-									/>
+									{#if ConfirmSubmit}
+										<ConfirmSubmit
+											label={t('profile.revokeOthers')}
+											question={t('profile.revokeOthersConfirm')}
+										/>
+									{/if}
 								</form>
 							{:else}
 								<p class="hint mt-3">{t('profile.noOtherSessions')}</p>
@@ -692,7 +718,9 @@
 				</div>
 
 				<div class="lg:hidden">
-					<InstallPrompt variant="full" />
+					{#if InstallPrompt}
+						<InstallPrompt variant="full" />
+					{/if}
 				</div>
 
 				{#if isManager}

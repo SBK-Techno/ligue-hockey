@@ -1,5 +1,6 @@
 import type { PlayerPeekView } from '#lib/domain/players/peek.ts';
 import { clock } from '#lib/shared/time/clock.ts';
+import { PLAYER_PEEK_EVENT } from './events.ts';
 import type { PeekAnchor } from './player-peek.ts';
 
 const CACHE_TTL_MS = 30_000;
@@ -76,6 +77,10 @@ export function openPlayerPeek(
 	controller?.abort();
 	openId = playerId;
 	pinned = options.pinned ?? false;
+	// La coquille charge la carte à la première ouverture, pas avant.
+	if (typeof window !== 'undefined') {
+		window.dispatchEvent(new CustomEvent(PLAYER_PEEK_EVENT));
+	}
 	const cached = cache[playerId];
 	if (cached && clock.nowMs() - cached.at < CACHE_TTL_MS) {
 		view = cached.view;
@@ -152,3 +157,93 @@ export const playerPeek = {
 		return pinned;
 	}
 };
+
+/**
+ * Les déclencheurs globaux du peek. La coquille importe ce module après la
+ * peinture initiale; la carte elle-même reste un import paresseux.
+ */
+export function installPlayerPeekTriggers(): () => void {
+	function triggerFrom(target: EventTarget | null): HTMLElement | null {
+		if (!(target instanceof Element)) return null;
+		const trigger = target.closest<HTMLElement>('[data-player-id]');
+		if (!trigger || trigger.closest('[data-player-peek-card]')) return null;
+		return trigger.dataset.playerId ? trigger : null;
+	}
+
+	function onPointerOver(event: PointerEvent) {
+		const trigger = triggerFrom(event.target);
+		if (!trigger) return;
+		if (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget)) {
+			return;
+		}
+		schedulePlayerPeekOpen(trigger.dataset.playerId as string, trigger);
+	}
+
+	function onPointerOut(event: PointerEvent) {
+		const trigger = triggerFrom(event.target);
+		if (!trigger) return;
+		if (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget)) {
+			return;
+		}
+		if (openId === trigger.dataset.playerId) schedulePlayerPeekClose();
+	}
+
+	function onClick(event: MouseEvent) {
+		const trigger = triggerFrom(event.target);
+		if (!trigger) {
+			if (
+				openId &&
+				!(event.target instanceof Element && event.target.closest('[data-player-peek-card]'))
+			) {
+				closePlayerPeek();
+			}
+			return;
+		}
+		const playerId = trigger.dataset.playerId as string;
+		if (trigger.dataset.playerPeek === 'click') {
+			openPlayerPeek(playerId, trigger, { pinned: true });
+			return;
+		}
+		const interactive = trigger.closest('a,button,[role="button"],label');
+		if (interactive && interactive !== trigger) return;
+		if (trigger.matches('a,button')) return;
+		openPlayerPeek(playerId, trigger, { pinned: true });
+	}
+
+	function onKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && openId) {
+			event.preventDefault();
+			closePlayerPeek({ restoreFocus: true });
+			return;
+		}
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		const trigger = triggerFrom(event.target);
+		if (!trigger || trigger.getAttribute('role') !== 'button') return;
+		if (trigger.dataset.playerId === openId) return;
+		event.preventDefault();
+		openPlayerPeek(trigger.dataset.playerId as string, trigger, { pinned: true });
+	}
+
+	function onPointerDown(event: PointerEvent) {
+		if (!openId) return;
+		if (event.target instanceof Element && event.target.closest('[data-player-peek-card]')) {
+			return;
+		}
+		if (event.target instanceof Element && event.target.closest('[data-player-id]')) return;
+		closePlayerPeek();
+	}
+
+	if (typeof document === 'undefined') return () => {};
+	document.addEventListener('pointerover', onPointerOver);
+	document.addEventListener('pointerout', onPointerOut);
+	document.addEventListener('click', onClick);
+	document.addEventListener('keydown', onKeyDown);
+	document.addEventListener('pointerdown', onPointerDown);
+	return () => {
+		document.removeEventListener('pointerover', onPointerOver);
+		document.removeEventListener('pointerout', onPointerOut);
+		document.removeEventListener('click', onClick);
+		document.removeEventListener('keydown', onKeyDown);
+		document.removeEventListener('pointerdown', onPointerDown);
+	};
+}

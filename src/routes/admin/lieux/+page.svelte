@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { mapUrlFor } from '#config/maps.ts';
 	import type { LocationMetrics } from '#lib/domain/locations/service.ts';
-	import { LOCATION_LIMITS } from '#lib/domain/locations/validators.ts';
+	import { LOCATION_LIMITS } from '#config/games.ts';
 	import { formatCount, formatDate, t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { players } from '#lib/domain/players/schema.ts';
@@ -22,26 +22,76 @@ export type MessageRow = ChatMessageRow & {
 	authorPosition: (typeof players.$inferSelect)['position'] | null;
 };
 
-export function listMessages(limit: number, before: number | null): MessageRow[] {
+const messageColumns = {
+	id: chatMessages.id,
+	authorUserId: chatMessages.authorUserId,
+	kind: chatMessages.kind,
+	body: chatMessages.body,
+	createdAt: chatMessages.createdAt,
+	deletedAt: chatMessages.deletedAt,
+	deletedBy: chatMessages.deletedBy,
+	authorName: user.name,
+	authorAvatarId: players.avatarId,
+	authorJerseyNumber: players.jerseyNumber,
+	authorPosition: players.position
+} as const;
+
+function messageQuery() {
 	return db
-		.select({
-			id: chatMessages.id,
-			authorUserId: chatMessages.authorUserId,
-			kind: chatMessages.kind,
-			body: chatMessages.body,
-			createdAt: chatMessages.createdAt,
-			deletedAt: chatMessages.deletedAt,
-			deletedBy: chatMessages.deletedBy,
-			authorName: user.name,
-			authorAvatarId: players.avatarId,
-			authorJerseyNumber: players.jerseyNumber,
-			authorPosition: players.position
-		})
+		.select(messageColumns)
 		.from(chatMessages)
 		.innerJoin(user, eq(user.id, chatMessages.authorUserId))
-		.leftJoin(players, eq(players.userId, chatMessages.authorUserId))
-		.where(before === null ? undefined : lt(chatMessages.createdAt, before))
-		.orderBy(desc(chatMessages.createdAt))
+		.leftJoin(players, eq(players.userId, chatMessages.authorUserId));
+}
+
+/**
+ * La page précédente est strictement antérieure au curseur. L'identifiant
+ * départage deux messages de la même milliseconde, puis l'ordre reste stable.
+ */
+export function listMessages(
+	limit: number,
+	before: { createdAt: number; id: string } | null
+): MessageRow[] {
+	return messageQuery()
+		.where(
+			before === null
+				? undefined
+				: or(
+						lt(chatMessages.createdAt, before.createdAt),
+						and(
+							eq(chatMessages.createdAt, before.createdAt),
+							lt(chatMessages.id, before.id)
+						)
+					)
+		)
+		.orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
+		.limit(limit)
+		.all();
+}
+
+/** Le dernier message visible, sans charger l'historique. */
+export function listLatestVisibleMessage(): MessageRow | undefined {
+	return messageQuery()
+		.where(isNull(chatMessages.deletedAt))
+		.orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
+		.limit(1)
+		.get();
+}
+
+/**
+ * Pour l'accueil : seulement les sondages encore ouverts, du plus récent au
+ * plus ancien. On ne charge jamais l'historique complet pour une seule carte.
+ */
+export function listOpenPollMessages(now: number, limit: number): MessageRow[] {
+	return messageQuery()
+		.innerJoin(polls, eq(polls.messageId, chatMessages.id))
+		.where(
+			and(
+				isNull(chatMessages.deletedAt),
+				or(isNull(polls.closesAt), gt(polls.closesAt, now))
+			)
+		)
+		.orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
 		.limit(limit)
 		.all();
 }

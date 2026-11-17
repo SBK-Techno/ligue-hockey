@@ -1,6 +1,8 @@
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
 import { ACCOUNT_LIMITS, AUTH_POLICY } from '#config/account.ts';
+import { legendForIdentity } from '#config/identities.ts';
+import { roleDefinition } from '#config/roles.ts';
 import type { Position } from '#config/positions.ts';
 import {
 	getOwnAccount,
@@ -8,6 +10,8 @@ import {
 	revokeOwnOtherSessions,
 	updateOwnDisplayName
 } from '#lib/domain/auth/service.ts';
+import { managementTabs } from '#lib/domain/auth/destinations.ts';
+import { can } from '#lib/domain/auth/policy.ts';
 import { getMyBalance } from '#lib/domain/finance/service.ts';
 import { seasonStatsFor } from '#lib/domain/gamesheet/season-stats.ts';
 import {
@@ -60,13 +64,23 @@ export const load: ServerLoad = ({ locals }) => {
 			sessions: [],
 			currentSessionId: null,
 			vapidPublicKey: publicEnv.vapidPublicKey,
-			minLength: publicEnv.passwordMinLength
+			minLength: publicEnv.passwordMinLength,
+			nav: {
+				canViewAdmin: false,
+				canSeeRatings: false,
+				canManagePlayers: false,
+				managementLinks: [],
+				roleLabelKey: 'admin.role.player' as const
+			},
+			legend: null
 		};
 	}
 
+	const account = getOwnAccount(actor);
 	const profile = findOwnProfile(actor);
+	const legend = legendForIdentity(profile?.avatarId);
 	return {
-		account: getOwnAccount(actor),
+		account,
 		profile,
 		avatarPicker: profile ? getOwnAvatarPicker(actor) : null,
 		positions,
@@ -79,7 +93,17 @@ export const load: ServerLoad = ({ locals }) => {
 		sessions: listOwnSessions(actor),
 		currentSessionId: locals.sessionId,
 		vapidPublicKey: publicEnv.vapidPublicKey,
-		minLength: publicEnv.passwordMinLength
+		minLength: publicEnv.passwordMinLength,
+		// Les capacités et les destinations sont résolues côté serveur : le
+		// navigateur ne reçoit que les entrées déjà autorisées.
+		nav: {
+			canViewAdmin: can(actor, 'viewAdmin'),
+			canSeeRatings: can(actor, 'editRatings'),
+			canManagePlayers: can(actor, 'managePlayers'),
+			managementLinks: managementTabs(actor),
+			roleLabelKey: roleDefinition(account.role)?.labelKey ?? 'admin.role.player'
+		},
+		legend: legend ? { name: legend.name, number: legend.number, era: legend.era } : null
 	};
 };
 

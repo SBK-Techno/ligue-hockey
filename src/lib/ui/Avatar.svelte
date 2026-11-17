@@ -2,9 +2,9 @@
 	import type { AvatarArt } from '#config/avatars.ts';
 	import { identityById, isIdentityId } from '#config/identities.ts';
 	import { avatarColor, resolveAvatarId } from '#lib/domain/players/identity.ts';
-	import { playerPeek } from './player-peek.svelte.ts';
+	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
-	import { avatarSvg } from './avatar-art.ts';
+	import { identitySymbolId } from './identity-symbol.ts';
 
 	type AvatarSize = 24 | 32 | 40 | 48 | 64 | 96;
 
@@ -57,12 +57,12 @@
 	data-player-id={peek ? player.userId : undefined}
 	tabindex={peek && !decorative ? 0 : undefined}
 	aria-haspopup={peek ? 'dialog' : undefined}
-	aria-expanded={peek && !decorative ? playerPeek.openId === player.userId : undefined}
 >
 	{#if variant}
-		<!-- Fixed catalogue only: no player-controlled string reaches the SVG. -->
-		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-		{@html avatarSvg(variant)}
+		<!-- Le catalogue fixe est chargé une fois; chaque avatar n'est qu'une référence. -->
+		<svg viewBox="0 0 512 512" class="h-full w-full" aria-hidden="true" focusable="false">
+			<use href={`${branding.identitySprite}#${identitySymbolId(avatarId)}`}></use>
+		</svg>
 	{:else}
 		<span class="font-semibold tracking-wide text-ink">{initials}</span>
 	{/if}

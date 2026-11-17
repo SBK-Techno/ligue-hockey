@@ -46,9 +46,20 @@ L'application ne termine pas TLS et n'émet jamais `Strict-Transport-Security` :
 - Terminer TLS et transmettre `X-Forwarded-Proto: https` et `Host` au conteneur, sur le port applicatif interne. Ne pas exposer le conteneur en clair.
 - Ajouter sur toute réponse HTTPS : `Strict-Transport-Security: max-age=31536000; includeSubDomains`. N'ajouter `preload` qu'après inscription du domaine; ne jamais envoyer HSTS sur une réponse HTTP en clair.
 - Ne pas retirer ni remplacer les en-têtes produits par l'application : `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`. La CSP est configurée dans `vite.config.ts` et non dans le proxy.
+- Activer HTTP/2 (h2) vers les navigateurs. L'origine Node sert du HTTP/1.1; le proxy négocie h2 avec le client et multiplexe les requêtes. Sans h2, le graphe JavaScript d'une page coûte plus de connexions que le budget ne le permet.
+- Préserver `Vary: Accept-Encoding`. Le serveur compresse lui-même le HTML et le JSON en br ou gzip et pose cet en-tête. Si le proxy compresse à son tour, il ne doit ni retirer `Vary`, ni réencoder une réponse qui porte déjà `Content-Encoding`.
+- Ne pas remplacer les politiques de cache : les médias générés nommés par contenu sortent en `public, max-age=31536000, immutable`, le manifeste et la page hors ligne en `public, max-age=300`, le service worker en `no-cache`. Le propriétaire est `scripts/lib/static-cache.js` et le manifeste `static/generated-assets.json`.
+- Le préchargement des données utilise `tap`, jamais `hover` : une page privée en `no-store` ne doit pas être demandée au simple survol.
 - Vérifier après chaque changement de proxy :
   `curl -sI https://votre-domaine/ | grep -i '^strict-transport-security'`
+  `curl -sS --compressed -D - -o /dev/null https://votre-domaine/connexion | grep -i '^content-encoding'`
   puis charger une page connectée et confirmer l'absence d'erreur CSP dans la console.
+
+## Budgets de livraison
+
+Le smoke de conteneur et les tests de contrat lisent `config/performance.ts`; aucun script ne recopie un seuil ni la liste des pages. `MEASURED_PAGES` est le seul propriétaire des routes mesurées : l'accueil, le profil et la discussion partagent le budget de 20 requêtes JavaScript initiales. Les valeurs protégées sont la page de connexion (60 Ko, 20 Ko de CSS critique), le profil (120 Ko), la discussion avec 20 messages (150 Ko), les textures (5 Ko chacune), la photo de connexion mobile (35 Ko) et la planche d'identités (220 Ko). Une page de 376 Ko fait échouer `scripts/ci/container-smoke.sh`.
+
+Les panneaux sous la ligne de flottaison sont des îlots : ils sont importés au niveau du module de la page et rendus par le serveur, puis chargés par le navigateur après la peinture initiale. Ce rendu asynchrone est activé par `compilerOptions.experimental.async` dans `vite.config.ts`; le retirer viderait les îlots du HTML serveur.
 
 ## Première mise en service
 

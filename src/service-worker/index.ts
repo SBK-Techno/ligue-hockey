@@ -1,23 +1,37 @@
 import { self } from '$app/service-worker';
 import { version } from '$app/env';
-import { assets, immutable } from '$app/manifest';
+import { immutable } from '$app/manifest';
 import { resolve } from '$app/paths';
 import { branding } from '#lib/generated/branding.ts';
+import { precachePaths } from './precache.ts';
 
 const CACHE = `${branding.cachePrefix}-${version}`;
-const ASSETS = [
-	...new Set([
-		...immutable.map((asset) => resolve(asset.path)),
-		...assets.map((asset) => resolve(asset.path)),
-		branding.offlinePath
-	])
-];
+const RUNTIME = `${CACHE}-runtime`;
+
+/**
+ * La coquille installée est volontairement courte : les morceaux immuables de
+ * l'application, la page hors ligne et les icônes du manifeste. La photo de
+ * connexion, l'aperçu social et les textures restent hors installation; ils
+ * entrent dans le cache d'exécution seulement quand une page les demande.
+ */
+const PRECACHE = precachePaths(
+	immutable.map((asset) => resolve(asset.path)),
+	branding
+);
+const PRECACHED = new Set(PRECACHE);
+
+/** Les médias nommés par contenu peuvent être resservis sans réseau. */
+const RUNTIME_PREFIXES = ['/icons/', '/textures/', '/auth/', '/identities/', '/social/'];
+
+function isRuntimeAsset(pathname: string): boolean {
+	return RUNTIME_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(
 		(async () => {
 			const cache = await caches.open(CACHE);
-			await cache.addAll(ASSETS);
+			await cache.addAll(PRECACHE);
 			await self.skipWaiting();
 		})()
 	);
@@ -27,7 +41,7 @@ self.addEventListener('activate', (event) => {
 	event.waitUntil(
 		(async () => {
 			for (const key of await caches.keys()) {
-				if (key !== CACHE) await caches.delete(key);
+				if (key !== CACHE && key !== RUNTIME) await caches.delete(key);
 			}
 			await self.clients.claim();
 		})()
@@ -44,19 +58,28 @@ self.addEventListener('fetch', (event) => {
 
 	event.respondWith(
 		(async () => {
-			const cache = await caches.open(CACHE);
-			if (ASSETS.includes(url.pathname)) {
-				const cached = await cache.match(url.pathname);
+			if (PRECACHED.has(url.pathname)) {
+				const cached = await caches.match(url.pathname);
 				if (cached) return cached;
 			}
 
+			if (isRuntimeAsset(url.pathname)) {
+				const runtime = await caches.open(RUNTIME);
+				const cached = await runtime.match(url.pathname);
+				if (cached) return cached;
+				const response = await fetch(request);
+				if (response.ok) await runtime.put(url.pathname, response.clone());
+				return response;
+			}
+
 			try {
-				// Authenticated HTML and data are never stored in the shared
-				// cache; only the public assets above are available offline.
+				// Le HTML et les données de session ne sont jamais stockés dans
+				// le cache partagé; seule la coquille publique est disponible
+				// hors ligne.
 				return await fetch(request);
 			} catch (error) {
 				if (request.mode === 'navigate') {
-					const offline = await cache.match(branding.offlinePath);
+					const offline = await caches.match(branding.offlinePath);
 					if (offline) return offline;
 				}
 				throw error;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
+	import { GAME_LIMITS } from '#config/games.ts';
 	import {
 		gameWarningDefinition,
 		gameWarningLabelKey,

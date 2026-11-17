@@ -8,9 +8,225 @@
 		<meta name="color-scheme" content="light" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<style nonce="%sveltekit.nonce%">:root {
+	/* Palette : bleu de denim, papier chaud, rouge de brique. */
+	--color-ink: #12283a;
+	--color-paper: #f6f1e7;
+	--color-paper-deep: #eae1d2;
+	--color-surface: #fffdf8;
+	/* Texte et icônes posés sur une surface de marque. */
+	--color-on-brand: #ffffff;
+	/* Trait décoratif : séparateurs, bordures de cartes. */
+	--color-line: #ddd2bf;
+	/* Trait de commande : bordure de champ, de bouton secondaire, de case. 3:1 minimum. */
+	--color-line-strong: #8c7b63;
+	--color-muted: #5e6a6a;
+	--color-ice: #1f5c99;
+	--color-ice-deep: #173f6b;
+	--color-ice-soft: #e3ecf4;
+	/* Rouge de la ligue : la marque, jamais une alerte de formulaire. */
+	--color-accent: #b4432f;
+	--color-accent-deep: #8c3223;
+	--color-accent-soft: #f6e4dd;
+	--color-alert: #a33a2a;
+	--color-alert-deep: #7f2a1d;
+	--color-alert-soft: #f7e3dd;
+	--color-ok: #3f6b4c;
+	--color-ok-soft: #e5efe6;
+	/* Maillots : deux équipes, noir et blanc, indépendantes de la palette de l'app. */
+	--color-team-black: #101010;
+	--color-team-white: #ffffff;
+
+	/* Deux familles, deux voix : la planche d'aréna et le tableau indicateur. */
+	--font-sans: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--font-display: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--font-mono: 'Spline Sans Mono Variable', 'Spline Sans Mono', ui-monospace, 'SFMono-Regular',
+		Menlo, Consolas, monospace;
+
+	/* Cartes et feuilles : coins ronds, ombre chaude et douce. */
+	--radius-card: 1rem;
+	--radius-sheet: 1rem;
+	--radius-control: 0.75rem;
+	--radius-pill: 999px;
+	--shadow-card: 0 1px 2px rgb(18 40 58 / 0.05), 0 14px 34px -24px rgb(18 40 58 / 0.26);
+	/* Un panneau se soulève : ombre diffuse, jamais un décalage dur. */
+	--shadow-lift: 0 2px 4px rgb(18 40 58 / 0.07), 0 22px 48px -28px rgb(18 40 58 / 0.32);
+	--shadow-button: inset 0 1px 0 rgb(255 253 248 / 0.2);
+	--shadow-strip: none;
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-spring: cubic-bezier(0.22, 1.18, 0.36, 1);
+
+	/* Durées : court pour un retour immédiat, moyen pour un panneau. */
+	--duration-fast: 140ms;
+	--duration-base: 220ms;
+	--duration-slow: 320ms;
+
+	/* Rôles typographiques. Aucune taille hors de cette échelle. */
+	--text-display: clamp(1.75rem, 1.25rem + 1.7vw, 2.5rem);
+	--text-section: 1.375rem;
+	--text-subhead: 1rem;
+	--text-body: 0.9375rem;
+	--text-meta: 0.8125rem;
+	/* Libellé dense : une seule taille entre la méta et le tampon. */
+	--text-caption: 0.6875rem;
+	--text-stamp: 0.625rem;
+	--text-clock: clamp(3.5rem, 9vw, 5.5rem);
+	/* Unité du cadran : relative à l'horloge, jamais une taille de texte. */
+	--text-clock-unit: 0.45em;
+	/* Chiffre de bandeau : s'adapte à la largeur de la cellule. */
+	--text-metric: clamp(1.15rem, 5vw, 1.5rem);
+	--text-figure: 1.75rem;
+	--text-figure-sm: 0.9375rem;
+
+	/* Largeur de lecture confortable pour les messages et les textes longs. */
+	--measure: 68ch;
+}
+/*
+ * La tranche critique est injectée dans la coquille par scripts/generate.ts.
+ * Elle couvre la peinture initiale et la connexion, avant la feuille complète.
+ */
+html,
+body {
+	background-color: var(--color-paper);
+	color: var(--color-ink);
+}
+body {
+	margin: 0;
+	font-family: var(--font-sans);
+	font-size: var(--text-body);
+	line-height: 1.5;
+}
+
+	/* Connexion : la photo de vestiaire, puis la même feuille que le reste. */
+	.auth-shell {
+		position: relative;
+		min-height: 100dvh;
+		background: var(--color-paper);
+	}
+	.auth-hero {
+		position: relative;
+		height: max(28dvh, 11rem);
+		overflow: hidden;
+	}
+	.auth-hero img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: 68% 50%;
+	}
+	.auth-scrim {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--color-ink) 78%, transparent),
+			transparent 72%
+		);
+	}
+	.auth-header {
+		position: absolute;
+		inset: 0 0 auto;
+		z-index: 1;
+		padding: 1.25rem;
+	}
+	.auth-body {
+		position: relative;
+		margin-top: -2rem;
+		padding: 0 0.75rem calc(env(safe-area-inset-bottom) + 1.5rem);
+	}
+	.auth-main {
+		position: relative;
+		z-index: 1;
+		padding: 0;
+	}
+	.auth-panel {
+		width: 100%;
+		max-width: 24rem;
+		margin-inline: auto;
+	}
+	.auth-panel .card {
+		padding: 1.5rem;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-card);
+		background: var(--color-surface);
+		box-shadow: none;
+	}
+	.auth-caption {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		max-width: 24rem;
+		margin: 1.25rem auto 0;
+		color: var(--color-muted);
+	}
+	/* Un téléphone court garde le bouton de connexion au-dessus de la ligne. */
+	@media (max-height: 720px) {
+		.auth-hero {
+			height: 9rem;
+		}
+		.auth-body {
+			margin-top: -1.5rem;
+		}
+	}
+	@media (min-width: 640px) {
+		.auth-hero {
+			height: max(32dvh, 14rem);
+		}
+		.auth-header {
+			padding: 1.75rem;
+		}
+		.auth-body {
+			padding: 0 1.5rem 2rem;
+		}
+		.auth-panel .card {
+			padding: 1.75rem;
+		}
+	}
+	@media (min-width: 1024px) {
+		.auth-shell {
+			display: grid;
+			grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 0.85fr);
+			background: var(--color-paper);
+		}
+		.auth-hero {
+			grid-column: 1;
+			grid-row: 1;
+			height: 100dvh;
+			position: sticky;
+			top: 0;
+		}
+		.auth-hero img {
+			object-position: center;
+		}
+		.auth-header {
+			padding: 2.5rem;
+		}
+		.auth-body {
+			display: flex;
+			flex-direction: column;
+			grid-column: 2;
+			grid-row: 1;
+			justify-content: center;
+			min-height: 100dvh;
+			margin-top: 0;
+			padding: 3rem;
+		}
+		.auth-panel {
+			max-width: 25rem;
+		}
+		.auth-panel .card {
+			padding: 2rem;
+		}
+		.auth-caption {
+			margin-top: 1.75rem;
+		}
+	}
+
+</style>
 		%sveltekit.head%
 	</head>
-	<body data-sveltekit-preload-data="hover">
+	<!-- tap : aucune page privée en no-store n'est demandée au survol. -->
+	<body data-sveltekit-preload-data="tap">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

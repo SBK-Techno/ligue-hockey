@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { playerPeek } from './player-peek.svelte.ts';
 	/**
 	 * A player name that opens the shared peek. Used where a bare name has no
 	 * avatar next to it, so phone users get the same access as a mouse hover.
@@ -22,7 +21,6 @@
 		data-player-id={playerId}
 		data-player-peek="click"
 		aria-haspopup="dialog"
-		aria-expanded={playerPeek.openId === playerId}
 	>
 		{name}
 	</button>

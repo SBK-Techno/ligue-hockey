@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { rinkGeometryStyle } from '#config/rink.ts';
 	import { TEAMS, teamDefinition } from '#config/teams.ts';
-	import { branding } from '#lib/generated/branding.ts';
 	import type { GameBenchView, GameSlotView } from '#lib/domain/games/types.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import {
@@ -141,7 +140,7 @@
 				</div>
 				<div
 					class="rink"
-					style="--rink-texture: url({branding.textures.ice}); {geometryStyle}"
+					style={geometryStyle}
 				>
 					{#each placements.filter((placement) => placement.team === team.key) as placement (placement.key)}
 						{#if placement.role}

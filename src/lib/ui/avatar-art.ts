@@ -1,4 +1,5 @@
 import type { AvatarArt } from '#config/avatars.ts';
+import { identitySymbolId } from './identity-symbol.ts';
 
 /**
  * Renders an avatar from the catalogue. The SVG contains only custom
@@ -78,7 +79,7 @@ function mask(): string {
 	</g>`;
 }
 
-export function avatarSvg(variant: AvatarArt): string {
+function art(variant: AvatarArt): string {
 	const skin = `var(--color-avatar-skin-${variant.skin})`;
 	const hair = `var(--color-avatar-hair-${variant.hair})`;
 	const background = `var(--color-avatar-bg-${variant.bg})`;
@@ -89,8 +90,7 @@ export function avatarSvg(variant: AvatarArt): string {
 			: variant.mouth === 'grin'
 				? 'M 232 280 C 244 296 268 296 280 280 Z'
 				: 'M 236 282 C 246 290 266 290 276 282';
-	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-  <rect width="512" height="512" fill="${background}"/>
+	return `<rect width="512" height="512" fill="${background}"/>
   <g transform="translate(256 512) scale(1.08) translate(-256 -512)" stroke="${INK}" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
     ${hairBack(variant.style).replaceAll('"h"', `"${hair}"`)}
     <path d="${BODY}" fill="${JERSEY}"/>
@@ -113,6 +113,10 @@ export function avatarSvg(variant: AvatarArt): string {
     <g stroke="${PAPER}" stroke-width="5" stroke-linecap="round">
       <path d="M 232 418 L 246 428"/><path d="M 256 420 L 256 434"/><path d="M 280 418 L 266 428"/>
     </g>
-  </g>
-</svg>`;
+  </g>`;
+}
+
+/** Le contenu d'un symbole de la planche : aucune enveloppe `<svg>`. */
+export function avatarSymbol(variant: AvatarArt): string {
+	return `<symbol id="${identitySymbolId(variant.id)}" viewBox="0 0 512 512" preserveAspectRatio="xMidYMid slice">${art(variant)}</symbol>`;
 }

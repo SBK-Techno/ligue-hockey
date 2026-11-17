@@ -5,6 +5,7 @@ import { actorFromUser } from '#lib/domain/auth/types.ts';
 import { isAccountActive } from '#lib/domain/players/account-status.ts';
 import { actorContextRequired } from '#lib/server/actor-context.ts';
 import { cacheControlFor } from '#lib/server/cache-policy.ts';
+import { compressResponse } from '#lib/server/compression.ts';
 import { auth } from '#lib/server/auth.ts';
 import { startup } from '#lib/server/startup.ts';
 import { isAppError } from '#lib/shared/errors.ts';
@@ -70,15 +71,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set('Referrer-Policy', 'no-referrer');
 	}
 
+	const delivered = compressResponse(event.request, response);
+
 	logger.info('http.request', {
 		method: event.request.method,
 		path: event.url.pathname,
-		status: response.status,
+		status: delivered.status,
 		durationMs: clock.nowMs() - startedAt,
 		requestId: event.locals.requestId
 	});
 
-	return response;
+	return delivered;
 };
 
 export const handleError: HandleServerError = (input) => {

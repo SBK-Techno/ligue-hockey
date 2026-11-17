@@ -113,10 +113,10 @@
 		z-index: -1;
 		pointer-events: none;
 		background-color: var(--color-paper);
-		background-image: var(--page-texture);
-		background-position: center;
-		background-size: cover;
-		background-repeat: no-repeat;
+		background-image: var(--page-material-image);
+		background-position: 0 0;
+		background-size: var(--page-material-size);
+		background-repeat: var(--page-material-repeat);
 	}
 
 	/* Une feuille : papier chaud posé sur la page, coins ronds et ombre douce. */
@@ -276,131 +276,6 @@
 			color-mix(in srgb, var(--color-on-brand) 12%, transparent) 49.7% 50.3%,
 			transparent 50.3%
 		);
-	}
-
-	/* Connexion : la photo de vestiaire, puis la même feuille que le reste. */
-	.auth-shell {
-		position: relative;
-		min-height: 100dvh;
-		background: var(--color-paper);
-	}
-	.auth-hero {
-		position: relative;
-		height: max(28dvh, 11rem);
-		overflow: hidden;
-	}
-	.auth-hero img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: 68% 50%;
-	}
-	.auth-scrim {
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(
-			to bottom,
-			color-mix(in srgb, var(--color-ink) 78%, transparent),
-			transparent 72%
-		);
-	}
-	.auth-header {
-		position: absolute;
-		inset: 0 0 auto;
-		z-index: 1;
-		padding: 1.25rem;
-	}
-	.auth-body {
-		position: relative;
-		margin-top: -2rem;
-		padding: 0 0.75rem calc(env(safe-area-inset-bottom) + 1.5rem);
-	}
-	.auth-main {
-		position: relative;
-		z-index: 1;
-		padding: 0;
-	}
-	.auth-panel {
-		width: 100%;
-		max-width: 24rem;
-		margin-inline: auto;
-	}
-	.auth-panel .card {
-		padding: 1.5rem;
-		border: 1px solid var(--color-line);
-		border-radius: var(--radius-card);
-		background: var(--color-surface);
-		box-shadow: none;
-	}
-	.auth-caption {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin: 1.25rem auto 0;
-		color: var(--color-muted);
-	}
-	/* Un téléphone court garde le bouton de connexion au-dessus de la ligne. */
-	@media (max-height: 720px) {
-		.auth-hero {
-			height: 9rem;
-		}
-		.auth-body {
-			margin-top: -1.5rem;
-		}
-	}
-	@media (min-width: 640px) {
-		.auth-hero {
-			height: max(32dvh, 14rem);
-		}
-		.auth-header {
-			padding: 1.75rem;
-		}
-		.auth-body {
-			padding: 0 1.5rem 2rem;
-		}
-		.auth-panel .card {
-			padding: 1.75rem;
-		}
-	}
-	@media (min-width: 1024px) {
-		.auth-shell {
-			display: grid;
-			grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 0.85fr);
-			background: var(--color-paper);
-		}
-		.auth-hero {
-			grid-column: 1;
-			grid-row: 1;
-			height: 100dvh;
-			position: sticky;
-			top: 0;
-		}
-		.auth-hero img {
-			object-position: center;
-		}
-		.auth-header {
-			padding: 2.5rem;
-		}
-		.auth-body {
-			display: flex;
-			flex-direction: column;
-			grid-column: 2;
-			grid-row: 1;
-			justify-content: center;
-			min-height: 100dvh;
-			margin-top: 0;
-			padding: 3rem;
-		}
-		.auth-panel {
-			max-width: 25rem;
-		}
-		.auth-panel .card {
-			padding: 2rem;
-		}
-		.auth-caption {
-			margin-top: 1.75rem;
-		}
 	}
 
 	/* Chiffres de feuille de match : une seule famille, alignée, stable. */
@@ -748,8 +623,15 @@
 			linear-gradient(90deg, transparent calc(var(--rink-blue-right) - 0.3%), var(--color-ice-deep) calc(var(--rink-blue-right) - 0.3%) calc(var(--rink-blue-right) + 0.3%), transparent calc(var(--rink-blue-right) + 0.3%)),
 			linear-gradient(90deg, transparent calc(var(--rink-goal-left) - 0.3%), var(--color-accent) calc(var(--rink-goal-left) - 0.3%) calc(var(--rink-goal-left) + 0.3%), transparent calc(var(--rink-goal-left) + 0.3%)),
 			linear-gradient(90deg, transparent calc(var(--rink-goal-right) - 0.3%), var(--color-accent) calc(var(--rink-goal-right) - 0.3%) calc(var(--rink-goal-right) + 0.3%), transparent calc(var(--rink-goal-right) + 0.3%)),
-			var(--rink-texture);
-		background-size: cover;
+			var(--rink-material-image);
+		background-size:
+			100% 100%,
+			100% 100%,
+			100% 100%,
+			100% 100%,
+			100% 100%,
+			var(--rink-material-size);
+		background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, var(--rink-material-repeat);
 		background-position: center;
 	}
 	.rink::after {

@@ -6,15 +6,12 @@
 	import { formatCount, formatDate, formatTimeOfDay, t } from '#lib/shared/i18n/index.ts';
 	import { toDate, todayInZone } from '#lib/shared/time/clock.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
-	import PlayerName from '#lib/ui/PlayerName.svelte';
-	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
-	import EmptyState from '#lib/ui/EmptyState.svelte';
+
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
-	import PollOptions from '#lib/ui/PollOptions.svelte';
+
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
-	import { prefersReducedMotion, scrollBehavior } from '#lib/ui/scroll.ts';
 	import { initialPillState, nextPillState } from '#lib/ui/chat-scroll.ts';
 	import type { PageProps } from './$types';
 
@@ -28,6 +25,17 @@
 
 	const messages = $derived([...data.messages].reverse());
 	const canAddOption = $derived(pollOptions.length < data.limits.pollMaxOptions);
+	// Les deux îlots conditionnels rendent leur contenu au serveur; leur
+	// morceau n'entre dans le navigateur que si la page en a besoin.
+	// svelte-ignore state_referenced_locally
+	const initialMessages = data.messages;
+	const hasPoll = initialMessages.some((message) => message.poll !== null);
+	const [EmptyState, PollOptions] = await Promise.all([
+		initialMessages.length === 0
+			? import('#lib/ui/EmptyState.svelte').then((module) => module.default)
+			: null,
+		hasPoll ? import('#lib/ui/PollOptions.svelte').then((module) => module.default) : null
+	]);
 
 	type DisplayMessage = (typeof data.messages)[number];
 	type DayGroup = { key: string; label: string; messages: DisplayMessage[] };
@@ -74,10 +82,15 @@
 	const scrollToLatest = () =>
 		window.scrollTo({
 			top: document.documentElement.scrollHeight,
-			behavior: scrollBehavior(prefersReducedMotion())
+			behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+				? 'auto'
+				: 'smooth'
 		});
 
 	onMount(() => {
+		// Une page d'historique s'ouvre sur son début; seule la page courante
+		// rejoint le dernier message.
+		if (data.before) return;
 		void document.fonts.ready.then(() =>
 			requestAnimationFrame(() => {
 				if (messages.length > 0) scrollToLatest();
@@ -94,6 +107,22 @@
 	function showNewMessages() {
 		pillState = { ...pillState, newMessages: 0 };
 		scrollToLatest();
+	}
+
+	async function confirmSubmit(
+		event: MouseEvent & { currentTarget: HTMLButtonElement },
+		question: string,
+		tone: 'danger' | 'neutral'
+	) {
+		const { askConfirm } = await import('#lib/ui/confirm.svelte.ts');
+		const confirmed = await askConfirm({
+			title: t('common.confirm'),
+			question,
+			confirmLabel: t('common.confirm'),
+			cancelLabel: t('common.cancel'),
+			tone
+		});
+		if (confirmed) event.currentTarget.form?.requestSubmit();
 	}
 
 	function addOption() {
@@ -198,8 +227,17 @@
 	{/if}
 
 	{#if messages.length === 0}
-		<EmptyState title={t('chat.empty')} help={t('chat.emptyHelp')} />
+		{#if EmptyState}
+			<EmptyState title={t('chat.empty')} help={t('chat.emptyHelp')} />
+		{/if}
 	{:else}
+		{#if data.nextCursor}
+			<div class="flex justify-center">
+				<a class="btn-secondary btn-sm" href="?before={data.nextCursor}">
+					{t('chat.loadOlder')}
+				</a>
+			</div>
+		{/if}
 		<section class="sheet" aria-label={t('chat.title')}>
 			{#each groups as group (group.key)}
 				<p
@@ -223,7 +261,7 @@
 
 							<div class="chat-meta">
 								<span class="flex min-w-0 items-center gap-1.5">
-									<PlayerName playerId={message.authorUserId} name={message.authorName} class="truncate text-body font-semibold" />
+									<span class="truncate text-body font-semibold">{message.authorName}</span>
 									{#if message.isOwn}
 										<span class="badge shrink-0">{t('chat.you')}</span>
 									{/if}
@@ -252,7 +290,9 @@
 								{#if message.deleted}
 									<p class="text-body italic text-muted">{t('chat.deleted')}</p>
 								{:else if message.poll}
-									<PollOptions messageId={message.id} poll={message.poll} />
+									{#if PollOptions}
+										<PollOptions messageId={message.id} poll={message.poll} />
+									{/if}
 								{:else}
 									<p class="whitespace-pre-wrap break-words text-body">{message.body}</p>
 								{/if}
@@ -272,21 +312,26 @@
 											{#if message.poll && !message.poll.closed}
 												<form method="POST" action="?/closePoll" use:progressiveForm>
 													<input type="hidden" name="messageId" value={message.id} />
-													<ConfirmSubmit
-														label={t('chat.closePoll')}
-														question={t('chat.closePollConfirm')}
-														tone="neutral"
+													<button
 														class="btn-ghost btn-sm"
-													/>
+														type="button"
+														onclick={(event) =>
+															confirmSubmit(event, t('chat.closePollConfirm'), 'neutral')}
+													>
+														{t('chat.closePoll')}
+													</button>
 												</form>
 											{/if}
 											<form method="POST" action="?/delete" use:progressiveForm>
 												<input type="hidden" name="messageId" value={message.id} />
-												<ConfirmSubmit
-													label={t('chat.delete')}
-													question={t('chat.deleteConfirm')}
+												<button
 													class="btn-ghost btn-sm"
-												/>
+													type="button"
+													onclick={(event) =>
+														confirmSubmit(event, t('chat.deleteConfirm'), 'danger')}
+												>
+													{t('chat.delete')}
+												</button>
 											</form>
 										</div>
 									</details>

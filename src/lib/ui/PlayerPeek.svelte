@@ -11,10 +11,8 @@
 	import {
 		cancelPlayerPeekClose,
 		closePlayerPeek,
-		openPlayerPeek,
 		playerPeek,
-		schedulePlayerPeekClose,
-		schedulePlayerPeekOpen
+		schedulePlayerPeekClose
 	} from './player-peek.svelte.ts';
 	import {
 		isPeekSheet,
@@ -41,76 +39,6 @@
 		(_, index) => RATING_SCALE.min + index
 	);
 
-	function triggerFrom(target: EventTarget | null): HTMLElement | null {
-		if (!(target instanceof Element)) return null;
-		const trigger = target.closest<HTMLElement>('[data-player-id]');
-		if (!trigger || trigger.closest('[data-player-peek-card]')) return null;
-		return trigger.dataset.playerId ? trigger : null;
-	}
-
-	function onPointerOver(event: PointerEvent) {
-		const trigger = triggerFrom(event.target);
-		if (!trigger) return;
-		if (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget)) {
-			return;
-		}
-		schedulePlayerPeekOpen(trigger.dataset.playerId as string, trigger);
-	}
-
-	function onPointerOut(event: PointerEvent) {
-		const trigger = triggerFrom(event.target);
-		if (!trigger) return;
-		if (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget)) {
-			return;
-		}
-		if (playerPeek.openId === trigger.dataset.playerId) schedulePlayerPeekClose();
-	}
-
-	function onClick(event: MouseEvent) {
-		const trigger = triggerFrom(event.target);
-		if (!trigger) {
-			if (
-				playerPeek.openId &&
-				!(event.target instanceof Element && event.target.closest('[data-player-peek-card]'))
-			) {
-				closePlayerPeek();
-			}
-			return;
-		}
-		const playerId = trigger.dataset.playerId as string;
-		if (trigger.dataset.playerPeek === 'click') {
-			openPlayerPeek(playerId, trigger, { pinned: true });
-			return;
-		}
-		const interactive = trigger.closest('a,button,[role="button"],label');
-		if (interactive && interactive !== trigger) return;
-		if (trigger.matches('a,button')) return;
-		openPlayerPeek(playerId, trigger, { pinned: true });
-	}
-
-	function onKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Escape' && playerPeek.openId) {
-			event.preventDefault();
-			closePlayerPeek({ restoreFocus: true });
-			return;
-		}
-		if (event.key !== 'Enter' && event.key !== ' ') return;
-		const trigger = triggerFrom(event.target);
-		if (!trigger || trigger.getAttribute('role') !== 'button') return;
-		if (trigger.dataset.playerId === playerPeek.openId) return;
-		event.preventDefault();
-		openPlayerPeek(trigger.dataset.playerId as string, trigger, { pinned: true });
-	}
-
-	function onPointerDown(event: PointerEvent) {
-		if (!playerPeek.openId) return;
-		if (event.target instanceof Element && event.target.closest('[data-player-peek-card]')) {
-			return;
-		}
-		if (event.target instanceof Element && event.target.closest('[data-player-id]')) return;
-		closePlayerPeek();
-	}
-
 	function updateViewport() {
 		viewport = { width: window.innerWidth, height: window.innerHeight };
 	}
@@ -122,19 +50,9 @@
 
 	onMount(() => {
 		updateViewport();
-		document.addEventListener('pointerover', onPointerOver);
-		document.addEventListener('pointerout', onPointerOut);
-		document.addEventListener('click', onClick);
-		document.addEventListener('keydown', onKeyDown);
-		document.addEventListener('pointerdown', onPointerDown);
 		window.addEventListener('resize', onViewportChange);
 		window.addEventListener('scroll', onViewportChange, { passive: true });
 		return () => {
-			document.removeEventListener('pointerover', onPointerOver);
-			document.removeEventListener('pointerout', onPointerOut);
-			document.removeEventListener('click', onClick);
-			document.removeEventListener('keydown', onKeyDown);
-			document.removeEventListener('pointerdown', onPointerDown);
 			window.removeEventListener('resize', onViewportChange);
 			window.removeEventListener('scroll', onViewportChange);
 		};

@@ -8,7 +8,7 @@
 	import { capabilityDefinition } from '#config/capabilities.ts';
 	import { ROLES, roleDefinition, type Role } from '#config/roles.ts';
 	import { POSITIONS, positionDefinition, type Position } from '#config/positions.ts';
-	import { SETTINGS } from '#config/settings-registry.ts';
+	import { FINANCE_LIMITS } from '#config/finance.ts';
 	import {
 		currencySymbol,
 		formatAge,
@@ -332,8 +332,8 @@
 									name="firstPercent"
 									type="number"
 									inputmode="numeric"
-									min={SETTINGS['finance.firstInstallmentPercent'].min}
-									max={SETTINGS['finance.firstInstallmentPercent'].max}
+									min={FINANCE_LIMITS.firstInstallmentPercent.min}
+									max={FINANCE_LIMITS.firstInstallmentPercent.max}
 									value={data.plan?.firstPercent}
 									required
 								/>

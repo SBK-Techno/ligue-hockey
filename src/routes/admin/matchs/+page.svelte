@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { GAME_LIMITS } from '#lib/domain/games/validators.ts';
+	import { GAME_LIMITS } from '#config/games.ts';
 	import { formatCount, t } from '#lib/shared/i18n/index.ts';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';

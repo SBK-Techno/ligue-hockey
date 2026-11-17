@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { ACCOUNT_LIMITS } from '#config/account.ts';
-	import { primarySurfaces, visibleSurfaces } from '#lib/domain/auth/surfaces.ts';
-	import type { UserActor } from '#lib/domain/auth/types.ts';
-	import { roleDefinition } from '#config/roles.ts';
+	import type { Surface } from '#config/surfaces.ts';
+	import type { I18nKey } from '#config/i18n/fr.ts';
 	import { formatCount, t } from '#lib/shared/i18n/index.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
@@ -11,23 +9,31 @@
 	import { isActiveHref } from '#lib/ui/nav.ts';
 
 	let {
-		actor,
+		name,
+		userId,
+		items,
+		account,
+		roleLabelKey,
 		unread,
+		unreadCap,
 		avatarId = null
-	}: { actor: UserActor; unread: number; avatarId?: string | null } = $props();
+	}: {
+		name: string;
+		userId: string;
+		items: readonly Surface[];
+		account: Surface | null;
+		roleLabelKey: I18nKey;
+		unread: number;
+		unreadCap: number;
+		avatarId?: string | null;
+	} = $props();
 
 	const path = $derived(page.url.pathname);
-	const items = $derived(primarySurfaces(actor));
-	const account = $derived(visibleSurfaces(actor).find((surface) => surface.key === 'account'));
 	const inAdmin = $derived(path.startsWith('/admin'));
 
 	const unreadBadge = $derived(
-		unread > ACCOUNT_LIMITS.unreadBadgeMax
-			? `${ACCOUNT_LIMITS.unreadBadgeMax}+`
-			: String(unread)
+		unread > unreadCap ? `${unreadCap}+` : String(unread)
 	);
-
-	const roleLabel = $derived(t(roleDefinition(actor.role)?.labelKey ?? 'admin.role.player'));
 
 	let open = $state(false);
 	let trigger = $state<HTMLButtonElement | null>(null);
@@ -100,7 +106,7 @@
 				href="/notifications"
 				class="relative grid h-11 w-11 place-items-center text-muted no-underline transition-colors hover:text-ink"
 				aria-label={unread > 0
-					? `${t('notifications.title')} · ${unread > ACCOUNT_LIMITS.unreadBadgeMax ? unreadBadge : formatCount(
+					? `${t('notifications.title')} · ${unread > unreadCap ? unreadBadge : formatCount(
 							unread,
 							'notifications.unreadCount.one',
 							'notifications.unreadCount.many'
@@ -124,14 +130,14 @@
 					class="flex min-h-11 cursor-pointer items-center gap-2 rounded-[0.375rem] border border-line bg-surface py-1 pl-1 pr-2.5 text-ink transition-colors hover:border-ice"
 					aria-expanded={open}
 					aria-controls="menu-compte"
-					aria-label="{t('nav.accountMenu')} · {actor.name}"
+					aria-label="{t('nav.accountMenu')} · {name}"
 					onclick={() => (open = !open)}
 				>
 					<Avatar
-						player={{ fullName: actor.name, userId: actor.userId, avatarId }}
+						player={{ fullName: name, userId: userId, avatarId }}
 						size={32}
 					/>
-					<span class="hidden max-w-40 truncate text-body font-semibold xl:block">{actor.name}</span>
+					<span class="hidden max-w-40 truncate text-body font-semibold xl:block">{name}</span>
 					<svg
 						viewBox="0 0 24 24"
 						class="hidden h-3.5 w-3.5 shrink-0 text-muted transition-transform duration-200 xl:block {open
@@ -153,8 +159,8 @@
 						class="card-flush absolute right-0 top-[calc(100%+0.5rem)] z-40 max-h-[70dvh] w-72 overflow-y-auto p-2"
 					>
 						<div class="border-b border-line px-2.5 pb-2.5 pt-1">
-							<p class="truncate text-body font-semibold">{actor.name}</p>
-							<p class="mt-0.5 text-meta text-muted">{roleLabel}</p>
+							<p class="truncate text-body font-semibold">{name}</p>
+							<p class="mt-0.5 text-meta text-muted">{t(roleLabelKey)}</p>
 						</div>
 						<nav class="mt-1 flex flex-col" aria-label={t('nav.accountMenu')}>
 							{#if account}

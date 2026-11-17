@@ -18,7 +18,7 @@ export type ContractInputs = {
 
 type Json = Record<string, unknown>;
 
-const GATE_SCRIPT = 'npm run verify && npm run build';
+const GATE_SCRIPT = 'npm run verify && npm run build && npm run verify:bundles';
 const VERIFY_COMMANDS = [
 	'npm run check',
 	'npm run lint',

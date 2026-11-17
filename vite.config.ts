@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { CRITICAL_STYLE_HASH } from './src/lib/generated/critical-style.ts';
 
 export default defineConfig({
 	server: {
@@ -15,11 +16,15 @@ export default defineConfig({
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
 				runes: ({ filename }) =>
-					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
+					filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
+				// Les îlots paresseux rendent leur contenu au serveur : le navigateur
+				// ne reçoit que le morceau qu'il doit hydrater, jamais le graphe complet.
+				experimental: { async: true }
 			},
-			// Le CSS critique tient sous ce seuil : l'inliner évite le second
-			// aller-retour qui peignait la page avant sa feuille de style.
-			inlineStyleThreshold: 80 * 1024,
+			// SvelteKit applique ce seuil à la feuille entière, pas à une tranche.
+			// La tranche critique est donc explicite dans src/lib/ui/critical.css
+			// et injectée par la coquille; la feuille complète reste un lien.
+			inlineStyleThreshold: 0,
 			// Les URL d'actifs restent absolues : le CSS inliné est partagé par
 			// toutes les routes, y compris les routes imbriquées.
 			paths: { relative: false },
@@ -31,7 +36,7 @@ export default defineConfig({
 				directives: {
 					'default-src': ['self'],
 					'script-src': ['self'],
-					'style-src': ['self'],
+					'style-src': ['self', CRITICAL_STYLE_HASH],
 					'style-src-attr': ['unsafe-inline'],
 					'img-src': ['self', 'data:'],
 					'font-src': ['self'],

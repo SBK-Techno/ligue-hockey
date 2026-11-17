@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { mapUrlFor } from '#config/maps.ts';
-	import { teamDefinition } from '#config/teams.ts';
 	import type { AvailabilityView } from '#lib/domain/availability/service.ts';
 	import type { GameView } from '#lib/domain/games/service.ts';
 	import type { GameBenchView, GameSlotView } from '#lib/domain/games/types.ts';
@@ -14,12 +12,13 @@
 		formatWeekday,
 		t
 	} from '#lib/shared/i18n/index.ts';
-	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	let {
 		variant,
 		game,
+		mapUrl,
+		teamLabel,
 		availability,
 		ownSlot,
 		ownBench,
@@ -30,6 +29,8 @@
 	}: {
 		variant: HeroVariant;
 		game: GameView | null;
+		mapUrl: string | null;
+		teamLabel: string | null;
 		availability: AvailabilityView | null;
 		ownSlot: GameSlotView | null;
 		ownBench: GameBenchView | null;
@@ -40,17 +41,21 @@
 	} = $props();
 
 	const gameId = $derived(game?.id ?? '');
-	const mapUrl = $derived(game ? mapUrlFor(game.locationAddress, game.locationMapUrl) : null);
 	const time = $derived(
 		game ? formatTimeParts(game.startTime) : { hour: '0', minute: '00' }
 	);
-	const teamLabel = $derived(ownSlot ? t(teamDefinition(ownSlot.team).labelKey) : null);
 	const jerseyNumber = $derived(ownSlot?.player?.jerseyNumber ?? null);
 	const present = $derived(availability?.own === 'present');
 	const absent = $derived(availability?.own === 'absent');
 	const unanswered = $derived(
 		availability !== null && availability.canRespond && availability.own === null
 	);
+	// Le bouton de confirmation n'est chargé que si une action peut l'ouvrir.
+	// svelte-ignore state_referenced_locally
+	const ConfirmSubmit =
+		availability?.canWithdraw || ownRequest !== null
+			? (await import('#lib/ui/ConfirmSubmit.svelte')).default
+			: null;
 </script>
 
 {#snippet withdrawForm()}
@@ -58,12 +63,14 @@
 		<form method="POST" action="?/availability" use:progressiveForm class="mt-3">
 			<input type="hidden" name="gameId" value={gameId} />
 			<input type="hidden" name="status" value="absent" />
-			<ConfirmSubmit
-				label={t('availability.withdraw')}
-				question={t('availability.withdrawConfirm')}
-				confirmLabel={t('availability.withdraw')}
-				class="btn border border-paper/40 text-paper hover:bg-paper/15"
-			/>
+			{#if ConfirmSubmit}
+				<ConfirmSubmit
+					label={t('availability.withdraw')}
+					question={t('availability.withdrawConfirm')}
+					confirmLabel={t('availability.withdraw')}
+					class="btn border border-paper/40 text-paper hover:bg-paper/15"
+				/>
+			{/if}
 		</form>
 	{/if}
 {/snippet}
@@ -107,12 +114,14 @@
 		<form method="POST" action="?/cancelRequest" use:progressiveForm class="mt-2">
 			<input type="hidden" name="gameId" value={gameId} />
 			<input type="hidden" name="requestId" value={ownRequest.id} />
-			<ConfirmSubmit
-				label={t('subs.cancelRequest')}
-				question={t('subs.cancelRequestConfirm')}
-				confirmLabel={t('subs.cancelRequest')}
-				class="btn border border-paper/40 text-paper hover:bg-paper/15"
-			/>
+			{#if ConfirmSubmit}
+				<ConfirmSubmit
+					label={t('subs.cancelRequest')}
+					question={t('subs.cancelRequestConfirm')}
+					confirmLabel={t('subs.cancelRequest')}
+					class="btn border border-paper/40 text-paper hover:bg-paper/15"
+				/>
+			{/if}
 		</form>
 	{/if}
 {/snippet}

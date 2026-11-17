@@ -8,6 +8,7 @@ import {
 	type SettingsKey,
 	type SettingsValues
 } from '#config/settings-registry.ts';
+import { CHAT_PAGE_SIZE } from '#config/chat.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
@@ -49,7 +50,13 @@ function decodeRows(rows: readonly { key: string; valueJson: string }[]) {
 
 export function getSettings(): SettingsValues {
 	if (cached) return cached;
-	cached = parseSettings(decodeRows(listSettings()));
+	const decoded = decodeRows(listSettings());
+	// Une base créée avant le plafond de pagination garde sa valeur historique :
+	// on la ramène au contrat courant avant validation, sans migration de données.
+	if (typeof decoded['chat.pageSize'] === 'number') {
+		decoded['chat.pageSize'] = Math.min(decoded['chat.pageSize'], CHAT_PAGE_SIZE);
+	}
+	cached = parseSettings(decoded);
 	return cached;
 }
 

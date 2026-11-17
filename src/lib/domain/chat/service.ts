@@ -1,3 +1,4 @@
+import { CHAT_PAGE_SIZE, HOME_POLL_LIMIT } from '#config/chat.ts';
 import type { Position } from '#config/positions.ts';
 import { canCreatePoll, can, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
@@ -15,12 +16,16 @@ import {
 	findPoll,
 	insertMessage,
 	insertPollMessage,
+	listLatestVisibleMessage,
 	listMessages,
+	listOpenPollMessages,
 	listOptions,
 	listPolls,
 	listVotes,
-	softDeleteMessage
+	softDeleteMessage,
+	type MessageRow
 } from './queries.ts';
+import { decodeCursor, encodeCursor } from './cursor.ts';
 import { messageInputSchema, pollInputSchema, voteInputSchema } from './validators.ts';
 
 export type ChatPollOptionView = {
@@ -55,9 +60,11 @@ export type ChatMessageView = {
 	canDelete: boolean;
 };
 
-function toViews(actor: Actor, userId: string): ChatMessageView[] {
-	const settings = getSettings();
-	const messages = listMessages(settings['chat.pageSize'], null);
+function toViews(
+	actor: Actor,
+	userId: string,
+	messages: readonly MessageRow[]
+): ChatMessageView[] {
 	const ids = messages.map((message) => message.id);
 	const polls = new Map(listPolls(ids).map((poll) => [poll.messageId, poll]));
 	const options = new Map<string, { id: string; label: string; optionIndex: number }[]>();
@@ -107,9 +114,62 @@ function toViews(actor: Actor, userId: string): ChatMessageView[] {
 	});
 }
 
-export function listChat(actor: Actor): ChatMessageView[] {
+export type ChatPage = {
+	messages: ChatMessageView[];
+	/** Curseur de la page précédente, null quand l'historique est complet. */
+	nextCursor: string | null;
+};
+
+export function listChatPage(actor: Actor, beforeValue?: string | null): ChatPage {
 	const user = requireUser(actor);
-	return toViews(actor, user.userId);
+	const settings = getSettings();
+	const pageSize = Math.min(settings['chat.pageSize'], CHAT_PAGE_SIZE);
+	const rows = listMessages(pageSize + 1, decodeCursor(beforeValue));
+	const hasMore = rows.length > pageSize;
+	const page = hasMore ? rows.slice(0, pageSize) : rows;
+	const oldest = page.at(-1);
+	return {
+		messages: toViews(actor, user.userId, page),
+		nextCursor: hasMore && oldest ? encodeCursor(oldest) : null
+	};
+}
+
+export type HomeChatSummary = {
+	latestMessage: ChatMessageView | null;
+	openPoll: { messageId: string; poll: ChatPollView; unvoted: boolean } | null;
+};
+
+/**
+ * L'accueil n'a besoin que du dernier message et d'un sondage ouvert. On
+ * interroge donc les sondages ouverts et un seul message, jamais la page de
+ * discussion complète.
+ */
+export function listChatSummary(actor: Actor): HomeChatSummary {
+	const user = requireUser(actor);
+	const latestRow = listLatestVisibleMessage();
+	const pollRows = listOpenPollMessages(clock.nowMs(), HOME_POLL_LIMIT);
+	const byId = new Map<string, MessageRow>();
+	if (latestRow) byId.set(latestRow.id, latestRow);
+	for (const row of pollRows) byId.set(row.id, row);
+	const views = toViews(actor, user.userId, [...byId.values()]);
+	const latest = latestRow
+		? (views.find((view) => view.id === latestRow.id) ?? null)
+		: null;
+	const polls = views.filter((view) => view.poll !== null && !view.poll.closed);
+	const openPoll =
+		polls.find((view) => view.poll?.options.every((option) => !option.myVote)) ??
+		polls[0] ??
+		null;
+	return {
+		latestMessage: latest,
+		openPoll: openPoll?.poll
+			? {
+					messageId: openPoll.id,
+					poll: openPoll.poll,
+					unvoted: openPoll.poll.options.every((option) => !option.myVote)
+				}
+			: null
+	};
 }
 
 export function sendMessage(actor: Actor, input: { body: string }): string {

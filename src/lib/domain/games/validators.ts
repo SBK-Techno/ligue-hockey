@@ -1,14 +1,11 @@
 import { z } from 'zod';
 import { POSITION_KEYS } from '#config/positions.ts';
+import { GAME_LIMITS } from '#config/games.ts';
 import { GAME_WARNING_KEYS } from '#config/game-warnings.ts';
 import { ROSTER_LIMITS } from '#config/roster.ts';
 import { TEAM_KEYS } from '#config/teams.ts';
 import { DATE_PATTERN, TIME_PATTERN } from '#config/time.ts';
 import { isRealDate } from '#lib/shared/time/clock.ts';
-
-export const GAME_LIMITS = {
-	notesMax: 1000
-} as const;
 
 export const gameInputSchema = z.object({
 	gameDate: z

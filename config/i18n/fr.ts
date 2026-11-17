@@ -309,7 +309,7 @@ export const fr = {
   'settings.pollMinOptions.description': 'Nombre minimal de choix.',
   'settings.chatPageSize.label': 'Messages par page',
   'settings.chatPageSize.description':
-    'Messages chargés à l’ouverture de la discussion.',
+    'Messages chargés à l’ouverture de la discussion, entre 10 et 20.',
   'settings.invariant.pollOptions':
     'Le nombre minimal de choix doit être inférieur ou égal au nombre maximal.',
   'settings.invariant.installmentDates':
@@ -764,6 +764,8 @@ export const fr = {
   'balance.paymentNotFound': 'Paiement introuvable.',
   'balance.applyDefaults': 'Appliquer les frais par défaut',
 
+  'chat.loadOlder':
+    'Afficher les messages plus anciens',
   'chat.title': 'Discussion',
   'chat.subtitle': 'Les messages et les sondages de la ligue.',
   'chat.publishPoll': 'Publier le sondage',

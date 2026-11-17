@@ -5,11 +5,12 @@ import {
 	closePollAsAdmin,
 	createPoll,
 	deleteChatMessage,
-	listChat,
+	listChatPage,
 	sendMessage
 } from '#lib/domain/chat/service.ts';
 import { canCreatePoll } from '#lib/domain/auth/policy.ts';
 import { CHAT_LIMITS, voteInputSchema } from '#lib/domain/chat/validators.ts';
+import { decodeCursor } from '#lib/domain/chat/cursor.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
@@ -24,7 +25,9 @@ const messageSchema = z.object({
 });
 const idSchema = z.object({ messageId: z.string().min(1) });
 
-export const load: ServerLoad = ({ locals }) => {
+export const load: ServerLoad = ({ locals, url }) => {
+	const before = url.searchParams.get('before');
+	const cursor = decodeCursor(before);
 	const settings = getSettings();
 	const limits = {
 		messageMax: settings['chat.maxMessageLength'],
@@ -38,10 +41,20 @@ export const load: ServerLoad = ({ locals }) => {
 		yesterday: todayInZone(branding.timezone, clock.nowMs() - DAY_MS)
 	};
 	if (locals.actor.kind !== 'user') {
-		return { messages: [], limits, canCreatePoll: false, ...days };
+		return {
+			messages: [],
+			nextCursor: null,
+			before: null,
+			limits,
+			canCreatePoll: false,
+			...days
+		};
 	}
+	const page = listChatPage(locals.actor, cursor ? before : null);
 	return {
-		messages: listChat(locals.actor),
+		messages: page.messages,
+		nextCursor: page.nextCursor,
+		before: cursor ? before : null,
 		limits,
 		canCreatePoll: canCreatePoll(locals.actor, settings['chat.allowPlayerPolls']),
 		...days
