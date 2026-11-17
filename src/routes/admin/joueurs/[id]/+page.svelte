@@ -219,6 +219,8 @@
 								taken={data.avatarPicker.taken}
 								help={t('admin.avatarHelp')}
 								position={position}
+								legendsTitle={t('admin.legendsTitle')}
+								legendsHelp={t('admin.legendsHelp')}
 							/>
 						{/if}
 					</div>

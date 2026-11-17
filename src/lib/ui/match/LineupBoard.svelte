@@ -148,7 +148,9 @@
 			<div class="min-w-0">
 				<div class="mb-2 flex items-baseline justify-between gap-2">
 					<h3 class="text-subhead font-semibold">{t(teamDefinition(team.key).labelKey)}</h3>
-					<span class="text-caption text-muted">{t('rink.attackRight')}</span>
+					<span class="text-caption text-muted">
+						{team.key === 'black' ? t('rink.attackLeft') : t('rink.attackRight')}
+					</span>
 				</div>
 				<div class="rink" style="--rink-texture: url({branding.textures.ice})">
 					{#each placements.filter((placement) => placement.team === team.key) as placement (placement.key)}
@@ -157,17 +159,18 @@
 							<button
 								type="button"
 								class="rink-token"
-								style="--x: {100 - placement.role.y}%; --y: {placement.role.x}%"
+								style="--x: {team.key === 'black' ? placement.role.y : 100 - placement.role.y}%; --y: {placement.role.x}%"
 								data-team={team.key}
 								data-player-id={player?.playerId}
 								data-filled={player !== null}
 								data-selected={selected === placement.key}
-								disabled={!canEdit}
+								disabled={!canEdit && player === null}
+								data-player-peek={!canEdit && player ? 'click' : undefined}
 								onclick={() => selectSlot(placement.key)}
 								aria-label={player
-									? `${player.jerseyNumber ?? ''} ${player.fullName}`
-									: t('rink.emptySlot')}
-								aria-pressed={selected === placement.key}
+									? `${t(teamDefinition(team.key).labelKey)}, ${t(placement.role.labelKey)} · ${player.jerseyNumber ?? ''} ${player.fullName}`
+									: `${t(teamDefinition(team.key).labelKey)}, ${t(placement.role.labelKey)} · ${t('rink.emptySlot')}`}
+								aria-pressed={canEdit ? selected === placement.key : undefined}
 							>
 								{#if player}
 									<span class="rink-number">{player.jerseyNumber ?? '?'}</span>
@@ -206,8 +209,8 @@
 							type="button"
 							class="bench-chip"
 							data-player-id={player.playerId}
+							data-player-peek={!canEdit ? 'click' : undefined}
 							data-selected={selected === `bench:${player.playerId}`}
-							disabled={!canEdit}
 							onclick={() => selectBench(player.playerId)}
 							aria-pressed={selected === `bench:${player.playerId}`}
 						>
@@ -221,7 +224,7 @@
 	{/if}
 
 	{#if canEdit && selected}
-		<div class="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+		<div class="flex flex-wrap items-center gap-2 border-t border-line pt-3" role="status">
 			{#if selected.startsWith('bench:')}
 				<p class="text-meta text-muted">{t('rink.choosePlace')}</p>
 			{:else}

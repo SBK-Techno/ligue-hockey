@@ -2,6 +2,7 @@
 	import type { AvatarArt } from '#config/avatars.ts';
 	import { identityById, isIdentityId } from '#config/identities.ts';
 	import { avatarColor, resolveAvatarId } from '#lib/domain/players/identity.ts';
+	import { playerPeek } from './player-peek.svelte.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import { avatarSvg } from './avatar-art.ts';
 
@@ -56,6 +57,7 @@
 	data-player-id={peek ? player.userId : undefined}
 	tabindex={peek && !decorative ? 0 : undefined}
 	aria-haspopup={peek ? 'dialog' : undefined}
+	aria-expanded={peek && !decorative ? playerPeek.openId === player.userId : undefined}
 >
 	{#if variant}
 		<!-- Fixed catalogue only: no player-controlled string reaches the SVG. -->

@@ -236,7 +236,8 @@
 						<span class="stamp border-paper/25 text-paper/80">
 							{t('profile.legendIdentity', {
 								name: legend.name,
-								number: legend.number
+								number: legend.number,
+								era: legend.era
 							})}
 						</span>
 					{/if}

@@ -88,19 +88,18 @@
 		openPlayerPeek(playerId, trigger, { pinned: true });
 	}
 
-	function onFocusIn(event: FocusEvent) {
-		const trigger = triggerFrom(event.target);
-		if (!trigger) return;
-		if (trigger.dataset.playerPeek === 'click' || !trigger.matches('a,button')) {
-			openPlayerPeek(trigger.dataset.playerId as string, trigger, { pinned: true });
-		}
-	}
-
 	function onKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Escape' && playerPeek.openId) {
 			event.preventDefault();
 			closePlayerPeek({ restoreFocus: true });
+			return;
 		}
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		const trigger = triggerFrom(event.target);
+		if (!trigger || trigger.getAttribute('role') !== 'button') return;
+		if (trigger.dataset.playerId === playerPeek.openId) return;
+		event.preventDefault();
+		openPlayerPeek(trigger.dataset.playerId as string, trigger, { pinned: true });
 	}
 
 	function onPointerDown(event: PointerEvent) {
@@ -126,7 +125,6 @@
 		document.addEventListener('pointerover', onPointerOver);
 		document.addEventListener('pointerout', onPointerOut);
 		document.addEventListener('click', onClick);
-		document.addEventListener('focusin', onFocusIn);
 		document.addEventListener('keydown', onKeyDown);
 		document.addEventListener('pointerdown', onPointerDown);
 		window.addEventListener('resize', onViewportChange);
@@ -135,7 +133,6 @@
 			document.removeEventListener('pointerover', onPointerOver);
 			document.removeEventListener('pointerout', onPointerOut);
 			document.removeEventListener('click', onClick);
-			document.removeEventListener('focusin', onFocusIn);
 			document.removeEventListener('keydown', onKeyDown);
 			document.removeEventListener('pointerdown', onPointerDown);
 			window.removeEventListener('resize', onViewportChange);
@@ -176,9 +173,9 @@
 		</button>
 
 		{#if playerPeek.status === 'loading'}
-			<p class="py-6 text-center text-meta text-muted">{t('peek.loading')}</p>
+			<p class="py-6 text-center text-meta text-muted" role="status">{t('peek.loading')}</p>
 		{:else if playerPeek.status === 'error'}
-			<p class="py-6 text-center text-meta text-muted">{t('peek.error')}</p>
+			<p class="py-6 text-center text-meta text-muted" role="alert">{t('peek.error')}</p>
 		{:else if playerPeek.view}
 			{@const view = playerPeek.view}
 			{@const ratings = view.ratings}
@@ -206,30 +203,31 @@
 				<p class="mt-3 border-t border-line pt-2 text-caption font-semibold text-muted">
 					{t('profile.legendIdentity', {
 						name: view.legend.name,
-						number: view.legend.number
+						number: view.legend.number,
+						era: view.legend.era
 					})}
 				</p>
 			{/if}
 
 			<div class="mt-3 border-t border-line pt-3">
-				<dl class="grid grid-cols-5 gap-1.5">
-					<div class="border border-line bg-paper-deep/40 px-1 py-1.5 text-center">
+				<dl class="grid grid-cols-5 divide-x divide-line border-y border-line">
+					<div class="px-0.5 py-1.5 text-center">
 						<dt class="text-stamp text-muted">{t('peek.games')}</dt>
 						<dd class="font-mono text-body font-semibold">{view.stats.games}</dd>
 					</div>
-					<div class="border border-line bg-paper-deep/40 px-1 py-1.5 text-center">
+					<div class="px-0.5 py-1.5 text-center">
 						<dt class="text-stamp text-muted">{t('peek.goals')}</dt>
 						<dd class="font-mono text-body font-semibold">{view.stats.goals}</dd>
 					</div>
-					<div class="border border-line bg-paper-deep/40 px-1 py-1.5 text-center">
+					<div class="px-0.5 py-1.5 text-center">
 						<dt class="text-stamp text-muted">{t('peek.assists')}</dt>
 						<dd class="font-mono text-body font-semibold">{view.stats.assists}</dd>
 					</div>
-					<div class="border border-line bg-paper-deep/40 px-1 py-1.5 text-center">
+					<div class="px-0.5 py-1.5 text-center">
 						<dt class="text-stamp text-muted">{t('peek.points')}</dt>
 						<dd class="font-mono text-body font-semibold">{view.stats.points}</dd>
 					</div>
-					<div class="border border-line bg-paper-deep/40 px-1 py-1.5 text-center">
+					<div class="px-0.5 py-1.5 text-center">
 						<dt class="text-stamp text-muted">{t('peek.penalties')}</dt>
 						<dd class="font-mono text-body font-semibold">{view.stats.penalties}</dd>
 					</div>
