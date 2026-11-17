@@ -4,27 +4,28 @@ Cette application est un conteneur unique : SvelteKit (Node 24), SQLite en mode 
 
 ## Prérequis
 
-- Docker 24+ et Docker Compose.
+- Docker avec le plugin Compose.
 - Un nom de domaine et un proxy HTTPS devant le conteneur (Caddy, Traefik ou nginx).
 - Un serveur SMTP pour les courriels transactionnels.
 - Une paire de clés VAPID pour les notifications push.
 
 ## Variables d'environnement
 
-Le schéma fait foi : `config/env-schema.ts`. Le fichier `.env.example` contient un modèle complet.
+Le schéma `config/env-schema.ts` est l'unique propriétaire des noms, des bornes et des valeurs par défaut; `.env.example` est le modèle complet à copier. La liste ci-dessous n'est qu'un index par usage, sans valeur; ne recopiez pas les contraintes ou les valeurs par défaut dans un autre document ou script.
 
-| Variable | Rôle |
-|---|---|
-| `ORIGIN` | URL publique exacte, sans barre oblique finale. Doit utiliser `https://` lorsque `APP_ENV=production`. Utilisée dans les liens de courriel et les cookies de session. |
-| `APP_ENV` | `production` en déploiement. Active les erreurs génériques, exige HTTPS et désactive la boîte d'envoi locale. Compose le fixe déjà à `production`. |
-| `BETTER_AUTH_SECRET` | Secret de session, 32 caractères minimum. Ne jamais le changer sans invalider les sessions. |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Premier administrateur, créé au démarrage s'il n'existe aucun compte. Mot de passe de 12 caractères minimum. |
-| `DATABASE_URL` | Chemin SQLite. En conteneur : `/app/data/ligue.db`. |
-| `SMTP_*` | Courriel. Sans SMTP en production, les envois échouent et sont réessayés. |
-| `VAPID_*` | Push. Sans clés, les abonnements push ne peuvent pas être créés. |
-| `SESSION_DAYS`, `INVITE_DAYS`, `LOGIN_WINDOW_MINUTES`, `MAX_LOGIN_ATTEMPTS`, `RESET_REQUESTS_PER_HOUR`, `PASSWORD_CHANGES_PER_HOUR`, `PASSWORD_MIN_LENGTH` | Politique de connexion et limites de récupération de mot de passe. |
-| `NOTIFICATION_TICK_MS`, `NOTIFICATION_MAX_ATTEMPTS`, `NOTIFICATION_BATCH_SIZE`, `NOTIFICATION_CLAIM_TIMEOUT_MS` | File de notifications. |
-| `LOG_LEVEL` | `debug`, `info`, `warn`, `error`. |
+Les variables se regroupent ainsi :
+
+- `ORIGIN` et `APP_ENV` : origine publique exacte et mode d'exécution. En production, `ORIGIN` utilise `https://` et `APP_ENV=production`; le compose du dépôt fixe déjà `APP_ENV`.
+- `BETTER_AUTH_SECRET` : secret de session. Le changer invalide les sessions.
+- `ADMIN_EMAIL` et `ADMIN_PASSWORD` : premier administrateur, créé au démarrage s'il n'existe aucun compte.
+- `DATABASE_URL`, `MIGRATIONS_DIR` et `DATABASE_BUSY_TIMEOUT_MS` : base SQLite et migrations. En conteneur, la base est `/app/data/ligue.db`.
+- `SMTP_*` : courriel transactionnel. Sans SMTP en production, les envois échouent et sont réessayés.
+- `VAPID_*` : push. Sans clés, les abonnements push ne peuvent pas être créés.
+- `SESSION_DAYS`, `INVITE_DAYS`, `LOGIN_WINDOW_MINUTES`, `MAX_LOGIN_ATTEMPTS`, `RESET_REQUESTS_PER_HOUR`, `PASSWORD_CHANGES_PER_HOUR` et `PASSWORD_MIN_LENGTH` : sessions et limites de connexion.
+- `NOTIFICATION_TICK_MS`, `NOTIFICATION_MAX_ATTEMPTS`, `NOTIFICATION_BATCH_SIZE` et `NOTIFICATION_CLAIM_TIMEOUT_MS` : file de notifications.
+- `LOG_LEVEL` : niveau de journalisation.
+
+Les contraintes et les valeurs par défaut sont dans le schéma, pas ici.
 
 ### SMTP et TLS
 
@@ -48,22 +49,25 @@ L'application ne termine pas TLS et n'émet jamais `Strict-Transport-Security` :
 - Ne pas retirer ni remplacer les en-têtes produits par l'application : `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`. La CSP est configurée dans `vite.config.ts` et non dans le proxy.
 - Activer HTTP/2 (h2) vers les navigateurs. L'origine Node sert du HTTP/1.1; le proxy négocie h2 avec le client et multiplexe les requêtes. Sans h2, le graphe JavaScript d'une page coûte plus de connexions que le budget ne le permet.
 - Préserver `Vary: Accept-Encoding`. Le serveur compresse lui-même le HTML et le JSON en br ou gzip et pose cet en-tête. Si le proxy compresse à son tour, il ne doit ni retirer `Vary`, ni réencoder une réponse qui porte déjà `Content-Encoding`.
-- Ne pas remplacer les politiques de cache : les médias générés nommés par contenu sortent en `public, max-age=31536000, immutable`, le manifeste et la page hors ligne en `public, max-age=300`, le service worker en `no-cache`. Le propriétaire est `scripts/lib/static-cache.js` et le manifeste `static/generated-assets.json`.
+- Ne pas remplacer les politiques de cache : `scripts/lib/static-cache.js` est le propriétaire des en-têtes et `static/generated-assets.json` celui des noms. Les actifs nommés par contenu sont immuables, le manifeste et la page hors ligne ont un cache court, le service worker n'est jamais mis en cache.
 - Le préchargement des données utilise `tap`, jamais `hover` : une page privée en `no-store` ne doit pas être demandée au simple survol.
-- Vérifier après chaque changement de proxy :
-  `curl -sI https://votre-domaine/ | grep -i '^strict-transport-security'`
-  `curl -sS --compressed -D - -o /dev/null https://votre-domaine/connexion | grep -i '^content-encoding'`
-  puis charger une page connectée et confirmer l'absence d'erreur CSP dans la console.
+
+Vérifier après chaque changement de proxy :
+`curl -sI https://votre-domaine/ | grep -i '^strict-transport-security'`
+`curl -sS --compressed -D - -o /dev/null https://votre-domaine/connexion | grep -i '^content-encoding'`
+puis charger une page connectée et confirmer l'absence d'erreur CSP dans la console.
 
 ## Budgets de livraison
 
-Le smoke de conteneur et les tests de contrat lisent `config/performance.ts`; aucun script ne recopie un seuil ni la liste des pages. `MEASURED_PAGES` est le seul propriétaire des routes mesurées : l'accueil, le profil et la discussion partagent le budget de 20 requêtes JavaScript initiales. Les valeurs protégées sont la page de connexion (60 Ko, 20 Ko de CSS critique), le profil (120 Ko), la discussion avec 20 messages (150 Ko), les textures (5 Ko chacune), la photo de connexion mobile (35 Ko) et la planche d'identités (220 Ko). Une page de 376 Ko fait échouer `scripts/ci/container-smoke.sh`.
+Le smoke de conteneur et les tests de contrat lisent `config/performance.ts`; aucun script ne recopie un seuil ni la liste des pages. `MEASURED_PAGES` est le seul propriétaire des routes mesurées. Les tailles, le budget de requêtes JavaScript et les valeurs protégées vivent dans ce fichier; ne les recopiez pas ici. `scripts/ci/container-smoke.sh` refuse une page qui dépasse son budget, une réponse non compressée ou une politique de cache divergente.
 
-Les actifs générés nommés par contenu (icônes, photo de connexion, textures, planche d'identités, image sociale) sont servis immuables. Une régénération conserve les anciens noms pendant sept jours avant de les supprimer, pour qu'un document encore en cache ne demande jamais un fichier absent.
+Les actifs générés nommés par contenu (icônes, photo de connexion, textures, planche d'identités, image sociale) sont servis immuables. Une régénération conserve les anciens noms dont le fichier date de moins de `GENERATED_ASSET_RETENTION_DAYS` (`scripts/lib/asset-retention.ts`), soit sept jours, et supprime les plus anciens. Après cette fenêtre, une requête vers un ancien nom renvoie 404 : un document ou un robot qui l'a mis en cache plus longtemps peut afficher un actif absent. Le nom courant est celui de `src/lib/generated/branding.ts`; ne figez jamais un ancien nom dans une configuration ou une documentation.
 
 Les panneaux sous la ligne de flottaison sont des îlots : ils sont importés au niveau du module de la page et rendus par le serveur, puis chargés par le navigateur après la peinture initiale. Ce rendu asynchrone est activé par `compilerOptions.experimental.async` dans `vite.config.ts`; le retirer viderait les îlots du HTML serveur.
 
 ## Première mise en service
+
+Cette séquence vaut pour une installation autonome avec le compose du dépôt. L'hôte de référence est décrit à la section suivante.
 
 ```bash
 cp .env.example .env
@@ -84,38 +88,89 @@ Au démarrage, le conteneur applique les migrations Drizzle, crée l'administrat
 
 Le premier administrateur se connecte avec `ADMIN_EMAIL` et `ADMIN_PASSWORD`, puis invite les joueurs depuis **Administration → Joueurs**. Chaque invitation produit un courriel d'activation valide `INVITE_DAYS` jours. Un joueur qui a déjà un compte peut utiliser **Mot de passe oublié?** sur la page de connexion; le lien reçu est distinct du courriel d'invitation.
 
+## Cible de production vérifiée
+
+La cible ci-dessous a été vérifiée le 16 novembre 2026 sur l'hôte de référence :
+
+- Hôte : `home.backend.localserver.ca`, accès `ssh home`.
+- Répertoire Compose : `/home/jadorais`; fichier `/home/jadorais/compose.ligue-hockey.yml`; service et conteneur `ligue-hockey`.
+- Données : `/mnt/Docker/DockerApps/LigueHockey` monté sur `/app/data` (SQLite WAL).
+- URL publique : `https://hockey.sbktechno.com`.
+- Image : `ghcr.io/sbk-techno/ligue-hockey:1.5.0`, publiée sur GHCR. Le compose du dépôt épingle l'image par `LIGUE_IMAGE`; le fichier de l'hôte porte la même étiquette de version. Ne déployez jamais `latest`.
+- Environnement : le déploiement fournit un fichier `--env-file` hors dépôt, qui contient les secrets et n'est jamais versionné. Le déploiement vérifié utilise `/tmp/ligue-compose.env`; ce chemin n'est pas durable, replacez le fichier dans le coffre de l'hôte et passez son chemin à `--env-file`.
+
+Le projet Compose de l'hôte porte le nom `jadorais` et contient d'autres services. `docker compose up -d` peut afficher un avertissement d'orphelins; ne lancez jamais `--remove-orphans`, qui supprimerait ces autres conteneurs.
+
+Mise à jour. Sauvegardez la base avec la séquence de la section **Sauvegarde et restauration** avant de tirer la nouvelle image.
+
+```bash
+cd /home/jadorais
+# Épingler l'étiquette publiée dans compose.ligue-hockey.yml.
+# Le compose du dépôt, lui, reçoit cette étiquette par LIGUE_IMAGE.
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env pull
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env up -d
+curl -fsS https://hockey.sbktechno.com/api/health \
+  | jq -e '.status == "ok" and .database == "ok" and .migrations == "applied"'
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
+```
+
+Le contrôle de santé est le même prédicat que celui de `scripts/ci/container-smoke.sh` : requête `curl -fsS`, puis `jq` sur `status`, `database` et `migrations`. La dernière commande doit afficher l'étiquette attendue, par exemple `1.5.0`.
+
+Les migrations Drizzle sont appliquées au démarrage du conteneur. Elles ne sont pas réversibles : sauvegardez la base avant chaque mise à jour, et restaurez la sauvegarde correspondante lors d'un retour arrière.
+
+Retour arrière :
+
+```bash
+cd /home/jadorais
+# Épingler l'étiquette ou le digest de la version précédente.
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env pull
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env up -d
+# Restaurer la base sauvegardée avant la mise à jour, puis vérifier /api/health.
+```
+
+Ne rétrogradez jamais le schéma sans restaurer la base. Si le fichier d'environnement n'est plus présent, reconstruisez-le depuis le coffre de l'hôte avant toute commande Compose; un fichier absent laisse les variables vides.
+
+## Aperçu de démonstration
+
+Une base d'aperçu est construite sur une base vide avec la commande du propriétaire du jeu de démonstration :
+
+```bash
+npm run seed:demo -- --yes --password <secret>
+```
+
+Sur une base vide, le script crée uniquement des lignes `demo_` et des comptes `@demo.liguehockey.local`. Sur une base déjà peuplée, il remplace son propre jeu de démonstration, conserve les autres comptes et met à jour les matchs existants avec une présence et un alignement. Il ne faut donc jamais le lancer sur une copie de la production. Ne copiez jamais une base de production pour un aperçu : aucune identité, adresse, note ou credential réel ne doit y figurer. La commande lit `ORIGIN`, `BETTER_AUTH_SECRET` et `DATABASE_URL` dans l'environnement; pointez `DATABASE_URL` vers une base vide et fournissez un secret de test.
+
+Le mot de passe est fourni en argument et n'est pas journalisé. Aucun secret, jeton, mot de passe ou adresse réelle ne doit être écrit dans le dépôt, un document, une image ou un rapport.
+
 ## Santé et supervision
 
-- `GET /api/health` retourne `status`, `database`, `migrations` (`applied`/`missing`), le dernier battement du planificateur (`scheduler.lastTickAt`) et un instantané de la file (`notifications.pending`, `.failed`, `.oldestDueAt`, `.suppressed`, `.push`). Aucun destinataire, sujet ou corps de message n'y figure. Les compteurs de suppression et de livraison push repartent à zéro au redémarrage du processus.
+- `GET /api/health` retourne `status`, `database`, `migrations` (`applied`/`missing`), le dernier battement du planificateur (`scheduler.lastTickAt`) et un instantané de la file (`notifications.pending`, `.failed`, `.oldestDueAt`, `.suppressed`, `.push`). Aucun destinataire, sujet ou corps de message n'y figure.
+- Les compteurs `suppressed` cumulent depuis le démarrage du processus. Les compteurs `push` ne couvrent que le dernier tick planifié. Les deux sont en mémoire et repartent à zéro au redémarrage du conteneur : une valeur nulle après un redémarrage ne prouve pas une absence d'activité, recoupez avec les journaux et `notification_jobs`.
 - Le tableau de bord `/admin` affiche le même instantané et la liste des envois en échec; un opérateur avec `manageSettings` peut relancer un envoi. Chaque relance est tracée dans `audit_log` sous `notification.retry`.
-- Les journaux sont des lignes JSON uniques avec `event`, `requestId`, et redaction des secrets. `docker compose logs -f ligue`.
+- Les journaux sont des lignes JSON uniques avec `event`, `requestId`, et redaction des secrets. `docker logs -f ligue-hockey`.
 - Le planificateur tourne toutes les `NOTIFICATION_TICK_MS` millisecondes. Un `lastTickAt` qui vieillit indique un processus bloqué.
 - Les actions administratives et les notifications sont tracées dans `audit_log` et consultables en base.
 
 ## Intégration continue et publication
 
-Le dépôt est publié sur GitHub à `https://github.com/SBK-Techno/ligue-hockey`. Les workflows sont la seule voie de publication:
+Le dépôt est publié sur GitHub à `https://github.com/SBK-Techno/ligue-hockey`. Les fichiers de `.github/workflows/` sont l'unique propriétaire des déclencheurs, des tâches, des actions et des commandes de publication; ce document ne les recopie pas. Ouvrez le workflow concerné :
 
-- `ci.yml` s'exécute sur chaque demande de fusion, sur chaque poussée vers `main` et manuellement. `verify` installe Node depuis `.nvmrc` et exécute `npm run gate`; `container` construit l'image et vérifie `/api/health`; `required` agrège les deux et constitue le statut requis par la protection de `main`.
-- `docs.yml` valide le site quand la documentation, la marque ou le générateur changent.
-- `pages.yml` publie le site sur `https://sbk-techno.github.io/ligue-hockey/`.
-- `auto-release.yml` s'exécute à chaque poussée vers `main`. Il calcule la prochaine version depuis les commits, prépare ou met à jour la branche `release/next`, ouvre la demande de fusion et lance la porte dessus. Après la fusion de cette demande, il crée l'étiquette `v<version>` et appelle `release.yml`.
-- `release.yml` publie une version, sur une étiquette `v*` ou par appel de `auto-release.yml`: il vérifie que l'étiquette correspond à `package.json`, construit l'image, la pousse sur `ghcr.io/sbk-techno/ligue-hockey` avec les étiquettes de version, de révision et `latest`, puis crée la version GitHub.
-- `security.yml` audite les dépendances d'exécution chaque semaine; `codeql.yml` analyse le code; `dependency-review.yml` bloque les changements à risque élevé; Dependabot propose les mises à jour.
+- [`ci.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/ci.yml) : porte de vérification et smoke du conteneur.
+- [`docs.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/docs.yml) : validation de la documentation.
+- [`pages.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/pages.yml) : publication du site.
+- [`auto-release.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/auto-release.yml) : préparation de la version et de la demande `release/next`.
+- [`release.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/release.yml) : publication de l'image et de la version.
+- [`security.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/security.yml), [`codeql.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/codeql.yml) et [`dependency-review.yml`](https://github.com/SBK-Techno/ligue-hockey/blob/main/.github/workflows/dependency-review.yml) : analyses de sécurité.
 
-`npm run verify:architecture` analyse les workflows et le dépôt, et refuse: un déclencheur manquant, une tâche `verify`, `container` ou `required` absente, une étape `npm run gate` absente ou enveloppée, un `npm ci` absent, un `setup-node` sans `.nvmrc` ou sans cache, une action non épinglée à un SHA complet, une publication Pages sans permission OIDC, une publication qui n'écoute pas les étiquettes `v*` ou qui ne pousse pas sur GHCR, un plan de version sans porte, sans demande de fusion ou sans appel à `release.yml`, un script `gate` ou `verify` affaibli, un major Node différent entre `package.json`, `.nvmrc` et le Dockerfile, ou une métadonnée OCI absente.
+`npm run verify:architecture` lit ces workflows et `config/release.ts`; il refuse toute divergence avec le contrat de publication. Ses règles appartiennent au script, pas à ce document.
 
-La protection de `main` refuse les poussées directes et exige le statut `required`. Le statut porte sur la tête de la demande de fusion, pas sur un commit de fusion.
+La protection de `main` refuse les poussées directes et exige le statut agrégé de la porte sur la tête de la demande de fusion, pas sur un commit de fusion.
 
 ## Publication d'une version
 
-La version de `package.json` est l'unique source. `auto-release.yml` prépare la publication à chaque poussée vers `main`:
+La version de `package.json` est l'unique source. `auto-release.yml` prépare la publication à chaque poussée vers `main`; ses étapes appartiennent au workflow. Les règles de montée appartiennent à `config/release.ts`, et `scripts/release/plan.ts` les applique. Ne recopiez ni les types de commit ni les seuils dans un autre document.
 
-1. `scripts/release/plan.ts` lit l'étiquette la plus récente et les commits depuis celle-ci. `config/release.ts` décide de la montée: une rupture passe en majeure, `feat` en mineure, le reste en correctrice; `chore`, `docs`, `test`, `ci`, `build` et `style` ne déclenchent rien.
-2. Si une version est à préparer, le workflow met à jour `release/next` avec `scripts/release/apply.ts`, qui synchronise `package.json`, `package-lock.json` et `.env.example`. Il ouvre ou actualise la demande de fusion et lance `ci.yml` sur la branche.
-3. La fusion de cette demande approuve la version. La poussée suivante crée l'étiquette `v<version>` et appelle `release.yml`, qui publie l'image et la version GitHub.
-
-La fusion de la demande de version est la seule approbation humaine. Ne créez pas d'étiquette à la main.
+Le seul geste d'approbation est de fusionner la demande `release/next` après une porte verte. Cette fusion approuve la version; la poussée suivante crée l'étiquette `v<version>` et appelle `release.yml`.
 
 `npm run verify:release` refuse trois surfaces de version désaccordées. En cas de reprise manuelle:
 
@@ -136,49 +191,29 @@ gh release view "v$version"
 docker pull "ghcr.io/sbk-techno/ligue-hockey:$version"
 ```
 
-## Mise à jour et retour arrière
-
-L'image de production vient de GHCR. `LIGUE_IMAGE` est obligatoire et porte la version publiée. `package.json` est la source de la version; le suffixe de `.env.example` est une surface générée par `npm run release:apply` et contrôlée par `npm run verify:release`.
-
-```bash
-version="$(node -p "require('./package.json').version")"
-export LIGUE_IMAGE="ghcr.io/sbk-techno/ligue-hockey:$version"
-docker compose pull
-docker compose up -d
-curl -fsS https://votre-domaine/api/health
-docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' ligue-hockey
-```
-
-Pour construire localement, utilisez `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`. Les migrations sont appliquées automatiquement et ne sont pas réversibles. Avant chaque mise à jour :
-
-```bash
-mkdir -p backups
-docker compose exec -T --user app ligue node scripts/backup.mjs /app/data/backup.db
-docker cp ligue-hockey:/app/data/backup.db "backups/ligue-$(date +%Y%m%dT%H%M%S).db"
-docker compose exec -T --user app ligue rm /app/data/backup.db
-```
-
-Pour revenir à une version précédente, épinglez son étiquette ou son digest dans `LIGUE_IMAGE`, relancez `docker compose pull` et `docker compose up -d`, puis restaurez la base correspondante. Ne rétrogradez jamais le schéma sans restaurer la base.
-
 ## Sauvegarde et restauration
 
-Sauvegarde à chaud, sans arrêter l'application :
+Sauvegarde à chaud, sans arrêter l'application. Les commandes utilisent le fichier Compose et le service de l'hôte de référence. Pour une installation autonome avec le compose du dépôt, remplacez `compose.ligue-hockey.yml` par `docker-compose.yml`, le service `ligue-hockey` par `ligue`, le chemin des données par le volume déclaré et omettez `--env-file`.
 
 ```bash
-docker compose exec -T --user app ligue node scripts/backup.mjs /app/data/backup.db
+cd /home/jadorais
+mkdir -p backups
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env exec -T --user app ligue-hockey node scripts/backup.mjs /app/data/backup.db
 docker cp ligue-hockey:/app/data/backup.db "backups/ligue-$(date +%Y%m%dT%H%M%S).db"
-docker compose exec -T --user app ligue rm /app/data/backup.db
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env exec -T --user app ligue-hockey rm /app/data/backup.db
 ```
 
 Restauration :
 
 ```bash
-docker compose stop ligue
+cd /home/jadorais
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env stop ligue-hockey
 docker cp backups/ligue-AAAAmmjjTHHMMSS.db ligue-hockey:/app/data/ligue.db
-docker compose run --rm --entrypoint sh ligue -c \
+image="$(docker inspect --format '{{.Config.Image}}' ligue-hockey)"
+docker run --rm --entrypoint sh -v /mnt/Docker/DockerApps/LigueHockey:/app/data "$image" -c \
   'rm -f /app/data/ligue.db-wal /app/data/ligue.db-shm && chown -R app:app /app/data'
-docker compose start ligue
-curl -fsS https://votre-domaine/api/health
+docker compose -f compose.ligue-hockey.yml --env-file /tmp/ligue-compose.env start ligue-hockey
+curl -fsS https://hockey.sbktechno.com/api/health
 ```
 
 Ne copiez jamais une base WAL active fichier par fichier : utilisez `.backup` ou arrêtez le conteneur.
@@ -197,7 +232,7 @@ Ne copiez jamais une base WAL active fichier par fichier : utilisez `.backup` ou
 
 | Symptôme | Vérification |
 |---|---|
-| `health` en 503 | Lire les journaux; vérifier les permissions du volume `./data`. |
+| `health` en 503 | Lire les journaux; vérifier les permissions du volume de données (`/app/data`). |
 | Connexion impossible | Vérifier `ORIGIN`, `BETTER_AUTH_SECRET`, l'horloge système et `MAX_LOGIN_ATTEMPTS`. |
 | Courriels absents | Vérifier `SMTP_*`, `notifications.emailEnabled`, et `notification_jobs.last_error`. |
 | Push absent | Vérifier les clés VAPID, l'installation de la PWA et l'autorisation du navigateur. |

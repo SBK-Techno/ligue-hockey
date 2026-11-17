@@ -43,7 +43,7 @@ Sont prioritaires:
 
 ## Dépendances
 
-Dependabot propose les mises à jour, la revue des dépendances bloque les changements à risque élevé, CodeQL analyse le code et `npm audit --omit=dev --audit-level=high` tourne chaque semaine. Une alerte de sécurité se corrige avant la prochaine publication.
+Les mises à jour, l'analyse du code et la revue des dépendances sont définies par `.github/workflows/security.yml`, `.github/workflows/codeql.yml` et `.github/workflows/dependency-review.yml`; ce document ne recopie ni leurs déclencheurs ni leurs seuils. Une alerte de sécurité se corrige avant la prochaine publication.
 
 ## Secrets
 

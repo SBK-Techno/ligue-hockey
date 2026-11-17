@@ -41,14 +41,14 @@ Routes never touch the database, environment, SMTP, or APNs directly. Domain ser
 | Recent-form window | `config/ratings.ts` | ratings service | rating tests |
 | Penalty infractions and default minutes | `config/infractions.ts` | schema checks, game sheet form, totals | migration test |
 | Periods and overtime label | `config/periods.ts` | game sheet, game detail | typecheck |
-| Rink geometry and the six presentation roles | `config/rink.ts` | rink lineup, future admin board | rink test |
+| Rink geometry and the six presentation roles | `config/rink.ts` | lineup board, match page, admin game views | rink test |
 | Game sheet goals, penalties and totals | `src/lib/domain/gamesheet/` | match sheet, game detail | service tests + migration test |
 | Manual lineup marker and CAS token | `games.lineup_manual_at`, `games.generated_at` | regeneration policy, lineup editor | lineup tests |
 | Notification events and payload schemas | `config/notification-events.ts` | `notify()`, templates, tests | coverage test |
 | French copy | `config/i18n/fr.ts` | all UI, emails, errors | French-literal check + `verify:language` |
 | Application version | `package.json` | `package-lock.json` root, `.env.example` image suffix, Docker OCI label, GHCR tags, GitHub release | `verify:release` + release workflow |
 | Release bump policy | `config/release.ts` | release planner, auto-release workflow | release tests + `verify:architecture` |
-| Deployment configuration | `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
+| Deployment configuration (names, bounds, defaults) | `config/env-schema.ts` → `src/lib/shared/config/env.ts` | adapters, bootstrap | no `process.env` elsewhere |
 | Repository and documentation URLs | `package.json` (`repository`) | docs build, docs publish | `docs:check` |
 | Roster template | settings registry → game snapshot | slot generation, team generator | generator test |
 | Theme tokens | `src/lib/ui/tokens.css` | every component | no raw colours elsewhere |
@@ -174,39 +174,23 @@ Pure function in `src/lib/domain/teams/generator.ts`:
 
 ## Mechanical gates
 
-`npm run verify` runs, in order:
+`npm run verify` is the local gate; `npm run gate` adds the production build. The script list, order and checks belong to `package.json`. The architecture and publication contract live in `scripts/verify-architecture.ts`, `scripts/lib/ci-contract.ts` and `config/release.ts`; this document does not restate their contents, so run the gate or read those owners.
 
-1. `svelte-check`: types and Svelte diagnostics.
-2. `eslint`: import boundaries and restricted syntax.
-3. `vitest run`: unit, table-driven, integration and contract tests. The suite declares its runtime environment once in the committed `.env.test`, which Vite loads in test mode; it never reads a developer `.env`, so a clean machine, a worktree and CI run the same gate.
-4. `verify:language`: rejects vouvoiement, second-person plural imperatives, em dashes and malformed placeholders in the French dictionary.
-5. `verify:architecture`: scans source for forbidden direct access: `process.env`, `console.*`, `new Date()`/`Date.now()` outside the clock, Drizzle imports outside `server/db` and `*/queries.ts`/`schema.ts`, hex colours outside tokens, provider imports outside the notification adapters, database access from routes, unreturned `actionError`, and dictionary keys that do not exist. It also enforces the publication contract from `scripts/lib/ci-contract.ts`: workflow triggers, the `verify`, `container` and `required` jobs, the exact `npm run gate` step, `npm ci`, the Node version file, pinned actions, Pages deployment permissions, release tags and GHCR publishing, the gate and verify scripts, and matching Node majors in `package.json`, `.nvmrc` and the Dockerfile.
-6. `verify:release`: refuses any disagreement between `package.json`, the two root versions in `package-lock.json`, and the `LIGUE_IMAGE` suffix in `.env.example`.
-7. `verify:generated`: regenerates every branding asset, manifest, app shell, robots file, offline page, social image, and generated module in memory and fails if the checked-in bytes differ, or if a static text asset has no declared generator. A registry test asserts every notification event has French title/body copy, declared channels, and a link that resolves to an existing route.
-8. `verify:shell`: parses `scripts/ci/container-smoke.sh` with `bash -n`.
-9. `docs:check`: builds the documentation site and rejects missing files, broken local links, missing anchors, missing metadata and dash punctuation.
+The gate refuses forbidden direct access in source (environment, console, ambient clock, Drizzle outside its layer, raw colours, provider imports, database access from routes), a missing or weakened publication contract, a version surface disagreement, a stale generated asset, an unparsable smoke script and a broken documentation site. Each rule is implemented and tested in its owner.
 
-CI runs `npm run gate`, which is the same verify plus `npm run build`. The `required` job aggregates `verify` and `container`, and branch protection on `main` requires that check and refuses direct pushes. A red gate blocks the merge. The check runs on the pull request head, not on a merge commit.
+CI runs `npm run gate` through `.github/workflows/ci.yml`; the workflow files are the only owner of triggers, jobs and required status. A red gate blocks the merge.
 
 ## Release automation
 
-`package.json` owns the application version. Every other version surface is derived or checked:
-
-- `scripts/release/plan.ts` reads the latest `v*` tag and the commits since it, then applies the bump policy from `config/release.ts`. Breaking changes win, `feat` bumps the minor, everything else falls back to the configured default, and ignored types produce no release.
-- `scripts/release/apply.ts` is the only writer of the version surfaces. It applies the exact version to `package.json` and the lockfile, then synchronises the `LIGUE_IMAGE` suffix in `.env.example`.
-- `.github/workflows/auto-release.yml` runs on every push to `main`. It prepares or updates one `release/next` branch and release pull request, and dispatches `ci.yml` on that branch so the protected `required` check exists. Merging that pull request is the human release approval.
-- The next push to `main` creates the annotated `v<version>` tag and calls `.github/workflows/release.yml` through `workflow_call`. Tagging and publication therefore have one owner; a tag pushed with `GITHUB_TOKEN` cannot trigger a second workflow.
-- `release.yml` also remains callable by a manual `v*` tag for recovery. It verifies the tag against `package.json` before building, pushing the version, revision and `latest` image tags, and creating the GitHub release.
-
-No module writes a version literal outside these owners. The release planner and version surfaces are pure functions with table-driven tests; the CI contract refuses a workflow that skips the gate, the release pull request, or the shared publisher.
+`package.json` owns the application version. `scripts/release/plan.ts` applies `config/release.ts`; `scripts/release/apply.ts` is the only writer of the version surfaces. The workflows in `.github/workflows/` own the triggers, the release pull request, tagging and publication; read them instead of copying their steps. No module writes a version literal outside these owners.
 
 ## Web delivery
 
 - Every route is server-rendered and reads its data per request; there is no shared client cache of league data.
 - Assets under `/_app/immutable` and every content-named generated asset declared in `static/generated-assets.json` (icons, auth photos, textures, identity sprite, social image) are served with a one-year immutable cache. The manifest, offline page, robots file and service worker use a short or no-cache policy; the superseded unhashed social path keeps a short cache. The generator retains replaced hashed assets for seven days before cleanup, so a cached document never requests a deleted file. The service worker precaches only public static assets and `offline.html`; authenticated HTML, `__data.json`, and API responses are never written to the shared cache. Offline navigation falls back to the static page.
 - The manifest and icon URLs are generated with content hashes and regenerated by `npm run generate`; the HTML never hardcodes them.
-- The documentation site is rendered from the canonical Markdown at the repository root by `scripts/docs/` and published by GitHub Pages. There is no second copy of the documentation.
-- Container images carry OCI version, revision and source labels, and are published to GHCR by the release workflow. `package.json` is the version owner; a release tag must match it.
+- The documentation site is rendered from the canonical Markdown at the repository root by `scripts/docs/`; publication is owned by `.github/workflows/pages.yml`. There is no second copy of the documentation.
+- Container images carry OCI version, revision and source labels. `package.json` is the version owner; a release tag must match it.
 
 ## Data and migrations
 
