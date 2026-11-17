@@ -234,10 +234,14 @@ export function composeHome(input: HomeCompositionInput): HomeComposition {
 	const add = (kind: PanelKind, span: PanelSpan) =>
 		panels.push({ kind, span, zone: PANEL_ZONES[kind] });
 
-	if (manager) add('manager', 12);
+	// Sans fiche de joueur, le gestionnaire n'a que le match à préparer et la
+	// saison : sur un grand écran, les deux se lisent côte à côte au lieu de
+	// s'empiler en deux bandeaux pleine largeur.
+	const managerSpan: PanelSpan = mode === 'no-profile' && agendaPanel ? 5 : 12;
+	if (manager) add('manager', managerSpan);
 
 	if (mode === 'no-profile') {
-		if (manager && agendaPanel) add('agenda', 12);
+		if (manager && agendaPanel) add('agenda', 7);
 		add('install', 12);
 		return { mode, manager, hero: selectHero(input, mode), actions, panels };
 	}

@@ -1437,6 +1437,15 @@
 		.home-dashboard .home-panel {
 			grid-column: auto;
 		}
+		/* Sans colonne de situation, la colonne principale garde la grille à
+		   douze colonnes : le match à préparer et la saison se partagent la
+		   ligne au lieu de s'empiler. */
+		.home-dashboard[data-rail='false'] .home-main {
+			grid-template-columns: repeat(12, minmax(0, 1fr));
+		}
+		.home-dashboard[data-rail='false'] .home-panel {
+			grid-column: span var(--span, 12);
+		}
 	}
 	/* La saison se lit sur deux colonnes quand son panneau est assez large :
 	   à venir et derniers matchs se font face. La requête porte sur le

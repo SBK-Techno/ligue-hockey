@@ -2,6 +2,15 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.9.1 (in progress)
+
+- **Admin Accueil.** An account without a player profile has no presence, poll or discussion, so 1.9.0 collapsed its home to one full-width column. The manager preparation panel and the season now share the 12-column main grid at 1024 px and up: the match to prepare takes 5 columns and the season 7, instead of stacking two wide bands. The 900 to 1023 px board uses the same 5/7 split. A no-profile player still receives the single profile surface.
+- **Mode marker.** The dashboard exposes its composed mode through `data-mode` so the layout audit can name the variant it rendered.
+- **Evidence.** Every home composition was audited at 1440 and 900 px: presence, announced, lineup with a slot, lineup on the bench, absent, game-day, cancelled, no-game, substitute, manager, no-profile manager, no-profile player and an unvoted poll. The no-profile manager home now places the match to prepare at 511 px beside a 721 px season at 1440, and 352 px beside 500 px at 900; its 900 px height drops from 1389 to 1130. No audited variant overflows horizontally or logs a console error, and the 320 px variants stay one column.
+- **Functionalities.** On the local preview, answering presence recorded `present` and showed the confirmation, voting moved the poll from Samedi to Vendredi, claiming a substitute place filled the request and moved the player into the lineup, the hero, season, discussion and account links reached their routes, and logout returned to the connection page.
+- **Gate.** `npm run gate` exit 0: 1129 tests in 156 files, svelte-check 0/0, architecture 396 files, generated assets and documentation current, 92 client chunks without zod.
+- **Next.** PR, release 1.9.1, deploy and verify Carl's live home.
+
 ## Release 1.9.0 (shipped)
 
 - **Desktop Accueil.** At 1024 px and up, the home is a two-column situation board: the next match and the season in a 2fr main column, presence, poll and discussion in a 1fr rail. The scoreboard and presence now start on the same row instead of stacking, and the rail keeps the status surfaces together.
