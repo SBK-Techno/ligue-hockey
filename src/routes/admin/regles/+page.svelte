@@ -73,11 +73,11 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<SectionCard title={t('admin.rules')} flush>
+		<SectionCard flush>
 			<ul role="list" class="divide-y divide-line">
 				{#each data.rules as rule (rule.id)}
 					{@const mode = ruleModeDefinition(rule.mode)}
-					<li class="section-row flex min-h-14 flex-wrap items-center justify-between gap-3">
+					<li class="section-row grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
 						<div class="min-w-0">
 							<p class="text-body font-semibold">
 								{names.get(rule.playerAId) ?? t('admin.rulePlayerRemoved')}

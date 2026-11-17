@@ -107,7 +107,13 @@
 	.app-shell {
 		position: relative;
 		isolation: isolate;
+		display: flex;
+		flex-direction: column;
 		min-height: 100dvh;
+	}
+	/* Le pied de page ferme la page, même quand elle est courte. */
+	.app-shell > main {
+		flex: 1 0 auto;
 	}
 	.page-ground {
 		position: fixed;
@@ -1328,7 +1334,12 @@
 		}
 	}
 
-	/* Bandeau de chiffres : des cellules séparées par un trait, pas des cartes. */
+	/* Bandeau de chiffres : des cellules séparées par un trait, pas des cartes.
+	   Le contenant décide de la grille : une bande étroite passe à deux
+	   colonnes, même dans une colonne latérale sur un grand écran. */
+	.metric-strip-wrap {
+		container-type: inline-size;
+	}
 	.metric-strip {
 		display: grid;
 		grid-auto-flow: column;
@@ -1351,7 +1362,7 @@
 	.metric-cell:first-child {
 		border-left: 0;
 	}
-	@media (max-width: 700px) {
+	@container (max-width: 40rem) {
 		.metric-strip {
 			grid-auto-flow: row;
 			grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1369,7 +1380,8 @@
 		.metric-cell:nth-child(even) {
 			border-left: 1px solid var(--color-line);
 		}
-		.metric-cell:last-child:nth-child(odd) {
+		.metric-strip:not([data-cells='1'])
+			.metric-cell:last-child:nth-child(odd) {
 			grid-column: span 2;
 		}
 	}

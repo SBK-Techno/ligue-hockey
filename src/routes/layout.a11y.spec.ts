@@ -33,6 +33,19 @@ describe('transition de page', () => {
 	});
 });
 
+describe('composition de la coquille', () => {
+	it('colle le pied de page au bas d’une page courte sans le superposer au contenu', () => {
+		const shell = css.slice(css.indexOf('.app-shell {'), css.indexOf('.page-ground {'));
+
+		expect(shell).toContain('display: flex');
+		expect(shell).toContain('flex-direction: column');
+		expect(shell).toContain('min-height: 100dvh');
+		expect(css).toContain('.app-shell > main {');
+		expect(css.slice(css.indexOf('.app-shell > main {'))).toContain('flex: 1 0 auto');
+		expect(layout).toContain('<footer');
+	});
+});
+
 describe('chrome fixe', () => {
 	it('compose le décalage de base avec l’appoint déclaré de la surface', () => {
 		const root = css.slice(css.indexOf('html {'), css.indexOf('body {'));

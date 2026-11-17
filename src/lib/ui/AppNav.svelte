@@ -92,7 +92,7 @@
 				{@const active = isActiveHref(path, item.href)}
 				<a
 					href={item.href}
-					class="flex h-9 shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-meta font-medium no-underline transition-colors {active
+					class="flex min-h-11 shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-meta font-medium no-underline transition-colors {active
 						? 'border-ice text-ink'
 						: 'border-transparent text-muted hover:text-ink'}"
 					aria-current={active ? 'page' : undefined}

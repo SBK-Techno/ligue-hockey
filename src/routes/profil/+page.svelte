@@ -102,7 +102,6 @@
 	const currentSession = $derived(
 		data.sessions.find((session) => session.id === data.currentSessionId)
 	);
-	const currentHash = $derived(page.url.hash);
 
 	let pushStatus = $state<
 		'checking' | 'off' | 'on' | 'denied' | 'unsupported' | 'unconfigured'
@@ -257,6 +256,32 @@
 		{ id: 'securite', label: t('profile.tab.security') },
 		...(isManager ? [{ id: 'administration', label: t('profile.tab.admin') }] : [])
 	]);
+
+	let activeSection = $state<string | null>(null);
+	const currentSection = $derived(activeSection ?? sections[0]?.id ?? '');
+
+	$effect(() => {
+		const hash = page.url.hash.replace('#', '');
+		if (hash) activeSection = hash;
+	});
+
+	onMount(() => {
+		if (!browser || !('IntersectionObserver' in window)) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const visible = entries
+					.filter((entry) => entry.isIntersecting)
+					.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+				if (visible[0]) activeSection = visible[0].target.id;
+			},
+			{ rootMargin: '-20% 0px -65% 0px' }
+		);
+		for (const section of sections) {
+			const element = document.getElementById(section.id);
+			if (element) observer.observe(element);
+		}
+		return () => observer.disconnect();
+	});
 </script>
 
 <PageHeader title={t('profile.title')} />
@@ -336,7 +361,7 @@
 				class="grid grid-cols-2 gap-1 border-y border-line bg-paper py-1.5 lg:grid-cols-1 lg:border-0 lg:bg-transparent lg:py-0"
 			>
 				{#each sections as item (item.id)}
-					{@const current = currentHash === `#${item.id}`}
+					{@const current = currentSection === item.id}
 					<a
 						href="#{item.id}"
 						class="flex min-h-11 items-center border-l-[3px] px-2.5 text-body font-medium no-underline transition-colors {current

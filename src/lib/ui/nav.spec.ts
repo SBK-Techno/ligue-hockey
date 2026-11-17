@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SURFACES } from '#config/surfaces.ts';
+import { t } from '#lib/shared/i18n/index.ts';
 import { mobileNavLabelKey, playerAssessmentHref } from './nav.ts';
 
 describe('playerAssessmentHref', () => {
@@ -20,5 +21,15 @@ describe('libellé de la barre mobile', () => {
 		const games = SURFACES.find((surface) => surface.key === 'games');
 
 		expect(mobileNavLabelKey(games!)).toBe('nav.games');
+	});
+
+	it('donne aux cinq places de la barre un libellé qui tient à 320 px', () => {
+		for (const key of ['home', 'games', 'subs', 'chat', 'account'] as const) {
+			const surface = SURFACES.find((entry) => entry.key === key);
+			const label = t(mobileNavLabelKey(surface!));
+
+			expect(surface).toBeDefined();
+			expect(label.length).toBeLessThanOrEqual(9);
+		}
 	});
 });

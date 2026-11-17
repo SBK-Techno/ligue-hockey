@@ -12,11 +12,11 @@
 	const isManager = $derived(data.actor.kind === 'user' && can(data.actor, 'viewAdmin'));
 </script>
 
-<PageHeader title={t('notifications.title')}>
+<PageHeader title={t('notifications.title')} meta={t('notifications.help')}>
 	{#snippet actions()}
 		{#if data.unread > 0}
 			<form method="POST" action="?/read" use:progressiveForm>
-				<button class="btn-primary btn-sm" type="submit">{t('notifications.markAll')}</button>
+				<button class="btn-secondary btn-sm" type="submit">{t('notifications.markAll')}</button>
 			</form>
 		{/if}
 	{/snippet}
@@ -55,15 +55,17 @@
 										<span class="block min-w-0 flex-1">
 											<span class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 												<span class="break-words text-body font-semibold text-ink">{item.title}</span>
+												{#if item.readAt === null}
+													<span class="stamp border-ice bg-ice-soft text-ice-deep"
+														>{t('notifications.unread')}</span
+													>
+												{/if}
 												<span class="text-meta text-muted">{formatTimestamp(item.createdAt)}</span>
 											</span>
 											<span class="mt-0.5 line-clamp-2 break-words text-body leading-snug text-ink/75">
 												{item.body}
 											</span>
 										</span>
-										{#if item.readAt === null}
-											<span class="sr-only">{t('notifications.unread')}</span>
-										{/if}
 									</button>
 								</form>
 							</li>

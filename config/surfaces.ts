@@ -61,6 +61,7 @@ export const SURFACES = [
     key: 'account',
     href: '/profil',
     labelKey: 'nav.profile',
+    shortLabelKey: 'nav.profileShort',
     icon: 'user',
     capabilities: ['member'],
     placement: 'primary',

@@ -214,7 +214,7 @@
 {#snippet attendancePanel()}
 	{#if hasAttendance && availability}
 		<SectionCard
-			class={hasSubsPanel ? 'lg:col-span-5' : 'lg:col-span-12'}
+			class="self-start {hasSubsPanel ? 'lg:col-span-5' : 'lg:col-span-12'}"
 			title={t('home.attendance')}
 		>
 			<AvailabilityRoster {availability} viewerId={actor?.userId ?? ''} />
@@ -225,7 +225,7 @@
 {#snippet substitutesPanel()}
 	{#if hasSubsPanel}
 		<SectionCard
-			class={hasAttendance ? 'lg:col-span-7' : 'lg:col-span-12'}
+			class="self-start {hasAttendance ? 'lg:col-span-7' : 'lg:col-span-12'}"
 			title={t('subs.title')}
 			flush
 		>
