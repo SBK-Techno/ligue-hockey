@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ABUSE_LIMITS } from '#config/abuse.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { AppError } from '#lib/shared/errors.ts';
-import { throttleMemberAction } from './member-action.ts';
+import { throttleMemberAction, isMemberWrite, memberActionExempt } from './member-action.ts';
 import { resetThrottle } from './throttle.ts';
 
 const actor: Actor = {
@@ -52,5 +52,19 @@ describe('limiteur des gestes de membre', () => {
 		expect(() => throttleMemberAction({ kind: 'anonymous' })).toThrowError(
 			expect.objectContaining({ code: 'UNAUTHORIZED' })
 		);
+	});
+
+	it('compte chaque écriture sauf le plan d’authentification et la santé', () => {
+		expect(isMemberWrite('POST', '/discussion')).toBe(true);
+		expect(isMemberWrite('PUT', '/profil')).toBe(true);
+		expect(isMemberWrite('DELETE', '/api/push/abonnement')).toBe(true);
+		expect(isMemberWrite('GET', '/discussion')).toBe(false);
+		expect(isMemberWrite('HEAD', '/discussion')).toBe(false);
+		expect(isMemberWrite('OPTIONS', '/discussion')).toBe(false);
+		expect(memberActionExempt('/api/auth/sign-in/email')).toBe(true);
+		expect(memberActionExempt('/deconnexion')).toBe(true);
+		expect(memberActionExempt('/api/health')).toBe(true);
+		expect(isMemberWrite('POST', '/api/auth/sign-in/email')).toBe(false);
+		expect(isMemberWrite('POST', '/api/health')).toBe(false);
 	});
 });

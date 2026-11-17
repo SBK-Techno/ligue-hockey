@@ -16,6 +16,7 @@ const {
 	listGameRatings,
 	listAssessmentGames,
 	listGameRatingsForGames,
+	insertAudit,
 	recordAudit,
 	store
 } =
@@ -48,6 +49,7 @@ const {
 			listGameRatings,
 			listAssessmentGames: vi.fn((): unknown[] => []),
 			listGameRatingsForGames: vi.fn((): unknown[] => []),
+			insertAudit: vi.fn(),
 			recordAudit: vi.fn(),
 			store
 		};
@@ -64,7 +66,11 @@ vi.mock('./queries.ts', () => ({
 	listRatingsForPlayers: vi.fn(() => []),
 	upsertRatings: vi.fn()
 }));
-vi.mock('#lib/domain/audit/service.ts', () => ({ recordAudit }));
+vi.mock('#lib/domain/audit/service.ts', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/domain/audit/service.ts')>();
+	return { ...actual, recordAudit };
+});
+vi.mock('#lib/domain/audit/queries.ts', () => ({ insertAudit }));
 vi.mock('#lib/domain/players/service.ts', () => ({
 	getPlayer: vi.fn(),
 	listRatingPlayers: vi.fn(() => [])
@@ -139,7 +145,8 @@ describe('saveGameAssessment', () => {
 			'p1',
 			skaterValues,
 			expect.any(Number),
-			'admin'
+			'admin',
+			expect.anything()
 		);
 	});
 
@@ -158,7 +165,8 @@ describe('saveGameAssessment', () => {
 			'p2',
 			{ goaliePositioning: 4, reboundControl: 3, puckHandling: 4, composure: 5 },
 			expect.any(Number),
-			'admin'
+			'admin',
+			expect.anything()
 		);
 	});
 
@@ -174,16 +182,18 @@ describe('saveGameAssessment', () => {
 			'p1',
 			{},
 			expect.any(Number),
-			'admin'
+			'admin',
+			expect.anything()
 		);
-		expect(recordAudit).toHaveBeenLastCalledWith(
-			admin,
+		expect(insertAudit).toHaveBeenLastCalledWith(
 			expect.objectContaining({
-				metadata: expect.objectContaining({
-					previousAttributes: 4,
-					cleared: true
-				})
-			})
+				actorUserId: 'admin',
+				action: 'ratings.game',
+				entityType: 'game',
+				entityId: 'game-1',
+				metadataJson: expect.stringContaining('"cleared":true')
+			}),
+			expect.anything()
 		);
 	});
 

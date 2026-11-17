@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ABUSE_LIMITS } from '#config/abuse.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 
 vi.mock('#lib/server/db/index.ts', async () => {
@@ -17,8 +18,10 @@ const {
 	listInboxPage,
 	listFailedJobs,
 	markAllInboxRead,
+	notify,
 	queueCounts,
 	retryFailedJob,
+	subscribeToPush,
 	unreadCount
 } = await import('./service.ts');
 const {
@@ -205,5 +208,80 @@ describe('file et relance', () => {
 		);
 		expect(JSON.stringify(snapshot)).not.toContain('@example.test');
 		expect(JSON.stringify(snapshot)).not.toContain('Aréna');
+	});
+
+	it('borne les appareils push d’un même membre', () => {
+		const limit = ABUSE_LIMITS.pushSubscription.limit;
+		const subscribe = (endpoint: string) =>
+			subscribeToPush(player, {
+				endpoint,
+				keys: { p256dh: 'cle-publique', auth: 'secret' }
+			});
+
+		for (let index = 0; index < limit; index += 1) {
+			subscribe(`https://fcm.googleapis.com/push/${index}`);
+		}
+		// Un appareil déjà enregistré se met à jour même au plafond.
+		expect(() => subscribe('https://fcm.googleapis.com/push/0')).not.toThrow();
+		expect(() => subscribe('https://fcm.googleapis.com/push/extra')).toThrowError(
+			expect.objectContaining({ code: 'RATE_LIMITED', key: 'profile.pushFailed' })
+		);
+		expect(
+			sqlite
+				.prepare("select count(*) as count from push_subscriptions where user_id = 'player'")
+				.get()
+		).toEqual({ count: limit });
+	});
+
+	it('garde le premier propriétaire d’un point de terminaison', () => {
+		const endpoint = 'https://fcm.googleapis.com/push/shared';
+		subscribeToPush(player, {
+			endpoint,
+			keys: { p256dh: 'premier', auth: 'secret-1' }
+		});
+
+		expect(() =>
+			subscribeToPush(admin, {
+				endpoint,
+				keys: { p256dh: 'second', auth: 'secret-2' }
+			})
+		).toThrowError(expect.objectContaining({ code: 'CONFLICT' }));
+
+		expect(
+			sqlite
+				.prepare('select user_id, p256dh from push_subscriptions where endpoint = ?')
+				.get(endpoint)
+		).toEqual({ user_id: 'player', p256dh: 'premier' });
+
+		// Le propriétaire peut rafraîchir ses propres clés.
+		subscribeToPush(player, {
+			endpoint,
+			keys: { p256dh: 'rafraichi', auth: 'secret-3' }
+		});
+		expect(
+			sqlite
+				.prepare('select p256dh from push_subscriptions where endpoint = ?')
+				.get(endpoint)
+		).toEqual({ p256dh: 'rafraichi' });
+
+		// Le premier propriétaire reçoit toujours ses avis push.
+		notify(
+			'game_cancelled',
+			[{ userId: 'player' }],
+			{
+				gameId: 'game_test',
+				gameDate: '2026-11-22',
+				startTime: '09:00',
+				location: 'Aréna de test'
+			},
+			{ dedupeKey: 'push-owner-test' }
+		);
+		expect(
+			sqlite
+				.prepare(
+					"select user_id from notification_jobs where channel = 'push' and event_key = 'game_cancelled'"
+				)
+				.all()
+		).toEqual([{ user_id: 'player' }]);
 	});
 });

@@ -1,16 +1,16 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
-import { json } from '@sveltejs/kit';
 import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { ADMIN_ROLE } from '#config/roles.ts';
 import { actorFromUser } from '#lib/domain/auth/types.ts';
 import { isAccountActive } from '#lib/domain/players/account-status.ts';
 import { actorContextRequired } from '#lib/server/actor-context.ts';
+import { apiError } from '#lib/server/action.ts';
 import { cacheControlFor } from '#lib/server/cache-policy.ts';
 import { compressResponse } from '#lib/server/compression.ts';
 import { auth } from '#lib/server/auth.ts';
+import { isMemberWrite, throttleMemberAction } from '#lib/server/security/member-action.ts';
 import { startup } from '#lib/server/startup.ts';
-import { isAppError } from '#lib/shared/errors.ts';
+import { AppError, isAppError } from '#lib/shared/errors.ts';
 import { errorStatus } from '#lib/server/error-status.ts';
 import { t, type I18nKey } from '#lib/shared/i18n/index.ts';
 import { newId } from '#lib/shared/ids/id.ts';
@@ -49,19 +49,39 @@ export const handle: Handle = async ({ event, resolve }) => {
 		: actorFromUser(null);
 	event.locals.sessionId = session?.session?.id ?? null;
 
-	const response =
-		event.url.pathname.startsWith('/api/auth/admin/') &&
-		!(event.locals.actor.kind === 'user' && event.locals.actor.role === ADMIN_ROLE)
-			? // Le plan d'administration de Better Auth vit sous /api/auth : il
-				// n'hérite pas des gardes de page. Un compte inactif ou non-admin
-				// n'y entre jamais, même avec un ancien cookie.
-				json({ message: t('error.forbidden') }, { status: 403 })
-			: await svelteKitHandler({
-					event,
-					resolve,
-					auth,
-					building
-				});
+	// Le plan HTTP de Better Auth n'est pas un second propriétaire des
+	// mutations : toute écriture brute est refusée avec l'enveloppe commune.
+	// Les lectures (dont le lien de réinitialisation) restent disponibles, et
+	// les cas d'usage de l'application passent par `auth.api`, jamais par HTTP.
+	const authMutation =
+		event.request.method !== 'GET' &&
+		event.request.method !== 'HEAD' &&
+		event.url.pathname.startsWith('/api/auth/');
+
+	let response: Response;
+	if (authMutation) {
+		response = apiError(new AppError('FORBIDDEN'));
+	} else {
+		try {
+			// Un seul limiteur pour tous les gestes de membre, réservé une fois
+			// par requête avant que la route puisse écrire.
+			if (
+				event.locals.actor.kind === 'user' &&
+				isMemberWrite(event.request.method, event.url.pathname)
+			) {
+				throttleMemberAction(event.locals.actor);
+			}
+			response = await svelteKitHandler({
+				event,
+				resolve,
+				auth,
+				building
+			});
+		} catch (cause) {
+			if (!isAppError(cause)) throw cause;
+			response = apiError(cause);
+		}
+	}
 
 	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
 		response.headers.set(name, value);

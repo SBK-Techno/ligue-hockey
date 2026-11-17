@@ -657,7 +657,7 @@ describe('score et totaux', () => {
 		]);
 	});
 
-	it('garde le nom et le numéro figés après la suppression du joueur', () => {
+	it('remplace le nom du buteur par le nom neutre après la suppression', () => {
 		addGoal(manager, 'started', {
 			team: 'white',
 			period: 1,
@@ -669,12 +669,12 @@ describe('score et totaux', () => {
 
 		deletePlayerAccount('a', '2026-11-16', '00:00');
 
-		// La fiche reste en base, anonymisée : le but garde son instantané et
-		// le grand livre ne perd ni le score ni la participation.
+		// La fiche reste en base, anonymisée : le but garde son instantané
+		// neutre et le grand livre ne perd ni le score ni la participation.
 		const sheet = getGameSheet(playerActor, 'started');
 		expect(sheet.goals[0].scorer).toEqual({
 			playerId: 'a',
-			fullName: 'a Test',
+			fullName: 'Joueur retiré',
 			jerseyNumber: 9,
 			team: 'white'
 		});

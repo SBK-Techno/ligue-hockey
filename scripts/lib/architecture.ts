@@ -68,6 +68,11 @@ export function queryBoundaryFindings(
  */
 export const QUERY_BOUNDARY_ALLOWANCES: readonly QueryBoundaryAllowance[] = [
 	{
+		file: 'src/lib/domain/availability/queries.ts',
+		module: 'games',
+		reason: 'La réponse de présence écrit la présence et libère la place dans une seule transaction.'
+	},
+	{
 		file: 'src/lib/domain/games/queries.ts',
 		module: 'ratings',
 		reason: 'La purge des notes des joueurs retirés partage la transaction de l’alignement.'

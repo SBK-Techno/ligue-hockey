@@ -55,16 +55,20 @@ export function upsertPreferences(input: {
 		.run();
 }
 
-export function upsertPushSubscription(input: {
-	id: string;
-	userId: string;
-	endpoint: string;
-	p256dh: string;
-	auth: string;
-	userAgent: string | null;
-	createdAt: number;
-}): void {
-	db.insert(pushSubscriptions)
+export function upsertPushSubscription(
+	input: {
+		id: string;
+		userId: string;
+		endpoint: string;
+		p256dh: string;
+		auth: string;
+		userAgent: string | null;
+		createdAt: number;
+	},
+	executor: DbExecutor = db
+): void {
+	executor
+		.insert(pushSubscriptions)
 		.values({ ...input, lastUsedAt: input.createdAt })
 		.onConflictDoUpdate({
 			target: pushSubscriptions.endpoint,
@@ -77,6 +81,29 @@ export function upsertPushSubscription(input: {
 			}
 		})
 		.run();
+}
+
+export function countPushSubscriptions(
+	userId: string,
+	executor: DbExecutor = db
+): number {
+	const row = executor
+		.select({ total: sql<number>`count(*)` })
+		.from(pushSubscriptions)
+		.where(eq(pushSubscriptions.userId, userId))
+		.get();
+	return Number(row?.total ?? 0);
+}
+
+export function findPushSubscriptionByEndpoint(
+	endpoint: string,
+	executor: DbExecutor = db
+): { id: string; userId: string } | undefined {
+	return executor
+		.select({ id: pushSubscriptions.id, userId: pushSubscriptions.userId })
+		.from(pushSubscriptions)
+		.where(eq(pushSubscriptions.endpoint, endpoint))
+		.get();
 }
 
 export function deletePushSubscriptionForUser(

@@ -2,23 +2,19 @@ import { isPosition, type Position } from '#config/positions.ts';
 import { listUserIdsWithCapability } from '#lib/domain/auth/queries.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
+import { auditEntry } from '#lib/domain/audit/service.ts';
+import { insertAudit } from '#lib/domain/audit/queries.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
-import {
-	findOwnProfile,
-	getOwnProfile,
-	getPlayer,
-	type SelfProfile
-} from '#lib/domain/players/service.ts';
+import { findOwnProfile, getOwnProfile, getPlayer } from '#lib/domain/players/service.ts';
 import { notify } from '#lib/domain/notifications/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import { isLineupEditable } from '#lib/domain/games/playability.ts';
+import { db } from '#lib/server/db/index.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
-import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
 	claimablePositions,
@@ -29,7 +25,6 @@ import {
 	cancelRequest,
 	claimRequest,
 	findRequest,
-	findRequesterRequest,
 	findSubProfile,
 	insertRequest,
 	listClaimedSubs,
@@ -318,45 +313,23 @@ export function notifyRequestWaves(
 	};
 }
 
-export function createAbsenceRequest(
-	actor: Actor,
+export function notifyBumped(
+	request: SubRequestRow,
 	game: GameSummary,
-	player: SelfProfile
-): SubRequestView | null {
-	if (player.isSubstitute) return null;
-	if (isGameStarted(game)) {
-		throw new AppError('CONFLICT', { key: 'availability.gameClosed' });
-	}
-
-	const existing = findRequesterRequest(game.id, player.userId);
-	if (existing) {
-		return requestView(existing, namesFor([existing]));
-	}
-
-	const now = clock.nowMs();
-	const id = newId('sub');
-	insertRequest({
-		id,
-		gameId: game.id,
-		requestedByPlayerId: player.userId,
-		createdByUserId: actor.kind === 'user' ? actor.userId : null,
-		position: player.position,
-		reason: 'absence',
-		status: 'open',
-		createdAt: now
-	});
-	const created = findRequest(id);
-	if (!created) {
-		throw new AppError('INTERNAL');
-	}
-	notifyRequestWaves(created, game);
-	recordAudit(actor, {
-		action: 'sub.request_created',
-		entityType: 'sub_request',
-		entityId: id,
-		metadata: { gameId: game.id, position: player.position, reason: 'absence' }
-	});
-	return requestView(created, namesFor([created]));
+	bumpedPlayerId: string,
+	occurrence: 'cancelled' | 'regular-returned'
+): void {
+	notify(
+		'sub_bumped',
+		[{ userId: bumpedPlayerId }],
+		{
+			gameId: game.id,
+			position: request.position,
+			gameDate: game.gameDate,
+			startTime: game.startTime
+		},
+		{ dedupeKey: `sub_bumped:${request.id}:${occurrence}` }
+	);
 }
 
 export function createManualRequest(
@@ -371,26 +344,34 @@ export function createManualRequest(
 
 	const now = clock.nowMs();
 	const id = newId('sub');
-	insertRequest({
-		id,
-		gameId: game.id,
-		createdByUserId: actor.kind === 'user' ? actor.userId : null,
-		position,
-		reason: 'manual',
-		status: 'open',
-		createdAt: now
+	db.transaction((tx) => {
+		insertRequest(
+			{
+				id,
+				gameId: game.id,
+				createdByUserId: actor.kind === 'user' ? actor.userId : null,
+				position,
+				reason: 'manual',
+				status: 'open',
+				createdAt: now
+			},
+			tx
+		);
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.request_created',
+				entityType: 'sub_request',
+				entityId: id,
+				metadata: { gameId: game.id, position, reason: 'manual' }
+			}),
+			tx
+		);
 	});
 	const created = findRequest(id);
 	if (!created) {
 		throw new AppError('INTERNAL');
 	}
 	notifyRequestWaves(created, game);
-	recordAudit(actor, {
-		action: 'sub.request_created',
-		entityType: 'sub_request',
-		entityId: id,
-		metadata: { gameId: game.id, position, reason: 'manual' }
-	});
 	return requestView(created, namesFor([created]));
 }
 
@@ -434,7 +415,19 @@ export function claimSubstitute(
 	let claimed: boolean;
 	const claimedAt = clock.nowMs();
 	try {
-		claimed = claimRequest(requestId, user.userId, claimedAt);
+		claimed = db.transaction((tx) => {
+			if (!claimRequest(requestId, user.userId, claimedAt, tx)) return false;
+			insertAudit(
+				auditEntry(actor, {
+					action: 'sub.claimed',
+					entityType: 'sub_request',
+					entityId: requestId,
+					metadata: { gameId: game.id, position: request.position }
+				}),
+				tx
+			);
+			return true;
+		});
 	} catch (cause) {
 		throw new AppError('CONFLICT', {
 			key: 'subs.alreadyPlaying',
@@ -463,13 +456,6 @@ export function claimSubstitute(
 		{ dedupeKey: `sub_claimed:${requestId}:${claimedAt}` }
 	);
 
-	recordAudit(actor, {
-		action: 'sub.claimed',
-		entityType: 'sub_request',
-		entityId: requestId,
-		metadata: { gameId: game.id, position: request.position }
-	});
-
 	return { requestId, gameId: game.id, position: request.position };
 }
 
@@ -488,14 +474,18 @@ export function releaseSubstitute(
 		throw new AppError('CONFLICT', { key: 'subs.gameStarted' });
 	}
 
-	if (!releaseRequest(requestId, user.userId)) {
-		throw new AppError('FORBIDDEN');
-	}
-
-	recordAudit(actor, {
-		action: 'sub.released',
-		entityType: 'sub_request',
-		entityId: requestId
+	db.transaction((tx) => {
+		if (!releaseRequest(requestId, user.userId, tx)) {
+			throw new AppError('FORBIDDEN');
+		}
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.released',
+				entityType: 'sub_request',
+				entityId: requestId
+			}),
+			tx
+		);
 	});
 
 	const reopened = findRequest(requestId);
@@ -552,64 +542,25 @@ function cancelRequestWithEffects(
 	request: NonNullable<ReturnType<typeof findRequest>>
 ): string | null {
 	const bumpedPlayerId = request.filledByPlayerId;
-	if (!cancelRequest(request.id, clock.nowMs())) {
+	const cancelled = db.transaction((tx) => {
+		if (!cancelRequest(request.id, clock.nowMs(), tx)) return false;
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.request_cancelled',
+				entityType: 'sub_request',
+				entityId: request.id
+			}),
+			tx
+		);
+		return true;
+	});
+	if (!cancelled) {
 		throw new AppError('CONFLICT', { key: 'subs.requestNotActive' });
 	}
 
 	if (bumpedPlayerId) {
-		notify(
-			'sub_bumped',
-			[{ userId: bumpedPlayerId }],
-			{
-				gameId: game.id,
-				position: request.position,
-				gameDate: game.gameDate,
-				startTime: game.startTime
-			},
-			{ dedupeKey: `sub_bumped:${request.id}:cancelled` }
-		);
+		notifyBumped(request, game, bumpedPlayerId, 'cancelled');
 	}
-
-	recordAudit(actor, {
-		action: 'sub.request_cancelled',
-		entityType: 'sub_request',
-		entityId: request.id
-	});
-	return bumpedPlayerId;
-}
-
-export function cancelForReturn(
-	actor: Actor,
-	game: GameSummary,
-	playerId: string
-): string | null {
-	const request = findRequesterRequest(game.id, playerId);
-	if (!request) return null;
-	const bumpedPlayerId = request.filledByPlayerId;
-	if (!cancelRequest(request.id, clock.nowMs())) {
-		return null;
-	}
-
-	if (bumpedPlayerId) {
-		notify(
-			'sub_bumped',
-			[{ userId: bumpedPlayerId }],
-			{
-				gameId: game.id,
-				position: request.position,
-				gameDate: game.gameDate,
-				startTime: game.startTime
-			},
-			{ dedupeKey: `sub_bumped:${request.id}:regular-returned` }
-		);
-	}
-
-	recordAudit(actor, {
-		action: 'sub.request_cancelled',
-		entityType: 'sub_request',
-		entityId: request.id,
-		metadata: { reason: 'regular-returned', playerId }
-	});
 	return bumpedPlayerId;
 }
 

@@ -6,6 +6,7 @@ import {
 	type NotificationPayload
 } from '#config/notification-events.ts';
 import type { NotificationChannel } from '#config/notification-channels.ts';
+import { ABUSE_LIMITS } from '#config/abuse.ts';
 import { INBOX } from '#config/notifications.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
 import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
@@ -19,12 +20,14 @@ import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import {
 	claimDueJobs,
+	countPushSubscriptions,
 	countQueue,
 	countUnread,
 	deletePushSubscriptionForUser,
 	findFailedJob,
 	findInAppJob,
 	findPreferences,
+	findPushSubscriptionByEndpoint,
 	insertJobs,
 	listFailedJobs as listFailedJobRows,
 	listInAppJobs,
@@ -205,14 +208,32 @@ export function subscribeToPush(
 ): void {
 	const user = requireUser(actor);
 	const parsed = parseSchema(pushSubscriptionSchema, input);
-	upsertPushSubscription({
-		id: newId('push'),
-		userId: user.userId,
-		endpoint: parsed.endpoint,
-		p256dh: parsed.keys.p256dh,
-		auth: parsed.keys.auth,
-		userAgent: parsed.userAgent ?? null,
-		createdAt: clock.nowMs()
+	db.transaction((tx) => {
+		const existing = findPushSubscriptionByEndpoint(parsed.endpoint, tx);
+		// Un point de terminaison appartient à son premier membre : un autre
+		// compte ne peut ni le reprendre ni détourner ses avis.
+		if (existing && existing.userId !== user.userId) {
+			throw new AppError('CONFLICT', { key: 'profile.pushFailed' });
+		}
+		if (
+			!existing &&
+			countPushSubscriptions(user.userId, tx) >=
+				ABUSE_LIMITS.pushSubscription.limit
+		) {
+			throw new AppError('RATE_LIMITED', { key: 'profile.pushFailed' });
+		}
+		upsertPushSubscription(
+			{
+				id: newId('push'),
+				userId: user.userId,
+				endpoint: parsed.endpoint,
+				p256dh: parsed.keys.p256dh,
+				auth: parsed.keys.auth,
+				userAgent: parsed.userAgent ?? null,
+				createdAt: clock.nowMs()
+			},
+			tx
+		);
 	});
 }
 

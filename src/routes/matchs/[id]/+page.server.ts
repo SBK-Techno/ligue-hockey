@@ -29,7 +29,6 @@ import {
 	penaltyFormInputSchema
 } from '#lib/domain/gamesheet/validators.ts';
 import { actionError } from '#lib/server/action.ts';
-import { throttleMemberAction } from '#lib/server/security/member-action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm, parseSchema } from '#lib/shared/validation.ts';
 import { AppError } from '#lib/shared/errors.ts';
@@ -98,7 +97,6 @@ export const load: ServerLoad = async ({ locals, params, parent }) => {
 export const actions: Actions = {
 	availability: async ({ request, locals, params }) => {
 		try {
-			throttleMemberAction(locals.actor);
 			const parsed = parseForm(availabilitySchema, await request.formData());
 			const result = markAvailability(locals.actor, params.id!, parsed.status);
 			return {

@@ -77,9 +77,10 @@ export function findRequest(id: string): SubRequestRow | undefined {
 
 export function findRequesterRequest(
 	gameId: string,
-	playerId: string
+	playerId: string,
+	executor: DbExecutor = db
 ): SubRequestRow | undefined {
-	return db
+	return executor
 		.select()
 		.from(subRequests)
 		.where(
@@ -92,16 +93,17 @@ export function findRequesterRequest(
 		.get();
 }
 
-export function insertRequest(row: NewSubRequest): void {
-	db.insert(subRequests).values(row).run();
+export function insertRequest(row: NewSubRequest, executor: DbExecutor = db): void {
+	executor.insert(subRequests).values(row).run();
 }
 
 export function claimRequest(
 	id: string,
 	playerId: string,
-	at: number
+	at: number,
+	executor: DbExecutor = db
 ): boolean {
-	const result = db
+	const result = executor
 		.update(subRequests)
 		.set({
 			status: 'filled',
@@ -113,8 +115,12 @@ export function claimRequest(
 	return result.changes === 1;
 }
 
-export function releaseRequest(id: string, playerId: string): boolean {
-	const result = db
+export function releaseRequest(
+	id: string,
+	playerId: string,
+	executor: DbExecutor = db
+): boolean {
+	const result = executor
 		.update(subRequests)
 		.set({
 			status: 'open',
@@ -133,8 +139,12 @@ export function releaseRequest(id: string, playerId: string): boolean {
 	return result.changes === 1;
 }
 
-export function cancelRequest(id: string, at: number): boolean {
-	const result = db
+export function cancelRequest(
+	id: string,
+	at: number,
+	executor: DbExecutor = db
+): boolean {
+	const result = executor
 		.update(subRequests)
 		.set({
 			status: 'cancelled',

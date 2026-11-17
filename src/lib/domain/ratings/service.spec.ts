@@ -60,9 +60,11 @@ vi.mock('#lib/domain/players/service.ts', () => ({
 	listRatingPlayers
 }));
 
-vi.mock('#lib/domain/audit/service.ts', () => ({
-	recordAudit: vi.fn()
-}));
+vi.mock('#lib/domain/audit/service.ts', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/domain/audit/service.ts')>();
+	return { ...actual, recordAudit: vi.fn() };
+});
+vi.mock('#lib/domain/audit/queries.ts', () => ({ insertAudit: vi.fn() }));
 
 vi.mock('#lib/domain/games/upcoming.ts', () => ({
 	regenerateUpcomingGeneratedGames: vi.fn()
@@ -127,7 +129,8 @@ describe('setRatings', () => {
 			input,
 			expect.arrayContaining([...RATING_ATTRIBUTE_KEYS]),
 			expect.any(Number),
-			'admin'
+			'admin',
+			expect.anything()
 		);
 	});
 
@@ -151,7 +154,8 @@ describe('setRatings', () => {
 			input,
 			expect.arrayContaining([...RATING_ATTRIBUTE_KEYS]),
 			expect.any(Number),
-			'admin'
+			'admin',
+			expect.anything()
 		);
 		expect(view.playerId).toBe('target');
 		expect(view.overall).not.toBeNull();
@@ -168,7 +172,8 @@ describe('setRatings', () => {
 			{ ...completeRatings(), forecheck: 4 },
 			expect.arrayContaining([...RATING_ATTRIBUTE_KEYS, 'forecheck']),
 			expect.any(Number),
-			'admin'
+			'admin',
+			expect.anything()
 		);
 	});
 

@@ -1,30 +1,30 @@
 import type { I18nKey } from '#config/i18n/fr.ts';
 import { HOUR_MS } from '#config/time.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
-import { isGameStarted, visibleParticipants } from '#lib/domain/games/playability.ts';
+import {
+	isGameStarted,
+	isLineupEditable,
+	visibleParticipants
+} from '#lib/domain/games/playability.ts';
 import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { auditEntry } from '#lib/domain/audit/service.ts';
 import {
 	getGame,
 	listGamePresence,
 	listPlayerAvailability,
-	regenerateIfGenerated,
-	releaseFromLineup,
-	setGamePresence
+	regenerateIfGenerated
 } from '#lib/domain/games/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import { findOwnProfile, getOwnProfile } from '#lib/domain/players/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
-import {
-	cancelForReturn,
-	createAbsenceRequest
-} from '#lib/domain/subs/service.ts';
+import { notifyBumped, notifyRequestWaves } from '#lib/domain/subs/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import type { AvailabilityStatus } from '#lib/domain/games/schema.ts';
+import { writeAvailability } from './queries.ts';
 
 export type AvailabilityRowView = {
 	playerId: string;
@@ -198,31 +198,38 @@ export function markAvailability(
 	const previous =
 		listGamePresence(gameId).find((row) => row.playerId === user.userId)?.status ?? null;
 
-	setGamePresence(gameId, user.userId, status, clock.nowMs());
-
-	let bumpedPlayerId: string | null = null;
-	let requestCreated = false;
-	if (status === 'absent') {
+	const at = clock.nowMs();
+	const write = writeAvailability({
+		actor,
+		game,
+		playerId: user.userId,
+		status,
+		at,
+		position: player.position,
 		// La place libérée l'est avant la demande : la lecture suivante ne
 		// contient plus le joueur, même si l'alignement était manuel.
-		releaseFromLineup(actor, gameId, user.userId, 'absence');
+		releaseSlot: isLineupEditable(game),
 		// Une place ne s'ouvre que si le joueur était réellement attendu.
-		if (previous === 'present' && getSettings()['notifications.subRequestOnAbsence']) {
-			const request = createAbsenceRequest(actor, game, player);
-			requestCreated = request !== null;
-		}
-	} else {
-		bumpedPlayerId = cancelForReturn(actor, game, user.userId);
-		if (bumpedPlayerId) releaseFromLineup(actor, gameId, bumpedPlayerId, 'bumped');
-	}
-
-	recordAudit(actor, {
-		action: 'availability.set',
-		entityType: 'game',
-		entityId: gameId,
-		metadata: { status }
+		requestAbsence:
+			status === 'absent' &&
+			previous === 'present' &&
+			getSettings()['notifications.subRequestOnAbsence'],
+		availabilityAudit: auditEntry(actor, {
+			action: 'availability.set',
+			entityType: 'game',
+			entityId: gameId,
+			metadata: { status }
+		})
 	});
 
+	// Les avis partent après la validation, jamais dans sa transaction.
+	if (write.requestCreated) notifyRequestWaves(write.requestCreated, game);
+	if (write.bumpedRequest && write.bumpedPlayerId) {
+		notifyBumped(write.bumpedRequest, game, write.bumpedPlayerId, 'regular-returned');
+	}
+
+	const requestCreated = write.requestCreated !== null;
+	const bumpedPlayerId = write.bumpedPlayerId;
 	const regeneration = regenerateIfGenerated(gameId);
 	const messageKey: I18nKey = bumpedPlayerId
 		? 'availability.savedBumped'

@@ -36,7 +36,6 @@ import {
 	listSlotAssignments,
 	saveAssignments,
 	updateGame as updateGameRow,
-	upsertAvailability,
 	type SlotAssignment
 } from './queries.ts';
 import { generationPlan, lineupPool, type LineupPool, type PoolSlot } from './pool.ts';
@@ -648,15 +647,6 @@ export function completeGame(actor: Actor, gameId: string): void {
 	if (!finalized) {
 		throw new AppError('CONFLICT', { key: 'games.alreadyCompleted' });
 	}
-}
-
-export function setGamePresence(
-	gameId: string,
-	playerId: string,
-	status: 'present' | 'absent',
-	at: number
-): void {
-	upsertAvailability(gameId, playerId, status, at);
 }
 
 /**

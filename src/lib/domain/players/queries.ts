@@ -10,10 +10,15 @@ import { positionRatingKeysToClear } from '#config/rating-attributes.ts';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { account, session, user } from '#lib/server/db/auth.schema.ts';
 import { gameAvailability, gameSlots, games } from '#lib/domain/games/schema.ts';
+import { gameGoals, gamePenalties } from '#lib/domain/gamesheet/schema.ts';
 import { subProfiles, subRequests } from '#lib/domain/subs/schema.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
-import { playerRatings, type PlayerRatingRow } from '#lib/domain/ratings/schema.ts';
+import {
+	gamePlayerRatings,
+	playerRatings,
+	type PlayerRatingRow
+} from '#lib/domain/ratings/schema.ts';
 import { firstFreeAvatarId } from './identity.ts';
 import { players, type NewPlayerRow, type PlayerRow } from './schema.ts';
 
@@ -481,6 +486,33 @@ export function deletePlayerAccount(
 	tx.delete(session).where(eq(session.userId, playerId)).run();
 	tx.delete(account).where(eq(account.userId, playerId)).run();
 	tx.delete(subProfiles).where(eq(subProfiles.playerId, playerId)).run();
+
+	// La feuille garde ses buts et ses pénalités, jamais le nom réel. Chaque
+	// instantané qui référence ce joueur prend le nom neutre dans la même
+	// transaction, pour qu'aucune surface ne doive réécrire la règle.
+	tx.update(gameGoals)
+		.set({ scorerName: fullName })
+		.where(eq(gameGoals.scorerPlayerId, playerId))
+		.run();
+	tx.update(gameGoals)
+		.set({ assist1Name: fullName })
+		.where(eq(gameGoals.assist1PlayerId, playerId))
+		.run();
+	tx.update(gameGoals)
+		.set({ assist2Name: fullName })
+		.where(eq(gameGoals.assist2PlayerId, playerId))
+		.run();
+	tx.update(gamePenalties)
+		.set({ playerName: fullName })
+		.where(eq(gamePenalties.playerId, playerId))
+		.run();
+
+	// Les évaluations ne sont pas un fait de match : elles disparaissent avec
+	// le compte. Le grand livre, les places jouées et les buts restent.
+	tx.delete(playerRatings).where(eq(playerRatings.playerId, playerId)).run();
+	tx.delete(gamePlayerRatings)
+		.where(eq(gamePlayerRatings.playerId, playerId))
+		.run();
 
 	// Une place reprise sur un match à venir redevient disponible. Sur un
 	// match passé ou annulé, elle est fermée pour conserver l'historique.

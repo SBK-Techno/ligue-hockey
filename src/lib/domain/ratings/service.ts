@@ -15,7 +15,8 @@ import { RATING_FORM_WINDOW } from '#config/ratings.ts';
 import type { Position } from '#config/positions.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
-import { recordAudit } from '#lib/domain/audit/service.ts';
+import { auditEntry } from '#lib/domain/audit/service.ts';
+import { insertAudit } from '#lib/domain/audit/queries.ts';
 import { getGame, listSchedule } from '#lib/domain/games/service.ts';
 import { isGamePlayable } from '#lib/domain/games/playability.ts';
 import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts';
@@ -23,6 +24,7 @@ import {
 	listRatingPlayers,
 	getPlayer
 } from '#lib/domain/players/service.ts';
+import { db } from '#lib/server/db/index.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
@@ -231,17 +233,23 @@ export function setRatings(
 		positionValues[key] = value;
 	}
 
-	replaceSeasonRatings(
-		playerId,
-		{ ...values, ...positionValues },
-		[...RATING_ATTRIBUTE_KEYS, ...allowed.map((attribute) => attribute.key)],
-		clock.nowMs(),
-		user.userId
-	);
-	recordAudit(actor, {
-		action: 'ratings.update',
-		entityType: 'player',
-		entityId: playerId
+	db.transaction((tx) => {
+		replaceSeasonRatings(
+			playerId,
+			{ ...values, ...positionValues },
+			[...RATING_ATTRIBUTE_KEYS, ...allowed.map((attribute) => attribute.key)],
+			clock.nowMs(),
+			user.userId,
+			tx
+		);
+		insertAudit(
+			auditEntry(actor, {
+				action: 'ratings.update',
+				entityType: 'player',
+				entityId: playerId
+			}),
+			tx
+		);
 	});
 	regenerateUpcomingGeneratedGames();
 
@@ -406,25 +414,31 @@ export function saveGameAssessment(
 		(row) => row.playerId === playerId && allowedKeys.has(row.attribute)
 	).length;
 
-	replaceGameRatings(
-		gameId,
-		playerId,
-		values,
-		clock.nowMs(),
-		user.userId
-	);
-	// L'audit garde le nombre de critères avant et après, jamais les notes :
-	// une évaluation reste privée même pour les administrateurs.
-	recordAudit(actor, {
-		action: 'ratings.game',
-		entityType: 'game',
-		entityId: gameId,
-		metadata: {
+	db.transaction((tx) => {
+		replaceGameRatings(
+			gameId,
 			playerId,
-			attributes: Object.keys(values),
-			previousAttributes,
-			cleared: previousAttributes > 0 && Object.keys(values).length === 0
-		}
+			values,
+			clock.nowMs(),
+			user.userId,
+			tx
+		);
+		// L'audit garde le nombre de critères avant et après, jamais les notes :
+		// une évaluation reste privée même pour les administrateurs.
+		insertAudit(
+			auditEntry(actor, {
+				action: 'ratings.game',
+				entityType: 'game',
+				entityId: gameId,
+				metadata: {
+					playerId,
+					attributes: Object.keys(values),
+					previousAttributes,
+					cleared: previousAttributes > 0 && Object.keys(values).length === 0
+				}
+			}),
+			tx
+		);
 	});
 
 	return getGameAssessment(actor, gameId);

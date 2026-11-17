@@ -451,6 +451,7 @@ export async function adminUpdatePlayer(
 				entityId: playerId,
 				metadata: {
 					fields: Object.keys(patch),
+					...(input.active !== undefined ? { active: input.active } : {}),
 					...(result.length > 0 ? { positionRatingsCleared: result } : {})
 				}
 			},
@@ -459,17 +460,33 @@ export async function adminUpdatePlayer(
 		return result;
 	});
 	if (input.active === false) {
+		// Fermer l'état et retirer les sessions sont deux gestes distincts du
+		// fournisseur : l'échec de l'un ne doit pas laisser l'autre en place.
+		// Les deux sont tentés, chaque échec est journalisé, puis l'action
+		// échoue pour que l'opérateur voie l'état partiel.
+		let failure: unknown;
 		try {
 			await identity().setAccountState(playerId, 'inactive');
+		} catch (cause) {
+			failure = cause;
+			logger.error('players.account_state_failed', {
+				userId: playerId,
+				error: cause
+			});
+		}
+		try {
 			await identity().revokeSessions(playerId);
 		} catch (cause) {
+			failure ??= cause;
 			logger.error('players.session_revoke_failed', {
 				userId: playerId,
 				error: cause
 			});
+		}
+		if (failure) {
 			throw new AppError('INTERNAL', {
 				key: 'admin.playerAccessFailed',
-				cause
+				cause: failure
 			});
 		}
 	} else if (input.active === true) {
@@ -553,7 +570,7 @@ export async function deletePlayer(actor: Actor, playerId: string): Promise<void
 				action: 'player.delete',
 				entityType: 'player',
 				entityId: playerId,
-				metadata: { role, retention: 'anonymized' }
+				metadata: { role, retention: 'anonymized', ratings: 'purged' }
 			},
 			tx
 		);

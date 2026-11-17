@@ -96,21 +96,6 @@ export const auth = betterAuth({
 			}
 		})
 	},
-	rateLimit: {
-		enabled: true,
-		window: AUTH_POLICY.rateLimitWindowSeconds,
-		max: AUTH_POLICY.rateLimitMax,
-		customRules: {
-			'/sign-in/email': {
-				window: env.security.loginWindowMinutes * 60,
-				max: env.security.maxLoginAttempts
-			},
-			'/request-password-reset': {
-				window: AUTH_POLICY.passwordWindowSeconds,
-				max: env.security.resetRequestsPerHour
-			}
-		}
-	},
 	logger: {
 		disabled: true
 	},

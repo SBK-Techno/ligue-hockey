@@ -20,8 +20,7 @@ vi.mock('#lib/server/db/index.ts', async () => {
 });
 
 const { sqlite } = await import('#lib/server/db/index.ts');
-const { claimSubstitute, releaseSubstitute, createAbsenceRequest, cancelOwnRequest } =
-	await import('./service.ts');
+const { claimSubstitute, releaseSubstitute } = await import('./service.ts');
 
 const game: GameSummary = {
 	id: 'game',
@@ -38,28 +37,6 @@ const substitute: Actor = {
 	userId: 'sub',
 	name: 'Remplaçant',
 	role: 'player'
-};
-
-const requester: Actor = {
-	kind: 'user',
-	active: true,
-	userId: 'requester',
-	name: 'Demandeur',
-	role: 'player'
-};
-
-const requesterProfile = {
-	userId: 'requester',
-	firstName: 'Demandeur',
-	lastName: 'Test',
-	fullName: 'Demandeur Test',
-	position: 'forward' as const,
-	jerseyNumber: 9,
-	avatarId: null,
-	isSubstitute: false,
-	active: true,
-	email: 'requester@example.test',
-	age: 30
 };
 
 const TEMPLATE = JSON.stringify({
@@ -158,25 +135,5 @@ describe('avis de remplacement', () => {
 		claimSubstitute(substitute, game, 'request');
 
 		expect(jobCount('sub_claimed')).toBe(afterFirst * 2);
-	});
-
-	it('notifie une demande rouverte le même jour', () => {
-		sqlite.prepare("delete from sub_requests where game_id = 'game'").run();
-
-		const first = createAbsenceRequest(
-			requester,
-			{ ...game, id: 'game' },
-			requesterProfile
-		);
-		expect(first).not.toBeNull();
-		const afterFirst = jobCount('sub_request');
-		expect(afterFirst).toBeGreaterThan(0);
-
-		cancelOwnRequest(requester, game, first!.id);
-
-		const second = createAbsenceRequest(requester, game, requesterProfile);
-		expect(second).not.toBeNull();
-		expect(second!.id).not.toBe(first!.id);
-		expect(jobCount('sub_request')).toBe(afterFirst * 2);
 	});
 });

@@ -263,61 +263,77 @@ export function releasePlayerSlot(
 	gameId: string,
 	playerId: string,
 	releasedAt: number,
+	audit: AuditEntry,
+	executor: DbExecutor = db
+): boolean {
+	if (executor === db) {
+		return db.transaction((tx) =>
+			releasePlayerSlotIn(tx, gameId, playerId, releasedAt, audit)
+		);
+	}
+	return releasePlayerSlotIn(executor, gameId, playerId, releasedAt, audit);
+}
+
+function releasePlayerSlotIn(
+	executor: DbExecutor,
+	gameId: string,
+	playerId: string,
+	releasedAt: number,
 	audit: AuditEntry
 ): boolean {
-	return db.transaction((tx) => {
-		const row = tx.select().from(games).where(eq(games.id, gameId)).get();
-		if (!row) return false;
-		const slot = tx
-			.select({ id: gameSlots.id })
-			.from(gameSlots)
-			.where(
-				and(
-					eq(gameSlots.gameId, gameId),
-					eq(gameSlots.assignedPlayerId, playerId)
-				)
+	const row = executor.select().from(games).where(eq(games.id, gameId)).get();
+	if (!row) return false;
+	const slot = executor
+		.select({ id: gameSlots.id })
+		.from(gameSlots)
+		.where(
+			and(
+				eq(gameSlots.gameId, gameId),
+				eq(gameSlots.assignedPlayerId, playerId)
 			)
-			.get();
+		)
+		.get();
 
-		let generationJson = row.generationJson;
-		let onBench = false;
-		if (generationJson) {
-			try {
-				const snapshot = JSON.parse(generationJson) as {
-					bench?: { playerId?: unknown }[];
-				};
-				onBench =
-					Array.isArray(snapshot.bench) &&
-					snapshot.bench.some((entry) => entry.playerId === playerId);
-				if (onBench) {
-					generationJson = JSON.stringify({
-						...snapshot,
-						bench: snapshot.bench!.filter((entry) => entry.playerId !== playerId)
-					});
-				}
-			} catch {
-				generationJson = row.generationJson;
+	let generationJson = row.generationJson;
+	let onBench = false;
+	if (generationJson) {
+		try {
+			const snapshot = JSON.parse(generationJson) as {
+				bench?: { playerId?: unknown }[];
+			};
+			onBench =
+				Array.isArray(snapshot.bench) &&
+				snapshot.bench.some((entry) => entry.playerId === playerId);
+			if (onBench) {
+				generationJson = JSON.stringify({
+					...snapshot,
+					bench: snapshot.bench!.filter((entry) => entry.playerId !== playerId)
+				});
 			}
+		} catch {
+			generationJson = row.generationJson;
 		}
+	}
 
-		if (!slot && !onBench) return false;
+	if (!slot && !onBench) return false;
 
-		if (slot) {
-			tx.update(gameSlots)
-				.set({ assignedPlayerId: null, assignmentKind: null, updatedAt: releasedAt })
-				.where(eq(gameSlots.id, slot.id))
-				.run();
-			deleteGameRatingsForPlayers(gameId, [playerId], tx);
-		}
-		if (generationJson !== row.generationJson) {
-			tx.update(games)
-				.set({ generationJson, updatedAt: releasedAt })
-				.where(eq(games.id, gameId))
-				.run();
-		}
-		insertAudit(audit, tx);
-		return true;
-	});
+	if (slot) {
+		executor
+			.update(gameSlots)
+			.set({ assignedPlayerId: null, assignmentKind: null, updatedAt: releasedAt })
+			.where(eq(gameSlots.id, slot.id))
+			.run();
+		deleteGameRatingsForPlayers(gameId, [playerId], executor);
+	}
+	if (generationJson !== row.generationJson) {
+		executor
+			.update(games)
+			.set({ generationJson, updatedAt: releasedAt })
+			.where(eq(games.id, gameId))
+			.run();
+	}
+	insertAudit(audit, executor);
+	return true;
 }
 
 /**
@@ -441,9 +457,11 @@ export function upsertAvailability(
 	gameId: string,
 	playerId: string,
 	status: 'present' | 'absent',
-	updatedAt: number
+	updatedAt: number,
+	executor: DbExecutor = db
 ): void {
-	db.insert(gameAvailability)
+	executor
+		.insert(gameAvailability)
 		.values({ gameId, playerId, status, updatedAt })
 		.onConflictDoUpdate({
 			target: [gameAvailability.gameId, gameAvailability.playerId],

@@ -13,8 +13,10 @@ vi.mock('#lib/server/db/index.ts', async () => {
 });
 
 const h = vi.hoisted(() => ({
-	revokeSessions: vi.fn(async () => undefined),
-	setAccountState: vi.fn(async () => undefined),
+	revokeSessions: vi.fn<(userId: string) => Promise<void>>(async () => undefined),
+	setAccountState: vi.fn<
+		(userId: string, state: 'active' | 'inactive') => Promise<void>
+	>(async () => undefined),
 	setRole: vi.fn(async () => undefined),
 	updateName: vi.fn(async () => undefined),
 	regenerate: vi.fn(),
@@ -51,7 +53,9 @@ vi.mock('#lib/shared/logging/logger.ts', () => ({
 }));
 
 const { sqlite } = await import('#lib/server/db/index.ts');
-const { adminUpdatePlayer, setPlayerRole, updateOwnProfile } = await import('./service.ts');
+const { adminUpdatePlayer, deletePlayer, setPlayerRole, updateOwnProfile } = await import(
+	'./service.ts'
+);
 const { updateOwnProfileSchema } = await import('./validators.ts');
 const { actorFromUser, anonymousActor } = await import('#lib/domain/auth/types.ts');
 const { can } = await import('#lib/domain/auth/policy.ts');
@@ -159,8 +163,26 @@ function assign(gameId: string, playerId: string): void {
 		.run(`${gameId}-${playerId}`, gameId, playerId, NOW, NOW);
 }
 
+function auditMetadata(action: string): Record<string, unknown> {
+	const row = sqlite
+		.prepare(
+			'select metadata_json from audit_log where action = ? order by rowid desc limit 1'
+		)
+		.get(action) as { metadata_json: string | null } | undefined;
+	if (!row?.metadata_json) throw new Error(`Missing audit ${action}`);
+	return JSON.parse(row.metadata_json) as Record<string, unknown>;
+}
+
+function sessionCount(userId: string): number {
+	const row = sqlite
+		.prepare('select count(*) as count from session where user_id = ?')
+		.get(userId) as { count: number };
+	return row.count;
+}
+
 beforeEach(() => {
 	for (const table of [
+		'player_ratings',
 		'game_player_ratings',
 		'game_goals',
 		'game_penalties',
@@ -171,6 +193,7 @@ beforeEach(() => {
 		'locations',
 		'players',
 		'audit_log',
+		'session',
 		'user'
 	]) {
 		sqlite.prepare(`delete from ${table}`).run();
@@ -282,6 +305,66 @@ describe('désactivation d’un joueur', () => {
 		expect(h.revokeSessions).not.toHaveBeenCalled();
 	});
 
+	it('inscrit le sens de l’activation dans l’audit', async () => {
+		addPlayer('admin', { role: 'admin' });
+		addPlayer('manager', { role: 'manager' });
+
+		await adminUpdatePlayer(admin, 'manager', { active: false });
+		expect(auditMetadata('player.admin_update').active).toBe(false);
+
+		await adminUpdatePlayer(admin, 'manager', { active: true });
+		expect(auditMetadata('player.admin_update').active).toBe(true);
+	});
+
+	it('révoque les sessions même quand la fermeture fournisseur échoue', async () => {
+		addPlayer('admin', { role: 'admin' });
+		addPlayer('manager', { role: 'manager' });
+		sqlite
+			.prepare(
+				`insert into session (id, expires_at, token, created_at, updated_at, user_id)
+				 values ('s1', 9999999999999, 'token-1', 0, 0, 'manager')`
+			)
+			.run();
+		h.setAccountState.mockRejectedValueOnce(new Error('state down'));
+		h.revokeSessions.mockImplementationOnce(async (userId: string) => {
+			sqlite.prepare('delete from session where user_id = ?').run(userId);
+		});
+
+		await expect(
+			adminUpdatePlayer(admin, 'manager', { active: false })
+		).rejects.toMatchObject({ key: 'admin.playerAccessFailed' });
+
+		expect(h.revokeSessions).toHaveBeenCalledWith('manager');
+		expect(sessionCount('manager')).toBe(0);
+		expect(h.logError).toHaveBeenCalledWith(
+			'players.account_state_failed',
+			expect.objectContaining({ userId: 'manager' })
+		);
+
+		await adminUpdatePlayer(admin, 'manager', { active: false });
+		expect(sessionCount('manager')).toBe(0);
+	});
+
+	it('journalise les deux échecs du fournisseur', async () => {
+		addPlayer('admin', { role: 'admin' });
+		addPlayer('manager', { role: 'manager' });
+		h.setAccountState.mockRejectedValueOnce(new Error('state down'));
+		h.revokeSessions.mockRejectedValueOnce(new Error('revoke down'));
+
+		await expect(
+			adminUpdatePlayer(admin, 'manager', { active: false })
+		).rejects.toMatchObject({ key: 'admin.playerAccessFailed' });
+
+		expect(h.logError).toHaveBeenCalledWith(
+			'players.account_state_failed',
+			expect.objectContaining({ userId: 'manager' })
+		);
+		expect(h.logError).toHaveBeenCalledWith(
+			'players.session_revoke_failed',
+			expect.objectContaining({ userId: 'manager' })
+		);
+	});
+
 	it('refuse de changer le rôle d’un compte inactif', async () => {
 		addPlayer('admin', { role: 'admin' });
 		addPlayer('manager', { role: 'manager', active: false });
@@ -341,6 +424,21 @@ describe('désactivation d’un joueur', () => {
 			caught = error;
 		}
 		expect(caught).toMatchObject({ key: 'subs.notEligible' });
+	});
+});
+
+describe('suppression d’un joueur', () => {
+	it('inscrit la politique de rétention dans l’audit', async () => {
+		addPlayer('admin', { role: 'admin' });
+		addPlayer('victim');
+
+		await deletePlayer(admin, 'victim');
+
+		expect(auditMetadata('player.delete')).toEqual({
+			role: 'player',
+			retention: 'anonymized',
+			ratings: 'purged'
+		});
 	});
 });
 

@@ -1,205 +1,371 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Actor } from '#lib/domain/auth/types.ts';
+import type { GameSummary } from '#lib/domain/games/types.ts';
 
 /**
- * La date limite ferme l'inscription, pas la sortie. Ces tests figent la règle :
- * après la fermeture, on ne peut plus se déclarer présent, mais on peut encore
- * retirer sa présence pour ouvrir sa place à un remplaçant.
+ * La réponse de présence est une seule transaction. Une panne entre la
+ * présence, la place et la demande ne doit jamais laisser un absent sans
+ * demande; un nouvel essai repart de l'état validé et ne crée qu'une demande.
  */
 
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
+vi.mock('#lib/server/db/index.ts', async () => {
+	const Database = (await import('better-sqlite3')).default;
+	const { drizzle } = await import('drizzle-orm/better-sqlite3');
+	const { migrate } = await import('drizzle-orm/better-sqlite3/migrator');
+	const sqlite = new Database(':memory:');
+	sqlite.pragma('foreign_keys = ON');
+	const db = drizzle(sqlite);
+	migrate(db, { migrationsFolder: 'drizzle' });
+	return { db, sqlite };
+});
 
-const h = vi.hoisted(() => ({
-	now: 1_000_000_000_000,
-	startMs: 1_000_000_000_000,
-	previous: null as 'present' | 'absent' | null,
-	setGamePresence: vi.fn(),
-	createAbsenceRequest: vi.fn(),
-	cancelForReturn: vi.fn(),
-	releaseFromLineup: vi.fn(),
-	regenerate: vi.fn()
-}));
+const { sqlite } = await import('#lib/server/db/index.ts');
+const { markAvailability, availabilityForGame } = await import('./service.ts');
+const { cancelOwnRequest } = await import('#lib/domain/subs/service.ts');
 
-vi.mock('#lib/generated/branding.ts', () => ({
-	branding: { timezone: 'America/Toronto', locale: 'fr-CA' }
-}));
+const player: Actor = {
+	kind: 'user',
+	active: true,
+	userId: 'me',
+	name: 'Moi',
+	role: 'player'
+};
 
-vi.mock('#lib/shared/time/clock.ts', () => ({
-	clock: { nowMs: () => h.now },
-	zonedDateTimeToMs: () => h.startMs
-}));
+const substitute: Actor = {
+	kind: 'user',
+	active: true,
+	userId: 'sub',
+	name: 'Remplaçant',
+	role: 'player'
+};
 
-vi.mock('#lib/shared/i18n/index.ts', () => ({
-	t: (key: string) => key,
-	formatCount: (count: number) => String(count),
-	formatTimestamp: () => 'date'
-}));
+const TEMPLATE = JSON.stringify({
+	goaliesPerTeam: 0,
+	forwardsPerTeam: 1,
+	defensePerTeam: 0
+});
 
-vi.mock('#lib/domain/auth/policy.ts', () => ({
-	requireUser: () => ({ kind: 'user', active: true, userId: 'me', role: 'player', name: 'Moi' }),
-	requirePermission: () => ({
-		kind: 'user',
-		active: true,
-		userId: 'me',
-		role: 'player',
-		name: 'Moi'
-	})
-}));
-
-vi.mock('#lib/domain/audit/service.ts', () => ({
-	recordAudit: vi.fn()
-}));
-
-vi.mock('#lib/domain/games/service.ts', () => ({
-	getGame: () => ({
-		id: 'game_1',
-		status: 'scheduled',
-		gameDate: '2026-11-22',
+const games: Record<string, GameSummary> = {
+	open: {
+		id: 'open',
+		gameDate: '2026-11-20',
 		startTime: '09:00',
-		location: 'Aréna'
-	}),
-	listGamePresence: () =>
-		h.previous === null ? [] : [{ playerId: 'me', status: h.previous }],
-	setGamePresence: h.setGamePresence,
-	releaseFromLineup: h.releaseFromLineup,
-	regenerateIfGenerated: h.regenerate
-}));
+		locationId: 'arena',
+		location: 'Aréna',
+		status: 'scheduled'
+	},
+	locked: {
+		id: 'locked',
+		gameDate: '2026-11-17',
+		startTime: '18:00',
+		locationId: 'arena',
+		location: 'Aréna',
+		status: 'scheduled'
+	},
+	started: {
+		id: 'started',
+		gameDate: '2026-11-16',
+		startTime: '09:00',
+		locationId: 'arena',
+		location: 'Aréna',
+		status: 'scheduled'
+	}
+};
 
-vi.mock('#lib/domain/players/service.ts', () => ({
-	getOwnProfile: () => ({
-		userId: 'me',
-		position: 'forward',
-		isSubstitute: false
-	}),
-	findOwnProfile: () => ({ userId: 'me', position: 'forward', isSubstitute: false })
-}));
+function auditRows() {
+	return sqlite
+		.prepare('select action, metadata_json from audit_log order by rowid')
+		.all() as { action: string; metadata_json: string | null }[];
+}
 
-vi.mock('#lib/domain/players/candidates.ts', () => ({
-	generationCandidates: () => [],
-	playersByIds: () => []
-}));
+function presence(gameId: string, playerId: string) {
+	return sqlite
+		.prepare(
+			'select status from game_availability where game_id = ? and player_id = ?'
+		)
+		.get(gameId, playerId) as { status: string } | undefined;
+}
 
-vi.mock('#lib/domain/settings/service.ts', () => ({
-	getSettings: () => ({
-		'games.availabilityClosesHours': 24,
-		'notifications.subRequestOnAbsence': true
-	})
-}));
+function slotOwner(gameId: string): string | null {
+	const row = sqlite
+		.prepare(
+			`select assigned_player_id from game_slots
+			 where game_id = ? and position = ? order by slot_index limit 1`
+		)
+		.get(gameId, 'forward') as { assigned_player_id: string | null } | undefined;
+	return row?.assigned_player_id ?? null;
+}
 
-vi.mock('#lib/domain/subs/service.ts', () => ({
-	createAbsenceRequest: h.createAbsenceRequest,
-	cancelForReturn: h.cancelForReturn
-}));
+function requestCount(gameId: string): number {
+	const row = sqlite
+		.prepare('select count(*) as count from sub_requests where game_id = ?')
+		.get(gameId) as { count: number };
+	return row.count;
+}
 
-const { availabilityForGame, markAvailability } = await import('./service.ts');
+function requestIds(gameId: string): string[] {
+	return (
+		sqlite
+			.prepare('select id from sub_requests where game_id = ? order by created_at')
+			.all(gameId) as { id: string }[]
+	).map((row) => row.id);
+}
 
-const actor = { kind: 'user', active: true, userId: 'me', role: 'player', name: 'Moi' } as never;
+function jobCount(eventKey: string): number {
+	const row = sqlite
+		.prepare(
+			`select count(*) as count from notification_jobs
+			 where event_key = ? and channel = 'in_app'`
+		)
+		.get(eventKey) as { count: number };
+	return row.count;
+}
+
+function failLastAudit(): void {	sqlite
+		.prepare(
+			`create trigger fail_availability_audit before insert on audit_log
+			 when new.action = 'availability.set'
+			 begin select raise(abort, 'audit failed'); end;`
+		)
+		.run();
+}
+
+function refusal(run: () => unknown): unknown {
+	try {
+		run();
+	} catch (cause) {
+		return cause;
+	}
+	return null;
+}
+
+function addPresence(gameId: string, playerId: string, status: 'present' | 'absent') {
+	sqlite
+		.prepare(
+			`insert into game_availability (game_id, player_id, status, updated_at)
+			 values (?, ?, ?, 0)`
+		)
+		.run(gameId, playerId, status);
+}
+
+function addSlot(gameId: string, playerId: string, index: number): void {
+	sqlite
+		.prepare(
+			`insert into game_slots
+			 (id, game_id, team, position, slot_index, assigned_player_id, assignment_kind, created_at, updated_at)
+			 values (?, ?, 'white', 'forward', ?, ?, 'regular', 0, 0)`
+		)
+		.run(`${gameId}-${index}`, gameId, index, playerId);
+}
 
 beforeEach(() => {
-	h.setGamePresence.mockReset();
-	h.createAbsenceRequest.mockReset();
-	h.createAbsenceRequest.mockReturnValue({ id: 'sub_1' });
-	h.cancelForReturn.mockReset();
-	h.cancelForReturn.mockReturnValue(null);
-	h.releaseFromLineup.mockReset();
-	h.regenerate.mockReset();
-	h.regenerate.mockReturnValue({ regenerated: false });
-	h.previous = null;
-	// Une heure avant le match : la date limite est passée.
-	h.now = h.startMs - HOUR;
+	vi.useFakeTimers();
+	vi.setSystemTime(Date.UTC(2026, 10, 17, 12, 0, 0));
+	sqlite.prepare('drop trigger if exists fail_availability_audit').run();
+	for (const table of [
+		'notification_jobs',
+		'notification_preferences',
+		'audit_log',
+		'sub_requests',
+		'sub_profiles',
+		'game_player_ratings',
+		'game_slots',
+		'game_availability',
+		'games',
+		'locations',
+		'players',
+		'user'
+	]) {
+		sqlite.prepare(`delete from ${table}`).run();
+	}
+	for (const [id, role] of [
+		['me', 'player'],
+		['sub', 'player']
+	]) {
+		sqlite
+			.prepare(
+				`insert into user (id, name, email, email_verified, created_at, updated_at, role)
+				 values (?, ?, ?, 1, 0, 0, ?)`
+			)
+			.run(id, id, `${id}@example.test`, role);
+	}
+	sqlite
+		.prepare(
+			`insert into players
+			 (user_id, first_name, last_name, position, age, is_substitute, active, created_at, updated_at)
+			 values ('me', 'Moi', 'Test', 'forward', 30, 0, 1, 0, 0),
+			        ('sub', 'Remplaçant', 'Test', 'forward', 30, 1, 1, 0, 0)`
+		)
+		.run();
+	sqlite
+		.prepare(
+			`insert into sub_profiles (player_id, favorite, positions_json, created_at, updated_at)
+			 values ('sub', 0, '["forward"]', 0, 0)`
+		)
+		.run();
+	sqlite
+		.prepare(
+			`insert into locations (id, name, created_at, updated_at)
+			 values ('arena', 'Aréna', 0, 0)`
+		)
+		.run();
+	for (const game of Object.values(games)) {
+		sqlite
+			.prepare(
+				`insert into games
+				 (id, game_date, start_time, location_id, location, status,
+				  roster_template_json, created_at, updated_at)
+				 values (?, ?, ?, 'arena', 'Aréna', 'scheduled', ?, 0, 0)`
+			)
+			.run(game.id, game.gameDate, game.startTime, TEMPLATE);
+		addSlot(game.id, 'me', 0);
+	}
 });
 
-describe('markAvailability après la mise au jeu', () => {
-	it('refuse une présence comme une absence', () => {
-		h.now = h.startMs + HOUR;
-		h.previous = 'present';
-		for (const status of ['present', 'absent'] as const) {
-			let error: unknown;
-			try {
-				markAvailability(actor, 'game_1', status);
-			} catch (cause) {
-				error = cause;
-			}
-			expect(error).toMatchObject({ code: 'CONFLICT', key: 'availability.gameClosed' });
-		}
-		expect(h.setGamePresence).not.toHaveBeenCalled();
-		expect(h.createAbsenceRequest).not.toHaveBeenCalled();
-	});
+describe('réponse de présence atomique', () => {
+	it('écrit présence, place, demande et traces ensemble', () => {
+		addPresence('open', 'me', 'present');
 
-	it('n’offre plus le retrait une fois le match commencé', () => {
-		h.now = h.startMs + HOUR;
-		h.previous = 'present';
+		const result = markAvailability(player, 'open', 'absent');
 
-		const view = availabilityForGame(actor, {
-			id: 'game_1',
-			status: 'scheduled',
-			gameDate: '2026-11-22',
-			startTime: '09:00',
-			locationId: 'arena',
-			location: 'Aréna'
-		});
-
-		expect(view.canWithdraw).toBe(false);
-	});
-});
-
-describe('markAvailability après la date limite', () => {
-	it('refuse de se déclarer présent', () => {
-		let error: unknown;
-		try {
-			markAvailability(actor, 'game_1', 'present');
-		} catch (cause) {
-			error = cause;
-		}
-		expect(error).toMatchObject({ code: 'CONFLICT', key: 'availability.locked' });
-		expect(h.setGamePresence).not.toHaveBeenCalled();
-	});
-
-	it('accepte un retrait et ouvre une place de remplaçant', async () => {
-		h.previous = 'present';
-
-		const result = await markAvailability(actor, 'game_1', 'absent');
-
-		expect(h.setGamePresence).toHaveBeenCalledWith('game_1', 'me', 'absent', h.now);
-		expect(h.createAbsenceRequest).toHaveBeenCalledTimes(1);
-		expect(result.messageKey).toBe('availability.savedRequested');
 		expect(result.requestCreated).toBe(true);
+		expect(result.messageKey).toBe('availability.savedRequested');
+		expect(presence('open', 'me')).toEqual({ status: 'absent' });
+		expect(slotOwner('open')).toBeNull();
+		expect(requestCount('open')).toBe(1);
+		const [request] = sqlite
+			.prepare('select reason, status, position, requested_by_player_id from sub_requests where game_id = ?')
+			.all('open') as {
+			reason: string;
+			status: string;
+			position: string;
+			requested_by_player_id: string;
+		}[];
+		expect(request).toEqual({
+			reason: 'absence',
+			status: 'open',
+			position: 'forward',
+			requested_by_player_id: 'me'
+		});
+		expect(auditRows().map((row) => row.action)).toEqual([
+			'game.lineup_release',
+			'sub.request_created',
+			'availability.set'
+		]);
+		expect(jobCount('sub_request')).toBeGreaterThan(0);
 	});
 
-	it('n’ouvre pas de place si le joueur n’était pas attendu', async () => {
-		h.previous = null;
+	it('annule tout si la dernière trace échoue, puis crée une seule demande', () => {
+		addPresence('open', 'me', 'present');
+		failLastAudit();
 
-		const result = await markAvailability(actor, 'game_1', 'absent');
+		expect(() => markAvailability(player, 'open', 'absent')).toThrow();
 
-		expect(h.createAbsenceRequest).not.toHaveBeenCalled();
-		expect(result.messageKey).toBe('availability.absenceSaved');
-		expect(result.requestCreated).toBe(false);
+		expect(presence('open', 'me')).toEqual({ status: 'present' });
+		expect(slotOwner('open')).toBe('me');
+		expect(requestCount('open')).toBe(0);
+		expect(auditRows()).toEqual([]);
+
+		sqlite.prepare('drop trigger fail_availability_audit').run();
+		const retry = markAvailability(player, 'open', 'absent');
+
+		expect(retry.requestCreated).toBe(true);
+		expect(requestCount('open')).toBe(1);
+		expect(auditRows().map((row) => row.action)).toEqual([
+			'game.lineup_release',
+			'sub.request_created',
+			'availability.set'
+		]);
+
+		const again = markAvailability(player, 'open', 'absent');
+		expect(again.requestCreated).toBe(false);
+		expect(requestCount('open')).toBe(1);
 	});
 
-	it('ouvre encore une place si le joueur était déjà absent par erreur', async () => {
-		h.previous = 'absent';
+	it('recrée une demande après son annulation et notifie chaque vague', () => {
+		addPresence('open', 'me', 'present');
+		const first = markAvailability(player, 'open', 'absent');
+		const firstId = requestIds('open')[0]!;
+		const firstJobs = jobCount('sub_request');
+		expect(first.requestCreated).toBe(true);
 
-		const result = await markAvailability(actor, 'game_1', 'absent');
+		cancelOwnRequest(player, games.open, firstId);
+		markAvailability(player, 'open', 'present');
+		const second = markAvailability(player, 'open', 'absent');
 
-		expect(h.createAbsenceRequest).not.toHaveBeenCalled();
-		expect(result.messageKey).toBe('availability.absenceSaved');
+		expect(second.requestCreated).toBe(true);
+		expect(requestCount('open')).toBe(2);
+		expect(requestIds('open')[1]).not.toBe(firstId);
+		expect(jobCount('sub_request')).toBe(firstJobs * 2);
+	});
+
+	it('rend la place du remplaçant quand le joueur revient', () => {
+		addPresence('open', 'me', 'absent');
+		addSlot('open', 'sub', 1);
+		sqlite
+			.prepare(
+				`insert into sub_requests
+				 (id, game_id, requested_by_player_id, position, reason, status, created_at,
+				  filled_by_player_id, filled_at)
+				 values ('request', 'open', 'me', 'forward', 'absence', 'filled', 0, 'sub', 0)`
+			)
+			.run();
+
+		const result = markAvailability(player, 'open', 'present');
+
+		expect(result.bumpedPlayerId).toBe('sub');
+		expect(result.messageKey).toBe('availability.savedBumped');
+		expect(presence('open', 'me')).toEqual({ status: 'present' });
+		expect(slotOwner('open')).toBe('me');
+		const request = sqlite
+			.prepare("select status, cancelled_at from sub_requests where id = 'request'")
+			.get() as { status: string; cancelled_at: number | null };
+		expect(request.status).toBe('cancelled');
+		expect(request.cancelled_at).not.toBeNull();
+		expect(auditRows().map((row) => row.action)).toEqual([
+			'sub.request_cancelled',
+			'game.lineup_release',
+			'availability.set'
+		]);
+		expect(jobCount('sub_bumped')).toBeGreaterThan(0);
 	});
 });
 
-describe('markAvailability avant la date limite', () => {
-	beforeEach(() => {
-		// Deux jours avant : les présences sont ouvertes.
-		h.now = h.startMs - 2 * DAY;
+describe('fenêtres de présence', () => {
+	it('refuse une présence après la fermeture mais accepte le retrait', () => {
+		addPresence('locked', 'me', 'present');
+
+		expect(refusal(() => markAvailability(player, 'locked', 'present'))).toMatchObject({
+			code: 'CONFLICT',
+			key: 'availability.locked'
+		});
+		const result = markAvailability(player, 'locked', 'absent');
+
+		expect(result.requestCreated).toBe(true);
+		expect(presence('locked', 'me')).toEqual({ status: 'absent' });
 	});
 
-	it('accepte une présence et retire le remplaçant s’il y en avait un', async () => {
-		h.cancelForReturn.mockReturnValue('sub_player');
+	it('refuse les deux réponses après la mise au jeu', () => {
+		addPresence('started', 'me', 'present');
 
-		const result = await markAvailability(actor, 'game_1', 'present');
+		for (const status of ['present', 'absent'] as const) {
+			expect(refusal(() => markAvailability(player, 'started', status))).toMatchObject({
+				code: 'CONFLICT',
+				key: 'availability.gameClosed'
+			});
+		}
+		expect(presence('started', 'me')).toEqual({ status: 'present' });
+	});
 
-		expect(h.setGamePresence).toHaveBeenCalledWith('game_1', 'me', 'present', h.now);
-		expect(h.cancelForReturn).toHaveBeenCalledWith(actor, expect.anything(), 'me');
-		expect(result.messageKey).toBe('availability.savedBumped');
-		expect(result.bumpedPlayerId).toBe('sub_player');
+	it('refuse une réponse de remplaçant', () => {
+		expect(refusal(() => markAvailability(substitute, 'open', 'absent'))).toMatchObject({
+			code: 'FORBIDDEN',
+			key: 'availability.substituteNoConfirm'
+		});
+	});
+
+	it('ne montre plus le retrait une fois le match commencé', () => {
+		const view = availabilityForGame(player, games.started);
+		expect(view.canWithdraw).toBe(false);
 	});
 });
