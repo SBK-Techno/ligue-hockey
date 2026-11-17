@@ -1,6 +1,6 @@
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { resetPassword } from '#lib/domain/auth/service.ts';
-import { actionError } from '#lib/server/action.ts';
+import { actionError, failingField } from '#lib/server/action.ts';
 import { isAppError } from '#lib/shared/errors.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { formToObject } from '#lib/shared/validation.ts';
@@ -15,12 +15,6 @@ export const load: ServerLoad = ({ url }) => {
 		minLength: publicEnv.passwordMinLength
 	};
 };
-
-function fieldOf(cause: unknown): string | undefined {
-	if (!isAppError(cause)) return undefined;
-	const details = cause.details as Array<{ path?: string }> | undefined;
-	return details?.find((entry) => entry.path)?.path;
-}
 
 export const actions: Actions = {
 	default: async ({ request }) => {
@@ -42,7 +36,7 @@ export const actions: Actions = {
 				mode,
 				section: 'mot-de-passe',
 				expired: false,
-				field: fieldOf(cause)
+				field: failingField(cause) ?? undefined
 			});
 		}
 		redirect(303, resetSuccessPath(mode));

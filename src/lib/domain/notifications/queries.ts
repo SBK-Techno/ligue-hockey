@@ -73,12 +73,14 @@ export function upsertPushSubscription(
 		.onConflictDoUpdate({
 			target: pushSubscriptions.endpoint,
 			set: {
-				userId: input.userId,
 				p256dh: input.p256dh,
 				auth: input.auth,
 				userAgent: input.userAgent,
 				lastUsedAt: input.createdAt
-			}
+			},
+			// Le premier propriétaire garde le point de terminaison : une
+			// écriture directe ne peut pas réattribuer l'appareil.
+			setWhere: eq(pushSubscriptions.userId, input.userId)
 		})
 		.run();
 }

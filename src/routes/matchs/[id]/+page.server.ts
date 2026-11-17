@@ -1,7 +1,7 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { z } from 'zod';
 import { POSITION_KEYS } from '#config/positions.ts';
-import { getAvailability, markAvailability } from '#lib/domain/availability/service.ts';
+import { availabilityForGame, markAvailability } from '#lib/domain/availability/service.ts';
 import {
 	cancelRequest,
 	claimSubstitute,
@@ -85,9 +85,9 @@ export const load: ServerLoad = async ({ locals, params, parent }) => {
 		game,
 		editable,
 		playable,
-		sheet: playable ? getGameSheet(actor, gameId) : null,
-		availability: getAvailability(actor, gameId),
-		requests: listRequestsForGame(actor, gameId),
+		sheet: playable ? getGameSheet(actor, game) : null,
+		availability: availabilityForGame(actor, game),
+		requests: listRequestsForGame(actor, game),
 		isSubstitute,
 		positions,
 		canManage: can(actor, 'manageGames')

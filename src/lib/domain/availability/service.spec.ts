@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 
@@ -93,6 +94,16 @@ function slotOwner(gameId: string): string | null {
 			 where game_id = ? and position = ? order by slot_index limit 1`
 		)
 		.get(gameId, 'forward') as { assigned_player_id: string | null } | undefined;
+	return row?.assigned_player_id ?? null;
+}
+
+function slotAt(gameId: string, slotIndex: number): string | null {
+	const row = sqlite
+		.prepare(
+			`select assigned_player_id from game_slots
+			 where game_id = ? and position = 'forward' and slot_index = ?`
+		)
+		.get(gameId, slotIndex) as { assigned_player_id: string | null } | undefined;
 	return row?.assigned_player_id ?? null;
 }
 
@@ -223,6 +234,15 @@ beforeEach(() => {
 });
 
 describe('réponse de présence atomique', () => {
+	it('garde l’orchestration et la transaction dans le service', () => {
+		const source = readFileSync(new URL('./service.ts', import.meta.url), 'utf8');
+
+		expect(source).toContain('db.transaction');
+		expect(source).toContain('writePresenceIn');
+		expect(source).not.toContain("from './queries.ts'");
+		expect(existsSync(new URL('./queries.ts', import.meta.url))).toBe(false);
+	});
+
 	it('écrit présence, place, demande et traces ensemble', () => {
 		addPresence('open', 'me', 'present');
 
@@ -316,7 +336,17 @@ describe('réponse de présence atomique', () => {
 		expect(result.bumpedPlayerId).toBe('sub');
 		expect(result.messageKey).toBe('availability.savedBumped');
 		expect(presence('open', 'me')).toEqual({ status: 'present' });
-		expect(slotOwner('open')).toBe('me');
+		expect(slotAt('open', 0)).toBe('me');
+		expect(slotAt('open', 1)).toBeNull();
+		const release = sqlite
+			.prepare(
+				"select metadata_json from audit_log where action = 'game.lineup_release'"
+			)
+			.get() as { metadata_json: string };
+		expect(JSON.parse(release.metadata_json)).toEqual({
+			playerId: 'sub',
+			reason: 'bumped'
+		});
 		const request = sqlite
 			.prepare("select status, cancelled_at from sub_requests where id = 'request'")
 			.get() as { status: string; cancelled_at: number | null };

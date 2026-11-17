@@ -20,6 +20,7 @@ import {
 } from '#lib/domain/teams/balance.ts';
 import type { GeneratorPlayer, GeneratorViolation } from '#lib/domain/teams/generator.ts';
 import type { BenchPlayer } from './selection.ts';
+import { ratingsRemovedAudit } from './audit.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { findGame, listSlotAssignments, saveAssignments, type SlotAssignment } from './queries.ts';
@@ -365,12 +366,7 @@ function saveAlignment(
 			// l'alignement contre le recalcul automatique.
 			manualAt: built.generatedAt,
 			ratingsAudit: (playerIds) =>
-				auditEntry(actor, {
-					action: 'ratings.game_removed',
-					entityType: 'game',
-					entityId: gameId,
-					metadata: { playerIds }
-				}),
+				ratingsRemovedAudit(actor, gameId, playerIds),
 			audits: [
 				auditEntry(actor, {
 					action,

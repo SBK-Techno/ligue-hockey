@@ -6,6 +6,7 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 import { anonymousActor } from '#lib/domain/auth/types.ts';
 import { auditEntry, recordAudit } from '#lib/domain/audit/service.ts';
 import { isGameStarted, isLineupEditable, visibleParticipants } from './playability.ts';
+import { isPublished } from './published.ts';
 import { generateTeams } from '#lib/domain/teams/generator.ts';
 import { rulesForGeneration } from '#lib/domain/rules/generation.ts';
 import { getLocation, getLocationDetails } from '#lib/domain/locations/service.ts';
@@ -22,6 +23,7 @@ import { newId } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
+import type { DbExecutor } from '#lib/server/db/index.ts';
 
 import {
 	cancelGame as cancelGameRow,
@@ -36,9 +38,11 @@ import {
 	listSlotAssignments,
 	saveAssignments,
 	updateGame as updateGameRow,
+	upsertAvailability,
 	type SlotAssignment
 } from './queries.ts';
 import { generationPlan, lineupPool, type LineupPool, type PoolSlot } from './pool.ts';
+import { ratingsRemovedAudit } from './audit.ts';
 import type { GameRow } from './schema.ts';
 import type {
 	GameGenerationView,
@@ -537,12 +541,7 @@ export function regenerateGame(
 			expectedGeneratedAt: row.generatedAt ?? null,
 			manualAt: null,
 			ratingsAudit: (playerIds) =>
-				auditEntry(actor, {
-					action: 'ratings.game_removed',
-					entityType: 'game',
-					entityId: gameId,
-					metadata: { playerIds }
-				}),
+				ratingsRemovedAudit(actor, gameId, playerIds),
 			audits: [
 				auditEntry(actor, {
 					action: 'game.generate',
@@ -650,6 +649,31 @@ export function completeGame(actor: Actor, gameId: string): void {
 }
 
 /**
+ * Les deux écritures de présence et de place qu'un autre service peut joindre
+ * à sa propre transaction. L'exécuteur vient de l'appelant; les tables et
+ * leurs invariants restent dans ce module.
+ */
+export function writePresenceIn(
+	executor: DbExecutor,
+	gameId: string,
+	playerId: string,
+	status: 'present' | 'absent',
+	at: number
+): void {
+	upsertAvailability(gameId, playerId, status, at, executor);
+}
+
+export function releaseSlotIn(
+	executor: DbExecutor,
+	gameId: string,
+	playerId: string,
+	at: number,
+	audit: ReturnType<typeof auditEntry>
+): void {
+	releasePlayerSlot(gameId, playerId, at, audit, executor);
+}
+
+/**
  * Retire un joueur d'un alignement encore modifiable. Une sortie ne laisse
  * jamais sa place ni son banc derrière elle : la prochaine lecture, y compris
  * la feuille de match, ne le voit plus. Le match commencé ou terminé garde ses
@@ -681,7 +705,7 @@ export function regenerateIfGenerated(gameId: string): {
 	warning?: I18nKey;
 } {
 	const row = findGame(gameId);
-	if (!row?.generatedAt) return { regenerated: false };
+	if (!row || !isPublished(row)) return { regenerated: false };
 	// Un alignement enregistré à la main reste intact tant qu'un gestionnaire
 	// ne demande pas explicitement de le refaire.
 	if (row.lineupManualAt !== null) return { regenerated: false };

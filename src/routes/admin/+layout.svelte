@@ -30,11 +30,24 @@
 	});
 </script>
 
+{#snippet backToLeague(label: string, className: string)}
+	<a href="/" class={className}>
+		<svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+			<path d="m15 6-6 6 6 6" />
+		</svg>
+		<span>{label}</span>
+	</a>
+{/snippet}
+
 <div class="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:items-start lg:gap-8">
 	<aside
 		class="hidden lg:sticky lg:top-[calc(3.75rem+1px+env(safe-area-inset-top)+1rem)] lg:block lg:border-r lg:border-line lg:pr-4"
 	>
 		<div class="py-1">
+			{@render backToLeague(
+				t('nav.backToLeague'),
+				'mb-2 flex min-h-11 items-center gap-2 px-2.5 text-meta font-semibold text-ink no-underline hover:bg-ice-soft/60 hover:text-ice-deep'
+			)}
 			<p class="serial px-2.5 pb-2">{t('admin.title')}</p>
 			<nav class="flex flex-col" aria-label={t('nav.admin')}>
 				{#each tabs as tab (tab.href)}
@@ -50,17 +63,6 @@
 					</a>
 				{/each}
 			</nav>
-			<div class="mt-3 border-t border-line pt-2">
-				<a
-					href="/"
-					class="flex min-h-11 items-center gap-2 px-2.5 text-meta font-medium text-muted no-underline hover:bg-ice-soft/60 hover:text-ice-deep"
-				>
-					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-						<path d="m15 6-6 6 6 6" />
-					</svg>
-					{t('nav.backToLeague')}
-				</a>
-			</div>
 		</div>
 	</aside>
 
@@ -69,16 +71,10 @@
 			class="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-paper px-4 py-2 lg:hidden"
 			bind:clientHeight={subBarHeight}
 		>
-			<a
-				href="/"
-				class="grid h-11 w-11 shrink-0 place-items-center text-muted no-underline"
-				aria-label={t('nav.backToLeague')}
-				title={t('nav.backToLeague')}
-			>
-				<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-					<path d="m15 6-6 6 6 6" />
-				</svg>
-			</a>
+			{@render backToLeague(
+				t('nav.home'),
+				'flex min-h-11 shrink-0 items-center gap-1 pr-2 text-meta font-semibold text-muted no-underline hover:text-ice-deep'
+			)}
 			<label class="sr-only" for="admin-nav">{t('nav.admin')}</label>
 			<select
 				id="admin-nav"

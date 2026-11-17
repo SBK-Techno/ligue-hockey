@@ -1,5 +1,6 @@
 import { logger } from '#lib/shared/logging/logger.ts';
 import { isLineupEditable } from './playability.ts';
+import { isPublished } from './published.ts';
 import { listGames } from './queries.ts';
 import { regenerateGame } from './service.ts';
 
@@ -18,7 +19,7 @@ function run(): UpcomingRegeneration {
 	let failed = 0;
 
 	for (const game of listGames()) {
-		if (game.generatedAt === null) continue;
+		if (!isPublished(game)) continue;
 		// Un alignement manuel n'est jamais écrasé par un recalcul automatique.
 		if (game.lineupManualAt !== null) continue;
 		// Un match commencé, terminé ou annulé ne se recalcule jamais : son

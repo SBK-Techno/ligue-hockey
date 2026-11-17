@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	QUERY_BOUNDARY_ALLOWANCES,
 	queryBoundaryFindings,
+	routeBoundaryFindings,
 	type ArchitectureFile
 } from './architecture.ts';
 
@@ -73,6 +74,45 @@ describe('frontière des requêtes entre modules', () => {
 			],
 			[]
 		);
+
+		expect(findings).toEqual([]);
+	});
+});
+
+describe('frontière des routes', () => {
+	it('refuse le fournisseur d’authentification dans une route', () => {
+		const findings = routeBoundaryFindings([
+			file(
+				'src/routes/deconnexion/+server.ts',
+				"import { auth } from '#lib/server/auth.ts';"
+			),
+			file(
+				'src/routes/profil/+page.server.ts',
+				"import { betterAuthIdentity } from '../../lib/server/auth/identity.ts';"
+			)
+		]);
+
+		expect(findings).toHaveLength(2);
+		expect(findings[0]).toEqual(
+			expect.objectContaining({
+				file: 'src/routes/deconnexion/+server.ts',
+				line: 1,
+				rule: 'route-provider-import'
+			})
+		);
+	});
+
+	it('accepte le service d’authentification et les composants de route', () => {
+		const findings = routeBoundaryFindings([
+			file(
+				'src/routes/deconnexion/+server.ts',
+				"import { signOut } from '#lib/domain/auth/service.ts';"
+			),
+			file(
+				'src/lib/server/auth/identity.ts',
+				"import { auth } from '#lib/server/auth.ts';"
+			)
+		]);
 
 		expect(findings).toEqual([]);
 	});

@@ -45,7 +45,7 @@ vi.mock('#lib/server/db/index.ts', async () => {
 
 const { sqlite } = await import('#lib/server/db/index.ts');
 const { getGame } = await import('./service.ts');
-const { getAvailability } = await import('#lib/domain/availability/service.ts');
+const { availabilityForGame } = await import('#lib/domain/availability/service.ts');
 
 const NOW = 1_700_000_000_000;
 
@@ -162,7 +162,7 @@ describe('participants d’un match selon son état', () => {
 		seed(state);
 
 		const game = getGame(manager, 'g1');
-		const availability = getAvailability(manager, 'g1');
+		const availability = availabilityForGame(manager, game);
 
 		expect(game.generation?.bench.map((entry) => entry.playerId)).toEqual(
 			visible ? ['bob'] : []

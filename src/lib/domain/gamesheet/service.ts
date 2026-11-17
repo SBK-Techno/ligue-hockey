@@ -4,7 +4,7 @@ import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
 import { getGame, completeGame, type GameView } from '#lib/domain/games/service.ts';
 import { isGamePlayable } from '#lib/domain/games/playability.ts';
-import { playersByIds } from '#lib/domain/players/candidates.ts';
+import { deletedPlayerIds, playersByIds } from '#lib/domain/players/candidates.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { newId } from '#lib/shared/ids/id.ts';
 import { clock } from '#lib/shared/time/clock.ts';
@@ -50,17 +50,21 @@ function playerRef(
 	team: Team,
 	playerId: string | null,
 	fullName: string,
-	jerseyNumber: number | null
+	jerseyNumber: number | null,
+	deleted: ReadonlySet<string>
 ): GamePlayerRef {
 	return {
-		playerId: playerId ?? '',
+		playerId: playerId !== null && !deleted.has(playerId) ? playerId : '',
 		fullName,
 		jerseyNumber,
 		team
 	};
 }
 
-function goalView(row: GameGoalRow): GameGoalView {
+function goalView(
+	row: GameGoalRow,
+	deleted: ReadonlySet<string> = new Set()
+): GameGoalView {
 	const assists: GamePlayerRef[] = [];
 	if (row.assist1Name !== null) {
 		assists.push(
@@ -68,7 +72,8 @@ function goalView(row: GameGoalRow): GameGoalView {
 				row.team,
 				row.assist1PlayerId,
 				row.assist1Name,
-				row.assist1Number
+				row.assist1Number,
+				deleted
 			)
 		);
 	}
@@ -78,7 +83,8 @@ function goalView(row: GameGoalRow): GameGoalView {
 				row.team,
 				row.assist2PlayerId,
 				row.assist2Name,
-				row.assist2Number
+				row.assist2Number,
+				deleted
 			)
 		);
 	}
@@ -92,7 +98,8 @@ function goalView(row: GameGoalRow): GameGoalView {
 			row.kind === 'own_goal' ? otherTeam(row.team) : row.team,
 			row.scorerPlayerId,
 			row.scorerName,
-			row.scorerNumber
+			row.scorerNumber,
+			deleted
 		),
 		assists,
 		ownGoal: row.kind === 'own_goal',
@@ -100,7 +107,10 @@ function goalView(row: GameGoalRow): GameGoalView {
 	};
 }
 
-function penaltyView(row: GamePenaltyRow): GamePenaltyView {
+function penaltyView(
+	row: GamePenaltyRow,
+	deleted: ReadonlySet<string> = new Set()
+): GamePenaltyView {
 	return {
 		id: row.id,
 		team: row.team,
@@ -110,7 +120,8 @@ function penaltyView(row: GamePenaltyRow): GamePenaltyView {
 			row.team,
 			row.playerId,
 			row.playerName,
-			row.playerNumber
+			row.playerNumber,
+			deleted
 		),
 		infraction: row.infraction,
 		minutes: row.minutes,
@@ -163,11 +174,26 @@ export function listGameScores(
 	return scores;
 }
 
-export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
+export function getGameSheet(actor: Actor, game: GameView): GameSheetView {
 	requireUser(actor);
-	const game = getGame(actor, gameId);
-	const goals = listGoals(gameId);
-	const penalties = listPenalties(gameId);
+	if (!isGamePlayable(game)) {
+		throw new AppError('CONFLICT', {
+			key: game.status === 'cancelled' ? 'gamesheet.cancelled' : 'games.notStarted'
+		});
+	}
+	const goals = listGoals(game.id);
+	const penalties = listPenalties(game.id);
+	const deleted = deletedPlayerIds([
+		...game.slots.flatMap((slot) => (slot.player ? [slot.player.playerId] : [])),
+		...goals.flatMap((goal) => [
+			...(goal.scorerPlayerId ? [goal.scorerPlayerId] : []),
+			...(goal.assist1PlayerId ? [goal.assist1PlayerId] : []),
+			...(goal.assist2PlayerId ? [goal.assist2PlayerId] : [])
+		]),
+		...penalties.flatMap((penalty) =>
+			penalty.playerId ? [penalty.playerId] : []
+		)
+	]);
 
 	const score = Object.fromEntries(
 		TEAMS.map((team) => [team.key, 0])
@@ -211,7 +237,11 @@ export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
 
 	const teamOrder = new Map(TEAMS.map((team, index) => [team.key, index]));
 	const rows = [...totals.values()]
-		.map((entry) => ({ ...entry, points: entry.goals + entry.assists }))
+		.map((entry) => ({
+			...entry,
+			playerId: deleted.has(entry.playerId) ? '' : entry.playerId,
+			points: entry.goals + entry.assists
+		}))
 		.sort(
 			(a, b) =>
 				(teamOrder.get(a.team) ?? 0) - (teamOrder.get(b.team) ?? 0) ||
@@ -222,9 +252,9 @@ export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
 		);
 
 	return {
-		gameId,
-		goals: goals.map(goalView),
-		penalties: penalties.map(penaltyView),
+		gameId: game.id,
+		goals: goals.map((goal) => goalView(goal, deleted)),
+		penalties: penalties.map((penalty) => penaltyView(penalty, deleted)),
 		score,
 		totals: rows,
 		finalized: game.completedAt !== null

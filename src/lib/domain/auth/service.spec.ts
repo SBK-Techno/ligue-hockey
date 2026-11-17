@@ -22,6 +22,7 @@ function provider(overrides: Partial<IdentityProvider> = {}): IdentityProvider {
 		signIn: vi.fn(async () => {
 			providerCalls.signIn += 1;
 		}),
+		signOut: vi.fn(async () => undefined),
 		changePassword: vi.fn(async () => {
 			providerCalls.changePassword += 1;
 		}),

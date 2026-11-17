@@ -34,6 +34,8 @@ export type IdentityProvider = {
 	requestPasswordReset(email: string, purpose: PasswordLinkPurpose): Promise<void>;
 	/** Ouvre une session avec un mot de passe. */
 	signIn(credentials: { email: string; password: string }, headers: Headers): Promise<void>;
+	/** Ferme la session portée par les en-têtes de la requête. */
+	signOut(headers: Headers): Promise<void>;
 	/** Vérifie le mot de passe courant et remplace le mot de passe. */
 	changePassword(
 		userId: string,

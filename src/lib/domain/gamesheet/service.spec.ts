@@ -64,6 +64,11 @@ const admin: Actor = {
 	role: 'admin'
 };
 
+/** La feuille reçoit la fiche déjà lue par l'appelant. */
+function sheetFor(actor: Actor, gameId = 'started') {
+	return getGameSheet(actor, getGame(actor, gameId));
+}
+
 const TEMPLATE = JSON.stringify({
 	goaliesPerTeam: 0,
 	forwardsPerTeam: 2,
@@ -212,6 +217,15 @@ beforeEach(() => {
 });
 
 describe('feuille de match', () => {
+	it('refuse la feuille d’un match annulé ou pas encore commencé', () => {
+		expect(() => sheetFor(manager, 'cancelled')).toThrowError(
+			expect.objectContaining({ code: 'CONFLICT', key: 'gamesheet.cancelled' })
+		);
+		expect(() => sheetFor(manager, 'future')).toThrowError(
+			expect.objectContaining({ code: 'CONFLICT', key: 'games.notStarted' })
+		);
+	});
+
 	it('ajoute, modifie et supprime un but avec ses totaux', () => {
 		const created = addGoal(manager, 'started', {
 			team: 'white',
@@ -231,7 +245,7 @@ describe('feuille de match', () => {
 		});
 		expect(created.assists.map((assist) => assist.playerId)).toEqual(['b']);
 
-		let sheet = getGameSheet(playerActor, 'started');
+		let sheet = sheetFor(playerActor);
 		expect(sheet.score).toEqual({ white: 1, black: 0 });
 		expect(
 			sheet.totals.find((entry) => entry.playerId === 'a')
@@ -250,7 +264,7 @@ describe('feuille de match', () => {
 			assist2PlayerId: null
 		});
 		expect(updated).toMatchObject({ period: 2, clock: '08:00', kind: 'power_play' });
-		sheet = getGameSheet(playerActor, 'started');
+		sheet = sheetFor(playerActor);
 		expect(
 			sheet.totals.find((entry) => entry.playerId === 'a')
 		).toMatchObject({ goals: 0, assists: 0 });
@@ -259,7 +273,7 @@ describe('feuille de match', () => {
 		).toMatchObject({ goals: 1, assists: 0 });
 
 		deleteGoal(manager, 'started', created.id);
-		expect(getGameSheet(playerActor, 'started').goals).toEqual([]);
+		expect(sheetFor(playerActor).goals).toEqual([]);
 
 		const actions = sqlite
 			.prepare("select action from audit_log where entity_id = 'started' order by created_at")
@@ -429,7 +443,7 @@ describe('pénalités', () => {
 		});
 		expect(penalty.player).toMatchObject({ playerId: 'a', jerseyNumber: 9 });
 		expect(
-			getGameSheet(playerActor, 'started').totals.find(
+			sheetFor(playerActor).totals.find(
 				(entry) => entry.playerId === 'a'
 			)?.penaltyMinutes
 		).toBe(2);
@@ -444,13 +458,13 @@ describe('pénalités', () => {
 			coincidental: true
 		});
 		expect(
-			getGameSheet(playerActor, 'started').totals.find(
+			sheetFor(playerActor).totals.find(
 				(entry) => entry.playerId === 'b'
 			)
 		).toMatchObject({ penaltyMinutes: 4 });
 
 		deletePenalty(manager, 'started', penalty.id);
-		expect(getGameSheet(playerActor, 'started').penalties).toEqual([]);
+		expect(sheetFor(playerActor).penalties).toEqual([]);
 	});
 
 	it('refuse un joueur non habillé, une infraction et des minutes invalides', () => {
@@ -517,7 +531,7 @@ describe('score et totaux', () => {
 			code: 'VALIDATION',
 			key: 'gamesheet.scorerNotDressed'
 		});
-		expect(getGameSheet(playerActor, 'started').score).toEqual({
+		expect(sheetFor(playerActor).score).toEqual({
 			white: 0,
 			black: 0
 		});
@@ -604,7 +618,7 @@ describe('score et totaux', () => {
 			coincidental: true
 		});
 
-		const sheet = getGameSheet(playerActor, 'started');
+		const sheet = sheetFor(playerActor);
 
 		expect(sheet.score).toEqual({ white: 2, black: 1 });
 		expect(sheet.goals.find((goal) => goal.kind === 'own_goal')).toMatchObject({
@@ -671,13 +685,14 @@ describe('score et totaux', () => {
 
 		// La fiche reste en base, anonymisée : le but garde son instantané
 		// neutre et le grand livre ne perd ni le score ni la participation.
-		const sheet = getGameSheet(playerActor, 'started');
+		const sheet = sheetFor(playerActor);
 		expect(sheet.goals[0].scorer).toEqual({
-			playerId: 'a',
+			playerId: '',
 			fullName: 'Joueur retiré',
 			jerseyNumber: 9,
 			team: 'white'
 		});
+		expect(JSON.stringify(sheet)).not.toContain('"a"');
 		expect(sheet.score.white).toBe(1);
 		expect(
 			sheet.totals.find((entry) => entry.playerId === 'b')
@@ -714,7 +729,7 @@ describe('finalisation', () => {
 			.prepare('select status, completed_at from games where id = ?')
 			.get('started') as { status: string; completed_at: number };
 		expect(row).toEqual({ status: 'completed', completed_at: h.now });
-		expect(getGameSheet(playerActor, 'started').finalized).toBe(true);
+		expect(sheetFor(playerActor).finalized).toBe(true);
 		const audit = sqlite
 			.prepare(
 				"select count(*) as count from audit_log where action = 'game.finalized' and entity_id = 'started'"

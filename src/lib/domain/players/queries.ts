@@ -439,7 +439,8 @@ function clearFutureCommitments(
  * anonymisée et inactive, parce que les paiements, les places jouées et les buts
  * la référencent. Le compte d'authentification perd ses identifiants et ses
  * sessions; les engagements futurs (places, présence, demandes de
- * remplacement) sont libérés, mais les faits passés ne sont jamais réécrits.
+ * remplacement) sont libérés. Les clés et les buts passés restent en place;
+ * seuls les noms figés dans les instantanés deviennent neutres.
  */
 export function deletePlayerAccount(
 	playerId: string,

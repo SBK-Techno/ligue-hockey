@@ -43,6 +43,7 @@ const { provideIdentity } = await import('#lib/domain/auth/identity.ts');
 const { adminUpdatePlayer } = await import('#lib/domain/players/service.ts');
 const { resetThrottle } = await import('#lib/server/security/throttle.ts');
 const { actions: loginActions } = await import('../../../routes/connexion/+page.server.ts');
+const { POST: signOutRoute } = await import('../../../routes/deconnexion/+server.ts');
 
 const ORIGIN = 'http://localhost:5173';
 const PASSWORD = 'MotDePasse2026!';
@@ -142,6 +143,15 @@ function sessionCount(userId: string): number {
 	return row.count;
 }
 
+function jobCount(eventKey: string): number {
+	const row = sqlite
+		.prepare(
+			'select count(*) as count from notification_jobs where event_key = ?'
+		)
+		.get(eventKey) as { count: number };
+	return row.count;
+}
+
 function userRow() {
 	return sqlite
 		.prepare('select name, email, role, banned from user where id = ?')
@@ -230,6 +240,7 @@ const MEMBER_WRITES = [
 beforeEach(async () => {
 	provideIdentity(betterAuthIdentity);
 	resetThrottle();
+	sqlite.prepare('delete from notification_jobs').run();
 	sqlite.prepare('delete from session').run();
 	sqlite.prepare('delete from account').run();
 	sqlite.prepare('delete from players').run();
@@ -329,6 +340,43 @@ describe('plan HTTP d’authentification', () => {
 			}
 		});
 		expect(invited.user.email).toContain('invite');
+	});
+
+	it('ferme la session par le service d’authentification', async () => {
+		const signed = await programmaticSignIn();
+		const cookie = signed.headers
+			.getSetCookie()
+			.map((value) => value.split(';')[0])
+			.join('; ');
+		expect(sessionCount(adminId)).toBe(1);
+
+		const result = await signOutRoute({
+			request: new Request(`${ORIGIN}/deconnexion`, {
+				method: 'POST',
+				headers: { cookie }
+			})
+		} as never).catch((cause: unknown) => cause);
+
+		expect(result).toMatchObject({ status: 303, location: '/connexion' });
+		expect(sessionCount(adminId)).toBe(0);
+	});
+
+	it('ne prépare aucun lien de réinitialisation pour un compte inactif', async () => {
+		const requestReset = () =>
+			auth.api.requestPasswordReset({
+				body: {
+					email: adminEmail,
+					redirectTo: `${ORIGIN}/reinitialiser-mot-de-passe`
+				}
+			});
+
+		await adminUpdatePlayer(adminActor(), adminId, { active: false });
+		await requestReset();
+		expect(jobCount('password_reset')).toBe(0);
+
+		await adminUpdatePlayer(adminActor(), adminId, { active: true });
+		await requestReset();
+		expect(jobCount('password_reset')).toBeGreaterThan(0);
 	});
 
 	it('ferme la connexion et les sessions d’un compte désactivé', async () => {

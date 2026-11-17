@@ -3,7 +3,8 @@ import { join, relative } from 'node:path';
 import { fr } from '../config/i18n/fr.ts';
 import {
 	QUERY_BOUNDARY_ALLOWANCES,
-	queryBoundaryFindings
+	queryBoundaryFindings,
+	routeBoundaryFindings
 } from './lib/architecture.ts';
 import { checkCiContract } from './lib/ci-contract.ts';
 
@@ -161,6 +162,15 @@ findings.push(
 				content: readFileSync(file, 'utf8')
 			})),
 		QUERY_BOUNDARY_ALLOWANCES
+	)
+);
+
+findings.push(
+	...routeBoundaryFindings(
+		sourceFiles.map((file) => ({
+			path: relative(ROOT, file).split('\\').join('/'),
+			content: readFileSync(file, 'utf8')
+		}))
 	)
 );
 

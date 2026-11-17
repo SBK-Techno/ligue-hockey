@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { render } from 'svelte/server';
 import type { Actor } from '#lib/domain/auth/types.ts';
+import GameSheet from '#lib/ui/match/GameSheet.svelte';
 
 /**
  * La suppression d'un compte n'efface plus son histoire : le grand livre, les
@@ -178,7 +181,7 @@ describe('rétention d’une suppression de joueur', () => {
 	it('rend un nom neutre sur la feuille et ne laisse aucune note', () => {
 		deletePlayerAccount('victim', '2026-11-17', '12:00');
 
-		const sheet = readSheet(manager, 'past');
+		const sheet = readSheet(manager, getGame(manager, 'past'));
 		const goal = sheet.goals[0]!;
 
 		expect(goal.scorer!.fullName).toBe('Joueur retiré');
@@ -188,12 +191,40 @@ describe('rétention d’une suppression de joueur', () => {
 		]);
 		expect(sheet.penalties[0]!.player.fullName).toBe('Joueur retiré');
 		expect(JSON.stringify(sheet)).not.toContain('Victime');
+		expect(JSON.stringify(sheet)).not.toContain('victim');
 		expect(
 			sqlite.prepare('select count(*) as count from player_ratings').get()
 		).toEqual({ count: 0 });
 		expect(
 			sqlite.prepare('select count(*) as count from game_player_ratings').get()
 		).toEqual({ count: 0 });
+	});
+
+	it('ne garde aucun identifiant brut et rend les deux assistances du joueur retiré', () => {
+		deletePlayerAccount('victim', '2026-11-17', '12:00');
+
+		const sheet = readSheet(manager, getGame(manager, 'past'));
+		expect(sheet.goals[0]!.scorer!.playerId).toBe('');
+		expect(sheet.goals[0]!.assists.map((entry) => entry.playerId)).toEqual(['', '']);
+		expect(sheet.penalties[0]!.player.playerId).toBe('');
+		expect(sheet.totals.every((row) => row.playerId === '')).toBe(true);
+
+		const body = render(GameSheet, {
+			props: { sheet, slots: [], canManage: false, completed: true }
+		}).body;
+		expect(body).toContain('Joueur retiré');
+		expect(body).toContain('Autre Joueur');
+		expect(body).not.toContain('data-player-id="victim"');
+
+		// Deux assistances anonymisées portent le même identifiant vide : la
+		// clé de ligne doit donc venir du but et de son rang, jamais du joueur.
+		const component = readFileSync(
+			new URL('../../../lib/ui/match/GameSheet.svelte', import.meta.url),
+			'utf8'
+		);
+		expect(component).toContain(
+			'{#each goal.assists as assist, index (`${goal.id}:${index}`)}'
+		);
 	});
 
 	it('garde le nom neutre dans la fiche et jamais l’ancien', () => {

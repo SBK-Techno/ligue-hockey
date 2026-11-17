@@ -82,9 +82,8 @@ export function listMyRequests(
 
 export function listRequestsForGame(
 	actor: Actor,
-	gameId: string
+	game: GameSummary
 ): SubRequestView[] {
-	const game = getGame(actor, gameId);
 	return listGameRequests(actor, game);
 }
 

@@ -108,7 +108,16 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 		maxBytes: 110 * 1024,
 		audience: 'admin'
 	},
-	{ name: 'admin', path: '/admin', maxRequests: 28, maxBytes: 130 * 1024, audience: 'admin' },
+	{
+		name: 'admin',
+		path: '/admin',
+		// Le chunk partagé `chrome-inset.svelte.ts` (publication de
+		// `surface-top-inset`, coquille admin et discussion) ajoute une requête
+		// mesurée par le smoke : 29 requêtes, plafond d'octets inchangé.
+		maxRequests: 29,
+		maxBytes: 130 * 1024,
+		audience: 'admin'
+	},
 	{
 		name: 'admin-matchs',
 		path: '/admin/matchs',

@@ -68,6 +68,10 @@ export const betterAuthIdentity: IdentityProvider = {
 		});
 	},
 
+	async signOut(headers) {
+		await auth.api.signOut({ headers });
+	},
+
 	async changePassword(_userId, input, headers) {
 		await auth.api.changePassword({
 			body: {

@@ -412,28 +412,35 @@ export function claimSubstitute(
 		throw new AppError('FORBIDDEN', { key: 'subs.notEligible' });
 	}
 
-	let claimed: boolean;
 	const claimedAt = clock.nowMs();
-	try {
-		claimed = db.transaction((tx) => {
-			if (!claimRequest(requestId, user.userId, claimedAt, tx)) return false;
-			insertAudit(
-				auditEntry(actor, {
-					action: 'sub.claimed',
-					entityType: 'sub_request',
-					entityId: requestId,
-					metadata: { gameId: game.id, position: request.position }
-				}),
-				tx
-			);
-			return true;
-		});
-	} catch (cause) {
-		throw new AppError('CONFLICT', {
-			key: 'subs.alreadyPlaying',
-			cause
-		});
-	}
+	const claimed = db.transaction((tx) => {
+		let taken: boolean;
+		try {
+			taken = claimRequest(requestId, user.userId, claimedAt, tx);
+		} catch (cause) {
+			// Le seul conflit d'unicité de cette écriture est l'index du
+			// remplaçant : ce joueur occupe déjà une place dans ce match. Une
+			// panne d'audit ou de base remonte telle quelle et annule tout.
+			if ((cause as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
+				throw new AppError('CONFLICT', {
+					key: 'subs.alreadyPlaying',
+					cause
+				});
+			}
+			throw cause;
+		}
+		if (!taken) return false;
+		insertAudit(
+			auditEntry(actor, {
+				action: 'sub.claimed',
+				entityType: 'sub_request',
+				entityId: requestId,
+				metadata: { gameId: game.id, position: request.position }
+			}),
+			tx
+		);
+		return true;
+	});
 	if (!claimed) {
 		throw new AppError('CONFLICT', { key: 'subs.claimTaken' });
 	}

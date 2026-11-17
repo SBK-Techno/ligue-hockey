@@ -5,7 +5,9 @@ import { playerCandidatesByIds } from '#lib/domain/players/candidates.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import { buildGenerationSnapshot, validateAssignments } from './alignment.ts';
+import { ratingsRemovedAudit } from './audit.ts';
 import { isLineupEditable } from './playability.ts';
+import { isPublished } from './published.ts';
 import { benchFromMembers, lineupPool, type PoolSlot } from './pool.ts';
 import { findGame, saveAssignments, type SlotAssignment } from './queries.ts';
 import { getGame, type GameView } from './service.ts';
@@ -46,7 +48,7 @@ export function saveManualLineup(
 	if (!isLineupEditable(row)) {
 		throw new AppError('CONFLICT', { key: 'games.lineupLocked' });
 	}
-	if (row.generatedAt === null) {
+	if (!isPublished(row)) {
 		throw new AppError('CONFLICT', { key: 'rating.gameNotGenerated' });
 	}
 
@@ -153,12 +155,7 @@ export function saveManualLineup(
 			expectedGeneratedAt: parsed.expectedGeneratedAt,
 			manualAt: built.generatedAt,
 			ratingsAudit: (playerIds) =>
-				auditEntry(actor, {
-					action: 'ratings.game_removed',
-					entityType: 'game',
-					entityId: gameId,
-					metadata: { playerIds }
-				}),
+				ratingsRemovedAudit(actor, gameId, playerIds),
 			audits: [
 				auditEntry(actor, {
 					action: 'game.lineup_manual',

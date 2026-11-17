@@ -29,9 +29,8 @@ import {
 import { updateOwnProfileSchema } from '#lib/domain/players/validators.ts';
 import { getMySubProfile, saveMySubProfile } from '#lib/domain/subs/service.ts';
 import { subProfileInputSchema } from '#lib/domain/subs/validators.ts';
-import { actionError } from '#lib/server/action.ts';
+import { actionError, failingField } from '#lib/server/action.ts';
 import { publicEnv } from '#lib/shared/config/public-env.ts';
-import { isAppError } from '#lib/shared/errors.ts';
 import { formatCount, t } from '#lib/shared/i18n/index.ts';
 import { formToObject, parseForm } from '#lib/shared/validation.ts';
 
@@ -118,12 +117,6 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 };
 
 const SECURITY = 'securite';
-
-function failingField(cause: unknown): string | null {
-	if (!isAppError(cause)) return null;
-	const details = cause.details as Array<{ path?: string }> | undefined;
-	return details?.find((entry) => entry.path)?.path ?? null;
-}
 
 export const actions: Actions = {
 	identity: async ({ request, locals }) => {

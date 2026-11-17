@@ -3,6 +3,7 @@ import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import type { AuditEntry } from '#lib/domain/audit/queries.ts';
 import { insertAudit } from '#lib/domain/audit/queries.ts';
 import { slotKey } from '#config/slot.ts';
+import { isPublished } from './published.ts';
 import { players } from '#lib/domain/players/schema.ts';
 import { deleteGameRatingsForPlayers } from '#lib/domain/ratings/queries.ts';
 import { gameAvailability, gameSlots, games } from './schema.ts';
@@ -69,7 +70,8 @@ export function listGameListRows(gameIds: readonly string[]): GameListRow[] {
 			locationId: games.locationId,
 			location: games.location,
 			status: games.status,
-			generated: games.generationJson
+			generatedAt: games.generatedAt,
+			generationJson: games.generationJson
 		})
 		.from(games)
 		.where(inArray(games.id, [...gameIds]))
@@ -94,7 +96,7 @@ export function listGameListRows(gameIds: readonly string[]): GameListRow[] {
 		locationId: row.locationId,
 		location: row.location,
 		status: row.status,
-		generated: row.generated !== null,
+		generated: isPublished(row),
 		openSlots: open.get(row.id) ?? 0
 	}));
 }

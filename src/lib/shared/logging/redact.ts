@@ -1,6 +1,17 @@
 const REDACTED = '[redacted]';
 const SENSITIVE_KEY =
 	/password|secret|token|cookie|authorization|vapid|smtp|session/i;
+const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const TOKEN_URL = /https?:\/\/[^\s'"<>]*[A-Za-z0-9_-]{20,}[^\s'"<>]*/g;
+
+/**
+ * Une erreur de fournisseur peut citer une adresse ou un point de terminaison
+ * poussé, qui est un secret porteur. Le message et la pile sont nettoyés au
+ * même endroit que les champs sensibles, avant d'être stockés ou journalisés.
+ */
+export function redactText(text: string): string {
+	return text.replace(EMAIL, REDACTED).replace(TOKEN_URL, REDACTED);
+}
 
 export function redactPath(path: string): string {
 	return path.replace(/^(\/api\/auth\/reset-password\/)[^/]+/, '$1[redacted]');
@@ -17,11 +28,12 @@ function walk(
 	if (value instanceof Error) {
 		return {
 			name: value.name,
-			message: value.message,
-			stack: includeStack ? value.stack : undefined
+			message: redactText(value.message),
+			stack: includeStack && value.stack ? redactText(value.stack) : undefined
 		};
 	}
 	if (typeof value === 'bigint') return value.toString();
+	if (typeof value === 'string') return redactText(value);
 	if (typeof value !== 'object') return value;
 	if (seen.has(value)) return '[circular]';
 	seen.add(value);

@@ -14,7 +14,7 @@ export type QueryBoundaryAllowance = {
 export type BoundaryFinding = {
 	file: string;
 	line: number;
-	rule: 'cross-module-query';
+	rule: 'cross-module-query' | 'route-provider-import';
 	detail: string;
 };
 
@@ -62,16 +62,41 @@ export function queryBoundaryFindings(
 }
 
 /**
+ * Une route ne parle jamais au fournisseur d'identité : elle appelle le cas
+ * d'usage du service d'authentification, qui possède le port et ses effets.
+ */
+const AUTH_PROVIDER_IMPORT = /from ['"][^'"]*server\/auth(?:\.ts|\/)/;
+
+export function routeBoundaryFindings(
+	files: readonly ArchitectureFile[]
+): BoundaryFinding[] {
+	const findings: BoundaryFinding[] = [];
+
+	for (const file of files) {
+		if (!file.path.startsWith('src/routes/')) continue;
+		if (file.path.includes('.spec.') || file.path.includes('.test.')) continue;
+
+		for (const [index, line] of file.content.split('\n').entries()) {
+			if (!AUTH_PROVIDER_IMPORT.test(line)) continue;
+			findings.push({
+				file: file.path,
+				line: index + 1,
+				rule: 'route-provider-import',
+				detail:
+					'Une route appelle le service d’authentification, jamais le fournisseur `#lib/server/auth`.'
+			});
+		}
+	}
+
+	return findings;
+}
+
+/**
  * Les exceptions déclarées. L'audit est transverse : chaque écriture le pose
  * dans sa transaction. Les autres exceptions sont propres au fichier et
  * portent leur raison.
  */
 export const QUERY_BOUNDARY_ALLOWANCES: readonly QueryBoundaryAllowance[] = [
-	{
-		file: 'src/lib/domain/availability/queries.ts',
-		module: 'games',
-		reason: 'La réponse de présence écrit la présence et libère la place dans une seule transaction.'
-	},
 	{
 		file: 'src/lib/domain/games/queries.ts',
 		module: 'ratings',

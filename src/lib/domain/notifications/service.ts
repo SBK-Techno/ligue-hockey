@@ -13,6 +13,7 @@ import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { newId } from '#lib/shared/ids/id.ts';
+import { redactText } from '#lib/shared/logging/redact.ts';
 import { db } from '#lib/server/db/index.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { encodeCursor, type Cursor } from '#lib/shared/paging/cursor.ts';
@@ -327,16 +328,17 @@ export function jobMessage(job: NotificationJobRow): RenderedNotification {
 	return rendered;
 }
 
+/** Le seul texte stocké pour une erreur : nettoyé avant la troncature. */
+function errorText(error: unknown): string {
+	return redactText(error instanceof Error ? error.message : String(error));
+}
+
 export function failJob(jobId: string, error: unknown): void {
-	markFailed(jobId, error instanceof Error ? error.message : String(error));
+	markFailed(jobId, errorText(error));
 }
 
 export function retryJob(job: NotificationJobRow, error: unknown, retryAt: number): void {
-	reschedule(
-		job.id,
-		retryAt,
-		error instanceof Error ? error.message : String(error)
-	);
+	reschedule(job.id, retryAt, errorText(error));
 }
 
 export function queueCounts(): {

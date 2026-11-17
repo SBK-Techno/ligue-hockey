@@ -144,6 +144,14 @@ export async function signIn(
 }
 
 /**
+ * Ferme la session de la requête. Le fournisseur reste derrière le port :
+ * aucune route ne le connaît.
+ */
+export async function signOut(headers: Headers): Promise<void> {
+	await identity().signOut(headers);
+}
+
+/**
  * Change le mot de passe du membre connecté. La politique de mot de passe et
  * le limiteur vivent ici, pas dans l'action de la page.
  */

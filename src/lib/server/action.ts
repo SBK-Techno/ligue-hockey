@@ -25,6 +25,17 @@ export function actionError(
 }
 
 /**
+ * Le premier champ refusé d'une erreur de validation, ou null. Les routes
+ * l'utilisent pour ramener le focus au bon contrôle; elles ne relisent jamais
+ * la forme des détails.
+ */
+export function failingField(cause: unknown): string | null {
+	if (!isAppError(cause)) return null;
+	const details = cause.details as Array<{ path?: string }> | undefined;
+	return details?.find((entry) => entry.path)?.path ?? null;
+}
+
+/**
  * Refuse une écriture au-delà du seau de membre sans casser le formulaire.
  * Une soumission enrichie reçoit un échec d'action SvelteKit; une soumission
  * sans JavaScript reçoit une page courte et lisible; une API garde l'enveloppe

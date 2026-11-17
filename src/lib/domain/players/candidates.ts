@@ -22,6 +22,19 @@ export function playersByIds(playerIds: readonly string[]): PublicPlayer[] {
 	return findPlayersByIds(playerIds).map(toPublic);
 }
 
+/**
+ * Les identifiants dont la fiche a été supprimée. Une feuille garde leurs
+ * faits, jamais leur identité : l'appelant remplace l'identifiant par le vide
+ * et ne peut donc pas ouvrir leur fiche.
+ */
+export function deletedPlayerIds(playerIds: readonly string[]): Set<string> {
+	return new Set(
+		findPlayersByIds(playerIds)
+			.filter((row) => row.deletedAt !== null)
+			.map((row) => row.userId)
+	);
+}
+
 export function playerCandidatesByIds(
 	playerIds: readonly string[]
 ): PlayerCandidate[] {

@@ -1,4 +1,5 @@
 import type { I18nKey } from '#config/i18n/fr.ts';
+import type { Position } from '#config/positions.ts';
 import { HOUR_MS } from '#config/time.ts';
 import { gameStartsAt } from '#lib/domain/games/schedule.ts';
 import {
@@ -8,23 +9,31 @@ import {
 } from '#lib/domain/games/playability.ts';
 import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
+import { insertAudit } from '#lib/domain/audit/queries.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
 import {
 	getGame,
 	listGamePresence,
 	listPlayerAvailability,
-	regenerateIfGenerated
+	regenerateIfGenerated,
+	releaseSlotIn,
+	writePresenceIn
 } from '#lib/domain/games/service.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import { generationCandidates, playersByIds } from '#lib/domain/players/candidates.ts';
 import { findOwnProfile, getOwnProfile } from '#lib/domain/players/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
+import {
+	cancelRequestForReturnIn,
+	createAbsenceRequestIn
+} from '#lib/domain/subs/generation.ts';
+import type { SubRequestRow } from '#lib/domain/subs/schema.ts';
 import { notifyBumped, notifyRequestWaves } from '#lib/domain/subs/service.ts';
+import { db } from '#lib/server/db/index.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import type { AvailabilityStatus } from '#lib/domain/games/schema.ts';
-import { writeAvailability } from './queries.ts';
 
 export type AvailabilityRowView = {
 	playerId: string;
@@ -77,6 +86,103 @@ export type AvailabilityResult = {
 	warning?: I18nKey;
 };
 
+type AvailabilityWriteInput = {
+	actor: Actor;
+	game: GameSummary;
+	playerId: string;
+	status: AvailabilityStatus;
+	at: number;
+	position: Position;
+	/** L'alignement se modifie encore : une place peut être libérée. */
+	releaseSlot: boolean;
+	/** Le joueur était attendu : sa sortie ouvre une demande de remplaçant. */
+	requestAbsence: boolean;
+	availabilityAudit: ReturnType<typeof auditEntry>;
+};
+
+type AvailabilityWriteResult = {
+	/** Demande créée par cette transaction, à notifier après la validation. */
+	requestCreated: SubRequestRow | null;
+	bumpedPlayerId: string | null;
+	/** Demande annulée par le retour du joueur, à notifier après la validation. */
+	bumpedRequest: SubRequestRow | null;
+};
+
+/**
+ * La réponse de présence est une seule transaction : présence, libération de
+ * place, demande d'absence ou retour du joueur, et toutes leurs traces. Un
+ * échec ne laisse jamais une présence sans sa demande ni son audit; un nouvel
+ * essai repart de l'état réellement validé.
+ */
+function writeAvailability(input: AvailabilityWriteInput): AvailabilityWriteResult {
+	return db.transaction((tx) => {
+		writePresenceIn(tx, input.game.id, input.playerId, input.status, input.at);
+
+		let requestCreated: SubRequestRow | null = null;
+		let bumpedPlayerId: string | null = null;
+		let bumpedRequest: SubRequestRow | null = null;
+
+		if (input.status === 'absent') {
+			if (input.releaseSlot) {
+				releaseSlotIn(
+					tx,
+					input.game.id,
+					input.playerId,
+					input.at,
+					auditEntry(input.actor, {
+						action: 'game.lineup_release',
+						entityType: 'game',
+						entityId: input.game.id,
+						metadata: { playerId: input.playerId, reason: 'absence' }
+					})
+				);
+			}
+			if (input.requestAbsence) {
+				const write = createAbsenceRequestIn(
+					tx,
+					input.actor,
+					input.game,
+					{
+						userId: input.playerId,
+						position: input.position,
+						isSubstitute: false
+					},
+					input.at
+				);
+				if (write?.created) requestCreated = write.request;
+			}
+		} else {
+			const cancelled = cancelRequestForReturnIn(
+				tx,
+				input.actor,
+				input.game,
+				input.playerId,
+				input.at
+			);
+			if (cancelled) {
+				bumpedRequest = cancelled.request;
+				bumpedPlayerId = cancelled.bumpedPlayerId;
+				if (bumpedPlayerId && input.releaseSlot) {
+					releaseSlotIn(
+						tx,
+						input.game.id,
+						bumpedPlayerId,
+						input.at,
+						auditEntry(input.actor, {
+							action: 'game.lineup_release',
+							entityType: 'game',
+							entityId: input.game.id,
+							metadata: { playerId: bumpedPlayerId, reason: 'bumped' }
+						})
+					);
+				}
+			}
+		}
+
+		insertAudit(input.availabilityAudit, tx);
+		return { requestCreated, bumpedPlayerId, bumpedRequest };
+	});
+}
 
 function availabilitySummary(counts: {
 	present: number;
@@ -164,10 +270,6 @@ export function availabilityForGame(actor: Actor, game: GameSummary): Availabili
 		substitute: profile?.isSubstitute ?? false,
 		closesAtLabel: formatTimestamp(closesAtMs(game))
 	};
-}
-
-export function getAvailability(actor: Actor, gameId: string): AvailabilityView {
-	return availabilityForGame(actor, getGame(actor, gameId));
 }
 
 export function markAvailability(

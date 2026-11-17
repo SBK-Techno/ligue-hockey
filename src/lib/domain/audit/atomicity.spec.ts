@@ -25,6 +25,7 @@ const { createPoll, closePollAsAdmin, deleteChatMessage } = await import(
 const {
 	cancelOwnRequest,
 	claimSubstitute,
+	createManualRequest,
 	releaseSubstitute,
 	setSubstituteFavorite
 } = await import('#lib/domain/subs/service.ts');
@@ -286,11 +287,36 @@ describe('audit atomique', () => {
 	it('ne garde pas une réclamation sans sa trace', () => {
 		failAudit();
 
-		expect(() => claimSubstitute(author, game, 'claim')).toThrow();
+		let caught: unknown;
+		try {
+			claimSubstitute(author, game, 'claim');
+		} catch (cause) {
+			caught = cause;
+		}
+		expect(caught).toBeTruthy();
+		expect(caught).not.toMatchObject({ key: 'subs.alreadyPlaying' });
 
 		expect(
 			sqlite.prepare("select status from sub_requests where id = 'claim'").get()
 		).toEqual({ status: 'open' });
+	});
+
+	it('signale seulement le remplaçant déjà placé dans ce match', () => {
+		claimSubstitute(author, game, 'claim');
+
+		expect(() => claimSubstitute(author, game, 'own')).toThrowError(
+			expect.objectContaining({ code: 'CONFLICT', key: 'subs.alreadyPlaying' })
+		);
+	});
+
+	it('ne garde pas une demande manuelle sans sa trace', () => {
+		failAudit();
+
+		expect(() => createManualRequest(admin, game, 'defense')).toThrow();
+
+		expect(
+			sqlite.prepare("select count(*) as count from sub_requests").get()
+		).toEqual({ count: 3 });
 	});
 
 	it('ne libère pas une place de remplaçant sans sa trace', () => {

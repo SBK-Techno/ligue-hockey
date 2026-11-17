@@ -135,7 +135,7 @@
 								{#if goal.assists.length > 0}
 									<p class="text-meta text-muted">
 										{t('gamesheet.assists')}:
-										{#each goal.assists as assist, index (assist.playerId)}
+										{#each goal.assists as assist, index (`${goal.id}:${index}`)}
 											{#if index > 0}<span aria-hidden="true"> · </span>{/if}
 											<span class="font-mono text-meta text-muted"
 												>{number(assist.jerseyNumber)}</span
@@ -264,7 +264,7 @@
 							{t(teamDefinition(team.key).labelKey)}
 						</th>
 					</tr>
-					{#each sheet.totals.filter((row) => row.team === team.key) as row (row.playerId)}
+					{#each sheet.totals.filter((row) => row.team === team.key) as row, index (row.playerId || 'deleted:' + team.key + ':' + index)}
 						<tr class="border-b border-line last:border-b-0">
 							<td class="py-1.5 font-mono text-muted">{row.jerseyNumber ?? ''}</td>
 							<td class="py-1.5 pr-2 font-medium">

@@ -15,12 +15,14 @@ vi.mock('#lib/server/db/index.ts', async () => {
 
 const { sqlite } = await import('#lib/server/db/index.ts');
 const {
+	failJob,
 	listInboxPage,
 	listFailedJobs,
 	markAllInboxRead,
 	notify,
 	queueCounts,
 	retryFailedJob,
+	retryJob,
 	subscribeToPush,
 	unreadCount
 } = await import('./service.ts');
@@ -30,6 +32,7 @@ const {
 	recordPushDelivery
 } = await import('#lib/server/notifications/status.ts');
 const { recordSuppression, suppressionCounts } = await import('./suppression.ts');
+const { upsertPushSubscription } = await import('./queries.ts');
 const { decodeCursor } = await import('#lib/shared/paging/cursor.ts');
 
 const admin: Actor = {
@@ -189,6 +192,26 @@ describe('file et relance', () => {
 		expect(auditCount()).toBe(1);
 	});
 
+	it('nettoie une adresse et un point de terminaison avant de les stocker', () => {
+		const refused =
+			'SMTP a refusé joueur@example.test via https://push.example.test/wpush/v2/abcdefghijklmnopqrstuvwxyz123456';
+		const failedId = insertJob({ status: 'pending' });
+		failJob(failedId, new Error(refused));
+
+		const view = listFailedJobs(admin).find((job) => job.id === failedId)!;
+		expect(view.lastError).not.toContain('joueur@example.test');
+		expect(view.lastError).not.toContain('abcdefghijklmnopqrstuvwxyz');
+		expect(view.lastError).toContain('[redacted]');
+
+		const retriedId = insertJob({ status: 'pending' });
+		retryJob({ id: retriedId } as never, new Error(refused), 999);
+		const row = sqlite
+			.prepare('select last_error from notification_jobs where id = ?')
+			.get(retriedId) as { last_error: string };
+		expect(row.last_error).not.toContain('joueur@example.test');
+		expect(row.last_error).not.toContain('abcdefghijklmnopqrstuvwxyz');
+	});
+
 	it('compose l’instantané sans destinataire ni contenu', () => {
 		insertJob({ status: 'pending', scheduledFor: 300 });
 		insertJob({ status: 'failed', scheduledFor: 200 });
@@ -264,7 +287,8 @@ describe('file et relance', () => {
 				.get(endpoint)
 		).toEqual({ p256dh: 'rafraichi' });
 
-		// Le premier propriétaire reçoit toujours ses avis push.
+		// Le premier propriétaire reçoit toujours ses avis push : le travail et
+		// l'abonnement que la livraison sélectionne portent le même membre.
 		notify(
 			'game_cancelled',
 			[{ userId: 'player' }],
@@ -279,9 +303,56 @@ describe('file et relance', () => {
 		expect(
 			sqlite
 				.prepare(
-					"select user_id from notification_jobs where channel = 'push' and event_key = 'game_cancelled'"
+					`select s.user_id as userId, s.endpoint as endpoint, s.p256dh as p256dh
+					 from notification_jobs j
+					 join push_subscriptions s on s.user_id = j.user_id
+					 where j.channel = 'push' and j.event_key = 'game_cancelled'`
 				)
 				.all()
-		).toEqual([{ user_id: 'player' }]);
+		).toEqual([{ userId: 'player', endpoint, p256dh: 'rafraichi' }]);
+	});
+
+	it('ne réattribue pas un appareil par une écriture directe', () => {
+		const endpoint = 'https://push.example.test/direct';
+		upsertPushSubscription({
+			id: 'push-first',
+			userId: 'player',
+			endpoint,
+			p256dh: 'premier',
+			auth: 'secret-1',
+			userAgent: null,
+			createdAt: 0
+		});
+
+		upsertPushSubscription({
+			id: 'push-hijack',
+			userId: 'admin',
+			endpoint,
+			p256dh: 'pirate',
+			auth: 'secret-2',
+			userAgent: null,
+			createdAt: 1
+		});
+		expect(
+			sqlite
+				.prepare('select user_id, p256dh from push_subscriptions where endpoint = ?')
+				.get(endpoint)
+		).toEqual({ user_id: 'player', p256dh: 'premier' });
+
+		// Le même propriétaire peut toujours rafraîchir ses clés.
+		upsertPushSubscription({
+			id: 'push-refresh',
+			userId: 'player',
+			endpoint,
+			p256dh: 'rafraichi',
+			auth: 'secret-3',
+			userAgent: null,
+			createdAt: 2
+		});
+		expect(
+			sqlite
+				.prepare('select user_id, p256dh from push_subscriptions where endpoint = ?')
+				.get(endpoint)
+		).toEqual({ user_id: 'player', p256dh: 'rafraichi' });
 	});
 });

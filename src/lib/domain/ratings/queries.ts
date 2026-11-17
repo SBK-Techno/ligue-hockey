@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { games, gameSlots } from '#lib/domain/games/schema.ts';
+import { isPublished } from '#lib/domain/games/published.ts';
 import { players } from '#lib/domain/players/schema.ts';
 import { playerRatings, gamePlayerRatings, type PlayerRatingRow } from './schema.ts';
 
@@ -146,7 +147,7 @@ export function listAssessmentGames(
 			startTime: row.startTime,
 			location: row.location,
 			status: row.status,
-			generated: row.generationJson !== null && row.generatedAt !== null,
+			generated: isPublished(row),
 			team: row.team,
 			position: row.position,
 			slotIndex: row.slotIndex,
