@@ -14,6 +14,7 @@ import { branding } from '#lib/generated/branding.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
+import { DAY_MS } from '#config/time.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
@@ -33,7 +34,7 @@ export const load: ServerLoad = ({ locals }) => {
 	};
 	const days = {
 		today: todayInZone(branding.timezone),
-		yesterday: todayInZone(branding.timezone, clock.nowMs() - 86_400_000)
+		yesterday: todayInZone(branding.timezone, clock.nowMs() - DAY_MS)
 	};
 	if (locals.actor.kind !== 'user') {
 		return { messages: [], limits, canCreatePoll: false, ...days };

@@ -1,5 +1,7 @@
 import type { I18nKey } from '#config/i18n/fr.ts';
-import { branding } from '#lib/generated/branding.ts';
+import { HOUR_MS } from '#config/time.ts';
+import { gameStartsAt } from '#lib/domain/games/schedule.ts';
+import { isGameStarted } from '#lib/domain/games/playability.ts';
 import { requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { recordAudit } from '#lib/domain/audit/service.ts';
@@ -20,7 +22,7 @@ import {
 } from '#lib/domain/subs/service.ts';
 import { AppError } from '#lib/shared/errors.ts';
 import { formatCount, formatTimestamp, t } from '#lib/shared/i18n/index.ts';
-import { clock, zonedDateTimeToMs } from '#lib/shared/time/clock.ts';
+import { clock } from '#lib/shared/time/clock.ts';
 import type { AvailabilityStatus } from '#lib/domain/games/schema.ts';
 
 export type AvailabilityRowView = {
@@ -74,9 +76,6 @@ export type AvailabilityResult = {
 	warning?: I18nKey;
 };
 
-function startMs(game: GameSummary): number {
-	return zonedDateTimeToMs(game.gameDate, game.startTime, branding.timezone);
-}
 
 function availabilitySummary(counts: {
 	present: number;
@@ -103,7 +102,7 @@ function availabilitySummary(counts: {
 function closesAtMs(game: GameSummary): number {
 	const settings = getSettings();
 	const closesHours = settings['games.availabilityClosesHours'];
-	return startMs(game) - closesHours * 60 * 60 * 1000;
+	return gameStartsAt(game) - closesHours * HOUR_MS;
 }
 
 function isLocked(game: GameSummary): boolean {
@@ -151,6 +150,7 @@ export function availabilityForGame(actor: Actor, game: GameSummary): Availabili
 		canWithdraw:
 			game.status === 'scheduled' &&
 			locked &&
+			!isGameStarted(game) &&
 			profile !== null &&
 			!profile.isSubstitute &&
 			own === 'present',
@@ -176,6 +176,10 @@ export function markAvailability(
 
 	const game = getGame(actor, gameId);
 	if (game.status !== 'scheduled') {
+		throw new AppError('CONFLICT', { key: 'availability.gameClosed' });
+	}
+	// La mise au jeu ferme tout : une place ne s'ouvre plus pour un match commencé.
+	if (isGameStarted(game)) {
 		throw new AppError('CONFLICT', { key: 'availability.gameClosed' });
 	}
 	// La date limite ferme l'inscription, pas la sortie : celui qui doit

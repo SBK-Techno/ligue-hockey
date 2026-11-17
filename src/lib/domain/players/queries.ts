@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, or } from 'drizzle-orm';
 import { positionRatingKeysToClear } from '#config/rating-attributes.ts';
 import { db } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
@@ -164,7 +164,7 @@ export function updatePlayer(playerId: string, patch: PlayerPatch): string[] {
  * their history with an empty assignment; sub requests filled by the deleted
  * player reopen so the league can fill them again.
  */
-export function deletePlayerAccount(playerId: string, today: string): void {
+export function deletePlayerAccount(playerId: string, today: string, nowTime: string): void {
 	const now = clock.nowMs();
 	db.transaction((tx) => {
 		tx.delete(paymentPlans).where(eq(paymentPlans.playerId, playerId)).run();
@@ -180,7 +180,15 @@ export function deletePlayerAccount(playerId: string, today: string): void {
 		const reopenable = tx
 			.select({ id: games.id })
 			.from(games)
-			.where(and(eq(games.status, 'scheduled'), gte(games.gameDate, today)))
+			.where(
+				and(
+					eq(games.status, 'scheduled'),
+					or(
+						gt(games.gameDate, today),
+						and(eq(games.gameDate, today), gt(games.startTime, nowTime))
+					)
+				)
+			)
 			.all()
 			.map((row) => row.id);
 		if (reopenable.length > 0) {
@@ -195,7 +203,12 @@ export function deletePlayerAccount(playerId: string, today: string): void {
 				.run();
 		}
 		tx.update(subRequests)
-			.set({ status: 'cancelled', filledByPlayerId: null, filledAt: null })
+			.set({
+				status: 'cancelled',
+				filledByPlayerId: null,
+				filledAt: null,
+				cancelledAt: now
+			})
 			.where(eq(subRequests.filledByPlayerId, playerId))
 			.run();
 		tx.delete(user).where(eq(user.id, playerId)).run();

@@ -21,6 +21,7 @@ import {
 } from '#lib/domain/players/service.ts';
 import { adminUpdatePlayerSchema } from '#lib/domain/players/validators.ts';
 import { getRatings } from '#lib/domain/ratings/service.ts';
+import { CURRENCY } from '#config/currency.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { applyDiscount, splitPlan } from '#lib/domain/finance/plan.ts';
 import { listSubstitutes, setSubstituteFavorite } from '#lib/domain/subs/service.ts';
@@ -66,7 +67,7 @@ function moneyToCents(value: string): number {
 export const load: ServerLoad = ({ locals, params }) => {
 	const actor = locals.actor;
 	const settings = getSettings();
-	const currency = settings['finance.currency'];
+	const currency = CURRENCY;
 	if (actor.kind !== 'user' || !params.id) {
 		return {
 			player: null,

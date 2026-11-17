@@ -1,3 +1,4 @@
+import { CURRENCY, type Currency } from '#config/currency.ts';
 import { branding } from '#lib/generated/branding.ts';
 import {
 	canViewBalance,
@@ -38,7 +39,7 @@ import {
 
 export type BalanceView = Balance & {
 	playerId: string;
-	currency: string;
+	currency: Currency;
 	playerName: string;
 	/** Un plan à zéro n'ouvre ni formulaire de paiement ni solde à payer. */
 	planActive: boolean;
@@ -48,10 +49,6 @@ export type AdminBalanceRow = BalanceView & {
 	active: boolean;
 	hasPlan: boolean;
 };
-
-function currency(): string {
-	return getSettings()['finance.currency'];
-}
 
 function today(): string {
 	return todayInZone(branding.timezone);
@@ -92,7 +89,7 @@ function balanceFor(
 	return {
 		playerId,
 		playerName,
-		currency: currency(),
+		currency: CURRENCY,
 		planActive: planIsActive(plan),
 		...(computeBalance(plan, payments, today(), graceDays()) as Balance)
 	};
@@ -102,7 +99,7 @@ function emptyBalance(playerId: string, playerName: string): BalanceView {
 	return {
 		playerId,
 		playerName,
-		currency: currency(),
+		currency: CURRENCY,
 		planActive: false,
 		status: 'upcoming',
 		totalCents: 0,

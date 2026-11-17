@@ -286,7 +286,6 @@ export const fr = {
     'Part des frais exigible au premier versement. Avec les frais actuels : {first} puis {second}.',
   'settings.installment1Due.label': 'Date du premier versement',
   'settings.installment2Due.label': 'Date du deuxième versement',
-  'settings.currency.label': 'Devise',
   'settings.maxSkillSpread.label': 'Écart de notes maximal',
   'settings.maxSkillSpread.description':
     'Refuse un alignement dont l’écart entre les moyennes de notes des deux équipes dépasse cette valeur. 0 laisse le générateur choisir.',
@@ -311,9 +310,6 @@ export const fr = {
   'settings.chatPageSize.label': 'Messages par page',
   'settings.chatPageSize.description':
     'Messages chargés à l’ouverture de la discussion.',
-  'settings.currency.CAD': 'Dollar canadien',
-  'settings.currency.USD': 'Dollar américain',
-  'settings.currency.EUR': 'Euro',
   'settings.invariant.pollOptions':
     'Le nombre minimal de choix doit être inférieur ou égal au nombre maximal.',
   'settings.invariant.installmentDates':
@@ -595,6 +591,7 @@ export const fr = {
   'gamesheet.penaltyPlayerNotDressed': '{name} n’est pas habillé pour ce match.',
   'gamesheet.assistIsScorer': 'Le buteur ne peut pas être son propre aide.',
   'gamesheet.assistDuplicate': 'Un même joueur ne peut pas signer deux aides.',
+  'gamesheet.ownGoalNoAssists': 'Un but contre son camp n’a pas d’aide.',
   'gamesheet.assistDuplicateName':
     '{name} ne peut pas être à la fois buteur et aide.',
   'gamesheet.goalNotFound': 'Ce but est introuvable.',

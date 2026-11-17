@@ -206,19 +206,41 @@ export function updateGame(
 	patch: Partial<
 		Pick<NewGame, 'gameDate' | 'startTime' | 'locationId' | 'location' | 'notes' | 'status'>
 	>,
-	updatedAt: number
-): void {
-	db.update(games)
+	updatedAt: number,
+	expectedUpdatedAt: number
+): boolean {
+	const result = db
+		.update(games)
 		.set({ ...patch, updatedAt })
-		.where(eq(games.id, gameId))
+		.where(
+			and(
+				eq(games.id, gameId),
+				eq(games.status, 'scheduled'),
+				eq(games.updatedAt, expectedUpdatedAt)
+			)
+		)
 		.run();
+	return result.changes === 1;
 }
 
-export function cancelGame(gameId: string, updatedAt: number): void {
-	db.update(games)
+/**
+ * Annule seulement un match encore programmé et jamais terminé. Le statut et
+ * l'estampille de fin sont dans la condition : un finalize concurrent gagne et
+ * l'annulation échoue au lieu d'écraser l'historique.
+ */
+export function cancelGame(gameId: string, updatedAt: number): boolean {
+	const result = db
+		.update(games)
 		.set({ status: 'cancelled', updatedAt })
-		.where(eq(games.id, gameId))
+		.where(
+			and(
+				eq(games.id, gameId),
+				eq(games.status, 'scheduled'),
+				isNull(games.completedAt)
+			)
+		)
 		.run();
+	return result.changes === 1;
 }
 
 export function listAvailability(gameId: string) {

@@ -11,6 +11,23 @@ This file tracks the current milestone, verified evidence, and the work that is 
 - Verified in this slice: `npm run gate` green (452 tests, 51 files), generated assets and documentation site current, production build served against a copy of the seeded database, home/discussion/match/schedule/admin pages fetched, and a goal written through the real action then read back from the sheet.
 - Next release step: commit, push, open the PR, merge after review, tag `v1.5.0`, release, promote and verify health.
 
+## Triple-check round 1 (in progress)
+
+Eight read-only auditors run in parallel, each on a distinct surface, then one consolidator rechecks every finding before a single writer touches code:
+
+| Auditor | Surface |
+|---|---|
+| Home and personalization | hero, agenda, panels, member modes, Québec garage-league usage |
+| Chat and polls | day groups, menus, voting, scroll, identity, keyboard |
+| Match and sheet | phase guards, scorekeeper friction, rink gap, player view |
+| Responsive and space | 320 to 1536, overflow, touch targets, density |
+| Copy and language | `tu`, sentence case, vocabulary, redundancy, CAD |
+| Domain and privacy | past-game guards, balances, ratings, permissions, atomicity, duplication |
+| Visual identity | materials, buttons, imagery, typography, AI tells, player colour |
+| Accessibility, performance, tests | semantics, contrast, bundles, N+1, missing regression coverage |
+
+Findings are confirmed against source before any edit; the round is only closed when a recheck agent returns no confirmed finding.
+
 ## 1.5.0 decisions
 
 - `config/goal-kinds.ts` is the single owner of goal kinds and their labels; the sheet schema re-exports it.

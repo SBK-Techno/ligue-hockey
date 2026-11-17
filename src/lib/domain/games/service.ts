@@ -278,7 +278,7 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 	const locationChanged = parsed.locationId !== row.locationId;
 
 	try {
-		updateGameRow(
+		const saved = updateGameRow(
 			gameId,
 			{
 				gameDate: parsed.gameDate,
@@ -289,8 +289,12 @@ export function updateGame(actor: Actor, gameId: string, input: GameInput): Game
 				...(locationChanged ? { location: location.name } : {}),
 				notes: parsed.notes
 			},
-			clock.nowMs()
+			clock.nowMs(),
+			row.updatedAt
 		);
+		if (!saved) {
+			throw new AppError('CONFLICT', { key: 'games.lineupChanged' });
+		}
 	} catch (cause) {
 		if ((cause as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
 			throw new AppError('CONFLICT', { key: 'admin.gameExists', cause });
@@ -328,7 +332,9 @@ export function cancelGame(actor: Actor, gameId: string): void {
 	}
 
 	const updatedAt = clock.nowMs();
-	cancelGameRow(gameId, updatedAt);
+	if (!cancelGameRow(gameId, updatedAt)) {
+		throw new AppError('CONFLICT', { key: 'admin.gameNotScheduled' });
+	}
 	cancelAllForGame(actor, summary(row));
 
 	const recipients = generationCandidates().map((player) => ({
@@ -427,32 +433,43 @@ export function regenerateGame(
 
 	// L'audit du calcul entre dans la même transaction que les places : une
 	// écriture échouée ne laisse ni alignement publié ni trace partielle.
-	saveAssignments(gameId, assignments, generatedAt, JSON.stringify(snapshot), generatedAt, {
-		manualAt: null,
-		removedRatedPlayerIds,
-		audits: [
-			...(removedRatedPlayerIds.length > 0
-				? [
-						auditEntry(actor, {
-							action: 'ratings.game_removed',
-							entityType: 'game',
-							entityId: gameId,
-							metadata: { playerIds: removedRatedPlayerIds }
-						})
-					]
-				: []),
-			auditEntry(actor, {
-				action: 'game.generate',
-				entityType: 'game',
-				entityId: gameId,
-				metadata: {
-					skillDiff: result.skillDiff,
-					ageDiff: result.ageDiff,
-					assignments: assignments.length
-				}
-			})
-		]
-	});
+	const saved = saveAssignments(
+		gameId,
+		assignments,
+		generatedAt,
+		JSON.stringify(snapshot),
+		generatedAt,
+		{
+			expectedGeneratedAt: row.generatedAt ?? null,
+			manualAt: null,
+			removedRatedPlayerIds,
+			audits: [
+				...(removedRatedPlayerIds.length > 0
+					? [
+							auditEntry(actor, {
+								action: 'ratings.game_removed',
+								entityType: 'game',
+								entityId: gameId,
+								metadata: { playerIds: removedRatedPlayerIds }
+							})
+						]
+					: []),
+				auditEntry(actor, {
+					action: 'game.generate',
+					entityType: 'game',
+					entityId: gameId,
+					metadata: {
+						skillDiff: result.skillDiff,
+						ageDiff: result.ageDiff,
+						assignments: assignments.length
+					}
+				})
+			]
+		}
+	);
+	if (!saved) {
+		throw new AppError('CONFLICT', { key: 'games.lineupChanged' });
+	}
 
 	const namedIds = [
 		...plan.bench.map((entry) => entry.playerId),

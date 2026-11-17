@@ -1,4 +1,4 @@
-import { TEAMS, type Team } from '#config/teams.ts';
+import { TEAMS, otherTeam, type Team } from '#config/teams.ts';
 import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
@@ -176,9 +176,12 @@ function resolveGoal(
 		)
 	);
 	const names = nameOf(ids);
+	// Un but contre son camp crédite l'autre camp, mais le buteur appartient
+	// à l'équipe qui l'a marqué contre elle-même.
+	const scoringTeam = input.kind === 'own_goal' ? otherTeam(input.team) : input.team;
 	const scorer = requireDressed(
 		slots,
-		input.team,
+		scoringTeam,
 		input.scorerPlayerId,
 		names,
 		'gamesheet.scorerNotDressed'
@@ -187,6 +190,9 @@ function resolveGoal(
 	const assistIds = [input.assist1PlayerId, input.assist2PlayerId].filter(
 		(value): value is string => value !== null
 	);
+	if (input.kind === 'own_goal' && assistIds.length > 0) {
+		throw new AppError('VALIDATION', { key: 'gamesheet.ownGoalNoAssists' });
+	}
 	const seen = new Set<string>();
 	for (const assistId of assistIds) {
 		if (assistId === input.scorerPlayerId) {
@@ -200,7 +206,7 @@ function resolveGoal(
 	for (const assistId of assistIds) {
 		const slot = requireDressed(
 			slots,
-			input.team,
+			scoringTeam,
 			assistId,
 			names,
 			'gamesheet.assistNotDressed'
@@ -217,7 +223,7 @@ function resolveGoal(
 		scorer,
 		assists: assistIds.map((playerId) => ({
 			playerId,
-			slot: slots.get(dressedKey(input.team, playerId))!
+			slot: slots.get(dressedKey(scoringTeam, playerId))!
 		}))
 	};
 }
@@ -288,7 +294,8 @@ export function getGameSheet(actor: Actor, gameId: string): GameSheetView {
 		// Un but contre son camp est écrit avec l'équipe créditée du but et le
 		// dernier attaquant comme buteur : le score compte pour cette équipe.
 		score[goal.team] += 1;
-		if (goal.scorerPlayerId) {
+		// Un but contre son camp n'est jamais un but au dossier du joueur.
+		if (goal.scorerPlayerId && goal.kind !== 'own_goal') {
 			const entry = totals.get(goal.scorerPlayerId);
 			if (entry) entry.goals += 1;
 		}

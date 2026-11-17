@@ -17,6 +17,11 @@ export type Team = (typeof TEAMS)[number]['key'];
 
 export const TEAM_KEYS = TEAMS.map((team) => team.key) as [Team, ...Team[]];
 
+/** L'autre camp, sans jamais dépendre de l'ordre du registre. */
+export function otherTeam(team: Team): Team {
+  return team === 'white' ? 'black' : 'white';
+}
+
 export function teamDefinition(team: Team) {
   const definition = TEAMS.find((entry) => entry.key === team);
   if (!definition) {

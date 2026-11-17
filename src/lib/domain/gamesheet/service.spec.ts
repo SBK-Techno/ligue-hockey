@@ -478,7 +478,7 @@ describe('score et totaux', () => {
 			period: 2,
 			clock: '09:00',
 			kind: 'own_goal',
-			scorerPlayerId: 'b'
+			scorerPlayerId: 'c'
 		});
 		addGoal(manager, 'started', {
 			team: 'black',
@@ -539,9 +539,9 @@ describe('score et totaux', () => {
 				fullName: 'b Test',
 				jerseyNumber: 11,
 				team: 'white',
-				goals: 1,
+				goals: 0,
 				assists: 1,
-				points: 2,
+				points: 1,
 				penaltyMinutes: 4
 			},
 			{
@@ -577,7 +577,7 @@ describe('score et totaux', () => {
 			assist1PlayerId: 'b'
 		});
 
-		deletePlayerAccount('a', '2026-11-16');
+		deletePlayerAccount('a', '2026-11-16', '00:00');
 
 		const sheet = getGameSheet(playerActor, 'started');
 		expect(sheet.goals[0].scorer).toEqual({

@@ -10,7 +10,7 @@ import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts'
 import { AppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
-import { clock, todayInZone } from '#lib/shared/time/clock.ts';
+import { clock, timeInZone, todayInZone } from '#lib/shared/time/clock.ts';
 import {
 	deletePlayerAccount,
 	findPlayer,
@@ -414,7 +414,12 @@ export async function deletePlayer(actor: Actor, playerId: string): Promise<void
 	if (role === 'admin') {
 		throw new AppError('FORBIDDEN', { key: 'admin.deleteAdmin' });
 	}
-	deletePlayerAccount(playerId, todayInZone(branding.timezone, clock.nowMs()));
+	const now = clock.nowMs();
+	deletePlayerAccount(
+		playerId,
+		todayInZone(branding.timezone, now),
+		timeInZone(branding.timezone, now)
+	);
 	if (findPlayer(playerId)) {
 		throw new AppError('INTERNAL', { key: 'admin.playerDeleteFailed' });
 	}
