@@ -33,7 +33,7 @@
 			? [
 					{ value: summary.present, label: t('home.present') },
 					{ value: summary.absent, label: t('home.absent') },
-					{ value: summary.unknown, label: t('availability.unknown') }
+					{ value: summary.unknown, label: t('availability.noAnswer') }
 				]
 			: [])
 	]);

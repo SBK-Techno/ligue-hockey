@@ -2,6 +2,12 @@ import type { PlayerPeekView } from '#lib/domain/players/peek.ts';
 import { clock } from '#lib/shared/time/clock.ts';
 import { PLAYER_PEEK_EVENT } from './events.ts';
 import type { PeekAnchor } from './player-peek.ts';
+import {
+	clearPeekCache,
+	readPeekCache,
+	writePeekCache,
+	type PeekCache
+} from './player-peek-cache.ts';
 
 const CACHE_TTL_MS = 30_000;
 const OPEN_DELAY_MS = 220;
@@ -19,7 +25,17 @@ let triggerElement: HTMLElement | null = null;
 let openTimer: ReturnType<typeof setTimeout> | null = null;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 let controller: AbortController | null = null;
-const cache: Record<string, { at: number; view: PlayerPeekView }> = {};
+// La portée vient de la capacité serveur; elle change avec le rôle ou la
+// session et vide le cache avant qu'une fiche puisse être resservie.
+let cacheScope = 'public';
+const cache: PeekCache<PlayerPeekView> = {};
+
+export function setPlayerPeekScope(scope: string): void {
+	if (scope === cacheScope) return;
+	cacheScope = scope;
+	clearPeekCache(cache);
+	if (openId) closePlayerPeek();
+}
 
 function clearTimers(): void {
 	if (openTimer) clearTimeout(openTimer);
@@ -40,10 +56,24 @@ function anchorOf(element: HTMLElement): PeekAnchor {
 	};
 }
 
+/**
+ * L'état du déclencheur suit l'état réel de la fiche. Une seule fonction
+ * écrit l'attribut, pour que l'ouverture, le changement de joueur et la
+ * fermeture ne puissent pas diverger.
+ */
+export function syncTriggerExpanded(
+	element: Pick<HTMLElement, 'setAttribute'>,
+	openId: string | null,
+	playerId: string
+): void {
+	element.setAttribute('aria-expanded', openId === playerId ? 'true' : 'false');
+}
+
 async function load(playerId: string): Promise<void> {
 	controller?.abort();
 	const current = new AbortController();
 	controller = current;
+	const requestScope = cacheScope;
 	try {
 		const response = await fetch(
 			`/api/joueurs/${encodeURIComponent(playerId)}`,
@@ -51,7 +81,10 @@ async function load(playerId: string): Promise<void> {
 		);
 		if (!response.ok) throw new Error(`peek ${response.status}`);
 		const data = (await response.json()) as PlayerPeekView;
-		cache[playerId] = { at: clock.nowMs(), view: data };
+		// Une réponse demandée avant un changement de capacité n'entre jamais
+		// dans la portée suivante.
+		if (requestScope !== cacheScope) return;
+		writePeekCache(cache, requestScope, playerId, data, clock.nowMs());
 		if (openId === playerId) {
 			view = data;
 			status = 'ready';
@@ -68,22 +101,27 @@ export function openPlayerPeek(
 	options: { pinned?: boolean } = {}
 ): void {
 	clearTimers();
+	if (triggerElement && triggerElement !== element) {
+		syncTriggerExpanded(triggerElement, null, triggerElement.dataset.playerId ?? '');
+	}
 	triggerElement = element;
 	anchor = anchorOf(element);
 	if (openId === playerId) {
 		if (options.pinned) pinned = true;
+		syncTriggerExpanded(element, playerId, playerId);
 		return;
 	}
 	controller?.abort();
 	openId = playerId;
 	pinned = options.pinned ?? false;
+	syncTriggerExpanded(element, playerId, playerId);
 	// La coquille charge la carte à la première ouverture, pas avant.
 	if (typeof window !== 'undefined') {
 		window.dispatchEvent(new CustomEvent(PLAYER_PEEK_EVENT));
 	}
-	const cached = cache[playerId];
-	if (cached && clock.nowMs() - cached.at < CACHE_TTL_MS) {
-		view = cached.view;
+	const cached = readPeekCache(cache, cacheScope, playerId, clock.nowMs(), CACHE_TTL_MS);
+	if (cached) {
+		view = cached;
 		status = 'ready';
 		return;
 	}
@@ -135,6 +173,7 @@ export function closePlayerPeek(options: { restoreFocus?: boolean } = {}): void 
 	status = 'idle';
 	pinned = false;
 	triggerElement = null;
+	if (focusTarget) syncTriggerExpanded(focusTarget, null, '');
 	if (options.restoreFocus && focusTarget?.isConnected) {
 		focusTarget.focus();
 	}

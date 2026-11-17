@@ -2,7 +2,6 @@ import type { Actions, ServerLoad } from '@sveltejs/kit';
 import {
 	cancelGame,
 	getGame,
-	regenerateAsAdmin,
 	updateGame
 } from '#lib/domain/games/service.ts';
 import { can } from '#lib/domain/auth/policy.ts';
@@ -105,14 +104,6 @@ export const actions: Actions = {
 				),
 				intelligence: result.intelligence
 			};
-		} catch (cause) {
-			return actionError(cause);
-		}
-	},
-	generate: async ({ locals, params }) => {
-		try {
-			regenerateAsAdmin(locals.actor, params.id!);
-			return { ok: true, message: t('games.generated') };
 		} catch (cause) {
 			return actionError(cause);
 		}

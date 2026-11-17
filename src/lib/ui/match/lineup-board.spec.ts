@@ -124,6 +124,17 @@ describe('carte d’alignement', () => {
 		).toContain(t('rink.extraSlot', { index: 2 }));
 	});
 
+	it('contient le texte visible du jeton dans son nom accessible', () => {
+		const label = slotAriaLabel(
+			'white',
+			{ position: 'forward', slotIndex: 0, role: rinkRole('forward', 0) },
+			{ jerseyNumber: 22, fullName: 'Karim Haddad' }
+		);
+
+		expect(label).toContain('22 Haddad');
+		expect(label).toContain('Karim Haddad');
+	});
+
 	it('donne un nom accessible distinct à chaque place de la glace', () => {
 		const names = new Set<string>();
 		for (const team of TEAMS) {

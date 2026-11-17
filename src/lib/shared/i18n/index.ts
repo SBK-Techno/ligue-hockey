@@ -65,6 +65,12 @@ export function formatDate(
 	return formatter.format(dateOnlyToDate(date));
 }
 
+/** Une date qui ouvre une section : la majuscule vient du formateur, pas de la vue. */
+export function formatDateHeading(date: string): string {
+	const label = formatDate(date, 'long');
+	return label.charAt(0).toLocaleUpperCase(branding.locale) + label.slice(1);
+}
+
 const weekdayShortFormat = new Intl.DateTimeFormat(branding.locale, {
 	weekday: 'short',
 	timeZone: branding.timezone

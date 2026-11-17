@@ -81,16 +81,18 @@
 <header
 	class="sticky top-0 z-30 border-b border-line bg-paper pt-[env(safe-area-inset-top)]"
 >
-	<div class="mx-auto flex h-[3.75rem] w-full max-w-6xl xl:max-w-7xl items-center gap-3 px-4">
+	<div
+		class="mx-auto flex min-h-[3.75rem] w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1 xl:max-w-7xl"
+	>
 		<BrandLockup href="/" size="sm" />
 
 		{#if !inAdmin}
-		<nav class="ml-4 hidden items-center gap-1 lg:flex" aria-label={t('nav.mainMenu')}>
+		<nav class="ml-2 hidden min-w-0 flex-wrap items-center gap-1 lg:flex" aria-label={t('nav.mainMenu')}>
 			{#each items as item (item.key)}
 				{@const active = isActiveHref(path, item.href)}
 				<a
 					href={item.href}
-					class="flex h-9 items-center whitespace-nowrap border-b-2 px-3 text-meta font-medium no-underline transition-colors {active
+					class="flex h-9 shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-meta font-medium no-underline transition-colors {active
 						? 'border-ice text-ink'
 						: 'border-transparent text-muted hover:text-ink'}"
 					aria-current={active ? 'page' : undefined}

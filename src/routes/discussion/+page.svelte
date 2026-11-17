@@ -3,9 +3,10 @@
 	import { refreshAll } from '$app/navigation';
 	import { positionDefinition } from '#config/positions.ts';
 	import { branding } from '#lib/generated/branding.ts';
-	import { formatCount, formatDate, formatTimeOfDay, t } from '#lib/shared/i18n/index.ts';
+	import { formatDateHeading, formatTimeOfDay, t } from '#lib/shared/i18n/index.ts';
 	import { toDate, todayInZone } from '#lib/shared/time/clock.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
+	import ChatNewMessages from '#lib/ui/ChatNewMessages.svelte';
 
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
@@ -43,7 +44,7 @@
 	function dayLabel(key: string): string {
 		if (key === data.today) return t('chat.today');
 		if (key === data.yesterday) return t('chat.yesterday');
-		return formatDate(key, 'long');
+		return formatDateHeading(key);
 	}
 
 	/** Le jour est écrit une fois; les messages gardent leur heure. */
@@ -133,20 +134,6 @@
 		pollOptions = pollOptions.filter((_, current) => current !== index);
 	}
 </script>
-
-{#if pillState.newMessages > 0}
-	<div
-		class="fixed inset-x-4 bottom-[calc(var(--bottom-bar-offset)+var(--bottom-bar-height))] z-30 mx-auto flex max-w-md justify-center lg:bottom-[var(--bottom-bar-offset)]"
-	>
-		<button class="btn-primary btn-sm" type="button" onclick={showNewMessages}>
-			{formatCount(
-				pillState.newMessages,
-				'chat.newMessages.one',
-				'chat.newMessages.many'
-			)}
-		</button>
-	</div>
-{/if}
 
 <PageHeader title={t('chat.title')} meta={t('chat.subtitle')}>
 	{#snippet actions()}
@@ -270,6 +257,7 @@
 									{#if message.authorJerseyNumber !== null}
 										<span
 											class="grid h-5 min-w-6 place-items-center rounded-[0.25rem] bg-ice-soft px-1 font-mono text-caption font-semibold text-ice-deep"
+											role="img"
 											aria-label={t('chat.jersey', { number: message.authorJerseyNumber })}
 										>
 											{message.authorJerseyNumber}
@@ -343,6 +331,8 @@
 			{/each}
 		</section>
 	{/if}
+
+	<ChatNewMessages count={pillState.newMessages} onshow={showNewMessages} />
 
 	<form
 		method="POST"

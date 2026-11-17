@@ -490,12 +490,25 @@ export const LEGEND_IDS = LEGENDS.map((legend) => legend.id) as [
   ...LegendId[]
 ];
 
+/** La première saison d'une ère, l'unique clé d'ordre du catalogue. */
+function eraStart(era: string): number {
+  return Number(era.slice(0, 4));
+}
+
+/**
+ * L'ordre du catalogue : la première saison, puis le nom pour départager.
+ * Il est déclaré ici et appliqué une seule fois, à la projection du sélecteur.
+ */
+export function compareLegends(a: Legend, b: Legend): number {
+  return eraStart(a.era) - eraStart(b.era) || a.name.localeCompare(b.name, 'fr');
+}
+
 /**
  * The tribute list for one position. Callers pass the position currently
  * selected in the form, so changing position immediately changes the list.
  */
 export function legendsForPosition(position: Position): readonly Legend[] {
-  return LEGENDS.filter((legend) => legend.position === position);
+  return LEGENDS.filter((legend) => legend.position === position).sort(compareLegends);
 }
 
 /**

@@ -4,6 +4,7 @@ import {
 	peekPlacement,
 	type PeekAnchor
 } from './player-peek.ts';
+import { syncTriggerExpanded } from './player-peek.svelte.ts';
 
 const anchor: PeekAnchor = {
 	top: 100,
@@ -14,6 +15,34 @@ const anchor: PeekAnchor = {
 	right: 340
 };
 const desktop = { width: 1200, height: 800 };
+
+describe('état du déclencheur de la fiche', () => {
+	function trigger() {
+		const attributes = new Map<string, string>();
+		return {
+			attributes,
+			setAttribute(name: string, value: string) {
+				attributes.set(name, value);
+			}
+		};
+	}
+
+	it('ouvre le déclencheur du joueur affiché', () => {
+		const element = trigger();
+		syncTriggerExpanded(element, 'player-1', 'player-1');
+
+		expect(element.attributes.get('aria-expanded')).toBe('true');
+	});
+
+	it('referme le déclencheur quand la fiche est fermée ou change de joueur', () => {
+		const element = trigger();
+		syncTriggerExpanded(element, null, 'player-1');
+		expect(element.attributes.get('aria-expanded')).toBe('false');
+
+		syncTriggerExpanded(element, 'player-2', 'player-1');
+		expect(element.attributes.get('aria-expanded')).toBe('false');
+	});
+});
 
 describe('placement de la fiche joueur', () => {
 	it('se pose sous la cible quand il y a de la place', () => {

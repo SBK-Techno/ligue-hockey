@@ -170,6 +170,11 @@
 
 		<SectionCard title={t('games.roster')}>
 			<div class="mb-3 flex justify-end">
+				{#if data.editable}
+					<a class="btn-secondary btn-sm mr-auto" href="/matchs/{game.id}">
+						{t('games.editLineup')}
+					</a>
+				{/if}
 				{#if game.generated}
 					<span class="badge-ice">{t('games.generated')}</span>
 				{:else}
@@ -203,25 +208,6 @@
 					<p class="text-body text-muted">
 						{t('games.sizeGap', { count: intelligence.sizeDiff })}
 					</p>
-					<div class="ml-auto flex flex-wrap gap-2">
-						{#if data.editable}
-							<form method="POST" action="?/generate" use:progressiveForm>
-								{#if game.generated}
-									<ConfirmSubmit
-										label={t('games.regenerate')}
-										title={t('games.regenerate')}
-										question={t('games.regenerateConfirm')}
-										confirmLabel={t('games.regenerate')}
-										cancelLabel={t('common.cancel')}
-										tone="neutral"
-										class="btn-secondary btn-sm"
-									/>
-								{:else}
-									<button class="btn-primary btn-sm" type="submit">{t('games.generate')}</button>
-								{/if}
-							</form>
-						{/if}
-					</div>
 				</div>
 
 				<TeamLineup
@@ -334,11 +320,6 @@
 				{/if}
 			{:else}
 				<p class="text-body text-muted">{t('games.lineupSoon')}</p>
-				{#if data.editable}
-					<form method="POST" action="?/generate" use:progressiveForm class="mt-3">
-						<button class="btn-primary" type="submit">{t('games.generate')}</button>
-					</form>
-				{/if}
 			{/if}
 		</SectionCard>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centsToInput, formatCount, formatDecimal } from './index.ts';
+import { centsToInput, formatCount, formatDateHeading, formatDecimal } from './index.ts';
 
 describe('formatCount', () => {
 	it('uses the French singular for zero and one', () => {
@@ -12,6 +12,15 @@ describe('formatCount', () => {
 		expect(formatCount(14, 'games.openSlots.one', 'games.openSlots.many')).toBe(
 			'14 places ouvertes'
 		);
+	});
+});
+
+describe('formatDateHeading', () => {
+	it('met la majuscule sur un libellé de jour autonome', () => {
+		const label = formatDateHeading('2026-11-12');
+
+		expect(label.startsWith('J')).toBe(true);
+		expect(label).toContain('12');
 	});
 });
 

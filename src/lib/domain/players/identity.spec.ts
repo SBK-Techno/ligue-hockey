@@ -220,9 +220,9 @@ describe('résolution de l’identité', () => {
 
 	it('ne donne jamais une légende d’un autre poste', () => {
 		for (const position of POSITION_KEYS) {
-			expect(firstFreeAvatarId(AVATAR_IDS, position), position).toBe(
-				legendsForPosition(position)[0]?.id
-			);
+			const assigned = firstFreeAvatarId(AVATAR_IDS, position);
+			expect(assigned, position).not.toBeNull();
+			expect(identityAllowedForPosition(assigned!, position), position).toBe(true);
 		}
 		expect(firstFreeAvatarId(AVATAR_IDS, 'forward')).toBe('legende-maurice-richard');
 		expect(firstFreeAvatarId(IDENTITY_IDS, 'forward')).toBeNull();
@@ -253,6 +253,15 @@ describe('position des identités', () => {
 });
 
 describe('options de légendes du sélecteur', () => {
+	it('suit l’ordre déclaré du catalogue, par première saison, à chaque poste', () => {
+		for (const position of POSITION_KEYS) {
+			const starts = legendOptionsForPosition(position, null).map((legend) =>
+				Number(legend.era.slice(0, 4))
+			);
+			expect(starts, position).toEqual([...starts].sort((a, b) => a - b));
+		}
+	});
+
 	it('garde la légende enregistrée hors poste en tête, une seule fois', () => {
 		const options = legendOptionsForPosition('forward', 'legende-roy');
 

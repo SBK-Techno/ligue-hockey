@@ -49,6 +49,7 @@
 	data-player-id={peek ? player.userId : undefined}
 	tabindex={peek && !decorative ? 0 : undefined}
 	aria-haspopup={peek ? 'dialog' : undefined}
+	aria-expanded={peek && !decorative ? 'false' : undefined}
 >
 	{#if variant}
 		<!-- Le catalogue fixe est chargé une fois; chaque avatar n'est qu'une référence. -->

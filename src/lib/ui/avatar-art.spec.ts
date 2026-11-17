@@ -3,15 +3,28 @@ import { IDENTITIES } from '#config/identities.ts';
 import { avatarSymbol } from './avatar-art.ts';
 
 describe('rendu des avatars', () => {
-	it('produit un symbole distinct pour chaque variante', () => {
+	it('produit un dessin distinct pour chaque variante', () => {
 		const rendered = IDENTITIES.map((avatar) => avatarSymbol(avatar));
 		expect(rendered).toHaveLength(58);
-		expect(new Set(rendered).size).toBe(58);
+		// L'identifiant est unique par construction : la comparaison porte donc
+		// sur le dessin, après avoir neutralisé l'enveloppe du symbole.
+		const drawings = rendered.map((svg) => svg.replace(/^<symbol[^>]*>/, ''));
+		expect(new Set(drawings).size).toBe(58);
 		for (const svg of rendered) {
 			expect(svg.startsWith('<symbol')).toBe(true);
 			expect(svg).toContain('viewBox="0 0 512 512"');
 			expect(svg).not.toContain('<svg');
 		}
+	});
+
+	it('détecte deux dessins identiques sous deux identifiants', () => {
+		const base = IDENTITIES[0];
+		const copy = { ...base, id: 'identite-copie' };
+		const drawings = [avatarSymbol(base), avatarSymbol(copy)].map((svg) =>
+			svg.replace(/^<symbol[^>]*>/, '')
+		);
+
+		expect(new Set(drawings).size).toBe(1);
 	});
 
 	it('n’écrit aucune couleur brute', () => {

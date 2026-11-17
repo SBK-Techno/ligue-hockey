@@ -25,7 +25,7 @@
 	cells={[
 		{ value: availability.present, label: t('home.present') },
 		{ value: availability.absent, label: t('home.absent') },
-		{ value: availability.unknown, label: t('availability.unknown') }
+		{ value: availability.unknown, label: t('availability.noAnswer') }
 	]}
 />
 

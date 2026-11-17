@@ -29,14 +29,23 @@ export type PlayerPeekView = {
 };
 
 /**
+ * La portée du cache client et de la réponse HTTP : la seule capacité qui
+ * change le contenu de la fiche est la lecture des notes. Le serveur la
+ * résout; le navigateur ne reçoit qu'un jeton de portée.
+ */
+export type PeekScope = 'ratings' | 'public';
+
+export function peekScope(actor: Actor): PeekScope {
+	return actor.kind === 'user' && can(actor, 'editRatings') ? 'ratings' : 'public';
+}
+
+/**
  * La fiche complète n'est jamais mise en cache : une réponse qui contient les
  * notes ne doit pas resservir après une perte de capacité. Les autres fiches
  * restent privées et courtes.
  */
 export function peekCacheControl(actor: Actor): string {
-	return actor.kind === 'user' && can(actor, 'editRatings')
-		? 'no-store'
-		: 'private, max-age=15';
+	return peekScope(actor) === 'ratings' ? 'no-store' : 'private, max-age=15';
 }
 
 /**

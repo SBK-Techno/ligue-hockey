@@ -11,10 +11,27 @@ type NamedPlacement = {
 	role: Pick<RinkPlacement, 'labelKey' | 'line' | 'pair'> | null;
 };
 
+/** Le nom de famille affiché sous le numéro, sur un jeton de la glace. */
+export function rinkPlayerLastName(fullName: string): string {
+	return fullName.trim().split(/\s+/).at(-1) ?? fullName;
+}
+
+/** Le texte visible d'un jeton rempli : le numéro, puis le nom de famille. */
+export function rinkTokenText(player: {
+	jerseyNumber: number | null;
+	fullName: string;
+}): string {
+	return `${player.jerseyNumber ?? '?'} ${rinkPlayerLastName(player.fullName)}`;
+}
+
 /**
  * Le nom accessible d'une place : équipe, rôle, puis trio ou paire. Les deux
  * centres et les deux ailes ne partagent donc jamais un nom; une place hors
  * glace se distingue par son indice. Aucun écran ne recompose ce nom.
+ *
+ * Le libellé visible du jeton est construit par la même fonction, puis le nom
+ * complet est ajouté : le nom accessible contient toujours le texte visible,
+ * comme l'exige le critère « label in name ».
  */
 export function slotAriaLabel(
 	team: Team,
@@ -35,7 +52,7 @@ export function slotAriaLabel(
 	}
 	parts.push(
 		player
-			? `${player.jerseyNumber ?? ''} ${player.fullName}`
+			? `${rinkTokenText(player)}, ${player.fullName}`
 			: t('rink.emptySlot')
 	);
 	return parts.join(', ');

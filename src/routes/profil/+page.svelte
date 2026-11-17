@@ -36,7 +36,7 @@
 		(session) => session.id !== initial.currentSessionId
 	);
 	const [
-		AvatarPicker,
+		IdentityDisclosure,
 		PositionChips,
 		StatStrip,
 		PasswordField,
@@ -44,7 +44,7 @@
 		InstallPrompt
 	] = await Promise.all([
 		initial.avatarPicker
-			? import('#lib/ui/AvatarPicker.svelte').then((module) => module.default)
+			? import('#lib/ui/IdentityDisclosure.svelte').then((module) => module.default)
 			: null,
 		initial.isSubstitute
 			? import('#lib/ui/PositionChips.svelte').then((module) => module.default)
@@ -441,12 +441,13 @@
 									</p>
 								</div>
 								<div class="sm:col-span-2">
-									{#if data.avatarPicker && AvatarPicker}
-										<AvatarPicker
-											name="avatarId"
+									{#if data.avatarPicker && IdentityDisclosure && profile}
+										<IdentityDisclosure
 											selected={data.avatarPicker.selected}
 											taken={data.avatarPicker.taken}
 											position={position}
+											player={profile}
+											legendName={data.legend?.name ?? null}
 										/>
 									{/if}
 								</div>

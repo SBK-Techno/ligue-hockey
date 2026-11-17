@@ -83,7 +83,7 @@
 </script>
 
 <div class="space-y-5">
-	<div class="rounded-card border border-line bg-ink px-4 py-3 text-paper">
+	<div class="scoreboard-split rounded-card border border-line bg-ink px-4 py-3 text-paper">
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
 			{#each TEAMS as team, index (team.key)}
 				{#if index === 1}

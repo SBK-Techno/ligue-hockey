@@ -21,6 +21,7 @@
 		data-player-id={playerId}
 		data-player-peek="click"
 		aria-haspopup="dialog"
+		aria-expanded="false"
 	>
 		{name}
 	</button>

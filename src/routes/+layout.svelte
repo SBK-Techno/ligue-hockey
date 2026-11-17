@@ -73,19 +73,29 @@
 		};
 		window.addEventListener(PLAYER_PEEK_EVENT, showPeek);
 		window.addEventListener(CONFIRM_REQUEST_EVENT, showConfirm);
+		return () => {
+			window.removeEventListener(PLAYER_PEEK_EVENT, showPeek);
+			window.removeEventListener(CONFIRM_REQUEST_EVENT, showConfirm);
+		};
+	});
 
-		// Les déclencheurs du peek s'installent après la peinture initiale; aucune
-		// page ne paie le store ni la carte avant d'avoir interagi avec un joueur.
-		let dispose: (() => void) | undefined;
+	// Les déclencheurs du peek s'installent après la peinture initiale; aucune
+	// page ne paie la carte avant d'avoir interagi avec un joueur. La portée
+	// suit la capacité calculée par le serveur et vide le cache si elle change.
+	$effect(() => {
+		const scope = data.peekScope;
 		let active = true;
-		void import('#lib/ui/player-peek.svelte.ts').then(({ installPlayerPeekTriggers }) => {
-			if (active) dispose = installPlayerPeekTriggers();
-		});
+		let dispose: (() => void) | undefined;
+		void import('#lib/ui/player-peek.svelte.ts').then(
+			({ installPlayerPeekTriggers, setPlayerPeekScope }) => {
+				if (!active) return;
+				setPlayerPeekScope(scope);
+				dispose = installPlayerPeekTriggers();
+			}
+		);
 		return () => {
 			active = false;
 			dispose?.();
-			window.removeEventListener(PLAYER_PEEK_EVENT, showPeek);
-			window.removeEventListener(CONFIRM_REQUEST_EVENT, showConfirm);
 		};
 	});
 

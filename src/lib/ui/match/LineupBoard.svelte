@@ -10,6 +10,7 @@
 		boardPlacements,
 		clearSelectedPlace,
 		initialAssignments,
+		rinkPlayerLastName,
 		selectBenchPlayer,
 		selectPlace,
 		slotAriaLabel,
@@ -139,11 +140,12 @@
 								data-player-peek={!canEdit && player ? 'click' : undefined}
 								onclick={() => selectSlot(placement.key)}
 								aria-label={slotAriaLabel(team.key, placement, player)}
+								aria-expanded={!canEdit && player ? 'false' : undefined}
 								aria-pressed={canEdit ? selected === placement.key : undefined}
 							>
 								{#if player}
 									<span class="rink-number">{player.jerseyNumber ?? '?'}</span>
-									<span class="rink-name">{player.fullName.split(' ').at(-1)}</span>
+									<span class="rink-name">{rinkPlayerLastName(player.fullName)}</span>
 								{:else}
 									<span class="rink-empty">+</span>
 								{/if}
@@ -167,6 +169,7 @@
 									data-player-peek={!canEdit && player ? 'click' : undefined}
 									onclick={() => selectSlot(placement.key)}
 									aria-label={slotAriaLabel(team.key, placement, player)}
+									aria-expanded={!canEdit && player ? 'false' : undefined}
 									aria-pressed={canEdit ? selected === placement.key : undefined}
 								>
 									{#if player}

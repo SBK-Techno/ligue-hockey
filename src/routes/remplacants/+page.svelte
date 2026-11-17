@@ -30,6 +30,7 @@
 	{#if !data.isSubstitute && !data.canManageRequests}
 		<div class="notice">
 			<p>{t('subs.notInPool')}</p>
+			<p class="mt-1">{t('subs.notInPoolHelp')}</p>
 		</div>
 	{/if}
 

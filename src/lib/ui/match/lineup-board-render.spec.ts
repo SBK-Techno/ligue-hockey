@@ -68,6 +68,31 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).toContain(t('team.black'));
 	});
 
+	it('donne à chaque jeton rempli un nom qui contient son texte visible', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench,
+				canEdit: false,
+				expectedGeneratedAt: 123
+			}
+		});
+		const tokens = [
+			...body.matchAll(/<button[^>]*class="rink-token"[^>]*>([\s\S]*?)<\/button>/g)
+		].filter((match) => match[0].includes('data-filled="true"'));
+
+		expect(tokens).toHaveLength(34);
+		for (const token of tokens) {
+			const label = token[0].match(/aria-label="([^"]*)"/)?.[1] ?? '';
+			const visible = token[1]
+				.replace(/<!--[\s\S]*?-->/g, '')
+				.replace(/<[^>]*>/g, '')
+				.replace(/\s+/g, ' ')
+				.trim();
+			expect(label, visible).toContain(visible);
+		}
+	});
+
 	it('rend les joueurs du banc comme des boutons non sélectionnés', () => {
 		const { body } = render(LineupBoard, {
 			props: {

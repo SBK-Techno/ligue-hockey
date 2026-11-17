@@ -9,7 +9,7 @@ vi.mock('#lib/domain/gamesheet/season-stats.ts', () => ({
 	seasonStatsFor: vi.fn()
 }));
 
-const { assertPeekAllowed, peekCacheControl } = await import('./peek.ts');
+const { assertPeekAllowed, peekCacheControl, peekScope } = await import('./peek.ts');
 
 const player: Actor = {
 	kind: 'user',
@@ -38,6 +38,12 @@ describe('cache de la fiche de joueur', () => {
 	it('garde une fiche privée et courte sans notes', () => {
 		expect(peekCacheControl(player)).toBe('private, max-age=15');
 		expect(peekCacheControl({ kind: 'anonymous' })).toBe('private, max-age=15');
+	});
+
+	it('donne une portée différente au lecteur qui voit les notes', () => {
+		expect(peekScope(admin)).toBe('ratings');
+		expect(peekScope(player)).toBe('public');
+		expect(peekScope({ kind: 'anonymous' })).toBe('public');
 	});
 });
 

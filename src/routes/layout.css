@@ -265,7 +265,13 @@
 		color: var(--color-on-brand);
 		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-on-brand) 8%, transparent);
 	}
-	.scoreboard::after {
+	/* La ligne de centre appartient au score à deux colonnes, jamais à une
+	   surface qui ne montre qu'une identité ou un prochain match. */
+	.scoreboard-split {
+		position: relative;
+		overflow: hidden;
+	}
+	.scoreboard-split::after {
 		content: '';
 		position: absolute;
 		inset: 0;
@@ -572,7 +578,7 @@
 		width: 4rem;
 		flex-shrink: 0;
 		font-family: var(--font-mono);
-		font-size: 0.75rem;
+		font-size: var(--text-meta);
 		color: var(--color-muted);
 		white-space: nowrap;
 	}
@@ -680,8 +686,11 @@
 		box-shadow: none;
 	}
 	.rink-token[data-selected='true'] {
-		outline: 3px solid var(--color-accent);
-		outline-offset: 2px;
+		/* La sélection garde son anneau, mais sur l'ombre : le contour reste
+		   réservé au focus clavier, même quand les deux se superposent. */
+		box-shadow:
+			0 0 0 3px var(--color-accent),
+			0 2px 0 color-mix(in srgb, var(--color-ink) 30%, transparent);
 	}
 	.rink-token:disabled {
 		cursor: default;
@@ -777,7 +786,12 @@
 		outline-offset: 1px;
 	}
 	.player-name {
-		display: inline;
+		display: inline-flex;
+		align-items: center;
+		/* La cible fait 44 px sans ajouter une ligne : la marge négative rend
+		   au flux la hauteur du texte, le remplissage reste cliquable. */
+		min-height: 2.75rem;
+		margin-block: -0.65rem;
 		padding: 0;
 		border: 0;
 		background: none;

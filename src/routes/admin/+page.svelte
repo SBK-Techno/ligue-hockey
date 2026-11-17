@@ -58,7 +58,7 @@
 				? [{ value: data.counts.openRequests, label: t('admin.openRequests') }]
 				: []),
 			...(data.permissions.games
-				? [{ value: data.counts.unanswered, label: t('admin.unanswered') }]
+				? [{ value: data.counts.unanswered, label: t('availability.noAnswer') }]
 				: [])
 		]}
 	/>

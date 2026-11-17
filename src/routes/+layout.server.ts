@@ -7,6 +7,7 @@ import {
 } from '#lib/domain/auth/surfaces.ts';
 import { ACCOUNT_LIMITS } from '#config/account.ts';
 import { roleDefinition } from '#config/roles.ts';
+import { peekScope } from '#lib/domain/players/peek.ts';
 import { findOwnProfile } from '#lib/domain/players/service.ts';
 
 const PUBLIC_PREFIXES = ['/connexion', '/mot-de-passe-oublie', '/reinitialiser-mot-de-passe'];
@@ -31,6 +32,7 @@ export const load = ({ locals, url }: { locals: App.Locals; url: URL }) => {
 			hasPlayerProfile: false,
 			isSubstitute: false,
 			avatarId: null,
+			peekScope: peekScope(actor),
 			nav: {
 				primary: [],
 				mobile: [],
@@ -53,6 +55,7 @@ export const load = ({ locals, url }: { locals: App.Locals; url: URL }) => {
 		hasPlayerProfile: profile !== null,
 		isSubstitute: profile?.isSubstitute ?? false,
 		avatarId: profile?.avatarId ?? null,
+		peekScope: peekScope(actor),
 		// L'autorisation est calculée côté serveur; le navigateur ne reçoit que
 		// les entrées déjà visibles, jamais la table des capacités.
 		nav: {
