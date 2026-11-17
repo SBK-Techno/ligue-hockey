@@ -1,51 +1,140 @@
 @theme {
-	/* Palette : encre, papier chaud, bleu SBK, rouge de filet. */
-	--color-ink: #101a22;
-	--color-paper: #f5f2ea;
-	--color-paper-deep: #ece7db;
-	--color-surface: #fffcf6;
-	/* Texte et icônes posés sur une surface de marque (bleu, rouge). */
-	--color-on-brand: var(--color-surface);
+	/* Palette : bleu de denim, papier chaud, rouge de brique. */
+	--color-ink: #12283a;
+	--color-paper: #f6f1e7;
+	--color-paper-deep: #eae1d2;
+	--color-surface: #fffdf8;
+	/* Texte et icônes posés sur une surface de marque. */
+	--color-on-brand: #ffffff;
 	/* Trait décoratif : séparateurs, bordures de cartes. */
-	--color-line: #ded6c7;
+	--color-line: #ddd2bf;
 	/* Trait de commande : bordure de champ, de bouton secondaire, de case. 3:1 minimum. */
-	--color-line-strong: #958872;
-	--color-muted: #58656e;
-	--color-ice: #2453bb;
-	--color-ice-deep: #173b8c;
-	--color-ice-soft: #e5eaf8;
-	--color-alert: #b23a25;
-	--color-alert-deep: #8e2c1b;
-	--color-alert-soft: #f9e4de;
-	--color-ok: #2c6a4c;
-	--color-ok-soft: #e2efe5;
-	/* Marque de la ligue : la plinthe jaune d'un aréna. Un seul repère par écran. */
-	--color-ochre: #a9700f;
-	--font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', 'Segoe UI', system-ui,
-		-apple-system, sans-serif;
-	--font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Palatino,
-		Georgia, serif;
-	--font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-	--radius-card: 0.5rem;
-	--radius-sheet: 0.375rem;
-	--radius-control: 0.375rem;
-	--shadow-card: 0 1px 2px rgb(16 26 34 / 0.04);
-	--shadow-lift: 0 2px 4px rgb(16 26 34 / 0.06), 0 20px 40px -30px rgb(16 26 34 / 0.35);
-	--shadow-strip: 0 1px 0 rgb(255 252 246 / 0.08) inset;
+	--color-line-strong: #8c7b63;
+	--color-muted: #5e6a6a;
+	--color-ice: #1f5c99;
+	--color-ice-deep: #173f6b;
+	--color-ice-soft: #e3ecf4;
+	/* Rouge de la ligue : la marque, jamais une alerte de formulaire. */
+	--color-accent: #b4432f;
+	--color-accent-deep: #8c3223;
+	--color-accent-soft: #f6e4dd;
+	--color-alert: #a33a2a;
+	--color-alert-deep: #7f2a1d;
+	--color-alert-soft: #f7e3dd;
+	--color-ok: #3f6b4c;
+	--color-ok-soft: #e5efe6;
+	/* Maillots : deux équipes, noir et blanc, indépendantes de la palette de l'app. */
+	--color-team-black: #101010;
+	--color-team-white: #ffffff;
+
+	/* Deux familles, deux voix : la planche d'aréna et le tableau indicateur. */
+	--font-sans: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--font-display: 'Anybody Variable', 'Anybody', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--font-mono: 'Spline Sans Mono Variable', 'Spline Sans Mono', ui-monospace, 'SFMono-Regular',
+		Menlo, Consolas, monospace;
+
+	/* Cartes et feuilles : coins ronds, ombre chaude et douce. */
+	--radius-card: 1rem;
+	--radius-sheet: 1rem;
+	--radius-control: 0.75rem;
+	--radius-pill: 999px;
+	--shadow-card: 0 1px 2px rgb(18 40 58 / 0.05), 0 14px 34px -24px rgb(18 40 58 / 0.26);
+	/* Un panneau se soulève : ombre diffuse, jamais un décalage dur. */
+	--shadow-lift: 0 2px 4px rgb(18 40 58 / 0.07), 0 22px 48px -28px rgb(18 40 58 / 0.32);
+	--shadow-button: inset 0 1px 0 rgb(255 253 248 / 0.2);
+	--shadow-strip: none;
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-	/* Durées : court pour un retour immédiat, moyen pour un panneau, long pour une entrée. */
-	--duration-fast: 160ms;
+	--ease-spring: cubic-bezier(0.22, 1.18, 0.36, 1);
+
+	/* Durées : court pour un retour immédiat, moyen pour un panneau. */
+	--duration-fast: 140ms;
 	--duration-base: 220ms;
 	--duration-slow: 320ms;
+
+	/* Rôles typographiques. Aucune taille hors de cette échelle. */
+	--text-display: clamp(1.75rem, 1.25rem + 1.7vw, 2.5rem);
+	--text-section: 1.375rem;
+	--text-subhead: 1rem;
+	--text-body: 0.9375rem;
+	--text-meta: 0.8125rem;
+	/* Libellé dense : une seule taille entre la méta et le tampon. */
+	--text-caption: 0.6875rem;
+	--text-stamp: 0.625rem;
+	--text-clock: clamp(3.5rem, 9vw, 5.5rem);
+	/* Unité du cadran : relative à l'horloge, jamais une taille de texte. */
+	--text-clock-unit: 0.45em;
+	/* Chiffre de bandeau : s'adapte à la largeur de la cellule. */
+	--text-metric: clamp(1.15rem, 5vw, 1.5rem);
+	--text-figure: 1.75rem;
+	--text-figure-sm: 0.9375rem;
+
 	/* Largeur de lecture confortable pour les messages et les textes longs. */
 	--measure: 68ch;
 }
 
+/*
+ * Avatars compose their colours inside SVG strings, outside Tailwind
+ * utilities. `static` prevents these unused variables from being pruned.
+ */
+@theme static {
+	/* Six skin tones, six hair colours, six backgrounds. */
+	--color-avatar-skin-1: #f2c9a0;
+	--color-avatar-skin-2: #e3ab7d;
+	--color-avatar-skin-3: #c98a5c;
+	--color-avatar-skin-4: #a4693f;
+	--color-avatar-skin-5: #7d4a2a;
+	--color-avatar-skin-6: #5c3520;
+	--color-avatar-hair-1: #2b2118;
+	--color-avatar-hair-2: #4a3220;
+	--color-avatar-hair-3: #7a4f2a;
+	--color-avatar-hair-4: #b98341;
+	--color-avatar-hair-5: #8c8c8c;
+	--color-avatar-hair-6: #1c1c1c;
+	--color-avatar-bg-1: #e9e1d2;
+	--color-avatar-bg-2: #dbe4e2;
+	--color-avatar-bg-3: #e3ddcf;
+	--color-avatar-bg-4: #d6dfe6;
+	--color-avatar-bg-5: #e6dfe3;
+	--color-avatar-bg-6: #dfe3d5;
+
+	/* Player accents: 28 dark shades that read on cream paper. */
+	--color-player-1: #1f3a5f;
+	--color-player-2: #8c3223;
+	--color-player-3: #2c6e5b;
+	--color-player-4: #5b3d8a;
+	--color-player-5: #a3561f;
+	--color-player-6: #1e6b8c;
+	--color-player-7: #7a2f4f;
+	--color-player-8: #3f6b4c;
+	--color-player-9: #4a4f9c;
+	--color-player-10: #9a6a1f;
+	--color-player-11: #2f7a7a;
+	--color-player-12: #6b3524;
+	--color-player-13: #7a3f8c;
+	--color-player-14: #a13b3b;
+	--color-player-15: #2d5f3f;
+	--color-player-16: #8a4b7a;
+	--color-player-17: #1f5c99;
+	--color-player-18: #b06a2c;
+	--color-player-19: #3d4b7a;
+	--color-player-20: #6a7a2f;
+	--color-player-21: #7c2d3a;
+	--color-player-22: #2c5a6b;
+	--color-player-23: #9b4b2f;
+	--color-player-24: #4a3b78;
+	--color-player-25: #24665a;
+	--color-player-26: #8a6a3a;
+	--color-player-27: #5c2f5f;
+	--color-player-28: #335c8c;
+}
+
 :root {
 	/* Une seule source pour la barre mobile : hauteur utile + zone sûre iOS. */
-	--bottom-bar-height: 4.5rem;
+	--bottom-bar-height: 4.125rem;
 	--bottom-bar-offset: calc(
-		var(--bottom-bar-height) + 1px + env(safe-area-inset-bottom)
+		var(--bottom-bar-height) + max(0.5rem, env(safe-area-inset-bottom))
 	);
 	--anchor-offset: calc(3.75rem + 1px + env(safe-area-inset-top) + 0.75rem);
+	/* Gouttière du numéro de chandail dans une feuille de présence. */
+	--jersey-gutter: 2.5rem;
 }

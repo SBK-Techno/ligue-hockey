@@ -1,10 +1,12 @@
-import { and, asc, eq, gte, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, or } from 'drizzle-orm';
+import { positionRatingKeysToClear } from '#config/rating-attributes.ts';
 import { db } from '#lib/server/db/index.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { paymentPlans, payments } from '#lib/domain/finance/schema.ts';
 import { gameSlots, games } from '#lib/domain/games/schema.ts';
 import { subRequests } from '#lib/domain/subs/schema.ts';
 import { clock } from '#lib/shared/time/clock.ts';
+import { playerRatings, type PlayerRatingRow } from '#lib/domain/ratings/schema.ts';
 import { players, type NewPlayerRow, type PlayerRow } from './schema.ts';
 
 export type PlayerWithEmail = PlayerRow & {
@@ -25,6 +27,7 @@ export function findPlayerWithEmail(playerId: string): PlayerWithEmail | undefin
 			position: players.position,
 			age: players.age,
 			jerseyNumber: players.jerseyNumber,
+			avatarId: players.avatarId,
 			isSubstitute: players.isSubstitute,
 			active: players.active,
 			createdAt: players.createdAt,
@@ -56,6 +59,20 @@ export function listActivePlayers(): PlayerRow[] {
 		.all();
 }
 
+export type PlayerAvatarAssignment = {
+	userId: string;
+	avatarId: string | null;
+};
+
+/** Every active player, including those whose avatar is still derived. */
+export function listActiveAvatarAssignments(): PlayerAvatarAssignment[] {
+	return db
+		.select({ userId: players.userId, avatarId: players.avatarId })
+		.from(players)
+		.where(eq(players.active, true))
+		.all();
+}
+
 export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 	return db
 		.select({
@@ -65,6 +82,7 @@ export function listAllPlayersWithEmail(): PlayerWithEmail[] {
 			position: players.position,
 			age: players.age,
 			jerseyNumber: players.jerseyNumber,
+			avatarId: players.avatarId,
 			isSubstitute: players.isSubstitute,
 			active: players.active,
 			createdAt: players.createdAt,
@@ -85,16 +103,58 @@ export function insertPlayer(row: NewPlayerRow): void {
 export type PlayerPatch = Partial<
 	Pick<
 		PlayerRow,
-		'firstName' | 'lastName' | 'position' | 'age' | 'jerseyNumber' | 'isSubstitute' | 'active'
+		| 'firstName'
+		| 'lastName'
+		| 'position'
+		| 'age'
+		| 'jerseyNumber'
+		| 'avatarId'
+		| 'isSubstitute'
+		| 'active'
 	>
 >;
 
-export function updatePlayer(playerId: string, patch: PlayerPatch): void {
-	if (Object.keys(patch).length === 0) return;
-	db.update(players)
-		.set({ ...patch, updatedAt: clock.nowMs() })
-		.where(eq(players.userId, playerId))
-		.run();
+/**
+ * Met à jour le joueur et, si son poste change, supprime dans la même
+ * transaction les critères de position qui ne s'appliquent plus. Retourne les
+ * critères supprimés pour que le service puisse les auditer.
+ */
+export function updatePlayer(playerId: string, patch: PlayerPatch): string[] {
+	if (Object.keys(patch).length === 0) return [];
+	return db.transaction((tx) => {
+		let cleared: string[] = [];
+		if (patch.position !== undefined) {
+			const current = tx
+				.select({ position: players.position })
+				.from(players)
+				.where(eq(players.userId, playerId))
+				.get();
+			if (current && current.position !== patch.position) {
+				const stored = tx
+					.select({ attribute: playerRatings.attribute })
+					.from(playerRatings)
+					.where(eq(playerRatings.playerId, playerId))
+					.all()
+					.map((row) => row.attribute);
+				cleared = positionRatingKeysToClear(patch.position, stored);
+				if (cleared.length > 0) {
+					tx.delete(playerRatings)
+						.where(
+							and(
+								eq(playerRatings.playerId, playerId),
+								inArray(playerRatings.attribute, cleared as PlayerRatingRow['attribute'][])
+							)
+						)
+						.run();
+				}
+			}
+		}
+		tx.update(players)
+			.set({ ...patch, updatedAt: clock.nowMs() })
+			.where(eq(players.userId, playerId))
+			.run();
+		return cleared;
+	});
 }
 
 /**
@@ -104,7 +164,7 @@ export function updatePlayer(playerId: string, patch: PlayerPatch): void {
  * their history with an empty assignment; sub requests filled by the deleted
  * player reopen so the league can fill them again.
  */
-export function deletePlayerAccount(playerId: string, today: string): void {
+export function deletePlayerAccount(playerId: string, today: string, nowTime: string): void {
 	const now = clock.nowMs();
 	db.transaction((tx) => {
 		tx.delete(paymentPlans).where(eq(paymentPlans.playerId, playerId)).run();
@@ -120,7 +180,15 @@ export function deletePlayerAccount(playerId: string, today: string): void {
 		const reopenable = tx
 			.select({ id: games.id })
 			.from(games)
-			.where(and(eq(games.status, 'scheduled'), gte(games.gameDate, today)))
+			.where(
+				and(
+					eq(games.status, 'scheduled'),
+					or(
+						gt(games.gameDate, today),
+						and(eq(games.gameDate, today), gt(games.startTime, nowTime))
+					)
+				)
+			)
 			.all()
 			.map((row) => row.id);
 		if (reopenable.length > 0) {
@@ -135,7 +203,12 @@ export function deletePlayerAccount(playerId: string, today: string): void {
 				.run();
 		}
 		tx.update(subRequests)
-			.set({ status: 'cancelled', filledByPlayerId: null, filledAt: null })
+			.set({
+				status: 'cancelled',
+				filledByPlayerId: null,
+				filledAt: null,
+				cancelledAt: now
+			})
 			.where(eq(subRequests.filledByPlayerId, playerId))
 			.run();
 		tx.delete(user).where(eq(user.id, playerId)).run();

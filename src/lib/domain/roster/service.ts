@@ -1,12 +1,14 @@
 import type { I18nKey } from '#config/i18n/fr.ts';
 import type { Position } from '#config/positions.ts';
-import { requireUser } from '#lib/domain/auth/policy.ts';
+import { requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import {
 	getGame,
 	listSchedule,
 	regenerateIfGenerated
 } from '#lib/domain/games/service.ts';
+import { isGameStarted } from '#lib/domain/games/playability.ts';
+import { splitSchedule } from '#lib/domain/games/schedule.ts';
 import type { GameSummary } from '#lib/domain/games/types.ts';
 import {
 	cancelRequestByAdmin as cancelSubRequest,
@@ -27,6 +29,11 @@ export type SubRequestWithGame = SubRequestView & {
 	game: GameSummary;
 };
 
+export type RequestableGame = Pick<
+	GameSummary,
+	'id' | 'gameDate' | 'startTime' | 'location'
+>;
+
 export type RosterActionResult = {
 	regenerated: boolean;
 	warning?: I18nKey;
@@ -34,10 +41,12 @@ export type RosterActionResult = {
 
 export type ClaimActionResult = ClaimResult & RosterActionResult;
 
-export function listOpenRequests(actor: Actor): SubRequestWithGame[] {
-	requireUser(actor);
-	const games = new Map(listSchedule(actor).map((game) => [game.id, game]));
-	return listOpenRequestsForMember(actor)
+function withGames(
+	requests: readonly SubRequestView[],
+	schedule: readonly GameSummary[]
+): SubRequestWithGame[] {
+	const games = new Map(schedule.map((game) => [game.id, game]));
+	return requests
 		.map((request) => {
 			const game = games.get(request.gameId);
 			return game ? { ...request, game } : null;
@@ -45,15 +54,28 @@ export function listOpenRequests(actor: Actor): SubRequestWithGame[] {
 		.filter((entry): entry is SubRequestWithGame => entry !== null);
 }
 
-export function listMyRequests(actor: Actor): SubRequestWithGame[] {
+/**
+ * Le schedule est déjà chargé par l'appelant quand la page le possède. La
+ * valeur par défaut garde l'API simple pour les autres surfaces.
+ */
+export function listOpenRequests(
+	actor: Actor,
+	schedule: readonly GameSummary[] = listSchedule(actor)
+): SubRequestWithGame[] {
 	requireUser(actor);
-	const games = new Map(listSchedule(actor).map((game) => [game.id, game]));
-	return listOwnSubRequests(actor)
-		.map((request) => {
-			const game = games.get(request.gameId);
-			return game ? { ...request, game } : null;
-		})
-		.filter((entry): entry is SubRequestWithGame => entry !== null);
+	// Une place ouverte sur un match commencé ne se réclame plus : la demande
+	// reste en base pour l'historique, mais elle quitte le bassin visible.
+	return withGames(listOpenRequestsForMember(actor), schedule).filter(
+		(entry) => !isGameStarted(entry.game)
+	);
+}
+
+export function listMyRequests(
+	actor: Actor,
+	schedule: readonly GameSummary[] = listSchedule(actor)
+): SubRequestWithGame[] {
+	requireUser(actor);
+	return withGames(listOwnSubRequests(actor), schedule);
 }
 
 export function listRequestsForGame(
@@ -126,4 +148,20 @@ export function createManualRequest(
 
 export function listSubstitutePool(actor: Actor): SubProfileView[] {
 	return listSubstitutes(actor);
+}
+
+/**
+ * Les matchs qu'une demande manuelle peut viser : à venir et encore
+ * programmés. La liste reste réservée aux gestionnaires des remplaçants.
+ */
+export function listRequestableGames(actor: Actor): RequestableGame[] {
+	requirePermission(actor, 'manageSubs');
+	return splitSchedule(listSchedule(actor))
+		.upcoming.filter((game) => game.status === 'scheduled')
+		.map(({ id, gameDate, startTime, location }) => ({
+			id,
+			gameDate,
+			startTime,
+			location
+		}));
 }

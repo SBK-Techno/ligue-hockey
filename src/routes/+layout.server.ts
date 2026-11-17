@@ -18,7 +18,13 @@ export const load = ({ locals, url }: { locals: App.Locals; url: URL }) => {
 			const next = `${url.pathname}${url.search}`;
 			redirect(303, `/connexion?prochaine=${encodeURIComponent(next)}`);
 		}
-		return { actor, unread: 0, hasPlayerProfile: false, isSubstitute: false };
+		return {
+			actor,
+			unread: 0,
+			hasPlayerProfile: false,
+			isSubstitute: false,
+			avatarId: null
+		};
 	}
 
 	if (url.pathname === '/connexion') {
@@ -30,6 +36,7 @@ export const load = ({ locals, url }: { locals: App.Locals; url: URL }) => {
 		actor,
 		unread: unreadCount(actor),
 		hasPlayerProfile: profile !== null,
-		isSubstitute: profile?.isSubstitute ?? false
+		isSubstitute: profile?.isSubstitute ?? false,
+		avatarId: profile?.avatarId ?? null
 	};
 };

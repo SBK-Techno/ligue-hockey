@@ -8,27 +8,27 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f5f2ea",
-  "theme_color": "#101a22",
+  "background_color": "#f6f1e7",
+  "theme_color": "#12283a",
   "categories": [
     "sports",
     "productivity"
   ],
   "icons": [
     {
-      "src": "/icons/icon-192-192.f41cbf210c11.png",
+      "src": "/icons/icon-192-192.073945cb4e02.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512-512.e6d2499b9bbd.png",
+      "src": "/icons/icon-512-512.904ac52376ea.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/maskable-512-512.28f891c1c4ec.png",
+      "src": "/icons/maskable-512-512.5c023d038900.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

@@ -14,12 +14,14 @@ import {
 import {
 	adminUpdatePlayer,
 	deletePlayer,
+	getAdminAvatarPicker,
 	getAdminPlayer,
 	resendInvite,
 	setPlayerRole
 } from '#lib/domain/players/service.ts';
 import { adminUpdatePlayerSchema } from '#lib/domain/players/validators.ts';
-import { getRatings, setRatings } from '#lib/domain/ratings/service.ts';
+import { getRatings } from '#lib/domain/ratings/service.ts';
+import { CURRENCY } from '#config/currency.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { applyDiscount, splitPlan } from '#lib/domain/finance/plan.ts';
 import { listSubstitutes, setSubstituteFavorite } from '#lib/domain/subs/service.ts';
@@ -65,10 +67,11 @@ function moneyToCents(value: string): number {
 export const load: ServerLoad = ({ locals, params }) => {
 	const actor = locals.actor;
 	const settings = getSettings();
-	const currency = settings['finance.currency'];
+	const currency = CURRENCY;
 	if (actor.kind !== 'user' || !params.id) {
 		return {
 			player: null,
+			avatarPicker: null,
 			ratings: null,
 			balance: null,
 			payments: [],
@@ -85,6 +88,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		if (isAppError(cause) && cause.code === 'NOT_FOUND') {
 			return {
 				player: null,
+				avatarPicker: null,
 				ratings: null,
 				balance: null,
 				payments: [],
@@ -112,6 +116,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 
 	return {
 		player,
+		avatarPicker: getAdminAvatarPicker(actor, params.id),
 		ratings: getRatings(actor, params.id),
 		balance,
 		payments: listPlayerPayments(actor, params.id),
@@ -134,20 +139,6 @@ export const actions: Actions = {
 			const parsed = parseForm(adminUpdatePlayerSchema, await request.formData());
 			await adminUpdatePlayer(locals.actor, params.id!, parsed);
 			return { ok: true, message: t('admin.playerSaved') };
-		} catch (cause) {
-			return actionError(cause);
-		}
-	},
-	ratings: async ({ request, locals, params }) => {
-		try {
-			const form = await request.formData();
-			const result = setRatings(locals.actor, params.id!, {
-				passing: Number(form.get('passing')),
-				speed: Number(form.get('speed')),
-				agility: Number(form.get('agility')),
-				backchecking: Number(form.get('backchecking'))
-			});
-			return { ok: true, message: t('admin.playerSaved'), ratings: result };
 		} catch (cause) {
 			return actionError(cause);
 		}

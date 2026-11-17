@@ -4,7 +4,10 @@
 	import { page } from '$app/state';
 	import { branding } from '#lib/generated/branding.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
+	import anybodyLatin from '@fontsource-variable/anybody/files/anybody-latin-wdth-normal.woff2?url';
+	import splineLatin from '@fontsource-variable/spline-sans-mono/files/spline-sans-mono-latin-wght-normal.woff2?url';
 	import AppNav from '#lib/ui/AppNav.svelte';
+	import AppNavBottom from '#lib/ui/AppNavBottom.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
 	import type { LayoutProps } from './$types';
 
@@ -16,6 +19,8 @@
 		['/admin/regles', 'admin.rules'],
 		['/admin/soldes', 'admin.balances'],
 		['/admin/parametres', 'admin.settings'],
+		['/admin/lieux', 'admin.locations'],
+		['/admin/evaluations', 'admin.evaluationsSeason'],
 		['/admin', 'admin.title'],
 		['/matchs', 'games.title'],
 		['/remplacants', 'subs.title'],
@@ -37,6 +42,7 @@
 		return match ? `${t(match[1])} · ${branding.shortName}` : branding.name;
 	});
 
+	const showBottomBar = $derived(!page.url.pathname.startsWith('/admin'));
 	const socialImage = $derived(new URL(branding.socialImage, page.url.origin).toString());
 	const openGraphLocale = $derived(branding.locale.replace('-', '_'));
 	const crawlDirective = $derived(branding.indexable ? 'index,follow' : 'noindex,nofollow');
@@ -56,6 +62,8 @@
 	<link rel="icon" href={branding.icons.favicon} />
 	<link rel="apple-touch-icon" href={branding.icons.appleTouch} />
 	<link rel="manifest" href={branding.manifestPath} />
+	<link rel="preload" href={anybodyLatin} as="font" type="font/woff2" crossorigin="anonymous" />
+	<link rel="preload" href={splineLatin} as="font" type="font/woff2" crossorigin="anonymous" />
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content={branding.name} />
 	<meta property="og:title" content={pageTitle} />
@@ -69,59 +77,55 @@
 </svelte:head>
 
 {#if data.actor.kind === 'anonymous'}
-	<div class="lg:grid lg:min-h-dvh lg:grid-cols-[1.08fr_0.92fr]">
-		<aside
-			class="relative flex flex-col justify-between overflow-hidden bg-ink px-5 pb-6 pt-5 text-paper sm:px-9 sm:pb-11 sm:pt-9 lg:min-h-dvh lg:p-12"
-		>
-			<svg
-				aria-hidden="true"
-				viewBox="0 0 600 600"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				class="pointer-events-none absolute -right-28 -top-24 h-[420px] w-[420px] text-paper/[0.08] sm:h-[520px] sm:w-[520px] lg:-right-32 lg:top-1/2 lg:h-[680px] lg:w-[680px] lg:-translate-y-1/2"
-			>
-				<circle cx="300" cy="300" r="232" />
-				<circle cx="300" cy="300" r="92" />
-				<path d="M0 300h600M300 0v600" />
-				<circle cx="300" cy="300" r="7" fill="currentColor" stroke="none" />
-				<path d="M68 208h56v184H68M532 208h-56v184h56" />
-			</svg>
-
-			<div class="relative">
+	<div class="auth-shell">
+		<div class="auth-hero">
+			<img src={branding.authImage} alt="" fetchpriority="high" decoding="async" />
+			<div class="auth-scrim" aria-hidden="true"></div>
+			<header class="auth-header">
 				<BrandLockup size="md" tone="dark" />
-			</div>
+			</header>
+		</div>
 
-			<div class="relative mt-8 max-w-md lg:mt-0">
-				<h1 class="text-paper">{t('auth.welcome')}</h1>
-				<p class="mt-4 hidden text-sm leading-relaxed text-paper/70 sm:block sm:text-base">
-					{branding.description}
-				</p>
-			</div>
-		</aside>
+		<div class="auth-body">
+			<main id="contenu" tabindex="-1" class="auth-main">
+				<div class="auth-panel page-enter">
+					{@render children()}
+				</div>
+			</main>
 
-		<main
-			id="contenu"
-			class="flex items-start justify-center px-4 py-8 sm:px-8 sm:py-12 lg:min-h-dvh lg:items-center"
-		>
-			<div class="w-full max-w-sm">
-				{@render children()}
-			</div>
-		</main>
+			<p class="auth-caption">
+				<span class="h-px w-10 bg-line-strong" aria-hidden="true"></span>
+				<span class="micro-label text-muted">{t('auth.afterGame')}</span>
+			</p>
+		</div>
 	</div>
 {:else}
-	<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
-	<AppNav actor={data.actor} unread={data.unread} />
-	<main id="contenu" tabindex="-1" class="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 sm:pt-8 lg:pb-12">
-		{@render children()}
-		<div aria-live="polite" class="sr-only">{pageTitle}</div>
-	</main>
-	<footer class="mx-auto w-full max-w-6xl px-4 pb-[calc(var(--bottom-bar-offset)+0.5rem)] pt-2 lg:pb-8">
-		<div
-			class="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 pt-5 text-[11px] font-medium text-muted"
+	<div class="app-shell" style="--page-texture: url({branding.textures.paper})">
+		<div class="page-ground" aria-hidden="true"></div>
+		<a class="skip-link" href="#contenu">{t('nav.skip')}</a>
+		<AppNav actor={data.actor} unread={data.unread} avatarId={data.avatarId} />
+		<main
+			id="contenu"
+			tabindex="-1"
+			class="mx-auto w-full max-w-6xl xl:max-w-7xl scroll-mt-[var(--anchor-offset)] px-4 pb-8 pt-6 sm:pt-8 lg:pb-12"
 		>
-			<p>{branding.name}</p>
-			<p>{t('brand.presentedBy', { name: branding.organisation })}</p>
-		</div>
-	</footer>
+			{#key page.url.pathname}
+				<div class="page-enter">{@render children()}</div>
+			{/key}
+			<div aria-live="polite" class="sr-only">{pageTitle}</div>
+		</main>
+		<AppNavBottom actor={data.actor} />
+		<footer
+			class="mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pt-2 lg:pb-8 {showBottomBar
+				? 'pb-[calc(var(--bottom-bar-offset)+0.5rem)]'
+				: 'pb-2'}"
+		>
+			<div
+				class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-caption font-medium text-muted"
+			>
+				<p>{branding.name}</p>
+				<p>{t('brand.presentedBy', { name: branding.organisation })}</p>
+			</div>
+		</footer>
+	</div>
 {/if}

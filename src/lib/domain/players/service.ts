@@ -1,5 +1,6 @@
 import type { Position } from '#config/positions.ts';
 import { DEFAULT_ROLE, isRole, type Role } from '#config/roles.ts';
+import type { AvatarId } from '#config/avatars.ts';
 import { branding } from '#lib/generated/branding.ts';
 import { can, requirePermission, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
@@ -9,16 +10,18 @@ import { regenerateUpcomingGeneratedGames } from '#lib/domain/games/upcoming.ts'
 import { AppError } from '#lib/shared/errors.ts';
 import { newToken } from '#lib/shared/ids/id.ts';
 import { logger } from '#lib/shared/logging/logger.ts';
-import { clock, todayInZone } from '#lib/shared/time/clock.ts';
+import { clock, timeInZone, todayInZone } from '#lib/shared/time/clock.ts';
 import {
 	deletePlayerAccount,
 	findPlayer,
 	findPlayerWithEmail,
 	insertPlayer,
+	listActiveAvatarAssignments,
 	listActivePlayers,
 	listAllPlayersWithEmail,
 	updatePlayer
 } from './queries.ts';
+import { firstFreeAvatarId, resolveAvatarId } from './identity.ts';
 import { toPublic } from './public.ts';
 import type {
 	AdminUpdatePlayerInput,
@@ -33,6 +36,7 @@ export type PublicPlayer = {
 	fullName: string;
 	position: Position;
 	jerseyNumber: number | null;
+	avatarId: string | null;
 	isSubstitute: boolean;
 	active: boolean;
 };
@@ -78,6 +82,42 @@ function toAdmin(row: ReturnType<typeof findPlayerWithEmail>): AdminPlayer {
 	};
 }
 
+export type AvatarPickerView = {
+	selected: AvatarId;
+	taken: AvatarId[];
+};
+
+/**
+ * The displayed identity of every active player, whether the avatar is stored
+ * or derived. Two active players must never share the same appearance.
+ */
+function activeAvatarUsage(): { userId: string; avatarId: AvatarId }[] {
+	return listActiveAvatarAssignments().map((row) => ({
+		userId: row.userId,
+		avatarId: resolveAvatarId(row.userId, row.avatarId)
+	}));
+}
+
+function takenAvatarIds(playerId: string): AvatarId[] {
+	return [
+		...new Set(
+			activeAvatarUsage()
+				.filter((entry) => entry.userId !== playerId)
+				.map((entry) => entry.avatarId)
+		)
+	];
+}
+
+function assertAvatarAvailable(playerId: string, avatarId: AvatarId): void {
+	if (takenAvatarIds(playerId).includes(avatarId)) {
+		throw new AppError('CONFLICT', { key: 'error.avatarTaken' });
+	}
+}
+
+function nextFreeAvatarId(): AvatarId | null {
+	return firstFreeAvatarId(activeAvatarUsage().map((entry) => entry.avatarId));
+}
+
 export function isSubstitutePlayer(actor: Actor): boolean {
 	const user = requireUser(actor);
 	return findPlayer(user.userId)?.isSubstitute ?? false;
@@ -91,6 +131,15 @@ export function listRoster(actor: Actor): PublicPlayer[] {
 export function listAdminPlayers(actor: Actor): AdminPlayer[] {
 	requirePermission(actor, 'managePlayers');
 	return listAllPlayersWithEmail().map(toAdmin);
+}
+
+/**
+ * Liste minimale pour les évaluations : la capacité de noter suffit, sans
+ * exiger l'administration complète des joueurs.
+ */
+export function listRatingPlayers(actor: Actor): PublicPlayer[] {
+	requirePermission(actor, 'editRatings');
+	return listAllPlayersWithEmail().map(toPublic);
 }
 
 export function findOwnProfile(actor: Actor): SelfProfile | null {
@@ -111,6 +160,30 @@ export function getOwnProfile(actor: Actor): SelfProfile {
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 	return profile;
+}
+
+export function getOwnAvatarPicker(actor: Actor): AvatarPickerView {
+	const user = requireUser(actor);
+	const row = findPlayer(user.userId);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+	}
+	return {
+		selected: resolveAvatarId(row.userId, row.avatarId),
+		taken: takenAvatarIds(row.userId)
+	};
+}
+
+export function getAdminAvatarPicker(actor: Actor, playerId: string): AvatarPickerView {
+	requirePermission(actor, 'managePlayers');
+	const row = findPlayer(playerId);
+	if (!row) {
+		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
+	}
+	return {
+		selected: resolveAvatarId(row.userId, row.avatarId),
+		taken: takenAvatarIds(row.userId)
+	};
 }
 
 export function getPlayer(actor: Actor, playerId: string): SelfProfile | PublicPlayer {
@@ -160,6 +233,7 @@ export async function invitePlayer(
 			position: input.position,
 			age: input.age,
 			jerseyNumber: input.jerseyNumber ?? null,
+			avatarId: nextFreeAvatarId(),
 			isSubstitute: input.isSubstitute,
 			active: true,
 			createdAt: now,
@@ -236,18 +310,24 @@ export async function updateOwnProfile(
 		throw new AppError('NOT_FOUND', { key: 'error.playerNotFound' });
 	}
 
-	updatePlayer(user.userId, {
+	const patch: Parameters<typeof updatePlayer>[1] = {
 		firstName: input.firstName,
 		lastName: input.lastName,
 		age: input.age,
 		position: input.position,
 		jerseyNumber: input.jerseyNumber
-	});
+	};
+	if (input.avatarId !== undefined && input.avatarId !== row.avatarId) {
+		assertAvatarAvailable(user.userId, input.avatarId);
+		patch.avatarId = input.avatarId;
+	}
+	const cleared = updatePlayer(user.userId, patch);
 	await identity().updateName(user.userId, `${input.firstName} ${input.lastName}`);
 	recordAudit(actor, {
 		action: 'player.self_update',
 		entityType: 'player',
-		entityId: user.userId
+		entityId: user.userId,
+		metadata: cleared.length > 0 ? { positionRatingsCleared: cleared } : undefined
 	});
 	regenerateUpcomingGeneratedGames();
 	return getOwnProfile(actor);
@@ -270,10 +350,14 @@ export async function adminUpdatePlayer(
 	if (input.age !== undefined) patch.age = input.age;
 	if (input.position !== undefined) patch.position = input.position;
 	if (input.jerseyNumber !== undefined) patch.jerseyNumber = input.jerseyNumber;
+	if (input.avatarId !== undefined && input.avatarId !== row.avatarId) {
+		assertAvatarAvailable(playerId, input.avatarId);
+		patch.avatarId = input.avatarId;
+	}
 	if (input.isSubstitute !== undefined) patch.isSubstitute = input.isSubstitute;
 	if (input.active !== undefined) patch.active = input.active;
 
-	updatePlayer(playerId, patch);
+	const cleared = updatePlayer(playerId, patch);
 	if (input.firstName !== undefined || input.lastName !== undefined) {
 		const updated = findPlayerWithEmail(playerId);
 		if (updated) {
@@ -284,7 +368,10 @@ export async function adminUpdatePlayer(
 		action: 'player.admin_update',
 		entityType: 'player',
 		entityId: playerId,
-		metadata: { fields: Object.keys(patch) }
+		metadata: {
+			fields: Object.keys(patch),
+			...(cleared.length > 0 ? { positionRatingsCleared: cleared } : {})
+		}
 	});
 	regenerateUpcomingGeneratedGames();
 
@@ -327,7 +414,12 @@ export async function deletePlayer(actor: Actor, playerId: string): Promise<void
 	if (role === 'admin') {
 		throw new AppError('FORBIDDEN', { key: 'admin.deleteAdmin' });
 	}
-	deletePlayerAccount(playerId, todayInZone(branding.timezone, clock.nowMs()));
+	const now = clock.nowMs();
+	deletePlayerAccount(
+		playerId,
+		todayInZone(branding.timezone, now),
+		timeInZone(branding.timezone, now)
+	);
 	if (findPlayer(playerId)) {
 		throw new AppError('INTERNAL', { key: 'admin.playerDeleteFailed' });
 	}

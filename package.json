@@ -1,6 +1,6 @@
 {
 	"name": "ligue-hockey",
-	"version": "1.2.0",
+	"version": "1.5.0",
 	"private": true,
 	"repository": {
 		"type": "git",
@@ -42,6 +42,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "tsx scripts/migrate.ts",
 		"db:studio": "drizzle-kit studio",
+		"seed:demo": "tsx scripts/seed-demo.ts",
 		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
 	},
 	"devDependencies": {
@@ -73,9 +74,8 @@
 		"yaml": "^2.9.1"
 	},
 	"dependencies": {
-		"@fontsource-variable/fraunces": "^5.3.0",
-		"@fontsource-variable/ibm-plex-sans": "^5.3.0",
-		"@fontsource/ibm-plex-mono": "^5.3.0",
+		"@fontsource-variable/anybody": "^5.3.0",
+		"@fontsource-variable/spline-sans-mono": "^5.3.0",
 		"better-auth": "^1.6.24",
 		"better-sqlite3": "^13.0.2",
 		"drizzle-orm": "^0.45.2",

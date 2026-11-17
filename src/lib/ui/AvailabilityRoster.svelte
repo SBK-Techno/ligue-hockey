@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { AvailabilityView } from '#lib/domain/availability/service.ts';
 	import { formatCount, t } from '#lib/shared/i18n/index.ts';
+	import StatStrip from '#lib/ui/StatStrip.svelte';
 
 	let { availability, viewerId }: { availability: AvailabilityView; viewerId: string } = $props();
 
@@ -19,43 +20,32 @@
 	);
 </script>
 
-<div class="grid grid-cols-3 divide-x divide-line/70 border-y border-line/70 text-center">
-	<div class="px-2 py-3">
-		<p class="numeric text-2xl">{availability.present}</p>
-		<p class="mt-0.5 text-[11px] text-muted">{t('home.present')}</p>
-	</div>
-	<div class="px-2 py-3">
-		<p class="numeric text-2xl">{availability.absent}</p>
-		<p class="mt-0.5 text-[11px] text-muted">{t('home.absent')}</p>
-	</div>
-	<div class="px-2 py-3">
-		<p class="numeric text-2xl">{availability.unknown}</p>
-		<p class="mt-0.5 text-[11px] text-muted">{t('home.pending')}</p>
-	</div>
-</div>
+<StatStrip
+	cells={[
+		{ value: availability.present, label: t('home.present') },
+		{ value: availability.absent, label: t('home.absent') },
+		{ value: availability.unknown, label: t('availability.unknown') }
+	]}
+/>
 
 {#if absent.length > 0 || pending.length > 0}
-	<ul role="list" class="mt-3 space-y-1.5 text-sm">
+	<ul role="list" class="mt-3 divide-y divide-line border-y border-line">
 		{#each absent as row (row.playerId)}
-			<li class="flex items-center gap-2">
-				<span aria-hidden="true" class="h-2 w-2 shrink-0 rounded-full bg-ink"></span>
-				<span class="min-w-0 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
+			<li class="flex min-h-11 items-center gap-2 px-1 py-1.5">
+				<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ink"></span>
+				<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
 					{row.fullName}
 				</span>
-				{#if row.playerId === viewerId}
-					<span class="badge-ice shrink-0">{t('common.you')}</span>
-				{/if}
+				<span class="stamp shrink-0 border-line text-muted">{t('availability.absent')}</span>
 			</li>
 		{/each}
 		{#each pending as row (row.playerId)}
-			<li class="flex items-center gap-2 text-muted">
-				<span
-					aria-hidden="true"
-					class="h-2 w-2 shrink-0 rounded-full border border-line-strong bg-transparent"
-				></span>
-				<span class="min-w-0 break-words {row.playerId === viewerId ? 'font-semibold text-ink' : ''}">
+			<li class="flex min-h-11 items-center gap-2 px-1 py-1.5 text-muted">
+				<span aria-hidden="true" class="h-2 w-2 shrink-0 border border-line-strong"></span>
+				<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold text-ink' : ''}">
 					{row.fullName}
 				</span>
+				<span class="stamp shrink-0 border-line text-muted">{t('availability.noAnswer')}</span>
 			</li>
 		{/each}
 	</ul>
@@ -63,9 +53,7 @@
 
 {#if present.length > 0}
 	<details class="group mt-2">
-		<summary
-			class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-ice marker:content-none"
-		>
+		<summary class="link flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body marker:content-none">
 			<svg
 				viewBox="0 0 24 24"
 				class="h-3.5 w-3.5 transition-transform group-open:rotate-90"
@@ -78,15 +66,15 @@
 			</svg>
 			{formatCount(present.length, 'home.showPresent.one', 'home.showPresent.many')}
 		</summary>
-		<ul role="list" class="mt-1 grid gap-1 pb-1 text-sm sm:grid-cols-2">
+		<ul role="list" class="mt-1 grid gap-x-4 pb-1 text-body sm:grid-cols-2">
 			{#each present as row (row.playerId)}
-				<li class="flex items-center gap-2">
-					<span aria-hidden="true" class="h-2 w-2 shrink-0 rounded-full bg-ice"></span>
-					<span class="min-w-0 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
+				<li class="flex min-h-9 items-center gap-2 border-b border-line py-1">
+					<span aria-hidden="true" class="h-2 w-2 shrink-0 bg-ice"></span>
+					<span class="min-w-0 flex-1 break-words {row.playerId === viewerId ? 'font-semibold' : ''}">
 						{row.fullName}
 					</span>
 					{#if row.playerId === viewerId}
-						<span class="badge-ice shrink-0">{t('common.you')}</span>
+						<span class="stamp shrink-0 border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>
 					{/if}
 				</li>
 			{/each}

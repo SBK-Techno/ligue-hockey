@@ -4,7 +4,7 @@ import {
 	type NotificationPayload
 } from '#config/notification-events.ts';
 import { positionDefinition } from '#config/positions.ts';
-import { formatDate, formatMoney, formatTime, t } from '#lib/shared/i18n/index.ts';
+import { formatCount, formatDate, formatMoney, formatTime, t } from '#lib/shared/i18n/index.ts';
 import type { I18nKey } from '#config/i18n/fr.ts';
 
 type Params = Record<string, string | number>;
@@ -94,9 +94,11 @@ export function renderNotification<K extends NotificationEventKey>(
 		email.actionLabel = t('email.accountAccess.cta');
 		email.actionUrl = account.url;
 		if (account.expiresInDays !== undefined) {
-			email.note = t('email.accountAccess.expiry', {
-				count: account.expiresInDays
-			});
+			email.note = formatCount(
+				account.expiresInDays,
+				'email.accountAccess.expiry.one',
+				'email.accountAccess.expiry.many'
+			);
 		}
 		email.ignore = t('email.accountAccess.ignore');
 	}
@@ -108,9 +110,11 @@ export function renderNotification<K extends NotificationEventKey>(
 		email.actionLabel = t('email.passwordReset.cta');
 		email.actionUrl = account.url;
 		if (account.expiresInDays !== undefined) {
-			email.note = t('email.accountAccess.expiry', {
-				count: account.expiresInDays
-			});
+			email.note = formatCount(
+				account.expiresInDays,
+				'email.accountAccess.expiry.one',
+				'email.accountAccess.expiry.many'
+			);
 		}
 		email.ignore = t('email.passwordReset.ignore');
 	}

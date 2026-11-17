@@ -8,16 +8,19 @@ export const PALETTE_KEYS = [
 	'paper',
 	'surface',
 	'line',
+	'line-strong',
 	'muted',
 	'ice',
 	'ice-deep',
 	'ice-soft',
+	'accent',
+	'accent-deep',
+	'accent-soft',
 	'alert',
 	'alert-deep',
 	'alert-soft',
 	'ok',
-	'ok-soft',
-	'ochre'
+	'ok-soft'
 ] as const;
 
 export type PaletteKey = (typeof PALETTE_KEYS)[number];
@@ -57,6 +60,6 @@ export function emailPaletteFrom(palette: Palette): EmailPalette {
 		surface: palette.surface,
 		line: palette.line,
 		muted: palette.muted,
-		brand: palette.ice
+		brand: palette.accent
 	};
 }

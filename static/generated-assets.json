@@ -1,17 +1,20 @@
 {
   "generatedBy": "scripts/generate.ts",
-  "source": "config/branding.json and config/i18n/fr.ts",
+  "source": "config/branding.json, config/i18n/fr.ts and src/lib/ui/tokens.css",
   "files": {
-    "static/icons/favicon-32.b38e780a2fd7.png": "b38e780a2fd799ebc1bc4a30a52c00260d8ddbf4d69ec8d772367f0be8390689",
-    "static/icons/apple-touch-180.f5b3ec40470a.png": "f5b3ec40470a819dd70a01da6ce4073576c181b4de3da6f3713deef5873baf4f",
-    "static/icons/icon-192-192.f41cbf210c11.png": "f41cbf210c115f02c035199bd204be10b8b835e82795781eb34b6b8e7dcf8ba6",
-    "static/icons/icon-512-512.e6d2499b9bbd.png": "e6d2499b9bbd5c5148f8fa0b9eda33604ccc313ff528080aad87a7c7de4a7f65",
-    "static/icons/maskable-512-512.28f891c1c4ec.png": "28f891c1c4ec0874ec278e798116c074e006193f64f1dfc169cf9fa61106ced8",
-    "static/manifest.webmanifest": "4da668f9928a8356bcb9c58f9354a3058ac25017fa7218150a5c7d24e17cb0c3",
-    "src/app.html": "fb90d83ca717defba749ed454693e4c944303e15011b64b31b38b202f0a11b89",
+    "static/icons/favicon-32.4c6787c2333a.png": "4c6787c2333a166ed1f6eae10ba4eea31578ebbd33d573fba630896952c58588",
+    "static/icons/apple-touch-180.aff87536bf7c.png": "aff87536bf7cacd6b1014b505830bb46f16d9295398c9bedf01078dffa62abed",
+    "static/icons/icon-192-192.073945cb4e02.png": "073945cb4e02cba9170ebde2b4722fd4721e1e827d8a8066aae26140a4abf3fb",
+    "static/icons/icon-512-512.904ac52376ea.png": "904ac52376eaeb02303f8823cbf0e045adcdf1ed3ec75f77cadbe60659c597b1",
+    "static/icons/maskable-512-512.5c023d038900.png": "5c023d03890083491048c095c2200b59fa3d60a4a950031fe15158bb4a8a839e",
+    "static/manifest.webmanifest": "8bc2b5af4ff652be2b15fd5d5803f40744328b9c63216dcbdf15b2ee111ae020",
+    "src/app.html": "d32b65ffe8eb25f684791b9fa6a5b20351456b078bd87dc29cfd3489670eca77",
     "static/robots.txt": "815bcd053b51b42648ea3f8103c8c9f86eb64d2d6eaad8f3b45b673b47f959b7",
-    "static/offline.html": "a77d9dc1a8ee691fe752edcd2c9a581f5a113be0aff96f969133da794aecd2e1",
-    "src/lib/generated/branding.ts": "34235ac2bd7eba21f977d204a1861b0fc824eabe1f577518183302d32ac930d4",
-    "static/social/apercu.jpg": "2ac0357d2a30b7e703d7172ae2f3856a676b9eae02aedc3e4de43f8bee65a79e"
+    "static/offline.html": "cfb47ac1ce31ce89d8f08a894a38e69f582bd79298dcb362dcf75f0f09a3139b",
+    "static/auth/dressing-room-0397f5db9c38.webp": "0397f5db9c3888b1f1dd67a856f0467619f13e1fc5c8413c0b9fa1ff4bac28bc",
+    "static/textures/paper-b0f353d27755.webp": "b0f353d27755856fdba753cc0bceff783b8988356df9ea56243221e40ea9331d",
+    "static/textures/ice-91bfe133b755.webp": "91bfe133b755c69db37ee90bc371e6fa402385dfeb01cee210b046903147e3a8",
+    "src/lib/generated/branding.ts": "58f26dbe897e76d4c4a5a90a0fde8beb6051e690bb97c535b1f7d735c51e8d59",
+    "static/social/apercu.jpg": "9166f43c7711f28c94a74a72e8934df48b13183d32ca5d4b0d1a6e23338b0d02"
   }
 }

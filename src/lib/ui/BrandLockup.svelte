@@ -14,8 +14,11 @@
 		tone?: 'light' | 'dark';
 	} = $props();
 
-	const markSize = $derived(
-		size === 'lg' ? 'h-14 w-14 rounded-2xl' : size === 'sm' ? 'h-9 w-9 rounded-[10px]' : 'h-11 w-11 rounded-xl'
+	const barHeight = $derived(
+		size === 'lg' ? 'h-12' : size === 'sm' ? 'h-8' : 'h-10'
+	);
+	const nameSize = $derived(
+		size === 'lg' ? 'text-section' : size === 'sm' ? 'text-body' : 'text-subhead'
 	);
 </script>
 
@@ -24,31 +27,21 @@
 	{href}
 	class="group flex min-h-11 min-w-0 items-center gap-3 no-underline"
 >
-	<img
-		src={branding.icons.icon192}
-		alt=""
-		width="96"
-		height="96"
-		class="{markSize} shrink-0 shadow-sm ring-1 ring-ink/10"
-	/>
+	<span aria-hidden="true" class="{barHeight} w-[3px] shrink-0 bg-accent"></span>
 	<span class="min-w-0">
 		<span
-			class="wordmark block truncate font-display font-bold leading-[1.1] {tone === 'dark'
+			class="wordmark block truncate font-display leading-[1.05] {tone === 'dark'
 				? 'text-paper'
-				: 'text-ink'} {size === 'lg'
-				? 'text-xl'
-				: size === 'sm'
-					? 'text-[15px]'
-					: 'text-base'}"
+				: 'text-ink'} {nameSize}"
 		>
 			<span class="sm:hidden">{branding.shortName}</span>
 			<span class="hidden sm:inline">{branding.name}</span>
 		</span>
 		{#if caption}
 			<span
-				class="mt-0.5 block truncate font-mono text-[9px] font-medium uppercase leading-tight tracking-[0.08em] {tone ===
+				class="mt-0.5 block truncate font-mono text-stamp font-medium uppercase leading-tight tracking-[0.08em] {tone ===
 				'dark'
-					? 'text-paper/60'
+					? 'text-paper/80'
 					: 'text-muted'}"
 			>
 				{t('brand.presentedBy', { name: branding.organisation })}

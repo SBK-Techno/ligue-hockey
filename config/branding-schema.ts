@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+/** Matières de fond, une par surface : papier pour la page, glace pour la patinoire. */
+export const TEXTURE_KEYS = ['paper', 'ice'] as const;
+
+export type TextureKey = (typeof TEXTURE_KEYS)[number];
+
 export const brandingSchema = z.object({
 	name: z.string().min(1).max(80),
 	shortName: z.string().min(1).max(12),
@@ -14,8 +19,13 @@ export const brandingSchema = z.object({
 	direction: z.enum(['ltr', 'rtl']),
 	categories: z.array(z.string().min(1)).max(3),
 	iconSource: z.string().min(1),
+	authSource: z.string().min(1),
 	socialImage: z.string().startsWith('/'),
 	socialSource: z.string().min(1),
+	textures: z.object({
+		paper: z.string().min(1),
+		ice: z.string().min(1)
+	}),
 	icons: z.object({
 		favicon: z.number().int().min(16).max(1024),
 		appleTouch: z.number().int().min(16).max(1024),

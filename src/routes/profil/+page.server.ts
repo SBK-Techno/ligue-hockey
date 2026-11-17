@@ -16,6 +16,7 @@ import {
 import { notificationPreferencesSchema } from '#lib/domain/notifications/validators.ts';
 import {
 	findOwnProfile,
+	getOwnAvatarPicker,
 	isSubstitutePlayer,
 	updateOwnProfile
 } from '#lib/domain/players/service.ts';
@@ -29,6 +30,7 @@ import { env } from '#lib/shared/config/env.ts';
 import { publicEnv } from '#lib/shared/config/public-env.ts';
 import { formatCount, t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
+import { isAppError } from '#lib/shared/errors.ts';
 
 const passwordSchema = z.object({
 	currentPassword: z.string().min(1).max(ACCOUNT_LIMITS.passwordMax),
@@ -47,6 +49,7 @@ export const load: ServerLoad = ({ locals }) => {
 		return {
 			account: null,
 			profile: null,
+			avatarPicker: null,
 			positions,
 			notifications: { emailEnabled: true, pushEnabled: true },
 			isSubstitute: false,
@@ -58,9 +61,11 @@ export const load: ServerLoad = ({ locals }) => {
 		};
 	}
 
+	const profile = findOwnProfile(actor);
 	return {
 		account: getOwnAccount(actor),
-		profile: findOwnProfile(actor),
+		profile,
+		avatarPicker: profile ? getOwnAvatarPicker(actor) : null,
 		positions,
 		notifications: getNotificationPreferences(actor),
 		isSubstitute: isSubstitutePlayer(actor),
@@ -72,12 +77,21 @@ export const load: ServerLoad = ({ locals }) => {
 	};
 };
 
+const SECURITY = 'securite';
+
+function failingField(cause: unknown): string | null {
+	if (!isAppError(cause)) return null;
+	const details = cause.details as Array<{ path?: string }> | undefined;
+	return details?.find((entry) => entry.path)?.path ?? null;
+}
+
 export const actions: Actions = {
 	identity: async ({ request, locals }) => {
 		try {
 			if (findOwnProfile(locals.actor)) {
 				return fail(403, {
 					ok: false,
+					section: 'compte',
 					message: t('profile.playerNameManaged')
 				});
 			}
@@ -85,38 +99,39 @@ export const actions: Actions = {
 			const account = await updateOwnDisplayName(locals.actor, parsed);
 			return {
 				ok: true,
+				section: 'compte',
 				message: t('profile.identitySaved'),
 				account
 			};
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { section: 'compte' });
 		}
 	},
 	profile: async ({ request, locals }) => {
 		try {
 			const parsed = parseForm(updateOwnProfileSchema, await request.formData());
 			await updateOwnProfile(locals.actor, parsed);
-			return { ok: true, message: t('profile.saved') };
+			return { ok: true, section: 'joueur', message: t('profile.saved') };
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { section: 'joueur' });
 		}
 	},
 	positions: async ({ request, locals }) => {
 		try {
 			const parsed = parseForm(subProfileInputSchema, await request.formData());
 			saveMySubProfile(locals.actor, parsed);
-			return { ok: true, message: t('subs.profileSaved') };
+			return { ok: true, section: 'positions', message: t('subs.profileSaved') };
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { section: 'positions' });
 		}
 	},
 	notifications: async ({ request, locals }) => {
 		try {
 			const parsed = parseForm(notificationPreferencesSchema, await request.formData());
 			updateNotificationPreferences(locals.actor, parsed);
-			return { ok: true, message: t('profile.saved') };
+			return { ok: true, section: 'notifications', message: t('profile.notificationsSaved') };
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { section: 'notifications' });
 		}
 	},
 	sessions: async ({ locals }) => {
@@ -124,27 +139,37 @@ export const actions: Actions = {
 			const revoked = revokeOwnOtherSessions(locals.actor, locals.sessionId ?? '');
 			return {
 				ok: true,
+				section: SECURITY,
 				message:
 					revoked === 0
 						? t('profile.noOtherSessions')
 						: formatCount(revoked, 'profile.sessionsRevoked.one', 'profile.sessionsRevoked.many')
 			};
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, { section: SECURITY });
 		}
 	},
 	password: async ({ request, locals }) => {
 		try {
 			if (locals.actor.kind !== 'user') {
-				return fail(401, { ok: false, message: t('error.sessionRequired') });
+				return fail(401, {
+					ok: false,
+					section: SECURITY,
+					message: t('error.sessionRequired')
+				});
 			}
 			const parsed = parseForm(passwordSchema, await request.formData());
 			if (parsed.newPassword !== parsed.confirm) {
-				return fail(400, { ok: false, message: t('invite.mismatch') });
+				return fail(400, {
+					ok: false,
+					section: SECURITY,
+					field: 'confirmPassword',
+					message: t('invite.mismatch')
+				});
 			}
 			const key = `password:${locals.actor.userId}`;
 			if (tooManyAttempts(key, env.security.passwordChangesPerHour)) {
-				return fail(429, { ok: false, message: t('auth.throttled') });
+				return fail(429, { ok: false, section: SECURITY, message: t('auth.throttled') });
 			}
 			try {
 				await auth.api.changePassword({
@@ -164,14 +189,19 @@ export const actions: Actions = {
 				if (status === 400) {
 					return fail(400, {
 						ok: false,
+						section: SECURITY,
+						field: 'currentPassword',
 						message: t('profile.currentPasswordInvalid')
 					});
 				}
 				throw cause;
 			}
-			return { ok: true, message: t('profile.passwordChanged') };
+			return { ok: true, section: SECURITY, message: t('profile.passwordChanged') };
 		} catch (cause) {
-			return actionError(cause);
+			return actionError(cause, {
+				section: SECURITY,
+				field: failingField(cause)
+			});
 		}
 	}
 };

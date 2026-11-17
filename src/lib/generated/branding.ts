@@ -10,26 +10,31 @@ export const branding = {
   "scope": "/",
   "display": "standalone",
   "indexable": true,
-  "themeColor": "#101a22",
-  "backgroundColor": "#f5f2ea",
+  "themeColor": "#12283a",
+  "backgroundColor": "#f6f1e7",
   "emailPalette": {
-    "ink": "#101a22",
-    "paper": "#f5f2ea",
-    "surface": "#fffcf6",
-    "line": "#ded6c7",
-    "muted": "#58656e",
-    "brand": "#2453bb"
+    "ink": "#12283a",
+    "paper": "#f6f1e7",
+    "surface": "#fffdf8",
+    "line": "#ddd2bf",
+    "muted": "#5e6a6a",
+    "brand": "#b4432f"
   },
   "socialImage": "/social/apercu.jpg",
+  "authImage": "/auth/dressing-room-0397f5db9c38.webp",
   "manifestPath": "/manifest.webmanifest",
   "offlinePath": "/offline.html",
   "cachePrefix": "lhdm",
   "icons": {
-    "favicon": "/icons/favicon-32.b38e780a2fd7.png",
-    "appleTouch": "/icons/apple-touch-180.f5b3ec40470a.png",
-    "icon192": "/icons/icon-192-192.f41cbf210c11.png",
-    "icon512": "/icons/icon-512-512.e6d2499b9bbd.png",
-    "maskable": "/icons/maskable-512-512.28f891c1c4ec.png"
+    "favicon": "/icons/favicon-32.4c6787c2333a.png",
+    "appleTouch": "/icons/apple-touch-180.aff87536bf7c.png",
+    "icon192": "/icons/icon-192-192.073945cb4e02.png",
+    "icon512": "/icons/icon-512-512.904ac52376ea.png",
+    "maskable": "/icons/maskable-512-512.5c023d038900.png"
+  },
+  "textures": {
+    "paper": "/textures/paper-b0f353d27755.webp",
+    "ice": "/textures/ice-91bfe133b755.webp"
   }
 } as const;
 

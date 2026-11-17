@@ -27,7 +27,7 @@ npm run build            # production build
 npm run db:generate      # generate a migration from schema changes
 ```
 
-Demo data is created through the admin screens; there is no seed command.
+Demo data is created through the admin screens. For a rich local or staging set, `npm run seed:demo -- --yes --password <secret>` writes a marked demonstration season: it only touches rows prefixed `demo_` or accounts at `@demo.liguehockey.local`, reuses the league generator for every lineup, and lists the four demonstration accounts. The password is supplied by the operator and is never logged.
 
 ## Intégration continue et publication
 

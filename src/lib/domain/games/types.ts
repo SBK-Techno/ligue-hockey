@@ -1,3 +1,4 @@
+import type { GameWarning } from '#config/game-warnings.ts';
 import type { Position } from '#config/positions.ts';
 import type { Team } from '#config/teams.ts';
 
@@ -5,6 +6,8 @@ export type GameSummary = {
 	id: string;
 	gameDate: string;
 	startTime: string;
+	locationId: string;
+	/** Libellé figé du lieu pour ce match. Renommer le lieu ne le réécrit pas. */
 	location: string;
 	status: 'scheduled' | 'cancelled' | 'completed';
 };
@@ -14,6 +17,7 @@ export type GamePlayer = {
 	fullName: string;
 	position: Position;
 	jerseyNumber: number | null;
+	avatarId: string | null;
 	kind: 'regular' | 'sub';
 };
 
@@ -46,7 +50,11 @@ export type GameGenerationView = {
 	sizeDiff: number | null;
 	skillDiffLabel: string | null;
 	ageDiffLabel: string | null;
-	warnings: string[];
+	/**
+	 * Avertissements d'alignement, jamais dérivés des notes : ils décrivent des
+	 * règles, des places ou des limites, et restent visibles aux joueurs.
+	 */
+	warnings: GameWarning[];
 	ruleViolations: GameRuleViolationView[];
 	bench: GameBenchView[];
 	generatedAt: number;

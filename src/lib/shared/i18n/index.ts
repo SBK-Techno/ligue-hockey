@@ -65,6 +65,15 @@ export function formatDate(
 	return formatter.format(dateOnlyToDate(date));
 }
 
+const weekdayShortFormat = new Intl.DateTimeFormat(branding.locale, {
+	weekday: 'short',
+	timeZone: branding.timezone
+});
+
+export function formatWeekdayShort(date: string): string {
+	return weekdayShortFormat.format(dateOnlyToDate(date));
+}
+
 const timestampFormat = new Intl.DateTimeFormat(branding.locale, {
 	day: 'numeric',
 	month: 'short',
@@ -77,14 +86,36 @@ export function formatTimestamp(ms: number): string {
 	return timestampFormat.format(toDate(ms));
 }
 
+const timeOfDayFormat = new Intl.DateTimeFormat(branding.locale, {
+	hour: '2-digit',
+	minute: '2-digit',
+	timeZone: branding.timezone
+});
+
+/** L'heure seule, quand le jour est déjà écrit au-dessus. */
+export function formatTimeOfDay(ms: number): string {
+	return timeOfDayFormat.format(toDate(ms));
+}
+
 const monthYearFormat = new Intl.DateTimeFormat(branding.locale, {
 	month: 'long',
 	year: 'numeric',
 	timeZone: branding.timezone
 });
 
+const monthLabelFormat = new Intl.DateTimeFormat(branding.locale, {
+	month: 'long',
+	year: 'numeric',
+	timeZone: 'UTC'
+});
+
 export function formatMonthYear(ms: number): string {
 	return monthYearFormat.format(toDate(ms));
+}
+
+/** Un mois de calendrier `YYYY-MM`, sans dépendre du fuseau du serveur. */
+export function formatMonthLabel(month: string): string {
+	return monthLabelFormat.format(dateOnlyToDate(`${month}-01`));
 }
 
 export function formatTimeParts(time: string): { hour: string; minute: string } {
@@ -103,6 +134,14 @@ export function formatTime(time: string): string {
 
 export function formatDateTime(date: string, time: string): string {
 	return `${formatDate(date)} · ${formatTime(time)}`;
+}
+
+export function currencySymbol(currency: string): string {
+	const parts = new Intl.NumberFormat(branding.locale, {
+		style: 'currency',
+		currency
+	}).formatToParts(0);
+	return parts.find((part) => part.type === 'currency')?.value ?? currency;
 }
 
 export function formatMoney(cents: number, currency: string): string {
@@ -135,10 +174,27 @@ export function formatAge(age: number): string {
 const pluralRules = new Intl.PluralRules(branding.locale);
 const decimalFormats = new Map<number, Intl.NumberFormat>();
 
-export function formatCount(count: number, singularKey: I18nKey, pluralKey: I18nKey): string {
+export function formatCount(
+	count: number,
+	singularKey: I18nKey,
+	pluralKey: I18nKey,
+	params: Params = {}
+): string {
 	return t(pluralRules.select(count) === 'one' ? singularKey : pluralKey, {
-		count
+		count,
+		...params
 	});
+}
+
+const percentFormat = new Intl.NumberFormat(branding.locale, {
+	style: 'percent',
+	maximumFractionDigits: 0
+});
+
+/** Une part entière, jamais un faux décimal : 0,34 devient 34 %. */
+export function formatPercent(part: number, whole: number): string {
+	if (whole <= 0) return percentFormat.format(0);
+	return percentFormat.format(part / whole);
 }
 
 export function formatDecimal(value: number, digits: number): string {

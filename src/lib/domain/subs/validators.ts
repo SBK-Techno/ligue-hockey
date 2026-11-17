@@ -10,6 +10,11 @@ export const subProfileInputSchema = z.object({
 	positions
 });
 
+export const subRequestRefSchema = z.object({
+	gameId: z.string().trim().min(1),
+	requestId: z.string().trim().min(1)
+});
+
 export const subFavoriteInputSchema = z.object({
 	playerId: z.string().trim().min(1),
 	favorite: z.preprocess(

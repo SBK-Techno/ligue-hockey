@@ -1,43 +1,49 @@
 import { redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { branding } from '#lib/generated/branding.ts';
+import { can } from '#lib/domain/auth/policy.ts';
+import { createGame, getGame, listSchedule } from '#lib/domain/games/service.ts';
 import {
-	createGame,
-	getGame,
-	listSchedule
-} from '#lib/domain/games/service.ts';
+	defaultGameDraft,
+	nextGameId,
+	splitSchedule
+} from '#lib/domain/games/schedule.ts';
+import { listLocations } from '#lib/domain/locations/service.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
-import {
-	addDays,
-	clock,
-	dateOnlyToDate,
-	todayInZone
-} from '#lib/shared/time/clock.ts';
+import { todayInZone } from '#lib/shared/time/clock.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 import { gameInputSchema } from '#lib/domain/games/validators.ts';
 
-function nextLeagueDay(): string {
-	const today = todayInZone(branding.timezone, clock.nowMs());
-	const weekday = dateOnlyToDate(today).getUTCDay();
-	const days = weekday === 0 ? 7 : 7 - weekday;
-	return addDays(today, days);
-}
+const PAST_LIMIT = 20;
 
-export const load: ServerLoad = ({ locals }) => {
+export const load: ServerLoad = ({ locals, url }) => {
 	const actor = locals.actor;
 	const settings = getSettings();
-	const defaults = {
-		date: nextLeagueDay(),
-		location: settings['games.defaultLocation'],
-		time: settings['games.defaultStartTime']
-	};
-	if (actor.kind !== 'user') {
-		return { games: [], defaults };
-	}
+	const schedule = actor.kind === 'user' ? listSchedule(actor) : [];
+	const locations =
+		actor.kind === 'user' && can(actor, 'manageGames') ? listLocations(actor) : [];
+	const today = todayInZone(branding.timezone);
+
+	const { upcoming, past } = splitSchedule(schedule);
+	const defaults = defaultGameDraft({
+		games: schedule,
+		locations,
+		defaultLocationName: settings['games.defaultLocation'],
+		defaultStartTime: settings['games.defaultStartTime'],
+		today
+	});
+
+	const showArchive = url.searchParams.get('archive') === '1';
+
 	return {
-		games: listSchedule(actor)
-			.slice(0, 20)
-			.map((game) => getGame(actor, game.id)),
+		upcoming: upcoming.map((game) => getGame(actor, game.id)),
+		past: (showArchive ? past : past.slice(0, PAST_LIMIT)).map((game) =>
+			getGame(actor, game.id)
+		),
+		pastTotal: past.length,
+		nextId: nextGameId(schedule),
+		showArchive,
+		locations,
 		defaults
 	};
 };

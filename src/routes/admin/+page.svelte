@@ -1,165 +1,178 @@
 <script lang="ts">
+	import { balanceStatusDefinition } from '#config/balance-status.ts';
 	import { gameStatus } from '#config/game-status.ts';
 	import { positionDefinition } from '#config/positions.ts';
-	import { formatDate, formatMoney, formatTime, t } from '#lib/shared/i18n/index.ts';
+	import { formatCount, formatDate, formatMoney, formatTime, t } from '#lib/shared/i18n/index.ts';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import RecordRow from '#lib/ui/RecordRow.svelte';
+	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import StatStrip from '#lib/ui/StatStrip.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	const overdue = $derived(data.balances.filter((balance) => balance.isOverdue));
-	const hasTodo = $derived(
-		overdue.length > 0 || data.requests.length > 0 || data.counts.overdue > 0
+	const hasTodo = $derived(data.unpaid.length > 0 || data.requests.length > 0);
+	const openSlots = $derived(
+		data.nextGame?.slots.filter((slot) => !slot.player).length ?? 0
+	);
+	const pendingNames = $derived(
+		data.nextAvailability?.pending.map((entry) => entry.fullName) ?? []
 	);
 </script>
 
 <PageHeader title={t('admin.dashboard')} meta={t('admin.dashboardHelp')} />
 
-<div class="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-sheet border border-line bg-line lg:grid-cols-4">
-	{#if data.permissions.players}
-		<a class="bg-surface px-4 py-3 no-underline transition-colors hover:bg-ice-soft" href="/admin/joueurs">
-			<p class="numeric text-2xl">{data.counts.active}</p>
-			<p class="mt-0.5 text-xs text-muted">{t('admin.totalPlayers')}</p>
-		</a>
-		<a class="bg-surface px-4 py-3 no-underline transition-colors hover:bg-ice-soft" href="/admin/joueurs">
-			<p class="numeric text-2xl">{data.counts.subs}</p>
-			<p class="mt-0.5 text-xs text-muted">{t('admin.totalSubs')}</p>
-		</a>
-	{/if}
-	{#if data.permissions.subs}
-		<a class="bg-surface px-4 py-3 no-underline transition-colors hover:bg-ice-soft" href="/admin/matchs">
-			<p class="numeric text-2xl">{data.counts.openRequests}</p>
-			<p class="mt-0.5 text-xs text-muted">{t('admin.openRequests')}</p>
-		</a>
-	{/if}
-	{#if data.permissions.balances}
-		<a class="bg-surface px-4 py-3 no-underline transition-colors hover:bg-ice-soft" href="/admin/soldes">
-			<p class="numeric text-2xl {data.counts.overdue > 0 ? 'text-alert' : ''}">
-				{data.counts.overdue}
-			</p>
-			<p class="mt-0.5 text-xs text-muted">{t('admin.overdueBalances')}</p>
-		</a>
-	{/if}
-</div>
+<div class="page-stack">
+	<StatStrip
+		cells={[
+			...(data.permissions.balances
+				? [
+						{
+							value: data.counts.unpaid,
+							label: `${t('admin.toReceive')}${
+								data.outstandingCents > 0 && data.currency
+									? ` · ${formatMoney(data.outstandingCents, data.currency)}`
+									: ''
+							}`,
+							tone: data.counts.overdue > 0 ? ('alert' as const) : undefined
+						}
+					]
+				: []),
+			...(data.permissions.balances
+				? [{ value: data.counts.noPlan, label: t('balance.noPlanShort') }]
+				: []),
+			...(data.permissions.subs
+				? [{ value: data.counts.openRequests, label: t('admin.openRequests') }]
+				: []),
+			...(data.permissions.games
+				? [{ value: data.counts.unanswered, label: t('admin.unanswered') }]
+				: [])
+		]}
+	/>
 
-<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
-	<section class="card-flush overflow-hidden" aria-labelledby="todo-titre">
-		<div class="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-3">
-			<h2 id="todo-titre" class="text-lg">{t('admin.todo')}</h2>
-			<span class="micro-label">{t('admin.thisWeek')}</span>
-		</div>
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+		<div class="space-y-4">
+			<SectionCard title={t('admin.todo')} flush>
+				{#if hasTodo}
+					<ul role="list" class="divide-y divide-line">
+						{#each data.unpaid as balance (balance.playerId)}
+							{@const status = balanceStatusDefinition(balance.status)}
+							<li>
+								<RecordRow
+									href="/admin/joueurs/{balance.playerId}#solde"
+									title={balance.playerName}
+									meta={t('balance.paidOf', {
+										paid: formatMoney(balance.paidCents, balance.currency),
+										total: formatMoney(balance.totalCents, balance.currency)
+									})}
+									trailing={formatMoney(balance.outstandingCents, balance.currency)}
+									badge={t(status.labelKey)}
+									badgeTone={status.tone}
+								/>
+							</li>
+						{/each}
 
-		{#if hasTodo}
-			<ul role="list" class="divide-y divide-line/70">
-				{#if data.permissions.balances}
-					{#each overdue as balance (balance.playerId)}
-						<li>
-							<a
-								class="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-ink/[0.03]"
-								href="/admin/joueurs/{balance.playerId}"
-							>
-								<span class="min-w-0">
-									<span class="block truncate text-sm font-semibold">{balance.playerName}</span>
-									<span class="mt-0.5 block text-xs text-muted">{t('admin.overdueBalance')}</span>
-								</span>
-								<span class="shrink-0 text-right">
-									<span class="numeric block text-base text-alert">
-										{formatMoney(balance.outstandingCents, balance.currency)}
-									</span>
-									<span class="mt-0.5 block text-[11px] text-alert">
-										{t('balance.status.overdue')}
-									</span>
-								</span>
-							</a>
-						</li>
-					{/each}
-				{/if}
-
-				{#each data.requests.slice(0, 6) as request (request.id)}
-					<li>
-						<a
-							class="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-ink/[0.03]"
-							href="/matchs/{request.gameId}"
-						>
-							<span class="min-w-0">
-								<span class="block text-sm font-semibold">
-									{t('admin.requestRow', {
+						{#each data.requests as request (request.id)}
+							<li>
+								<RecordRow
+									href="/remplacants"
+									title={t('admin.requestRow', {
 										position: t(positionDefinition(request.position).labelKey)
 									})}
-								</span>
-								<span class="mt-0.5 block text-xs text-muted">
-									{formatDate(request.game.gameDate, 'short')} · {request.game.location}
-								</span>
-							</span>
-							<span class="badge-ice shrink-0">{t('subs.placeOpen')}</span>
-						</a>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<div class="px-4 py-6">
-				<p class="text-sm text-muted">{t('admin.nothingTodo')}</p>
-			</div>
-		{/if}
+									meta="{formatDate(request.game.gameDate, 'short')} · {request.game.location}{request.requestedByName
+										? ` · ${request.requestedByName}`
+										: ''}"
+									badge={t('subs.placeOpen')}
+									badgeTone="ice"
+								/>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="section-row text-body text-muted">
+						{data.withoutPlan.length > 0 ? t('admin.noUnpaid') : t('admin.nothingTodo')}
+					</p>
+				{/if}
+			</SectionCard>
 
-		{#if data.requests.length > 6}
-			<div class="border-t border-line/70 px-4 py-2">
-				<a class="link text-sm" href="/admin/matchs">
-					{t('admin.moreRequests', { count: data.requests.length - 6 })}
-				</a>
-			</div>
-		{/if}
-	</section>
-
-	{#if data.permissions.games}
-		<section class="card" aria-labelledby="prochain-titre">
-			<h2 id="prochain-titre" class="text-lg">{t('admin.nextGame')}</h2>
-			{#if data.nextGame}
-				<a
-					class="mt-3 block rounded-control border border-line bg-paper px-3 py-3 no-underline transition-colors hover:bg-ice-soft"
-					href="/admin/matchs/{data.nextGame.id}"
+			{#if data.permissions.balances && data.withoutPlan.length > 0}
+				<SectionCard
+					title={t('admin.withoutPlanTitle', { count: data.withoutPlan.length })}
+					href="/admin/soldes"
+					linkLabel={t('admin.balances')}
+					flush
 				>
-					<p class="font-display text-xl leading-tight">{formatDate(data.nextGame.gameDate)}</p>
-					<p class="mt-1 text-sm text-muted">
-						{formatTime(data.nextGame.startTime)} · {data.nextGame.location}
-					</p>
-					<p class="mt-3">
-						<span class={data.nextGame.generated ? 'badge-ok' : 'badge'}>
-							{data.nextGame.generated ? t('games.generated') : t('games.notGenerated')}
-						</span>
-					</p>
-				</a>
-			{:else}
-				<p class="mt-3 text-sm text-muted">{t('home.noGame')}</p>
-				<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
+					<ul role="list" class="divide-y divide-line">
+						{#each data.withoutPlan.slice(0, 3) as balance (balance.playerId)}
+							<li>
+								<RecordRow
+									href="/admin/joueurs/{balance.playerId}#solde"
+									title={balance.playerName}
+								/>
+							</li>
+						{/each}
+					</ul>
+				</SectionCard>
 			{/if}
-		</section>
-	{/if}
-</div>
-
-{#if data.upcoming.length > 0}
-	<section class="card-flush mt-4 overflow-hidden" aria-labelledby="prochaines-titre">
-		<div class="flex items-center justify-between gap-3 border-b border-line/70 px-4 py-3">
-			<h2 id="prochaines-titre" class="text-lg">{t('home.upcoming')}</h2>
-			<a class="link text-sm" href="/admin/matchs">{t('home.allGames')}</a>
 		</div>
-		<ul role="list" class="divide-y divide-line/70">
-			{#each data.upcoming as game (game.id)}
-				<li>
-					<a
-						class="flex min-h-12 items-center gap-3 px-4 py-2 no-underline transition-colors hover:bg-ink/[0.03]"
-						href="/admin/matchs/{game.id}"
-					>
-						<span class="w-16 shrink-0 whitespace-nowrap font-mono text-xs text-muted">
-							{formatDate(game.gameDate, 'short')}
-						</span>
-						<span class="min-w-0 flex-1 truncate text-sm font-semibold">
-							{formatTime(game.startTime)} · {game.location}
-						</span>
-						<span class="badge shrink-0">{t(gameStatus(game.status).labelKey)}</span>
-					</a>
-				</li>
-			{/each}
-		</ul>
-	</section>
-{/if}
+
+		<div class="space-y-4">
+			{#if data.permissions.games}
+				<SectionCard title={t('home.nextGame')}>
+					{#if data.nextGame}
+						<p class="serial">{formatDate(data.nextGame.gameDate)}</p>
+						<p class="mt-1 font-display text-subhead font-semibold leading-tight">
+							{formatTime(data.nextGame.startTime)} · {data.nextGame.location}
+						</p>
+						<div class="mt-3 flex flex-wrap gap-1.5">
+							<span class={data.nextGame.generated ? 'badge-ok' : 'badge'}>
+								{data.nextGame.generated ? t('games.generated') : t('games.notGenerated')}
+							</span>
+							{#if openSlots > 0}
+								<span class="badge-ice">
+									{formatCount(openSlots, 'games.openSlots.one', 'games.openSlots.many')}
+								</span>
+							{/if}
+						</div>
+						{#if data.nextAvailability}
+							<p class="mt-3 font-mono text-meta text-muted">{data.nextAvailability.summary}</p>
+							{#if pendingNames.length > 0}
+								<p class="mt-1 text-meta leading-snug text-muted">
+									{t('admin.unansweredNames', { names: pendingNames.slice(0, 5).join(', ') })}
+								</p>
+							{/if}
+						{/if}
+						<a class="btn-primary mt-4 w-full" href="/admin/matchs/{data.nextGame.id}">
+							{t('admin.openSheet')}
+						</a>
+					{:else}
+						<p class="text-body text-muted">{t('home.noGame')}</p>
+						<a class="btn-secondary btn-sm mt-3" href="/admin/matchs">{t('games.adminCreate')}</a>
+					{/if}
+				</SectionCard>
+			{/if}
+
+			{#if data.upcoming.length > 0}
+				<SectionCard
+					title={t('home.upcoming')}
+					href="/admin/matchs"
+					linkLabel={t('home.allGames')}
+					flush
+				>
+					<ul role="list" class="divide-y divide-line">
+						{#each data.upcoming as game (game.id)}
+							<li>
+								<RecordRow
+									href="/admin/matchs/{game.id}"
+									title="{formatTime(game.startTime)} · {game.location}"
+									meta={formatDate(game.gameDate, 'short')}
+									badge={t(gameStatus(game.status).labelKey)}
+								/>
+							</li>
+						{/each}
+					</ul>
+				</SectionCard>
+			{/if}
+		</div>
+	</div>
+</div>

@@ -6,20 +6,22 @@
 		eyebrow,
 		meta,
 		back,
-		actions
+		actions,
+		leading
 	}: {
 		title: string;
 		eyebrow?: string;
 		meta?: string;
 		back?: { href: string; label: string };
 		actions?: Snippet;
+		leading?: Snippet;
 	} = $props();
 </script>
 
 <header class="mb-6">
 	{#if back}
 		<a
-			class="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted no-underline hover:text-ink"
+			class="mb-2 inline-flex min-h-11 items-center gap-1.5 text-body font-semibold text-muted no-underline hover:text-ink"
 			href={back.href}
 		>
 			<svg
@@ -37,14 +39,19 @@
 	{/if}
 
 	<div class="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-		<div class="min-w-0">
-			{#if eyebrow}
-				<p class="micro-label">{eyebrow}</p>
+		<div class="flex min-w-0 items-center gap-3">
+			{#if leading}
+				<div class="shrink-0">{@render leading()}</div>
 			{/if}
-			<h1 class="first-letter:uppercase {eyebrow ? 'mt-1' : ''}">{title}</h1>
-			{#if meta}
-				<p class="mt-1.5 text-sm text-muted">{meta}</p>
-			{/if}
+			<div class="min-w-0">
+				{#if eyebrow}
+					<p class="micro-label">{eyebrow}</p>
+				{/if}
+				<h1 class="first-letter:uppercase {eyebrow ? 'mt-1' : ''}">{title}</h1>
+				{#if meta}
+					<p class="mt-1.5 break-words text-meta text-muted">{meta}</p>
+				{/if}
+			</div>
 		</div>
 
 		{#if actions}

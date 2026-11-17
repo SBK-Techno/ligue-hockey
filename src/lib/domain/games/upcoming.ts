@@ -1,4 +1,5 @@
 import { logger } from '#lib/shared/logging/logger.ts';
+import { isLineupEditable } from './playability.ts';
 import { listGames } from './queries.ts';
 import { regenerateGame } from './service.ts';
 
@@ -20,7 +21,20 @@ export function regenerateUpcomingGeneratedGames(): UpcomingRegeneration {
 	let failed = 0;
 
 	for (const game of listGames()) {
-		if (game.status !== 'scheduled' || game.generatedAt === null) continue;
+		if (game.generatedAt === null) continue;
+		// Un alignement manuel n'est jamais écrasé par un recalcul automatique.
+		if (game.lineupManualAt !== null) continue;
+		// Un match commencé, terminé ou annulé ne se recalcule jamais : son
+		// alignement publié est figé.
+		if (
+			!isLineupEditable({
+				status: game.status,
+				gameDate: game.gameDate,
+				startTime: game.startTime
+			})
+		) {
+			continue;
+		}
 		try {
 			regenerateGame(game.id);
 			regenerated += 1;

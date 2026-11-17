@@ -13,6 +13,7 @@ import { POSITION_KEYS, type Position } from '#config/positions.ts';
 import { DATE_GLOB, TIME_GLOB } from '#config/time.ts';
 import { user } from '#lib/server/db/auth.schema.ts';
 import { players } from '#lib/domain/players/schema.ts';
+import { locations } from '#lib/domain/locations/schema.ts';
 
 const TEAM_SQL = TEAM_KEYS.map((key) => `'${key}'`).join(', ');
 const POSITION_SQL = POSITION_KEYS.map((key) => `'${key}'`).join(', ');
@@ -26,9 +27,17 @@ export const games = sqliteTable(
 		id: text('id').primaryKey(),
 		gameDate: text('game_date').notNull(),
 		startTime: text('start_time').notNull(),
+		locationId: text('location_id')
+			.notNull()
+			.references(() => locations.id, { onDelete: 'restrict' }),
+		/** Libellé figé du lieu au moment de la création ou du changement de lieu. */
 		location: text('location').notNull(),
 		notes: text('notes'),
 		status: text('status').$type<GameStatus>().notNull().default('scheduled'),
+		/** Un match n'est terminé qu'avec cette estampille, jamais par le statut seul. */
+		completedAt: integer('completed_at'),
+		/** Alignement enregistré à la main : la régénération automatique ne le remplace pas. */
+		lineupManualAt: integer('lineup_manual_at'),
 		rosterTemplateJson: text('roster_template_json').notNull(),
 		generatedAt: integer('generated_at'),
 		generationJson: text('generation_json'),
@@ -43,6 +52,7 @@ export const games = sqliteTable(
 			.on(table.gameDate, table.startTime)
 			.where(sql`"status" <> 'cancelled'`),
 		index('games_status_date_idx').on(table.status, table.gameDate),
+		index('games_location_idx').on(table.locationId),
 		check(
 			'games_status_check',
 			sql.raw(`"status" in ('scheduled', 'cancelled', 'completed')`)

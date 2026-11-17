@@ -1,3 +1,4 @@
+import { CURRENCY, type Currency } from '#config/currency.ts';
 import { branding } from '#lib/generated/branding.ts';
 import {
 	canViewBalance,
@@ -17,7 +18,7 @@ import { newId } from '#lib/shared/ids/id.ts';
 import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseSchema } from '#lib/shared/validation.ts';
 import { applyDiscount, splitPlan } from './plan.ts';
-import { computeBalance, type Balance, type Payment, type PaymentPlan } from './policy.ts';
+import { computeBalance, planIsActive, type Balance, type Payment, type PaymentPlan } from './policy.ts';
 import {
 	deletePayment,
 	findPayment,
@@ -38,18 +39,16 @@ import {
 
 export type BalanceView = Balance & {
 	playerId: string;
-	currency: string;
+	currency: Currency;
 	playerName: string;
+	/** Un plan à zéro n'ouvre ni formulaire de paiement ni solde à payer. */
+	planActive: boolean;
 };
 
 export type AdminBalanceRow = BalanceView & {
 	active: boolean;
 	hasPlan: boolean;
 };
-
-function currency(): string {
-	return getSettings()['finance.currency'];
-}
 
 function today(): string {
 	return todayInZone(branding.timezone);
@@ -90,7 +89,8 @@ function balanceFor(
 	return {
 		playerId,
 		playerName,
-		currency: currency(),
+		currency: CURRENCY,
+		planActive: planIsActive(plan),
 		...(computeBalance(plan, payments, today(), graceDays()) as Balance)
 	};
 }
@@ -99,7 +99,9 @@ function emptyBalance(playerId: string, playerName: string): BalanceView {
 	return {
 		playerId,
 		playerName,
-		currency: currency(),
+		currency: CURRENCY,
+		planActive: false,
+		status: 'upcoming',
 		totalCents: 0,
 		paidCents: 0,
 		outstandingCents: 0,
@@ -112,6 +114,7 @@ function emptyBalance(playerId: string, playerName: string): BalanceView {
 				paidCents: 0,
 				remainingCents: 0,
 				dueDate: null,
+				paidAt: null,
 				status: 'upcoming'
 			},
 			{
@@ -120,6 +123,7 @@ function emptyBalance(playerId: string, playerName: string): BalanceView {
 				paidCents: 0,
 				remainingCents: 0,
 				dueDate: null,
+				paidAt: null,
 				status: 'upcoming'
 			}
 		]
@@ -208,7 +212,7 @@ export function listBalances(actor: Actor): AdminBalanceRow[] {
 		return {
 			...(view ?? emptyBalance(player.userId, player.fullName)),
 			active: player.active,
-			hasPlan: view !== null
+			hasPlan: planIsActive(plan)
 		};
 	});
 }
@@ -224,6 +228,9 @@ export function applyDefaultPlan(actor: Actor, playerId: string): BalanceView | 
 		settings['finance.totalCents'],
 		player.position === 'goalie' ? settings['finance.goalieDiscountPercent'] : 0
 	);
+	if (total <= 0) {
+		throw new AppError('VALIDATION', { key: 'balance.feeNotSet' });
+	}
 	const amounts = splitPlan(total, settings['finance.firstInstallmentPercent']);
 	const now = clock.nowMs();
 
@@ -291,7 +298,7 @@ export function recordPayment(
 	requirePermission(actor, 'recordPayments');
 	getPlayer(actor, playerId);
 	const parsed = parseSchema(paymentInputSchema, input);
-	if (!findPlan(playerId)) {
+	if (!planIsActive(planFromRow(findPlan(playerId)))) {
 		throw new AppError('CONFLICT', { key: 'balance.noPlan' });
 	}
 

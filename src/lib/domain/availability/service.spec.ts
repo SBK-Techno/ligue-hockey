@@ -82,7 +82,7 @@ vi.mock('#lib/domain/subs/service.ts', () => ({
 	cancelForReturn: h.cancelForReturn
 }));
 
-const { markAvailability } = await import('./service.ts');
+const { availabilityForGame, markAvailability } = await import('./service.ts');
 
 const actor = { kind: 'user', userId: 'me', role: 'player', name: 'Moi' } as never;
 
@@ -97,6 +97,40 @@ beforeEach(() => {
 	h.previous = null;
 	// Une heure avant le match : la date limite est passée.
 	h.now = h.startMs - HOUR;
+});
+
+describe('markAvailability après la mise au jeu', () => {
+	it('refuse une présence comme une absence', () => {
+		h.now = h.startMs + HOUR;
+		h.previous = 'present';
+		for (const status of ['present', 'absent'] as const) {
+			let error: unknown;
+			try {
+				markAvailability(actor, 'game_1', status);
+			} catch (cause) {
+				error = cause;
+			}
+			expect(error).toMatchObject({ code: 'CONFLICT', key: 'availability.gameClosed' });
+		}
+		expect(h.setGamePresence).not.toHaveBeenCalled();
+		expect(h.createAbsenceRequest).not.toHaveBeenCalled();
+	});
+
+	it('n’offre plus le retrait une fois le match commencé', () => {
+		h.now = h.startMs + HOUR;
+		h.previous = 'present';
+
+		const view = availabilityForGame(actor, {
+			id: 'game_1',
+			status: 'scheduled',
+			gameDate: '2026-11-22',
+			startTime: '09:00',
+			locationId: 'arena',
+			location: 'Aréna'
+		});
+
+		expect(view.canWithdraw).toBe(false);
+	});
 });
 
 describe('markAvailability après la date limite', () => {

@@ -1,10 +1,10 @@
 import type { ServerLoad } from '@sveltejs/kit';
+import { CURRENCY } from '#config/currency.ts';
 import { listBalances } from '#lib/domain/finance/service.ts';
-import { getSettings } from '#lib/domain/settings/service.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	const actor = locals.actor;
-	const currency = getSettings()['finance.currency'];
+	const currency = CURRENCY;
 	if (actor.kind !== 'user') return { balances: [], totals: {}, currency };
 	const balances = listBalances(actor);
 	return {

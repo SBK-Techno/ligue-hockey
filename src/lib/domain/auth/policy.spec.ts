@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accountSurfaces, primarySurfaces } from './surfaces.ts';
+import { mobileSurfaces, primarySurfaces } from './surfaces.ts';
 import { can, capabilitiesOf } from './policy.ts';
 import type { Actor, UserActor } from './types.ts';
 
@@ -52,16 +52,35 @@ describe('role surfaces', () => {
 	it('keeps the player navigation to member destinations', () => {
 		const keys = primarySurfaces(actor('player')).map((surface) => surface.key);
 		expect(keys).toEqual(['home', 'games', 'subs', 'chat', 'account']);
-		expect(accountSurfaces(actor('player'))).toHaveLength(0);
+		expect(mobileSurfaces(actor('player')).map((surface) => surface.key)).toEqual([
+			'home',
+			'games',
+			'subs',
+			'chat',
+			'account'
+		]);
 	});
 
-	it('adds the management destination for a manager', () => {
-		const surfaces = accountSurfaces(actor('manager')).map((surface) => surface.key);
-		expect(surfaces).toEqual(['management']);
+	it('puts management in the manager navigation and the fifth mobile slot', () => {
+		const keys = primarySurfaces(actor('manager')).map((surface) => surface.key);
+		expect(keys).toContain('management');
+		expect(mobileSurfaces(actor('manager')).map((surface) => surface.key)).toEqual([
+			'home',
+			'games',
+			'subs',
+			'chat',
+			'management'
+		]);
 	});
 
 	it('keeps the substitute bank reachable for a manager', () => {
 		const keys = primarySurfaces(actor('manager')).map((surface) => surface.key);
 		expect(keys).toContain('subs');
+	});
+
+	it('gives the substitute bank a short label for the five-slot mobile bar', () => {
+		const subs = primarySurfaces(actor('player')).find((surface) => surface.key === 'subs');
+		expect(subs?.shortLabelKey).toBe('subs.short');
+		expect(subs?.labelKey).toBe('subs.title');
 	});
 });

@@ -49,11 +49,11 @@
 </script>
 
 {#if browser && !installed && (variant === 'full' || (!dismissed && deferred))}
-	<section class="card {variant === 'compact' ? 'mt-4 border-ice/20 bg-ice-soft/50' : 'mb-4'}">
+	<section class="card">
 		<div class="flex flex-wrap items-start justify-between gap-3">
 			<div class="min-w-0">
-				<h2 class={variant === 'compact' ? 'text-base' : ''}>{t('install.title')}</h2>
-				<p class="mt-1 text-sm leading-relaxed text-muted">{t('install.body')}</p>
+				<h2 class={variant === 'compact' ? 'text-subhead' : ''}>{t('install.title')}</h2>
+				<p class="mt-1 text-body leading-relaxed text-muted">{t('install.body')}</p>
 			</div>
 			{#if deferred}
 				<button class="btn-primary btn-sm" type="button" onclick={install}>
@@ -62,9 +62,9 @@
 			{/if}
 		</div>
 		{#if variant === 'full'}
-			<details class="group mt-3 border-t border-line/70 pt-2">
+			<details class="group mt-3 border-t border-line pt-2">
 				<summary
-					class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-ice marker:content-none"
+					class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body font-medium text-ice marker:content-none"
 				>
 					<svg
 						viewBox="0 0 24 24"
@@ -78,14 +78,14 @@
 					</svg>
 					{t('install.how')}
 				</summary>
-				<ul class="mt-1 space-y-1.5 pb-1 text-sm text-muted">
+				<ul class="mt-1 space-y-1.5 pb-1 text-body text-muted">
 					<li>{t('install.ios')}</li>
 					<li>{t('install.android')}</li>
 					<li>{t('install.desktop')}</li>
 				</ul>
 			</details>
 		{:else if isIos}
-			<p class="mt-2 text-xs text-muted">{t('install.ios')}</p>
+			<p class="mt-2 text-meta text-muted">{t('install.ios')}</p>
 		{/if}
 		{#if variant === 'compact' && !deferred}
 			<button class="btn-ghost btn-sm mt-2" type="button" onclick={dismiss}>

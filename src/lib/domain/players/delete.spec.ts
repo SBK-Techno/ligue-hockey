@@ -9,6 +9,7 @@ const row = {
 	position: 'forward' as const,
 	age: 30,
 	jerseyNumber: null,
+	avatarId: null,
 	isSubstitute: false,
 	active: true,
 	role: 'player' as const
@@ -31,8 +32,9 @@ vi.mock('./queries.ts', () => ({
 	insertPlayer: vi.fn(),
 	listActivePlayers: vi.fn(() => []),
 	listAllPlayersWithEmail: vi.fn(() => [row]),
+	listActiveAvatarAssignments: vi.fn(() => []),
 	updatePlayer: vi.fn(),
-	deletePlayerAccount: (...args: [string]) => deletePlayerAccount(...args)
+	deletePlayerAccount: (...args: [string, string, string]) => deletePlayerAccount(...args)
 }));
 
 vi.mock('#lib/domain/audit/service.ts', () => ({
@@ -79,7 +81,7 @@ describe('deletePlayer', () => {
 		const { deletePlayer } = await import('./service.ts');
 		await deletePlayer(admin, 'target');
 
-		expect(deletePlayerAccount).toHaveBeenCalledWith('target', expect.any(String));
+		expect(deletePlayerAccount).toHaveBeenCalledWith('target', expect.any(String), expect.any(String));
 		expect(identitySpy).not.toHaveBeenCalled();
 		expect(regenerateUpcomingGeneratedGames).toHaveBeenCalledTimes(1);
 	});

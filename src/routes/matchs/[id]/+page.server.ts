@@ -10,10 +10,23 @@ import {
 	releaseSubstitute
 } from '#lib/domain/roster/service.ts';
 import { getGame, regenerateAsAdmin } from '#lib/domain/games/service.ts';
+import { isGameStarted, isLineupEditable } from '#lib/domain/games/playability.ts';
 import { can } from '#lib/domain/auth/policy.ts';
 import { isSubstitutePlayer } from '#lib/domain/players/service.ts';
 import type { Position } from '#config/positions.ts';
 import { getMySubProfile } from '#lib/domain/subs/service.ts';
+import {
+	addGoal,
+	addPenalty,
+	deleteGoal,
+	deletePenalty,
+	finalizeGame,
+	getGameSheet
+} from '#lib/domain/gamesheet/service.ts';
+import {
+	goalFormInputSchema,
+	penaltyFormInputSchema
+} from '#lib/domain/gamesheet/validators.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import { parseForm } from '#lib/shared/validation.ts';
@@ -30,6 +43,9 @@ const manualRequestSchema = z.object({
 	position: z.enum(POSITION_KEYS)
 });
 
+const goalIdSchema = z.object({ goalId: z.string().min(1) });
+const penaltyIdSchema = z.object({ penaltyId: z.string().min(1) });
+
 export const load: ServerLoad = ({ locals, params }) => {
 	const actor = locals.actor;
 	const positions: Position[] =
@@ -41,7 +57,10 @@ export const load: ServerLoad = ({ locals, params }) => {
 			requests: [],
 			isSubstitute: false,
 			positions,
-			canManage: false
+			canManage: false,
+			editable: false,
+			started: false,
+			sheet: null
 		};
 	}
 	const gameId = params.id;
@@ -52,12 +71,20 @@ export const load: ServerLoad = ({ locals, params }) => {
 			requests: [],
 			isSubstitute: false,
 			positions,
-			canManage: false
+			canManage: false,
+			editable: false,
+			started: false,
+			sheet: null
 		};
 	}
 
+	const game = getGame(actor, gameId);
+	const started = isGameStarted(game);
 	return {
-		game: getGame(actor, gameId),
+		game,
+		editable: isLineupEditable(game),
+		started,
+		sheet: started ? getGameSheet(actor, gameId) : null,
 		availability: getAvailability(actor, gameId),
 		requests: listRequestsForGame(actor, gameId),
 		isSubstitute: isSubstitutePlayer(actor),
@@ -119,6 +146,50 @@ export const actions: Actions = {
 				ok: true,
 				message: result.warning ? t(result.warning) : t('subs.requestCancelled')
 			};
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	goal: async ({ request, locals, params }) => {
+		try {
+			const parsed = parseForm(goalFormInputSchema, await request.formData());
+			addGoal(locals.actor, params.id!, parsed);
+			return { ok: true, message: t('gamesheet.goalSaved') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	penalty: async ({ request, locals, params }) => {
+		try {
+			const parsed = parseForm(penaltyFormInputSchema, await request.formData());
+			addPenalty(locals.actor, params.id!, parsed);
+			return { ok: true, message: t('gamesheet.penaltySaved') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	deleteGoal: async ({ request, locals, params }) => {
+		try {
+			const parsed = parseForm(goalIdSchema, await request.formData());
+			deleteGoal(locals.actor, params.id!, parsed.goalId);
+			return { ok: true, message: t('gamesheet.goalDeleted') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	deletePenalty: async ({ request, locals, params }) => {
+		try {
+			const parsed = parseForm(penaltyIdSchema, await request.formData());
+			deletePenalty(locals.actor, params.id!, parsed.penaltyId);
+			return { ok: true, message: t('gamesheet.penaltyDeleted') };
+		} catch (cause) {
+			return actionError(cause);
+		}
+	},
+	finalize: async ({ locals, params }) => {
+		try {
+			finalizeGame(locals.actor, params.id!);
+			return { ok: true, message: t('gamesheet.finalized') };
 		} catch (cause) {
 			return actionError(cause);
 		}

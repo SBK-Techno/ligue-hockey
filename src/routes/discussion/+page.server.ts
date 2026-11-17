@@ -9,18 +9,17 @@ import {
 	sendMessage
 } from '#lib/domain/chat/service.ts';
 import { canCreatePoll } from '#lib/domain/auth/policy.ts';
-import { CHAT_LIMITS } from '#lib/domain/chat/validators.ts';
+import { CHAT_LIMITS, voteInputSchema } from '#lib/domain/chat/validators.ts';
+import { branding } from '#lib/generated/branding.ts';
 import { getSettings } from '#lib/domain/settings/service.ts';
 import { actionError } from '#lib/server/action.ts';
 import { t } from '#lib/shared/i18n/index.ts';
+import { DAY_MS } from '#config/time.ts';
+import { clock, todayInZone } from '#lib/shared/time/clock.ts';
 import { parseForm } from '#lib/shared/validation.ts';
 
 const messageSchema = z.object({
 	body: z.string().trim().min(1).max(CHAT_LIMITS.messageMax)
-});
-const voteSchema = z.object({
-	messageId: z.string().min(1),
-	optionId: z.string().min(1)
 });
 const idSchema = z.object({ messageId: z.string().min(1) });
 
@@ -33,11 +32,18 @@ export const load: ServerLoad = ({ locals }) => {
 		pollMinOptions: settings['chat.pollMinOptions'],
 		pollMaxOptions: settings['chat.maxPollOptions']
 	};
-	if (locals.actor.kind !== 'user') return { messages: [], limits, canCreatePoll: false };
+	const days = {
+		today: todayInZone(branding.timezone),
+		yesterday: todayInZone(branding.timezone, clock.nowMs() - DAY_MS)
+	};
+	if (locals.actor.kind !== 'user') {
+		return { messages: [], limits, canCreatePoll: false, ...days };
+	}
 	return {
 		messages: listChat(locals.actor),
 		limits,
-		canCreatePoll: canCreatePoll(locals.actor, settings['chat.allowPlayerPolls'])
+		canCreatePoll: canCreatePoll(locals.actor, settings['chat.allowPlayerPolls']),
+		...days
 	};
 };
 
@@ -67,7 +73,7 @@ export const actions: Actions = {
 	},
 	vote: async ({ request, locals }) => {
 		try {
-			const parsed = parseForm(voteSchema, await request.formData());
+			const parsed = parseForm(voteInputSchema, await request.formData());
 			castPollVote(locals.actor, parsed);
 			return { ok: true, message: t('chat.voteSaved') };
 		} catch (cause) {
