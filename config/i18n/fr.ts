@@ -567,6 +567,8 @@ export const fr = {
   'rink.benchEmpty': 'Personne sur le banc.',
   'rink.selectedBench': 'Prêt à placer sur la glace.',
   'rink.selectedIce': 'Choisis une autre place, ou dépose-le sur le banc.',
+  'rink.positionOnly':
+    'Poste : {position}. Les places des autres postes sont verrouillées.',
   'rink.remove': 'Envoyer au banc',
   'rink.save': 'Enregistrer l’alignement',
   'rink.saved': 'Alignement enregistré.',

@@ -36,6 +36,18 @@ export function isPosition(value: string): value is Position {
 }
 
 /**
+ * The only slot-eligibility rule: the player's position must be one of the
+ * positions the slot accepts. A goalie never replaces a defenceman, even in
+ * the lineup editor.
+ */
+export function canFillPosition(
+  playerPositions: readonly Position[],
+  slotPosition: Position
+): boolean {
+  return playerPositions.includes(slotPosition);
+}
+
+/**
  * L'ordre des postes pour l'affichage et les comparaisons : attaque, défense,
  * gardien. C'est le seul propriétaire de ce rang.
  */

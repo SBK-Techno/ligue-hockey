@@ -90,6 +90,12 @@ const TEMPLATE = JSON.stringify({
 	defensePerTeam: 0
 });
 
+const GOALIE_TEMPLATE = JSON.stringify({
+	goaliesPerTeam: 1,
+	forwardsPerTeam: 0,
+	defensePerTeam: 1
+});
+
 function captureError(run: () => unknown): unknown {
 	try {
 		run();
@@ -156,7 +162,11 @@ function addSubstitute(
 		.run(`claim-${id}`, position, id);
 }
 
-function addGame(id: string, gameDate = '2026-11-20'): void {
+function addGame(
+	id: string,
+	gameDate = '2026-11-20',
+	template = TEMPLATE
+): void {
 	sqlite
 		.prepare(
 			`insert into games
@@ -164,8 +174,8 @@ function addGame(id: string, gameDate = '2026-11-20'): void {
 			  generated_at, generation_json, created_at, updated_at)
 			 values (?, ?, '09:00', 'arena', 'Aréna', 'scheduled', ?, 1, ?, 0, 0)`
 		)
-		.run(id, gameDate, TEMPLATE, JSON.stringify(EMPTY_SNAPSHOT));
-	for (const slot of buildSlotDefinitions(JSON.parse(TEMPLATE))) {
+		.run(id, gameDate, template, JSON.stringify(EMPTY_SNAPSHOT));
+	for (const slot of buildSlotDefinitions(JSON.parse(template))) {
 		sqlite
 			.prepare(
 				`insert into game_slots
@@ -381,6 +391,33 @@ describe('alignement manuel', () => {
 				saveManualLineup(manager, 'game', withPlayers(['a', 'a', 'c', 'd']))
 			)
 		).toMatchObject({ code: 'VALIDATION', key: 'games.lineupPlayerDuplicate' });
+	});
+
+	it('refuse un gardien dans une place de défenseur', () => {
+		addPlayer('g', 'goalie');
+		addGame('goalie-game', '2026-11-21', GOALIE_TEMPLATE);
+		setPresent('goalie-game', 'g');
+		setPresent('goalie-game', 'e');
+
+		expect(
+			captureError(() =>
+				saveManualLineup(manager, 'goalie-game', {
+					expectedGeneratedAt: 1,
+					assignments: [
+						{
+							team: 'white',
+							position: 'defense',
+							slotIndex: 0,
+							playerId: 'g'
+						},
+						{ team: 'white', position: 'goalie', slotIndex: 0, playerId: null },
+						{ team: 'black', position: 'defense', slotIndex: 0, playerId: null },
+						{ team: 'black', position: 'goalie', slotIndex: 0, playerId: null }
+					]
+				})
+			)
+		).toMatchObject({ code: 'VALIDATION', key: 'games.lineupPositionInvalid' });
+		expect(lineups('goalie-game')).toEqual([]);
 	});
 
 	it('refuse une formation vide ou partielle au lieu d’effacer l’alignement', () => {

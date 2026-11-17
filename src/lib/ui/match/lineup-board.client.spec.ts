@@ -120,9 +120,14 @@ beforeEach(() => {
 	const slots = [
 		slot('white', 'forward', 0, player('a', 'Alice Roy', 1)),
 		slot('white', 'forward', 1, null),
-		slot('black', 'forward', 0, null)
+		slot('black', 'forward', 0, null),
+		slot('black', 'defense', 0, null),
+		slot('black', 'goalie', 0, null)
 	];
-	const bench = [player('b', 'Bob Gagnon', 27)];
+	const bench = [
+		player('b', 'Bob Gagnon', 27),
+		player('g', 'Guy Gagnon', 30, 'goalie')
+	];
 
 	const target = document.createElement('div');
 	document.body.append(target);
@@ -239,5 +244,27 @@ describe('gestes de la carte', () => {
 		fireTouch(token('white:forward:0'), 'pointerup', 10, 10);
 
 		expect(token('white:forward:0').dataset.selected).toBe('true');
+	});
+
+	it('refuse de placer le gardien hors de sa place', () => {
+		tap(token('bench:g'));
+
+		expect(token('black:defense:0').dataset.ineligible).toBe('true');
+		expect(token('black:defense:0').hasAttribute('disabled')).toBe(true);
+		expect(token('black:goalie:0').dataset.ineligible).toBe('false');
+		expect(token('black:goalie:0').hasAttribute('disabled')).toBe(false);
+		expect(document.body.textContent).toContain(
+			t('rink.positionOnly', { position: t('position.goalie') })
+		);
+
+		drag(token('bench:g'), token('black:defense:0'));
+
+		expect(token('black:defense:0').dataset.filled).toBe('false');
+		expect(document.querySelector('[data-lineup-key="bench:g"]')).not.toBeNull();
+
+		tap(token('black:goalie:0'));
+
+		expect(token('black:goalie:0').dataset.filled).toBe('true');
+		expect(token('black:goalie:0').textContent).toContain('Gagnon');
 	});
 });

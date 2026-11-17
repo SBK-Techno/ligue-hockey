@@ -2,7 +2,16 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release 1.12.0 (in progress)
+## Release 1.13.0 (in progress)
+
+- **Rink geometry.** Token coordinates are exact percentages of the ice and the portrait centre is the anchor; the label hangs below without shifting the marker. The first forward line and first defence pair sit on the painted centre and blue lines, and the goalie stands at the crease depth. Two rinks share a row only when each keeps a 28 rem formation width; below 440 px the portrait becomes a 44 px number disc and the named roster carries the surnames. The 559 px formation grid is gone, so browser zoom changes the scale, never the positions.
+- **Position eligibility.** A player can only fill a slot of their own position. The card marks the other empty slots as locked, switches selection instead of swapping across positions, and revalidates the whole map before publishing it; `saveManualLineup` rechecks the same `canFillPosition` rule against the live eligible positions. A goalie can no longer be placed in defence, in the card or through a submitted lineup.
+- **Legend picker.** The identity picker follows its own column: two columns from 24 rem of picker width, one column in the narrower admin column, full-height cards and wrapped names with no truncation. Profile and admin at 1440 show 2 × 234 px and 2 × 203 px cards; the 1024 admin column stays single-column at 288 px.
+- **Navigation.** The generated shell preloads route data and code on hover (touchstart on touch), and the page entrance and home panels only settle 4 px without fading from zero. With Slow 3G emulation, hovering “Matchs” fetched `/matchs/__data.json` before the click and the click painted the path and heading in 19 ms; the computed page opacity stayed 1 under `page-settle`.
+- **Browser evidence.** Chrome at 1440, 1152, 960, 900, 640, 560, 520, 480, 440 and 320 reports zero horizontal overflow, exact face centres within the 2 px rink border, minimum face distances of 44.5 px at 320 px and 85.3 px at 1024 px, and no clipped token labels. The 1440 and 1152 boards keep two rinks; 960 and below stack them with the same formation; 320 keeps the formation with compact number discs and the named roster. Selecting the goalie marks every non-goalie slot ineligible and leaves both goalie slots open; clicking a defence token selects that defenceman instead of swapping.
+- **Gate.** `npm run gate` exit 0: 1264 tests in 173 files, svelte-check 0/0, architecture 434 files, 1169 language values, generated assets and documentation current, 100 client chunks without zod and an 8 331-byte precache shell.
+
+## Release 1.12.0 (shipped)
 
 - **Poll rail.** From 1280 px the discussion moves live polls into a sticky column: open polls first, then the newest closed ones, each keeping the shared close/delete menu from `ChatMessageActions.svelte`. Below 1280 px the polls stay inline. The server renders the inline layout and the mount resolves the real width before the first paint, so the client and server first render agree and the rail does not cause a hydration mismatch.
 - **History on scroll.** The sentinel at the top of the stream loads the previous page through the authenticated `/api/discussion/messages?before=...` transport. Pages are merged by identity, and the first visible message plus its viewport offset anchor the reader while older messages arrive; the sentinel is observed only after the cache and the reading position have settled.

@@ -4,6 +4,7 @@ import { settingBound } from '#config/settings-registry.ts';
 import {
 	RINK,
 	rinkGeometryStyle,
+	rinkLengthPercent,
 	rinkLineVariables,
 	rinkRole
 } from '#config/rink.ts';
@@ -32,6 +33,8 @@ describe('patinoire', () => {
 		expect(RINK.neutralSpot).toBeLessThan(RINK.blueLine);
 		expect(RINK.cornerRadius * 2).toBeLessThan(RINK.width);
 		expect(RINK.crease).toBeLessThan(RINK.goalLine);
+		expect(RINK.goalieDepth).toBeGreaterThan(RINK.goalLine + RINK.crease);
+		expect(RINK.goalieDepth).toBeLessThan(RINK.blueLine);
 
 		const lines = rinkLineVariables();
 		expect(lines.center).toBe('50%');
@@ -41,12 +44,18 @@ describe('patinoire', () => {
 		expect(lines.goalRight).toBe(percentOfLength(RINK.length - RINK.goalLine));
 	});
 
-	it('garde les coordonnées historiques du 3F et du 2D', () => {
+	it('aligne la première ligne et la première paire sur les lignes peintes', () => {
+		const ownBlue = rinkLengthPercent(RINK.blueLine);
+		const enemyBlue = rinkLengthPercent(RINK.length - RINK.blueLine);
+		const goalie = rinkLengthPercent(RINK.goalieDepth);
+
 		expect(rinkRole('forward', 0)).toMatchObject({ key: 'C', x: 50, y: 50 });
-		expect(rinkRole('forward', 1)).toMatchObject({ key: 'LW', x: 16, y: 38 });
-		expect(rinkRole('forward', 2)).toMatchObject({ key: 'RW', x: 84, y: 38 });
-		expect(rinkRole('defense', 0)).toMatchObject({ key: 'LD', x: 30, y: 62 });
-		expect(rinkRole('defense', 1)).toMatchObject({ key: 'RD', x: 70, y: 62 });
+		expect(rinkRole('forward', 1)).toMatchObject({ key: 'LW', x: 23, y: enemyBlue });
+		expect(rinkRole('forward', 2)).toMatchObject({ key: 'RW', x: 77, y: enemyBlue });
+		expect(rinkRole('defense', 0)).toMatchObject({ key: 'LD', x: 26, y: ownBlue });
+		expect(rinkRole('defense', 1)).toMatchObject({ key: 'RD', x: 74, y: ownBlue });
+		expect(rinkRole('goalie', 0)).toMatchObject({ key: 'G', x: 50, y: goalie });
+		expect(goalie).toBe(89);
 	});
 
 	it('donne une coordonnée unique à chaque place soutenue par les réglages', () => {
@@ -102,21 +111,33 @@ describe('patinoire', () => {
 		expect(shifted.goalLeft).toBe('10%');
 	});
 
-	it('garde le jeton du gardien et son anneau à l’intérieur de la glace', () => {
+	it('ancre le portrait sur la coordonnée exacte, sans borne en pixels', () => {
 		const css = readFileSync('src/routes/layout.css', 'utf8');
 		const tokenBlock = css.slice(
 			css.indexOf('.rink-token {'),
-			css.indexOf(".rink-token[data-team='white']")
+			css.indexOf('.rink-token:focus-visible')
 		);
 
-		// Le gardien est à 8 % de la bande : à 320 px, un jeton de 44 px et
-		// son anneau de focus de 4 px dépassent sans cet inset de position.
+		expect(tokenBlock).toContain('--rink-face-size: clamp(3rem, 14cqi, 4rem)');
 		expect(tokenBlock).toContain(
-			'top: clamp(2.5rem, var(--y), calc(100% - 2.5rem))'
+			'top: calc(var(--y) - var(--rink-face-size) * 0.5)'
 		);
-		expect(tokenBlock).toContain(
-			'left: clamp(2.5rem, var(--x), calc(100% - 2.5rem))'
-		);
+		expect(tokenBlock).toContain('left: var(--x)');
+		expect(tokenBlock).toContain('transform: translateX(-50%)');
+		expect(tokenBlock).not.toContain('clamp(2.5rem, var(--y)');
+		expect(tokenBlock).not.toContain('clamp(2.5rem, var(--x)');
+	});
+
+	it('garde la formation sous 440 px avec des pastilles de 44 px', () => {
+		const css = readFileSync('src/routes/layout.css', 'utf8');
+		const start = css.indexOf('@container (max-width: 439px)');
+		const compact = css.slice(start, css.indexOf('.avatar-picker', start));
+
+		expect(start).toBeGreaterThan(0);
+		expect(compact).toContain('--rink-face-size: 2.75rem');
+		expect(compact).toContain('.rink-name');
+		expect(compact).toContain('display: none');
+		expect(css).not.toContain('@container (max-width: 559px)');
 	});
 
 	it('transmet la géométrie par les variables CSS consommées par la glace', () => {

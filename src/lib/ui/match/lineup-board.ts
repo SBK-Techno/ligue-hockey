@@ -1,4 +1,8 @@
-import { positionDefinition, type Position } from '#config/positions.ts';
+import {
+	canFillPosition,
+	positionDefinition,
+	type Position
+} from '#config/positions.ts';
 import { rinkRole, type RinkPlacement, type RinkRoleKey } from '#config/rink.ts';
 import { slotKey } from '#config/slot.ts';
 import { teamDefinition, type Team } from '#config/teams.ts';
@@ -114,6 +118,61 @@ export function initialAssignments(
 	return map;
 }
 
+/**
+ * The position of every slot and every player, read once. Every board gesture
+ * goes through this table: a player can only occupy a slot of their position,
+ * and the server applies the same rule when saving.
+ */
+export type PlacementRules = {
+	slotPosition(key: string): Position | null;
+	playerPosition(playerId: string): Position | null;
+};
+
+export function placementRules(
+	slots: readonly GameSlotView[],
+	players: readonly Pick<GamePlayer, 'playerId' | 'position'>[]
+): PlacementRules {
+	const slotPositions = new Map(
+		slots.map((slot) => [slotKey(slot), slot.position])
+	);
+	const playerPositions = new Map(
+		players.map((player) => [player.playerId, player.position])
+	);
+	return {
+		slotPosition: (key) => slotPositions.get(key) ?? null,
+		playerPosition: (playerId) => playerPositions.get(playerId) ?? null
+	};
+}
+
+/** The player behind a selection, whether it comes from the ice or the bench. */
+function selectedPlayerId(state: LineupSelection): string | null {
+	if (state.selected === null) return null;
+	const benchId = benchPlayerId(state.selected);
+	if (benchId !== null) return benchId;
+	return state.assignments[state.selected] ?? null;
+}
+
+export function canPlacePlayer(
+	rules: PlacementRules,
+	playerId: string,
+	target: string
+): boolean {
+	const slot = rules.slotPosition(target);
+	const player = rules.playerPosition(playerId);
+	return slot !== null && player !== null && canFillPosition([player], slot);
+}
+
+/** Checks every slot before publishing a state on the board. */
+export function assignmentsAllowed(
+	rules: PlacementRules,
+	map: LineupAssignmentMap
+): boolean {
+	return Object.entries(map).every(
+		([key, playerId]) =>
+			playerId === null || canPlacePlayer(rules, playerId, key)
+	);
+}
+
 function placementsOf(
 	slots: readonly GameSlotView[],
 	map: LineupAssignmentMap
@@ -180,10 +239,15 @@ export function viewerSpot(
 export function swapPlayers(
 	map: LineupAssignmentMap,
 	from: string,
-	to: string
+	to: string,
+	rules: PlacementRules
 ): LineupAssignmentMap {
 	if (!(from in map) || !(to in map)) return map;
-	return { ...map, [from]: map[to], [to]: map[from] };
+	const fromPlayer = map[from];
+	const toPlayer = map[to];
+	if (fromPlayer !== null && !canPlacePlayer(rules, fromPlayer, to)) return map;
+	if (toPlayer !== null && !canPlacePlayer(rules, toPlayer, from)) return map;
+	return { ...map, [from]: toPlayer, [to]: fromPlayer };
 }
 
 /**
@@ -194,16 +258,18 @@ export function swapPlayers(
 export function placeFromBench(
 	map: LineupAssignmentMap,
 	playerId: string,
-	target: string
+	target: string,
+	rules: PlacementRules
 ): LineupAssignmentMap {
 	if (!(target in map)) return map;
+	if (!canPlacePlayer(rules, playerId, target)) return map;
 	const current = Object.values(map);
 	if (!current.includes(playerId)) {
 		return { ...map, [target]: playerId };
 	}
 	const previous = Object.keys(map).find((key) => map[key] === playerId);
 	if (!previous || previous === target) return map;
-	return swapPlayers(map, previous, target);
+	return swapPlayers(map, previous, target, rules);
 }
 
 export function removePlayer(
@@ -226,7 +292,8 @@ export type LineupSelection = {
  */
 export function selectPlace(
 	state: LineupSelection,
-	key: string
+	key: string,
+	rules: PlacementRules
 ): LineupSelection {
 	if (state.selected === key) {
 		return { selected: null, assignments: state.assignments };
@@ -237,7 +304,15 @@ export function selectPlace(
 			assignments: state.assignments
 		};
 	}
-	return dropOnPlace(state, key);
+	const playerId = selectedPlayerId(state);
+	if (playerId !== null && !canPlacePlayer(rules, playerId, key)) {
+		/* An occupied slot of another position selects its player; an empty
+		   slot of another position stays closed. */
+		return state.assignments[key]
+			? { selected: key, assignments: state.assignments }
+			: state;
+	}
+	return dropOnPlace(state, key, rules);
 }
 
 /**
@@ -247,21 +322,24 @@ export function selectPlace(
  */
 export function dropOnPlace(
 	state: LineupSelection,
-	target: string
+	target: string,
+	rules: PlacementRules
 ): LineupSelection {
 	if (!(target in state.assignments) || state.selected === null) return state;
 	if (state.selected === target) return state;
-	const playerId = benchPlayerId(state.selected);
-	if (playerId !== null) {
+	const playerId = selectedPlayerId(state);
+	if (playerId === null || !canPlacePlayer(rules, playerId, target)) return state;
+	const benchId = benchPlayerId(state.selected);
+	if (benchId !== null) {
 		return {
 			selected: null,
-			assignments: placeFromBench(state.assignments, playerId, target)
+			assignments: placeFromBench(state.assignments, benchId, target, rules)
 		};
 	}
 	if (!(state.selected in state.assignments)) return state;
 	return {
 		selected: null,
-		assignments: swapPlayers(state.assignments, state.selected, target)
+		assignments: swapPlayers(state.assignments, state.selected, target, rules)
 	};
 }
 

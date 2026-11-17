@@ -125,27 +125,28 @@ describe('rendu de la carte d’alignement', () => {
 		expect(block).not.toContain('white-space: nowrap');
 	});
 
-	it('passe une glace étroite en grille de formation sans chevauchement', () => {
+	it('garde la formation exacte et compacte seulement les pastilles étroites', () => {
 		const css = readFileSync('src/routes/layout.css', 'utf8');
 		const team = css.slice(css.indexOf('.rink-team {'), css.indexOf('.rink-roster'));
 		expect(team).toContain('container-type: inline-size');
 
-		const start = css.indexOf('@container (max-width: 559px)');
-		const grid = css.slice(start, css.indexOf('@media (min-width: 900px)', start));
+		const start = css.indexOf('@container (max-width: 439px)');
+		const compact = css.slice(start, css.indexOf('.avatar-picker', start));
 		expect(start).toBeGreaterThan(0);
-		expect(grid).toContain('aspect-ratio: 4 / 3');
-		expect(grid).toContain('width: min(28%, 4rem)');
-		for (const slot of [
-			':forward:0',
-			':forward:1',
-			':forward:2',
-			':defense:0',
-			':defense:1',
-			':goalie:0'
-		]) {
-			expect(grid).toContain(`data-lineup-key$='${slot}'`);
-		}
-		expect(grid).toContain("data-team='white'");
+		expect(compact).toContain('--rink-face-size: 2.75rem');
+		expect(compact).toContain('.rink-name');
+		expect(compact).toContain('display: none');
+		expect(css).not.toContain('@container (max-width: 559px)');
+		expect(css).not.toContain('aspect-ratio: 4 / 3');
+	});
+
+	it('ne met deux glaces côte à côte que si chacune garde sa largeur', () => {
+		const css = readFileSync('src/routes/layout.css', 'utf8');
+		const teams = css.slice(css.indexOf('.rink-teams {'), css.indexOf('.rink-team {'));
+
+		expect(teams).toContain(
+			'grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr))'
+		);
 	});
 
 	it('découpe le portrait, jamais le numéro ni le nom', () => {

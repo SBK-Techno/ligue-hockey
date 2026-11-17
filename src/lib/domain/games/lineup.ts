@@ -1,3 +1,4 @@
+import { canFillPosition } from '#config/positions.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
@@ -107,7 +108,7 @@ export function saveManualLineup(
 				params: { name: player.fullName }
 			});
 		}
-		if (!member.eligiblePositions.includes(assignment.position)) {
+		if (!canFillPosition(member.eligiblePositions, assignment.position)) {
 			throw new AppError('VALIDATION', {
 				key: 'games.lineupPositionInvalid',
 				params: { name: player.fullName }

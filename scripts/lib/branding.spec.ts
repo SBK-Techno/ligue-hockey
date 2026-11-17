@@ -21,6 +21,12 @@ describe('generated app shell', () => {
 		const shell = readFileSync('src/app.html', 'utf8');
 		expect(shell).toContain(`style="background-color: ${palette.paper}; color-scheme: light"`);
 	});
+
+	it('précharge les données et le code avant le clic', () => {
+		const shell = readFileSync('src/app.html', 'utf8');
+		expect(shell).toContain('data-sveltekit-preload-data="hover"');
+		expect(shell).toContain('data-sveltekit-preload-code="viewport"');
+	});
 });
 
 describe('catalogue des couleurs', () => {

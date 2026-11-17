@@ -54,7 +54,7 @@
 	<p id={helpId} class="hint">{help}</p>
 
 	<div
-		class="mt-4"
+		class="avatar-picker mt-4"
 		role="radiogroup"
 		aria-labelledby={legendTitleId}
 		aria-describedby={legendHelpId}
@@ -68,10 +68,10 @@
 			<p id={legendHelpId} class="mt-2 text-meta text-muted">{legendsHelp}</p>
 		{/if}
 
-		<div class="mt-3 grid gap-2">
+		<div class="avatar-grid mt-3 grid gap-2">
 			{#if initialIsLeagueFace}
 				<label
-					class="relative flex min-w-0 cursor-pointer items-center gap-3 rounded-control border border-line-strong bg-surface p-2 transition-colors hover:border-ice has-[:checked]:border-ice has-[:checked]:bg-ice-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice"
+					class="relative flex h-full min-w-0 cursor-pointer items-center gap-3 rounded-control border border-line-strong bg-surface p-2 transition-colors hover:border-ice has-[:checked]:border-ice has-[:checked]:bg-ice-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice"
 				>
 					<input
 						class="sr-only"
@@ -119,7 +119,7 @@
 							era: legend.era
 						})}
 				<label
-					class="relative flex min-w-0 items-center gap-3 rounded-control border p-2 transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice {isTaken
+					class="relative flex h-full min-w-0 items-center gap-3 rounded-control border p-2 transition-colors has-[:checked]:border-ice has-[:checked]:bg-ice-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ice {isTaken
 						? 'cursor-not-allowed border-line bg-paper-deep/40 opacity-50 grayscale'
 						: 'cursor-pointer border-line-strong bg-surface hover:border-ice'}"
 					data-taken={isTaken}
