@@ -66,13 +66,15 @@ describe('catalogue des visages de la ligue', () => {
 });
 
 describe('identités hommage', () => {
-	it('offre quinze légendes, cinq par poste', () => {
-		expect(LEGENDS).toHaveLength(15);
-		expect(LEGEND_IDS).toHaveLength(15);
-		expect(new Set(LEGEND_IDS).size).toBe(15);
-		for (const position of POSITION_KEYS) {
-			expect(legendsForPosition(position), position).toHaveLength(5);
-		}
+	it('offre trente légendes au prorata des postes de la ligue', () => {
+		expect(LEGENDS).toHaveLength(30);
+		expect(LEGEND_IDS).toHaveLength(30);
+		expect(new Set(LEGEND_IDS).size).toBe(30);
+		// La ligue compte 14 attaquants, 10 défenseurs et 4 gardiens : la
+		// répartition des hommages suit le même rapport.
+		expect(legendsForPosition('forward')).toHaveLength(15);
+		expect(legendsForPosition('defense')).toHaveLength(11);
+		expect(legendsForPosition('goalie')).toHaveLength(4);
 	});
 
 	it('donne un numéro et une époque crédibles à chaque légende', () => {
@@ -85,10 +87,71 @@ describe('identités hommage', () => {
 		}
 	});
 
-	it('réserve quinze couleurs après celles des visages de la ligue', () => {
+	it('réserve trente couleurs après celles des visages de la ligue', () => {
 		expect(LEGENDS.map((legend) => legend.color).sort((a, b) => a - b)).toEqual(
-			Array.from({ length: 15 }, (_, index) => index + 29)
+			Array.from({ length: 30 }, (_, index) => index + 29)
 		);
+	});
+
+	it('conserve les faits vérifiés de chaque légende', () => {
+		// Table de vérité revue contre Hockey-Reference et les registres de
+		// chandails du Canadien. Une légende déplacée, renumérotée ou dont
+		// l'époque change doit casser ce test, pas passer inaperçue.
+		const expected: ReadonlyArray<
+			readonly [string, string, number, string, string]
+		> = [
+			['legende-plante', 'Jacques Plante', 1, 'goalie', '1952-1963'],
+			['legende-dryden', 'Ken Dryden', 29, 'goalie', '1970-1979'],
+			['legende-roy', 'Patrick Roy', 33, 'goalie', '1984-1996'],
+			['legende-price', 'Carey Price', 31, 'goalie', '2007-2022'],
+			['legende-harvey', 'Doug Harvey', 2, 'defense', '1947-1961'],
+			['legende-savard', 'Serge Savard', 18, 'defense', '1966-1981'],
+			['legende-robinson', 'Larry Robinson', 19, 'defense', '1972-1989'],
+			['legende-lapointe', 'Guy Lapointe', 5, 'defense', '1968-1982'],
+			['legende-markov', 'Andrei Markov', 79, 'defense', '2000-2017'],
+			['legende-laperriere', 'Jacques Laperrière', 2, 'defense', '1962-1974'],
+			['legende-bouchard', 'Émile Bouchard', 3, 'defense', '1941-1956'],
+			['legende-chelios', 'Chris Chelios', 24, 'defense', '1983-1990'],
+			['legende-subban', 'P.K. Subban', 76, 'defense', '2009-2016'],
+			['legende-weber', 'Shea Weber', 6, 'defense', '2016-2021'],
+			['legende-tremblay', 'J.C. Tremblay', 3, 'defense', '1959-1972'],
+			['legende-maurice-richard', 'Maurice Richard', 9, 'forward', '1942-1960'],
+			['legende-beliveau', 'Jean Béliveau', 4, 'forward', '1950-1971'],
+			['legende-lafleur', 'Guy Lafleur', 10, 'forward', '1971-1985'],
+			['legende-henri-richard', 'Henri Richard', 16, 'forward', '1955-1975'],
+			['legende-koivu', 'Saku Koivu', 11, 'forward', '1995-2009'],
+			['legende-gainey', 'Bob Gainey', 23, 'forward', '1973-1989'],
+			['legende-cournoyer', 'Yvan Cournoyer', 12, 'forward', '1963-1979'],
+			['legende-moore', 'Dickie Moore', 12, 'forward', '1951-1963'],
+			['legende-geoffrion', 'Bernie Geoffrion', 5, 'forward', '1950-1964'],
+			['legende-blake', 'Toe Blake', 6, 'forward', '1935-1948'],
+			['legende-lach', 'Elmer Lach', 16, 'forward', '1940-1954'],
+			['legende-lemaire', 'Jacques Lemaire', 25, 'forward', '1967-1979'],
+			['legende-shutt', 'Steve Shutt', 22, 'forward', '1972-1985'],
+			['legende-damphousse', 'Vincent Damphousse', 25, 'forward', '1992-1999'],
+			['legende-morenz', 'Howie Morenz', 7, 'forward', '1923-1937']
+		];
+
+		const actual = LEGENDS.map((legend) => [
+			legend.id,
+			legend.name,
+			legend.number,
+			legend.position,
+			legend.era
+		]).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+		expect(actual).toEqual(
+			[...expected].sort((a, b) => a[0].localeCompare(b[0]))
+		);
+		for (const [, , , , era] of expected) {
+			const [start, end] = era.split('-').map(Number);
+			expect(start).toBeLessThan(end);
+		}
+	});
+
+	it('garde des identifiants stables en forme de slug', () => {
+		for (const legend of LEGENDS) {
+			expect(legend.id, legend.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+		}
 	});
 
 	it('reconnaît une légende et distingue un visage de la ligue', () => {
@@ -104,9 +167,9 @@ describe('identités hommage', () => {
 
 describe('catalogue des identités', () => {
 	it('réunit les deux familles sans doublon', () => {
-		expect(IDENTITIES).toHaveLength(43);
-		expect(IDENTITY_IDS).toHaveLength(43);
-		expect(new Set(IDENTITY_IDS).size).toBe(43);
+		expect(IDENTITIES).toHaveLength(58);
+		expect(IDENTITY_IDS).toHaveLength(58);
+		expect(new Set(IDENTITY_IDS).size).toBe(58);
 		expect(IDENTITY_IDS.slice(0, 28)).toEqual(AVATAR_IDS);
 		expect(IDENTITY_IDS.slice(28)).toEqual(LEGEND_IDS);
 	});

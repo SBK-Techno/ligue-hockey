@@ -5,8 +5,8 @@ import { avatarSvg } from './avatar-art.ts';
 describe('rendu des avatars', () => {
 	it('produit un SVG distinct pour chaque variante', () => {
 		const rendered = IDENTITIES.map((avatar) => avatarSvg(avatar));
-		expect(rendered).toHaveLength(43);
-		expect(new Set(rendered).size).toBe(43);
+		expect(rendered).toHaveLength(58);
+		expect(new Set(rendered).size).toBe(58);
 		for (const svg of rendered) {
 			expect(svg.startsWith('<svg')).toBe(true);
 			expect(svg).toContain('viewBox="0 0 512 512"');
