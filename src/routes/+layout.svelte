@@ -9,6 +9,7 @@
 	import AppNav from '#lib/ui/AppNav.svelte';
 	import AppNavBottom from '#lib/ui/AppNavBottom.svelte';
 	import BrandLockup from '#lib/ui/BrandLockup.svelte';
+	import PlayerPeek from '#lib/ui/PlayerPeek.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
@@ -115,6 +116,7 @@
 			<div aria-live="polite" class="sr-only">{pageTitle}</div>
 		</main>
 		<AppNavBottom actor={data.actor} />
+		<PlayerPeek />
 		<footer
 			class="mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pt-2 lg:pb-8 {showBottomBar
 				? 'pb-[calc(var(--bottom-bar-offset)+0.5rem)]'

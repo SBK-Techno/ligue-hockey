@@ -7,6 +7,7 @@
 	import type { GameSheetView } from '#lib/domain/gamesheet/service.ts';
 	import { t } from '#lib/shared/i18n/index.ts';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 
 	let {
@@ -118,7 +119,10 @@
 										<span class="font-mono text-meta text-muted"
 											>{number(goal.scorer.jerseyNumber)}</span
 										>
-										{goal.scorer.fullName}
+										<PlayerName
+											playerId={goal.scorer.playerId}
+											name={goal.scorer.fullName}
+										/>
 									{:else}
 										{t('gamesheet.noGoals')}
 									{/if}
@@ -126,9 +130,13 @@
 								{#if goal.assists.length > 0}
 									<p class="text-meta text-muted">
 										{t('gamesheet.assists')}:
-										{goal.assists
-											.map((assist) => `${number(assist.jerseyNumber)} ${assist.fullName}`)
-											.join(' · ')}
+										{#each goal.assists as assist, index (assist.playerId)}
+											{#if index > 0}<span aria-hidden="true"> · </span>{/if}
+											<span class="font-mono text-meta text-muted"
+												>{number(assist.jerseyNumber)}</span
+											>
+											<PlayerName playerId={assist.playerId} name={assist.fullName} />
+										{/each}
 									</p>
 								{/if}
 							</div>
@@ -189,7 +197,10 @@
 									<span class="font-mono text-meta text-muted"
 										>{number(penalty.player.jerseyNumber)}</span
 									>
-									{penalty.player.fullName}
+									<PlayerName
+										playerId={penalty.player.playerId}
+										name={penalty.player.fullName}
+									/>
 								</p>
 								<p class="text-meta text-muted">
 									{t(infractionDefinition(penalty.infraction).labelKey)} · {penalty.minutes}
@@ -251,7 +262,9 @@
 					{#each sheet.totals.filter((row) => row.team === team.key) as row (row.playerId)}
 						<tr class="border-b border-line last:border-b-0">
 							<td class="py-1.5 font-mono text-muted">{row.jerseyNumber ?? ''}</td>
-							<td class="py-1.5 pr-2 font-medium">{row.fullName}</td>
+							<td class="py-1.5 pr-2 font-medium">
+								<PlayerName playerId={row.playerId} name={row.fullName} />
+							</td>
 							<td class="py-1.5 text-right font-mono tabular-nums">{row.goals}</td>
 							<td class="py-1.5 text-right font-mono tabular-nums">{row.assists}</td>
 							<td class="py-1.5 text-right font-mono font-semibold tabular-nums">{row.points}</td>

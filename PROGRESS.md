@@ -58,8 +58,9 @@ Findings are confirmed against source before any edit; the round is only closed 
 ## 1.6.0 in progress
 
 - Rink placement board: `config/rink.ts` owns the geometry, `LineupBoard.svelte` renders both team halves, and the `?/lineup` action saves through `saveManualLineup` with the generation token. Pure placement rules live in `src/lib/ui/match/lineup-board.ts` with seven tests.
-- Legend identities: `config/legends.ts` will own the curated Canadiens alumni facts (name, number, position, era) and their stylised art variants; `config/identities.ts` composes them with the 28 league avatars behind one catalogue, and the picker will only offer legends that played the player's position.
-- Remaining: team season page `/equipe`, chat history pagination and connection-lost banner, and the confirmed UX findings from triple-check round 1.
+- Legend identities: `config/legends.ts` owns the curated Canadiens alumni facts (name, number, position, era) and their stylised art variants; `config/identities.ts` composes them with the 28 league avatars behind one catalogue, and the picker only offers legends that played the player's position.
+- Player peek: every avatar and player name opens a shared card with season totals and position. Skills stay behind the ratings capability, so players never receive them. The data comes from one `getPlayerPeek` use case and a private short-lived API; the card is a hover popover on desktop and a sheet on mobile.
+- Remaining: team season page `/equipe`, chat history pagination and connection-lost banner, and the confirmed triple-check findings for 1.6.0.
 
 ## Next: 1.6.0
 

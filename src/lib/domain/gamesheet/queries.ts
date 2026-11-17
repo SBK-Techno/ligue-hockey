@@ -1,6 +1,7 @@
-import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { insertAudit, type AuditEntry } from '#lib/domain/audit/queries.ts';
+import { gameSlots, games } from '#lib/domain/games/schema.ts';
 import {
 	gameGoals,
 	gamePenalties,
@@ -146,4 +147,79 @@ export function deletePenalty(
 		insertAudit(audit, tx);
 		return true;
 	});
+}
+
+
+export type PlayerSeasonStats = {
+	games: number;
+	goals: number;
+	assists: number;
+	points: number;
+	penalties: number;
+};
+
+/**
+ * Les totaux de saison d'un joueur, calculés sur les matchs terminés seulement.
+ * Un but contre son camp crédite l'équipe, jamais le joueur : il reste exclu de
+ * ses buts personnels. Une lecture par agrégat, sans charger les événements.
+ */
+export function playerSeasonStats(playerId: string): PlayerSeasonStats {
+	const gamesRow = db
+		.select({ total: sql<number>`count(distinct ${gameSlots.gameId})` })
+		.from(gameSlots)
+		.innerJoin(games, eq(gameSlots.gameId, games.id))
+		.where(
+			and(
+				eq(gameSlots.assignedPlayerId, playerId),
+				eq(games.status, 'completed')
+			)
+		)
+		.get();
+	const goalsRow = db
+		.select({ total: count() })
+		.from(gameGoals)
+		.innerJoin(games, eq(gameGoals.gameId, games.id))
+		.where(
+			and(
+				eq(gameGoals.scorerPlayerId, playerId),
+				ne(gameGoals.kind, 'own_goal'),
+				eq(games.status, 'completed')
+			)
+		)
+		.get();
+	const assistsRow = db
+		.select({ total: count() })
+		.from(gameGoals)
+		.innerJoin(games, eq(gameGoals.gameId, games.id))
+		.where(
+			and(
+				or(
+					eq(gameGoals.assist1PlayerId, playerId),
+					eq(gameGoals.assist2PlayerId, playerId)
+				),
+				eq(games.status, 'completed')
+			)
+		)
+		.get();
+	const penaltiesRow = db
+		.select({ total: count() })
+		.from(gamePenalties)
+		.innerJoin(games, eq(gamePenalties.gameId, games.id))
+		.where(
+			and(
+				eq(gamePenalties.playerId, playerId),
+				eq(games.status, 'completed')
+			)
+		)
+		.get();
+
+	const goals = Number(goalsRow?.total ?? 0);
+	const assists = Number(assistsRow?.total ?? 0);
+	return {
+		games: Number(gamesRow?.total ?? 0),
+		goals,
+		assists,
+		points: goals + assists,
+		penalties: Number(penaltiesRow?.total ?? 0)
+	};
 }

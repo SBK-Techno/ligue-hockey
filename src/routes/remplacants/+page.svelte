@@ -4,6 +4,7 @@
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 	import InvitePlayerForm from '#lib/ui/InvitePlayerForm.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import PositionChips from '#lib/ui/PositionChips.svelte';
@@ -234,7 +235,7 @@
 								{#each data.pool as substitute (substitute.playerId)}
 									<li class="section-row">
 										<div class="flex flex-wrap items-start justify-between gap-2">
-											<span class="min-w-0 text-body font-medium">{substitute.fullName}</span>
+											<PlayerName playerId={substitute.playerId} name={substitute.fullName} class="min-w-0 text-body font-medium" />
 											<span class="flex flex-wrap gap-1">
 												{#each substitute.positions as position (position)}
 													<span class="badge">{t(positionDefinition(position).shortLabelKey)}</span>

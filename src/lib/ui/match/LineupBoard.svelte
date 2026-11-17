@@ -159,6 +159,7 @@
 								class="rink-token"
 								style="--x: {100 - placement.role.y}%; --y: {placement.role.x}%"
 								data-team={team.key}
+								data-player-id={player?.playerId}
 								data-filled={player !== null}
 								data-selected={selected === placement.key}
 								disabled={!canEdit}
@@ -204,6 +205,7 @@
 						<button
 							type="button"
 							class="bench-chip"
+							data-player-id={player.playerId}
 							data-selected={selected === `bench:${player.playerId}`}
 							disabled={!canEdit}
 							onclick={() => selectBench(player.playerId)}

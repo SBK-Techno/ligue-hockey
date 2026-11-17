@@ -10,11 +10,13 @@
 	let {
 		player,
 		size = 48,
-		decorative = true
+		decorative = true,
+		peek = true
 	}: {
 		player: { fullName: string; userId: string; avatarId?: string | null };
 		size?: AvatarSize;
 		decorative?: boolean;
+		peek?: boolean;
 	} = $props();
 
 	const avatarId = $derived(resolveAvatarId(player.userId, player.avatarId));
@@ -38,12 +40,22 @@
 	}
 </script>
 
+<!-- The span is a button only when peek is enabled and the avatar is exposed;
+     the catalogue stays an image otherwise. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <span
 	class="inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-paper-deep align-middle"
 	style={boxStyle}
-	role={decorative ? undefined : 'img'}
+	role={decorative ? undefined : peek ? 'button' : 'img'}
 	aria-hidden={decorative ? 'true' : undefined}
-	aria-label={decorative ? undefined : t('profile.avatarOf', { name: player.fullName })}
+	aria-label={decorative
+		? undefined
+		: peek
+			? t('profile.avatarOpen', { name: player.fullName })
+			: t('profile.avatarOf', { name: player.fullName })}
+	data-player-id={peek ? player.userId : undefined}
+	tabindex={peek && !decorative ? 0 : undefined}
+	aria-haspopup={peek ? 'dialog' : undefined}
 >
 	{#if variant}
 		<!-- Fixed catalogue only: no player-controlled string reaches the SVG. -->

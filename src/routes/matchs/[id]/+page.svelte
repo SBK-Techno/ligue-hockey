@@ -12,6 +12,7 @@
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
 	import GameSheet from '#lib/ui/match/GameSheet.svelte';
 	import LineupBoard from '#lib/ui/match/LineupBoard.svelte';
@@ -427,7 +428,9 @@
 						{#each game.generation.bench as entry (entry.playerId)}
 							<li class="badge">
 								{#if entry.jerseyNumber}<span class="numeric">{entry.jerseyNumber}</span>{/if}
-								{entry.fullName} · {t(positionDefinition(entry.position).shortLabelKey)}
+								<PlayerName playerId={entry.playerId} name={entry.fullName} /> · {t(
+									positionDefinition(entry.position).shortLabelKey
+								)}
 							</li>
 						{/each}
 					</ul>

@@ -78,6 +78,7 @@
 				<Avatar
 					player={{ fullName: label, userId: avatar.id, avatarId: avatar.id }}
 					size={48}
+					peek={false}
 				/>
 				{#if isTaken}
 					<span class="mt-0.5 text-stamp font-semibold text-muted">{t('profile.avatarTaken')}</span>
@@ -135,6 +136,7 @@
 						<Avatar
 							player={{ fullName: legend.name, userId: legend.id, avatarId: legend.id }}
 							size={48}
+							peek={false}
 						/>
 						<span class="min-w-0 flex-1">
 							<span class="block truncate text-meta font-semibold">{legend.name}</span>

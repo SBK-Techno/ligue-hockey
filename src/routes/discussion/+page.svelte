@@ -6,6 +6,7 @@
 	import { formatCount, formatDate, formatTimeOfDay, t } from '#lib/shared/i18n/index.ts';
 	import { toDate, todayInZone } from '#lib/shared/time/clock.ts';
 	import Avatar from '#lib/ui/Avatar.svelte';
+	import PlayerName from '#lib/ui/PlayerName.svelte';
 	import ConfirmSubmit from '#lib/ui/ConfirmSubmit.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import FormFeedback from '#lib/ui/FormFeedback.svelte';
@@ -220,7 +221,7 @@
 
 							<div class="chat-meta">
 								<span class="flex min-w-0 items-center gap-1.5">
-									<span class="truncate text-body font-semibold">{message.authorName}</span>
+									<PlayerName playerId={message.authorUserId} name={message.authorName} class="truncate text-body font-semibold" />
 									{#if message.isOwn}
 										<span class="badge shrink-0">{t('chat.you')}</span>
 									{/if}
