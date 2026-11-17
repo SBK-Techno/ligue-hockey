@@ -9,13 +9,23 @@
 		taken = [],
 		position,
 		player,
-		legendName
+		legendName,
+		actionLabel = t('profile.identityChange'),
+		help,
+		legendsTitle,
+		legendsHelp
 	}: {
 		selected: string;
 		taken?: readonly string[];
 		position: Position | null;
 		player: { fullName: string; userId: string };
 		legendName: string | null;
+		/** Le libellé de l'action suit le contexte : le membre change la sienne,
+		 *  un responsable change celle du joueur. */
+		actionLabel?: string;
+		help?: string;
+		legendsTitle?: string;
+		legendsHelp?: string;
 	} = $props();
 </script>
 
@@ -28,7 +38,7 @@
 			<span class="block truncate text-body font-semibold">
 				{legendName ?? t('profile.avatarLeague')}
 			</span>
-			<span class="block text-meta text-muted">{t('profile.identityChange')}</span>
+			<span class="block text-meta text-muted">{actionLabel}</span>
 		</span>
 		<svg
 			viewBox="0 0 24 24"
@@ -42,6 +52,6 @@
 		</svg>
 	</summary>
 	<div class="border-t border-line p-3">
-		<AvatarPicker {selected} {taken} {position} />
+		<AvatarPicker {selected} {taken} {position} {help} {legendsTitle} {legendsHelp} />
 	</div>
 </details>

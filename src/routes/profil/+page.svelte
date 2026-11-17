@@ -590,9 +590,7 @@
 						{/if}
 					</SectionCard>
 				{/if}
-			</div>
 
-			<div class="page-stack min-w-0">
 				{#if data.stats}
 					<div id="stats">
 						<SectionCard title={t('stats.title')}>
@@ -612,7 +610,9 @@
 						</SectionCard>
 					</div>
 				{/if}
+			</div>
 
+			<div class="page-stack min-w-0">
 				<div id="notifications">
 					<SectionCard title={t('profile.notifications')}>
 						<p class="hint">{t('profile.notificationsHelp')}</p>

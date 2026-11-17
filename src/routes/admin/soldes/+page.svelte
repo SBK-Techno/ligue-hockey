@@ -112,7 +112,7 @@
 		{/if}
 	{:else}
 		<SectionCard flush>
-			<ul role="list" class="divide-y divide-line">
+			<ul role="list" class="ledger-columns">
 				{#each rows as row (row.playerId)}
 					{@const status = balanceStatusDefinition(row.status)}
 					<li>

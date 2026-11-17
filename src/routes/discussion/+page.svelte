@@ -223,7 +223,7 @@
 		</div>
 	{/if}
 
-	<div class="mx-auto w-full max-w-3xl space-y-4">
+	<div class="mx-auto w-full max-w-4xl space-y-4">
 		{#if messages.length === 0}
 			{#if EmptyState}
 				<EmptyState title={t('chat.empty')} help={t('chat.emptyHelp')} />

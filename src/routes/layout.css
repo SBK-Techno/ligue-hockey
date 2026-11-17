@@ -547,6 +547,31 @@
 	.ledger {
 		@apply divide-y divide-line;
 	}
+	/* Un registre de deux colonnes au grand écran : les rangées gardent leur
+	   trait et la feuille se lit comme une page de registre, sans défilement
+	   inutile. Sous 1024 px, la pile garde un seul trait entre chaque rangée. */
+	.ledger-columns > * {
+		border-bottom: 1px solid var(--color-line);
+	}
+	.ledger-columns > :last-child {
+		border-bottom: 0;
+	}
+	@media (min-width: 1024px) {
+		.ledger-columns {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			align-items: stretch;
+		}
+		/* Une liste paire ferme ses deux colonnes sur la même rangée; une liste
+		   impaire garde le trait de l'avant-dernière, sinon la colonne de gauche
+		   s'arrête sur une demi-règle. */
+		.ledger-columns:not(:has(> :last-child:nth-child(odd))) > :nth-last-child(2) {
+			border-bottom: 0;
+		}
+		.ledger-columns > :nth-child(even) {
+			border-left: 1px solid var(--color-line);
+		}
+	}
 	/* Une paire libellé/valeur sur une seule ligne, comme une fiche imprimée. */
 	.fact {
 		display: flex;
@@ -584,6 +609,31 @@
 	}
 	.record-row:focus-visible {
 		outline-offset: -2px;
+	}
+	.record-body {
+		min-width: 0;
+		flex: 1 1 auto;
+	}
+	/* L'état, le montant et la flèche restent ensemble : sous 640 px ils
+	   passent sous le titre plutôt que de comprimer un nom en syllabes. */
+	.record-tail {
+		display: inline-flex;
+		flex: none;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	@media (max-width: 639px) {
+		.record-row {
+			flex-wrap: wrap;
+			row-gap: 0.25rem;
+		}
+		.record-row:has(.record-date):has(.record-tail:not([data-compact='true'])) .record-body {
+			flex-basis: calc(100% - 4.75rem);
+		}
+		.record-tail:not([data-compact='true']) {
+			width: 100%;
+			justify-content: flex-end;
+		}
 	}
 	.record-date {
 		width: 4rem;
@@ -883,6 +933,15 @@
 		font-weight: 700;
 		letter-spacing: 0.02em;
 		line-height: 1;
+	}
+	/* Au grand écran, le jeton est assez large pour porter ses libellés à la
+	   taille de lecture plancher, sans changer la géométrie de la glace. */
+	@media (min-width: 1024px) {
+		.rink-role,
+		.rink-name,
+		.rink-number {
+			font-size: var(--text-caption);
+		}
 	}
 	.bench-chip {
 		display: inline-flex;
@@ -1331,6 +1390,23 @@
 		.board-grid > * {
 			grid-column: span var(--span, 12);
 			min-width: 0;
+		}
+	}
+
+	/* Les fiches d'évaluation repliées forment deux colonnes; la fiche ouverte
+	   prend toute la largeur pour garder ses quatre échelles ensemble. */
+	.assessment-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.5rem;
+	}
+	@media (min-width: 1024px) {
+		.assessment-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			align-items: start;
+		}
+		.assessment-grid > details[open] {
+			grid-column: 1 / -1;
 		}
 	}
 

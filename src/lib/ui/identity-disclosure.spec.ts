@@ -33,4 +33,25 @@ describe('divulgation de l’identité', () => {
 		expect(body).toContain(t('profile.avatarLeague'));
 		expect(body).toContain('name="avatarId"');
 	});
+
+	it('suit le contexte du responsable qui change l’identité d’un joueur', () => {
+		const { body } = render(IdentityDisclosure, {
+			props: {
+				selected: 'avatar-1',
+				position: 'defense',
+				player: { fullName: 'Karim Haddad', userId: 'player-1' },
+				legendName: null,
+				actionLabel: t('admin.identityChange'),
+				help: t('admin.avatarHelp'),
+				legendsTitle: t('admin.legendsTitle'),
+				legendsHelp: t('admin.legendsHelp')
+			}
+		});
+
+		expect(body).toContain(t('admin.identityChange'));
+		expect(body).not.toContain(t('profile.identityChange'));
+		expect(body).toContain(t('admin.avatarHelp'));
+		expect(body).toContain(t('admin.legendsTitle'));
+		expect(body).toContain(t('admin.legendsHelp'));
+	});
 });

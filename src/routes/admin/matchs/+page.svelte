@@ -99,64 +99,73 @@
 		</SectionCard>
 	{/if}
 
-	{#if data.upcoming.length === 0}
-		<EmptyState title={t('games.empty')} help={t('games.emptyHelp')}>
-			{#snippet action()}
-				{#if !showCreate}
-					<button class="btn-secondary" type="button" onclick={() => (showCreate = true)}>
-						{t('games.adminCreate')}
-					</button>
-				{/if}
-			{/snippet}
-		</EmptyState>
-	{:else}
-		<SectionCard title="{t('games.upcoming')} ({data.upcoming.length})" flush>
-			<ul role="list" class="divide-y divide-line">
-				{#each data.upcoming as game (game.id)}
-					<li>
-						{#if game.id === data.nextId}
-							<div class="bg-ice-soft/60">
-								<GameRow {game} context="admin" href="/admin/matchs/{game.id}" next />
-							</div>
-						{:else}
-							<GameRow {game} context="admin" href="/admin/matchs/{game.id}" />
+	<div class="grid gap-4 lg:grid-cols-2 lg:items-start">
+		{#if data.upcoming.length === 0}
+			<div class="lg:col-span-2">
+				<EmptyState title={t('games.empty')} help={t('games.emptyHelp')}>
+					{#snippet action()}
+						{#if !showCreate}
+							<button class="btn-secondary" type="button" onclick={() => (showCreate = true)}>
+								{t('games.adminCreate')}
+							</button>
 						{/if}
-					</li>
-				{/each}
-			</ul>
-		</SectionCard>
-	{/if}
-
-	{#if data.past.length > 0}
-		<SectionCard
-			title="{t('games.past')} ({data.past.length})"
-			href={data.showArchive
-				? '/admin/matchs'
-				: data.pastTotal > data.past.length
-					? '/admin/matchs?archive=1#archive'
-					: undefined}
-			linkLabel={data.showArchive
-				? t('games.hideArchive')
-				: data.pastTotal > data.past.length
-					? formatCount(
-							data.pastTotal,
-							'games.showArchive.one',
-							'games.showArchive.many'
-						)
-					: undefined}
-			flush
-		>
-			<ul
-				role="list"
-				class="divide-y divide-line"
-				id="archive"
+					{/snippet}
+				</EmptyState>
+			</div>
+		{:else}
+			<SectionCard
+				class={data.past.length > 0 ? '' : 'lg:col-span-2'}
+				title="{t('games.upcoming')} ({data.upcoming.length})"
+				flush
 			>
-				{#each data.past as game (game.id)}
-					<li>
-						<GameRow {game} context="admin" href="/admin/matchs/{game.id}" past />
-					</li>
-				{/each}
-			</ul>
-		</SectionCard>
-	{/if}
+				<ul role="list" class="divide-y divide-line">
+					{#each data.upcoming as game (game.id)}
+						<li>
+							{#if game.id === data.nextId}
+								<div class="bg-ice-soft/60">
+									<GameRow {game} context="admin" href="/admin/matchs/{game.id}" next />
+								</div>
+							{:else}
+								<GameRow {game} context="admin" href="/admin/matchs/{game.id}" />
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</SectionCard>
+		{/if}
+
+		{#if data.past.length > 0}
+			<SectionCard
+				class={data.upcoming.length > 0 ? '' : 'lg:col-span-2'}
+				title="{t('games.past')} ({data.past.length})"
+				href={data.showArchive
+					? '/admin/matchs'
+					: data.pastTotal > data.past.length
+						? '/admin/matchs?archive=1#archive'
+						: undefined}
+				linkLabel={data.showArchive
+					? t('games.hideArchive')
+					: data.pastTotal > data.past.length
+						? formatCount(
+								data.pastTotal,
+								'games.showArchive.one',
+								'games.showArchive.many'
+							)
+						: undefined}
+				flush
+			>
+				<ul
+					role="list"
+					class="divide-y divide-line"
+					id="archive"
+				>
+					{#each data.past as game (game.id)}
+						<li>
+							<GameRow {game} context="admin" href="/admin/matchs/{game.id}" past />
+						</li>
+					{/each}
+				</ul>
+			</SectionCard>
+		{/if}
+	</div>
 </div>

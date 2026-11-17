@@ -134,7 +134,7 @@
 		<EmptyState title={t('admin.noResults')} />
 	{:else}
 		<SectionCard flush clip={false}>
-			<ul role="list" class="divide-y divide-line">
+			<ul role="list" class="ledger-columns">
 				{#each filtered as player, index (player.userId)}
 					{@const menuUp = index >= filtered.length - 2}
 					<li class="section-row relative flex items-center gap-3">
@@ -150,27 +150,25 @@
 							></a>
 							<div class="pointer-events-none relative z-10 min-w-0">
 								<span class="block break-words font-semibold text-ink">{player.fullName}</span>
-								{#if player.role !== 'player' || player.isSubstitute || data.favorites.get(player.userId) || !player.active}
-									<div class="mt-1 flex flex-wrap items-center gap-1">
-										{#if player.role !== 'player'}
-											<span class="badge-ice"
-												>{t(roleDefinition(player.role)?.labelKey ?? 'admin.role.player')}</span
-											>
-										{/if}
-										{#if player.isSubstitute}
-											<span class="badge">{t('profile.substitute')}</span>
-										{/if}
-										{#if data.favorites.get(player.userId)}
-											<span class="badge-ice">{t('subs.favorite')}</span>
-										{/if}
-										{#if !player.active}
-											<span class="badge-alert">{t('admin.inactive')}</span>
-										{/if}
-									</div>
-								{/if}
 							</div>
-							<p class="pointer-events-none relative z-10 mt-1 break-words text-meta text-muted">
-								{t(positionDefinition(player.position).labelKey)} · {formatAge(player.age)}
+							<p
+								class="pointer-events-none relative z-10 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-meta text-muted"
+							>
+								<span>{t(positionDefinition(player.position).labelKey)} · {formatAge(player.age)}</span>
+								{#if player.role !== 'player'}
+									<span class="badge-ice"
+										>{t(roleDefinition(player.role)?.labelKey ?? 'admin.role.player')}</span
+									>
+								{/if}
+								{#if player.isSubstitute}
+									<span class="badge">{t('profile.substitute')}</span>
+								{/if}
+								{#if data.favorites.get(player.userId)}
+									<span class="badge-ice">{t('subs.favorite')}</span>
+								{/if}
+								{#if !player.active}
+									<span class="badge-alert">{t('admin.inactive')}</span>
+								{/if}
 							</p>
 						</div>
 						<svg

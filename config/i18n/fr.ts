@@ -942,6 +942,7 @@ export const fr = {
   'peek.positionSkills': 'Au poste',
   'peek.overall': 'Note globale',
   'peek.positionOverall': 'Note au poste',
+  'admin.identityChange': 'Changer l’identité de ce joueur',
   'admin.legendsTitle': 'Légendes au poste du joueur',
   'admin.legendsHelp': 'Des identités hommage, choisies pour le poste de ce joueur.',
   'admin.avatarHelp':

@@ -114,10 +114,11 @@
 				{#if hasTodo}
 					<ul role="list" class="divide-y divide-line">
 						{#if data.unpaid.length > 0}
-							<li class="section-row">
+							<li class="section-row flex flex-wrap items-center justify-between gap-2 py-2">
 								<p class="micro-label">{t('admin.todoBalances', { count: data.unpaid.length })}</p>
+								<a class="action-link text-meta" href="/admin/soldes">{t('admin.balances')}</a>
 							</li>
-							{#each data.unpaid as balance (balance.playerId)}
+							{#each data.unpaid.slice(0, 5) as balance (balance.playerId)}
 								{@const status = balanceStatusDefinition(balance.status)}
 								<li>
 									<RecordRow
@@ -136,10 +137,11 @@
 						{/if}
 
 						{#if data.requests.length > 0}
-							<li class="section-row">
+							<li class="section-row flex flex-wrap items-center justify-between gap-2 py-2">
 								<p class="micro-label">{t('admin.todoRequests', { count: data.requests.length })}</p>
+								<a class="action-link text-meta" href="/remplacants">{t('subs.title')}</a>
 							</li>
-							{#each data.requests as request (request.id)}
+							{#each data.requests.slice(0, 3) as request (request.id)}
 								<li>
 									<RecordRow
 										href="/remplacants"
