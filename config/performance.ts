@@ -108,10 +108,11 @@ export const MEASURED_PAGES: readonly MeasuredPage[] = [
 	{
 		name: 'discussion',
 		path: '/discussion',
-		// Le module partagé `chrome-inset.svelte.ts` (coquille admin et
-		// discussion) ajoute une requête mesurée par le smoke du conteneur :
-		// 21 requêtes pour cette page, sans changement du plafond d'octets.
-		maxRequests: 21,
+		// La copie locale (cache IndexedDB, position, sondages) et le menu
+		// partagé des messages ajoutent des morceaux mesurés sur la
+		// construction 1.12.0 : 24 requêtes, 240 Ko JavaScript et 75 Ko HTML.
+		// Le plafond d'octets ne change pas; les requêtes restent des planchers.
+		maxRequests: 24,
 		maxBytes: 150 * 1024,
 		audience: 'admin'
 	},

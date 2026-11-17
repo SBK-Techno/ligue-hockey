@@ -17,6 +17,10 @@ export const PEEK_RATINGS_CACHE = 'no-store';
  * une visite, sans garder une fiche privée au-delà. */
 export const PEEK_CLIENT_TTL_MS = 30_000;
 
+/** Le cache de l'appareil est le seul cache : une réponse de synchronisation
+ * ne doit jamais être réutilisée par le cache HTTP. */
+export const CHAT_SYNC_CACHE = 'private, no-store';
+
 /** Les suggestions d'adresses restent privées et suivent le cache serveur. */
 export const ADDRESS_SEARCH_CACHE = `private, max-age=${Math.floor(
 	ADDRESS_SEARCH.cacheTtlMs / 1000

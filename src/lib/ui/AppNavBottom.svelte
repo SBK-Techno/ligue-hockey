@@ -5,12 +5,12 @@
 	import NavIcon from '#lib/ui/NavIcon.svelte';
 	import { isActiveHref, mobileNavLabelKey } from '#lib/ui/nav.ts';
 
-	let { items }: { items: readonly Surface[] } = $props();
+	let { items, visible = true }: { items: readonly Surface[]; visible?: boolean } = $props();
 
 	const path = $derived(page.url.pathname);
 </script>
 
-{#if !path.startsWith('/admin')}
+{#if visible}
 	<nav
 		class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
 		aria-label={t('nav.mainMenu')}

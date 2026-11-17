@@ -44,6 +44,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 			messages: [],
 			nextCursor: null,
 			before: null,
+			viewerId: null,
 			limits,
 			canCreatePoll: false,
 			...days
@@ -54,6 +55,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 		messages: page.messages,
 		nextCursor: page.nextCursor,
 		before: cursor ? before : null,
+		viewerId: locals.actor.userId,
 		limits,
 		canCreatePoll: canCreatePoll(locals.actor, settings['chat.allowPlayerPolls']),
 		...days

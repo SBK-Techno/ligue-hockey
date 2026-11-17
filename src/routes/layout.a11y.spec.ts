@@ -34,7 +34,7 @@ describe('transition de page', () => {
 });
 
 describe('composition de la coquille', () => {
-	it('colle le pied de page au bas d’une page courte sans le superposer au contenu', () => {
+	it('réserve la hauteur du pied flottant sans le superposer au contenu', () => {
 		const shell = css.slice(css.indexOf('.app-shell {'), css.indexOf('.page-ground {'));
 
 		expect(shell).toContain('display: flex');
@@ -42,7 +42,20 @@ describe('composition de la coquille', () => {
 		expect(shell).toContain('min-height: 100dvh');
 		expect(css).toContain('.app-shell > main {');
 		expect(css.slice(css.indexOf('.app-shell > main {'))).toContain('flex: 1 0 auto');
+		expect(css).toContain('.app-main {');
+		expect(css).toContain('calc(3rem + var(--footer-reserve, 0px))');
+		expect(layout).toContain('--footer-reserve');
+		expect(layout).toContain('class="app-footer');
+		expect(layout).toContain('lg:fixed');
 		expect(layout).toContain('<footer');
+	});
+
+	it('garde un seul propriétaire de la visibilité de la barre mobile', () => {
+		const bottomNav = readFileSync('src/lib/ui/AppNavBottom.svelte', 'utf8');
+
+		expect(bottomNav).toContain('visible = true');
+		expect(bottomNav).not.toContain("startsWith('/admin')");
+		expect(layout).toContain('visible={memberShell}');
 	});
 });
 
@@ -64,6 +77,39 @@ describe('chrome fixe', () => {
 		);
 		expect(root).toContain(
 			'scroll-padding-bottom: calc(var(--bottom-bar-offset) + var(--surface-bottom-inset, 0px));'
+		);
+		expect(css).toContain(
+			'var(--bottom-bar-offset) + var(--surface-bottom-inset, 0px) + var(--footer-offset)'
+		);
+	});
+
+	it('laisse le pied dans le flux sur mobile et le rend fixe au bureau', () => {
+		const footerStart = layout.lastIndexOf('<footer');
+		const footer = layout.slice(footerStart, layout.indexOf('</footer>', footerStart));
+
+		expect(footer).toContain('app-footer');
+		expect(footer).toContain('lg:fixed');
+		expect(footer).not.toMatch(/(^|\s)fixed(\s|")/);
+	});
+
+	it('aplatit le pied flottant à l’impression', () => {
+		const print = css.slice(css.indexOf('@media print {'));
+
+		expect(print).toContain('.app-footer');
+		expect(print).toContain('position: static !important');
+		expect(print).toContain('.app-main');
+	});
+
+	it('garde une seule définition du pied flottant', () => {
+		const tokens = readFileSync('src/lib/ui/tokens.css', 'utf8');
+		const definitions = [...globSync('src/**/*.css'), ...globSync('src/**/*.svelte')].filter(
+			(file) => /--footer-offset\s*:/.test(readFileSync(file, 'utf8'))
+		);
+
+		expect(definitions).toEqual(['src/lib/ui/tokens.css']);
+		expect(tokens).toContain('--footer-height: 3.25rem');
+		expect(tokens).toContain(
+			'--footer-offset: calc(var(--footer-height) + env(safe-area-inset-bottom));'
 		);
 	});
 

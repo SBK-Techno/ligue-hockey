@@ -29,7 +29,12 @@ describe('avis de nouveaux messages', () => {
 	});
 
 	it('annonce le compte produit par un rafraîchissement', () => {
-		const state = nextPillState(initialPillState(10), 12, false);
+		const list = (count: number) =>
+			Array.from({ length: count }, (_, index) => ({
+				id: `msg_${index + 1}`,
+				createdAt: index + 1
+			}));
+		const state = nextPillState(initialPillState(list(10)), list(12), false);
 		const { body } = render(ChatNewMessages, {
 			props: { count: state.newMessages, onshow: () => {} }
 		});

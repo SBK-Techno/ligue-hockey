@@ -8,6 +8,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
 	listMessages: vi.fn(),
+	listMessagesAfter: vi.fn(),
+	listDeletedMessageIds: vi.fn(),
+	listPollMessageRows: vi.fn(),
 	listLatestVisibleMessage: vi.fn(),
 	listOpenPollMessages: vi.fn(),
 	listPolls: vi.fn(),
@@ -39,7 +42,8 @@ vi.mock('#lib/shared/time/clock.ts', () => ({
 
 vi.mock('#lib/shared/i18n/index.ts', () => ({ t: (key: string) => key }));
 
-import { castPollVote, listChatPage, listChatSummary } from './service.ts';
+import { AppError } from '#lib/shared/errors.ts';
+import { castPollVote, listChatPage, listChatSummary, syncChat } from './service.ts';
 
 const message = {
 	id: 'msg_1',
@@ -75,12 +79,36 @@ function rows(count: number) {
 beforeEach(() => {
 	vi.clearAllMocks();
 	h.listMessages.mockReturnValue([message]);
+	h.listMessagesAfter.mockReturnValue([]);
+	h.listDeletedMessageIds.mockReturnValue([]);
+	h.listPollMessageRows.mockReturnValue([]);
 	h.listLatestVisibleMessage.mockReturnValue(message);
 	h.listOpenPollMessages.mockReturnValue([]);
 	h.listPolls.mockReturnValue([]);
 	h.listOptions.mockReturnValue([]);
 	h.listVotes.mockReturnValue([]);
 });
+
+/** Une synchronisation rend ses messages du plus ancien au plus récent. */
+function ascendingRows(count: number) {
+	return Array.from({ length: count }, (_, index) => ({
+		...message,
+		id: `sync_${String(index + 1).padStart(3, '0')}`,
+		body: `Message ${index + 1}`,
+		createdAt: 20_000 + index
+	}));
+}
+
+function expectValidation(run: () => unknown) {
+	try {
+		run();
+	} catch (cause) {
+		expect(cause).toBeInstanceOf(AppError);
+		expect(cause).toMatchObject({ code: 'VALIDATION', key: 'chat.invalidCursor' });
+		return;
+	}
+	throw new Error('Une erreur de validation était attendue.');
+}
 
 describe('discussion', () => {
 	it('expose l’avatar, le chandail, le poste et le message du membre', () => {
@@ -168,6 +196,115 @@ describe('pagination de la discussion', () => {
 		listChatPage(actor, 'pas-un-curseur');
 		expect(h.listMessages).toHaveBeenCalledWith(21, null);
 	});
+});
+
+describe('synchronisation de la discussion', () => {
+	it('rend une page ascendante avec le curseur de la suite', () => {
+		h.listMessagesAfter.mockReturnValue(ascendingRows(101));
+
+		const page = syncChat(actor, { after: '1000:msg_1' });
+
+		expect(h.listMessagesAfter).toHaveBeenCalledWith(101, {
+			createdAt: 1_000,
+			id: 'msg_1'
+		});
+		expect(page.messages).toHaveLength(100);
+		expect(page.messages[0].id).toBe('sync_001');
+		expect(page.messages.at(-1)?.id).toBe('sync_100');
+		expect(page.hasMore).toBe(true);
+		expect(page.nextAfter).toBe('20099:sync_100');
+		expect(page.now).toBe(999);
+	});
+
+	it('termine la synchronisation sans curseur sur une page incomplète', () => {
+		h.listMessagesAfter.mockReturnValue(ascendingRows(3));
+
+		const page = syncChat(actor, { after: '1000:msg_1' });
+
+		expect(page.messages).toHaveLength(3);
+		expect(page.hasMore).toBe(false);
+		expect(page.nextAfter).toBeNull();
+	});
+
+	it('transmet les identifiants supprimés demandés', () => {
+		h.listDeletedMessageIds.mockReturnValue(['msg_a', 'msg_b']);
+
+		const page = syncChat(actor, { after: '1000:msg_1', deletedSince: 500 });
+
+		expect(h.listDeletedMessageIds).toHaveBeenCalledWith(500, 501);
+		expect(page.deletedIds).toEqual(['msg_a', 'msg_b']);
+		expect(page.reset).toBe(false);
+	});
+
+	it('repart du serveur quand les suppressions dépassent la borne', () => {
+		h.listDeletedMessageIds.mockReturnValue(
+			Array.from({ length: 501 }, (_, index) => `msg_${index}`)
+		);
+
+		const page = syncChat(actor, { after: '1000:msg_1', deletedSince: 500 });
+
+		expect(page.reset).toBe(true);
+		expect(page.deletedIds).toEqual([]);
+	});
+
+	it('accepte zéro comme instant de référence des suppressions', () => {
+		h.listDeletedMessageIds.mockReturnValue(['msg_a']);
+
+		const page = syncChat(actor, { after: '1000:msg_1', deletedSince: 0 });
+
+		expect(h.listDeletedMessageIds).toHaveBeenCalledWith(0, 501);
+		expect(page.deletedIds).toEqual(['msg_a']);
+	});
+
+	it('ne demande aucune suppression sans instant de référence', () => {
+		const page = syncChat(actor, { after: '1000:msg_1', deletedSince: null });
+
+		expect(h.listDeletedMessageIds).not.toHaveBeenCalled();
+		expect(page.deletedIds).toEqual([]);
+	});
+
+	it('rend un état nul pour un sondage supprimé', () => {
+		const deletedPoll = {
+			...message,
+			id: 'msg_poll',
+			kind: 'poll' as const,
+			body: null,
+			createdAt: 950,
+			deletedAt: 960,
+			deletedBy: 'me'
+		};
+		h.listPollMessageRows.mockReturnValue([deletedPoll]);
+		h.listPolls.mockReturnValue([
+			{ messageId: 'msg_poll', question: 'On joue ?', closesAt: null, createdAt: 950 }
+		]);
+		h.listOptions.mockReturnValue([
+			{ id: 'opt_1', messageId: 'msg_poll', label: 'Oui', optionIndex: 0 }
+		]);
+
+		const page = syncChat(actor, { after: '1000:msg_1' });
+
+		expect(h.listPollMessageRows).toHaveBeenCalledWith(100);
+		expect(page.polls).toEqual([{ id: 'msg_poll', poll: null }]);
+	});
+
+	it('refuse un curseur de synchronisation invalide sans interroger la base', () => {
+		expectValidation(() => syncChat(actor, { after: 'pas-un-curseur' }));
+
+		expect(h.listMessagesAfter).not.toHaveBeenCalled();
+		expect(h.listDeletedMessageIds).not.toHaveBeenCalled();
+		expect(h.listPollMessageRows).not.toHaveBeenCalled();
+	});
+
+	it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+		'refuse un instant de suppression invalide (%s) sans interroger la base',
+		(deletedSince) => {
+			expectValidation(() =>
+				syncChat(actor, { after: '1000:msg_1', deletedSince })
+			);
+
+			expect(h.listMessagesAfter).not.toHaveBeenCalled();
+		}
+	);
 });
 
 describe('résumé de l’accueil', () => {

@@ -19,6 +19,7 @@
 	import { progressiveForm } from '#lib/ui/progressive-form.ts';
 	import { fieldErrorFor } from '#lib/ui/form-feedback.ts';
 	import { monogram } from '#lib/ui/identity-display.ts';
+	import { signOutWithCleanup } from '#lib/ui/sign-out.ts';
 	import {
 		pushPreferenceState,
 		type PushDeviceStatus
@@ -820,7 +821,12 @@
 
 						<div class="mt-5 border-t border-line pt-4">
 							<p class="hint">{t('profile.signOutHelp')}</p>
-							<form method="POST" action="/deconnexion" class="mt-2">
+							<form
+								method="POST"
+								action="/deconnexion"
+								class="mt-2"
+								onsubmit={(event) => void signOutWithCleanup(event, account.id)}
+							>
 								<button class="btn-secondary" type="submit">{t('nav.logout')}</button>
 							</form>
 						</div>

@@ -1,4 +1,10 @@
-import { CHAT_PAGE_SIZE, HOME_POLL_LIMIT } from '#config/chat.ts';
+import {
+	CHAT_DELETED_SYNC_LIMIT,
+	CHAT_PAGE_SIZE,
+	CHAT_POLL_SYNC_LIMIT,
+	CHAT_SYNC_PAGE_SIZE,
+	HOME_POLL_LIMIT
+} from '#config/chat.ts';
 import type { Position } from '#config/positions.ts';
 import { canCreatePoll, can, requireUser } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
@@ -16,10 +22,13 @@ import {
 	findPoll,
 	insertMessage,
 	insertPollMessage,
+	listDeletedMessageIds,
 	listLatestVisibleMessage,
 	listMessages,
+	listMessagesAfter,
 	listOpenPollMessages,
 	listOptions,
+	listPollMessageRows,
 	listPolls,
 	listVotes,
 	softDeleteMessage,
@@ -131,6 +140,79 @@ export function listChatPage(actor: Actor, beforeValue?: string | null): ChatPag
 	return {
 		messages: toViews(actor, user.userId, page),
 		nextCursor: hasMore && oldest ? encodeCursor(oldest) : null
+	};
+}
+
+export type ChatPollState = { id: string; poll: ChatPollView | null };
+
+export type ChatSyncPage = {
+	/** Les messages postérieurs au curseur, du plus ancien au plus récent. */
+	messages: ChatMessageView[];
+	/** Les identifiants supprimés depuis `deletedSince`, du plus ancien au plus récent. */
+	deletedIds: string[];
+	/**
+	 * Vrai quand le rattrapage des suppressions dépasse sa borne : l'appareil
+	 * doit alors jeter sa copie et repartir du serveur, jamais avancer son
+	 * instant en sautant des suppressions.
+	 */
+	reset: boolean;
+	/** L'état courant de chaque sondage du catalogue borné. */
+	polls: ChatPollState[];
+	/** Le curseur à passer comme `after` quand `hasMore` est vrai. */
+	nextAfter: string | null;
+	hasMore: boolean;
+	/** L'heure du serveur à conserver comme prochain `deletedSince`. */
+	now: number;
+};
+
+/**
+ * La synchronisation d'un appareil : les messages écrits après son curseur,
+ * les suppressions rattrapées depuis son instant, et l'état courant des
+ * sondages. Une page vide n'est pas la fin de l'historique; seul `hasMore`
+ * décide de continuer.
+ */
+export function syncChat(
+	actor: Actor,
+	input: { after: string; deletedSince?: number | null }
+): ChatSyncPage {
+	const user = requireUser(actor);
+	const cursor = decodeCursor(input.after);
+	if (cursor === null) {
+		throw new AppError('VALIDATION', { key: 'chat.invalidCursor' });
+	}
+	const deletedSince = input.deletedSince ?? null;
+	if (
+		deletedSince !== null &&
+		(!Number.isSafeInteger(deletedSince) || deletedSince < 0)
+	) {
+		throw new AppError('VALIDATION', { key: 'chat.invalidCursor' });
+	}
+
+	// Le curseur des suppressions précède la lecture d'une milliseconde : une
+	// suppression committée pendant la requête est rejouée au prochain passage,
+	// jamais sautée. Une suppression rejouée est idempotente.
+	const now = Math.max(0, clock.nowMs() - 1);
+	const rows = listMessagesAfter(CHAT_SYNC_PAGE_SIZE + 1, cursor);
+	const hasMore = rows.length > CHAT_SYNC_PAGE_SIZE;
+	const page = hasMore ? rows.slice(0, CHAT_SYNC_PAGE_SIZE) : rows;
+	const deleted =
+		deletedSince === null
+			? []
+			: listDeletedMessageIds(deletedSince, CHAT_DELETED_SYNC_LIMIT + 1);
+	// La borne est dépassée : une page partielle ne doit jamais faire avancer
+	// `deletedSince`, sinon les suppressions suivantes seraient perdues.
+	const reset = deleted.length > CHAT_DELETED_SYNC_LIMIT;
+	const polls = toViews(actor, user.userId, listPollMessageRows(CHAT_POLL_SYNC_LIMIT)).map(
+		(view) => ({ id: view.id, poll: view.poll })
+	);
+	return {
+		messages: toViews(actor, user.userId, page),
+		deletedIds: reset ? [] : deleted,
+		reset,
+		polls,
+		nextAfter: hasMore ? encodeCursor(page.at(-1)!) : null,
+		hasMore,
+		now
 	};
 }
 

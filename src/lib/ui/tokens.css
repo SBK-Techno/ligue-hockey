@@ -83,6 +83,10 @@
 		var(--bottom-bar-height) + max(0.5rem, env(safe-area-inset-bottom))
 	);
 	--anchor-offset: calc(3.75rem + 1px + env(safe-area-inset-top) + 0.75rem);
+	/* Le pied de page flottant du bureau : une hauteur utile et la zone sûre,
+	   composées une seule fois pour le contenu, le compositeur et la pastille. */
+	--footer-height: 3.25rem;
+	--footer-offset: calc(var(--footer-height) + env(safe-area-inset-bottom));
 	/* Gouttière du numéro de chandail dans une feuille de présence. */
 	--jersey-gutter: 2.5rem;
 }

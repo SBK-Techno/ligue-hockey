@@ -8,6 +8,7 @@
 		poll,
 		action = '?/vote',
 		showQuestion = true,
+		onsuccess,
 		class: className = ''
 	}: {
 		messageId: string;
@@ -15,6 +16,8 @@
 		/** La même action `?/vote` sur la discussion et sur l'accueil. */
 		action?: string;
 		showQuestion?: boolean;
+		/** Le parent rafraîchit son cache après un vote accepté. */
+		onsuccess?: () => void;
 		class?: string;
 	} = $props();
 
@@ -39,7 +42,7 @@
 				{@const share = total > 0 ? option.votes / total : 0}
 				<li>
 					{#if open}
-						<form method="POST" action={action} use:progressiveForm>
+						<form method="POST" action={action} use:progressiveForm={{ onSuccess: onsuccess }}>
 							<input type="hidden" name="messageId" value={messageId} />
 							<input type="hidden" name="optionId" value={option.id} />
 							<button
