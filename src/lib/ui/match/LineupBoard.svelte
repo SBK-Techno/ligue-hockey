@@ -50,8 +50,6 @@
 		pointerType: string;
 		startX: number;
 		startY: number;
-		x: number;
-		y: number;
 		dragging: boolean;
 		draggable: boolean;
 		fromSlot: boolean;
@@ -88,6 +86,13 @@
 	let drag = $state<DragSession | null>(null);
 	let hoverKey = $state<string | null>(null);
 	let benchHover = $state(false);
+	// Le fantôme suit le pointeur par transformée, écrite directement sur le
+	// nœud : aucune invalidation réactive ni mise en page par événement. Une
+	// seule image par frame fait le test de cible et ne touche l'état réactif
+	// que lorsque la cible change.
+	let ghostEl = $state<HTMLElement>();
+	let pendingPointer: { x: number; y: number } | null = null;
+	let dragFrame = 0;
 	// svelte-ignore state_referenced_locally
 	const initialJson = JSON.stringify(initialAssignments(slots));
 	// svelte-ignore state_referenced_locally
@@ -331,14 +336,13 @@
 			pointerType: event.pointerType,
 			startX: event.clientX,
 			startY: event.clientY,
-			x: event.clientX,
-			y: event.clientY,
 			dragging: false,
 			/* Au toucher, le geste reste un toucher : la page doit pouvoir
 			   défiler. Le déplacement se fait en deux touchers. */
 			draggable: !touch && player !== null,
 			fromSlot: benchPlayerId(key) === null
 		};
+		pendingPointer = { x: event.clientX, y: event.clientY };
 		if (!touch) {
 			(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 		}
@@ -356,26 +360,48 @@
 		}
 
 		if (!drag.dragging && Math.hypot(dx, dy) < 8) {
-			drag = { ...drag, x: event.clientX, y: event.clientY };
+			pendingPointer = { x: event.clientX, y: event.clientY };
 			return;
 		}
 		if (!drag.draggable) return;
 
-		drag = { ...drag, dragging: true, x: event.clientX, y: event.clientY };
-		const under = document.elementFromPoint(event.clientX, event.clientY);
-		const key = lineupKeyAt(under);
-		hoverKey =
-			key === drag.key || (key !== null && !canTarget(key)) ? null : key;
-		benchHover = Boolean(
-			drag.fromSlot && under?.closest('[data-bench-drop]')
-		);
-		if (benchHover) hoverKey = null;
+		if (!drag.dragging) drag = { ...drag, dragging: true };
+		pendingPointer = { x: event.clientX, y: event.clientY };
+		scheduleDragFrame();
+	}
+
+	/** Une seule passe par image : transformée du fantôme puis test de cible. */
+	function scheduleDragFrame() {
+		if (dragFrame) return;
+		dragFrame = requestAnimationFrame(() => {
+			dragFrame = 0;
+			const point = pendingPointer;
+			const session = drag;
+			if (!point || !session) return;
+			if (ghostEl) {
+				ghostEl.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, calc(-100% - 0.75rem))`;
+			}
+			const under = document.elementFromPoint(point.x, point.y);
+			const key = lineupKeyAt(under);
+			const nextBench = Boolean(session.fromSlot && under?.closest('[data-bench-drop]'));
+			const nextHover =
+				nextBench || key === session.key || (key !== null && !canTarget(key)) ? null : key;
+			if (nextHover !== hoverKey) hoverKey = nextHover;
+			if (nextBench !== benchHover) benchHover = nextBench;
+		});
+	}
+
+	function stopDragFrame() {
+		if (dragFrame) cancelAnimationFrame(dragFrame);
+		dragFrame = 0;
+		pendingPointer = null;
 	}
 
 	function endPointer(event: PointerEvent) {
 		if (!drag || drag.pointerId !== event.pointerId) return;
 		const session = drag;
 		drag = null;
+		stopDragFrame();
 		const element = event.currentTarget as HTMLElement;
 		if (element.hasPointerCapture(event.pointerId)) {
 			element.releasePointerCapture(event.pointerId);
@@ -409,9 +435,13 @@
 	function cancelPointer(event: PointerEvent) {
 		if (!drag || drag.pointerId !== event.pointerId) return;
 		drag = null;
+		stopDragFrame();
 		hoverKey = null;
 		benchHover = false;
 	}
+
+	// Une frame de glissement ne survit pas au démontage de la carte.
+	$effect(() => () => stopDragFrame());
 
 	/** Un clic sans pointeur vient du clavier ou d'un lecteur d'écran. */
 	function handleClick(event: MouseEvent, key: string) {
@@ -748,7 +778,7 @@
 	{#if drag?.dragging && draggedPlayer}
 		<div
 			class="drag-ghost"
-			style="left: {drag.x}px; top: {drag.y}px"
+			bind:this={ghostEl}
 			aria-hidden="true"
 		>
 			<span class="drag-ghost-portrait">

@@ -1094,6 +1094,8 @@
 	/* Le fantôme suit le pointeur : il nomme le joueur, pas un rectangle vide. */
 	.drag-ghost {
 		position: fixed;
+		left: 0;
+		top: 0;
 		z-index: 90;
 		display: flex;
 		align-items: center;
@@ -1101,6 +1103,7 @@
 		max-width: 14rem;
 		padding: 0.25rem 0.65rem 0.25rem 0.25rem;
 		transform: translate(-50%, calc(-100% - 0.75rem));
+		will-change: transform;
 		border: 1px solid var(--color-line-strong);
 		border-radius: var(--radius-pill);
 		background: var(--color-surface);
