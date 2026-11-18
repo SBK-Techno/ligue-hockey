@@ -19,6 +19,8 @@ export type GamePlayer = {
 	jerseyNumber: number | null;
 	avatarId: string | null;
 	kind: 'regular' | 'sub';
+	/** L'équipe dont le joueur habille le banc; null ou absent : hors effectif. */
+	team?: Team | null;
 };
 
 export type GameSlotView = {

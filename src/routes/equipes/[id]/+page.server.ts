@@ -89,9 +89,19 @@ export const actions: Actions = {
 			} catch {
 				throw new AppError('VALIDATION', { key: 'rink.invalid' });
 			}
+			let bench: unknown = [];
+			const rawBench = String(form.get('bench') ?? '');
+			if (rawBench !== '') {
+				try {
+					bench = JSON.parse(rawBench);
+				} catch {
+					throw new AppError('VALIDATION', { key: 'rink.invalid' });
+				}
+			}
 			const parsed = parseSchema(manualLineupInputSchema, {
 				expectedGeneratedAt: token,
-				assignments
+				assignments,
+				bench
 			});
 			saveManualLineup(locals.actor, params.id!, parsed);
 			return { ok: true, section: 'lineup', message: t('rink.saved') };

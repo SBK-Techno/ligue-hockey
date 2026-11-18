@@ -47,7 +47,10 @@
 				<p class="notice mt-3 text-meta leading-relaxed">{pairNote}</p>
 			{/if}
 		{:else if ownBench}
-			<p class="text-body font-semibold">{t('home.teamBench')}</p>
+			{#if ownBench.team}
+				<TeamMark team={ownBench.team} variant="badge" />
+			{/if}
+			<p class="text-body font-semibold {ownBench.team ? 'mt-1.5' : ''}">{t('home.teamBench')}</p>
 			<p class="hint">{t('home.teamBenchHelp')}</p>
 		{:else}
 			<p class="text-body font-semibold">{t('home.teamNoSlot')}</p>

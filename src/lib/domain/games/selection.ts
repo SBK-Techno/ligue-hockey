@@ -1,11 +1,16 @@
 import { POSITIONS, comparePositionThenKind, positionRank, type Position } from '#config/positions.ts';
 import { slotCounts, type RosterTemplate } from '#config/roster.ts';
-import { TEAMS } from '#config/teams.ts';
+import { TEAMS, type Team } from '#config/teams.ts';
 
 export type BenchPlayer = {
 	playerId: string;
 	position: Position;
 	kind: 'regular' | 'sub';
+	/**
+	 * L'équipe dont le joueur habille le banc. Absent : le joueur attend hors
+	 * effectif (banc global), comme avant l'effectif par équipe.
+	 */
+	team?: Team;
 };
 
 /**

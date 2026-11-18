@@ -219,6 +219,17 @@ export const SETTINGS = {
     labelKey: 'settings.defensePerTeam.label',
     descriptionKey: 'settings.defensePerTeam.description'
   }),
+  'roster.playersPerTeam': defineNumericSetting({
+    group: 'roster',
+    kind: 'number',
+    min: 1,
+    max: 20,
+    step: 1,
+    integer: true,
+    defaultValue: 11,
+    labelKey: 'settings.playersPerTeam.label',
+    descriptionKey: 'settings.playersPerTeam.description'
+  }),
   'notifications.generalLeadHours': defineNumericSetting({
     group: 'notifications',
     kind: 'number',
@@ -493,6 +504,20 @@ export const SETTINGS_INVARIANTS: readonly SettingInvariant[] = [
     check: (values) =>
       values['roster.forwardsPerTeam'] + values['roster.defensePerTeam'] > 0,
     messageKey: 'settings.invariant.roster'
+  },
+  {
+    keys: [
+      'roster.playersPerTeam',
+      'roster.forwardsPerTeam',
+      'roster.defensePerTeam',
+      'roster.goaliesPerTeam'
+    ],
+    check: (values) =>
+      values['roster.playersPerTeam'] >=
+      values['roster.forwardsPerTeam'] +
+        values['roster.defensePerTeam'] +
+        values['roster.goaliesPerTeam'],
+    messageKey: 'settings.invariant.playersPerTeam'
   },
   {
     keys: [

@@ -169,6 +169,6 @@ describe('historique des équipes', () => {
 		expect(read.value[0].generated).toBe(true);
 		expect(read.value[0].counts).toEqual({ white: 2, black: 1 });
 		expect(read.value[1].counts).toEqual({ white: 0, black: 0 });
-		expect(read.statements).toBe(3);
+		expect(read.statements).toBe(4);
 	});
 });

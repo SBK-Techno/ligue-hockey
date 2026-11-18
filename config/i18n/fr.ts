@@ -298,6 +298,9 @@ export const fr = {
   'settings.defensePerTeam.label': 'Défenseurs par équipe',
   'settings.defensePerTeam.description':
     'Nombre de défenseurs alignés par équipe. Total par match : {total}.',
+  'settings.playersPerTeam.label': 'Joueurs par équipe',
+  'settings.playersPerTeam.description':
+    'Effectif habillé par équipe, sur la glace et au banc. Avec la formation actuelle : {onIce} sur la glace, {bench} au banc.',
   'settings.generalLeadHours.label': 'Délai de la liste générale',
   'settings.generalLeadHours.description':
     'Heures avant le match où les remplaçants non favoris sont avisés. Pour un match à {startTime}, envoi {dayRelation} à {time}.',
@@ -348,6 +351,8 @@ export const fr = {
   'settings.invariant.notificationWindow':
     'La fenêtre de notification dépasse le maximum autorisé.',
   'settings.invariant.roster': 'Une équipe doit avoir au moins un joueur.',
+  'settings.invariant.playersPerTeam':
+    'L’effectif par équipe doit au moins couvrir les places sur la glace.',
   'settings.invariant.maxPlayers':
     'Le maximum de joueurs doit couvrir tous les postes d’un match.',
 
@@ -517,6 +522,7 @@ export const fr = {
   'games.lineupPlayerInactive': '{name} n’est plus actif.',
   'games.lineupPlayerAbsent': '{name} n’a pas confirmé sa présence.',
   'games.lineupPositionInvalid': '{name} ne joue pas à ce poste.',
+  'games.lineupRosterFull': 'L’effectif de cette équipe est déjà complet.',
   'games.lineupRuleConflict':
     'Impossible de placer {a} et {b} ensemble : une règle l’interdit.',
 
@@ -552,6 +558,8 @@ export const fr = {
   'rink.extraSlot': 'Place hors glace {index}',
   'rink.bench': 'Sur le banc',
   'rink.benchEmpty': 'Personne sur le banc.',
+  'rink.benchOverflow': 'Hors effectif',
+  'rink.benchOverflowHelp': 'Joueurs en attente, sans équipe pour ce match.',
   'rink.selectedBench': 'Prêt à placer sur la glace.',
   'rink.selectedIce': 'Choisis une autre place, ou dépose-le sur le banc.',
   'rink.positionOnly':

@@ -119,12 +119,26 @@ export function initialAssignments(
 }
 
 /**
+ * Le banc habillé par équipe au départ : chaque joueur du banc publié avec
+ * une équipe habille le banc de cette équipe. Les autres attendent hors
+ * effectif et n'ont pas d'équipe.
+ */
+export function initialBenchTeams(bench: readonly GamePlayer[]): Record<string, Team> {
+	const teams: Record<string, Team> = {};
+	for (const entry of bench) {
+		if (entry.team) teams[entry.playerId] = entry.team;
+	}
+	return teams;
+}
+
+/**
  * The position of every slot and every player, read once. Every board gesture
  * goes through this table: a player can only occupy a slot of their position,
  * and the server applies the same rule when saving.
  */
 export type PlacementRules = {
 	slotPosition(key: string): Position | null;
+	slotTeam(key: string): Team | null;
 	playerPosition(playerId: string): Position | null;
 };
 
@@ -135,11 +149,13 @@ export function placementRules(
 	const slotPositions = new Map(
 		slots.map((slot) => [slotKey(slot), slot.position])
 	);
+	const slotTeams = new Map(slots.map((slot) => [slotKey(slot), slot.team]));
 	const playerPositions = new Map(
 		players.map((player) => [player.playerId, player.position])
 	);
 	return {
 		slotPosition: (key) => slotPositions.get(key) ?? null,
+		slotTeam: (key) => slotTeams.get(key) ?? null,
 		playerPosition: (playerId) => playerPositions.get(playerId) ?? null
 	};
 }
@@ -209,7 +225,7 @@ export type ViewerSpot =
 			line: number | null;
 			pair: number | null;
 	  }
-	| { kind: 'bench' }
+	| { kind: 'bench'; team: Team | null }
 	| { kind: 'absent' };
 
 export function viewerSpot(
@@ -231,7 +247,8 @@ export function viewerSpot(
 			pair: role && slot.position === 'defense' ? role.pair : null
 		};
 	}
-	if (bench.some((player) => player.playerId === actorId)) return { kind: 'bench' };
+	const benchEntry = bench.find((player) => player.playerId === actorId);
+	if (benchEntry) return { kind: 'bench', team: benchEntry.team ?? null };
 	return { kind: 'absent' };
 }
 
@@ -283,7 +300,23 @@ export function removePlayer(
 export type LineupSelection = {
 	selected: string | null;
 	assignments: LineupAssignmentMap;
+	/** Le banc habillé par équipe : playerId -> équipe. Absent : hors effectif. */
+	benchTeams: Record<string, Team>;
 };
+
+/**
+ * Un joueur du banc habillé ne peut prendre une place que de son équipe;
+ * un joueur hors effectif (sans équipe) peut rejoindre l'une ou l'autre.
+ */
+function benchTeamAllows(
+	state: LineupSelection,
+	playerId: string,
+	target: string,
+	rules: PlacementRules
+): boolean {
+	const team = state.benchTeams[playerId];
+	return team === undefined || rules.slotTeam(target) === team;
+}
 
 /**
  * La sélection d'une place : un premier clic choisit un joueur, un second
@@ -296,21 +329,24 @@ export function selectPlace(
 	rules: PlacementRules
 ): LineupSelection {
 	if (state.selected === key) {
-		return { selected: null, assignments: state.assignments };
+		return { ...state, selected: null };
 	}
 	if (state.selected === null) {
 		return {
-			selected: state.assignments[key] ? key : null,
-			assignments: state.assignments
+			...state,
+			selected: state.assignments[key] ? key : null
 		};
 	}
 	const playerId = selectedPlayerId(state);
-	if (playerId !== null && !canPlacePlayer(rules, playerId, key)) {
-		/* An occupied slot of another position selects its player; an empty
-		   slot of another position stays closed. */
-		return state.assignments[key]
-			? { selected: key, assignments: state.assignments }
-			: state;
+	const benchId = benchPlayerId(state.selected);
+	const blockedByPosition =
+		playerId !== null && !canPlacePlayer(rules, playerId, key);
+	const blockedByTeam =
+		playerId !== null && benchId !== null && !benchTeamAllows(state, playerId, key, rules);
+	if (blockedByPosition || blockedByTeam) {
+		/* An occupied slot of another position or team selects its player; an
+		   empty slot that cannot accept the selection stays closed. */
+		return state.assignments[key] ? { ...state, selected: key } : state;
 	}
 	return dropOnPlace(state, key, rules);
 }
@@ -331,13 +367,23 @@ export function dropOnPlace(
 	if (playerId === null || !canPlacePlayer(rules, playerId, target)) return state;
 	const benchId = benchPlayerId(state.selected);
 	if (benchId !== null) {
-		return {
-			selected: null,
-			assignments: placeFromBench(state.assignments, benchId, target, rules)
-		};
+		if (!benchTeamAllows(state, benchId, target, rules)) return state;
+		const next = placeFromBench(state.assignments, benchId, target, rules);
+		if (next === state.assignments) return state;
+		// Le joueur quitte le banc pour la glace; le joueur délogé rejoint le
+		// banc de l'équipe de la place visée.
+		const benchTeams = { ...state.benchTeams };
+		delete benchTeams[benchId];
+		const displaced = state.assignments[target];
+		const targetTeam = rules.slotTeam(target);
+		if (displaced && targetTeam && !Object.values(next).includes(displaced)) {
+			benchTeams[displaced] = targetTeam;
+		}
+		return { selected: null, assignments: next, benchTeams };
 	}
 	if (!(state.selected in state.assignments)) return state;
 	return {
+		...state,
 		selected: null,
 		assignments: swapPlayers(state.assignments, state.selected, target, rules)
 	};
@@ -348,18 +394,27 @@ export function selectBenchPlayer(
 	playerId: string
 ): LineupSelection {
 	return {
-		selected: state.selected === benchKey(playerId) ? null : benchKey(playerId),
-		assignments: state.assignments
+		...state,
+		selected: state.selected === benchKey(playerId) ? null : benchKey(playerId)
 	};
 }
 
-export function clearSelectedPlace(state: LineupSelection): LineupSelection {
+export function clearSelectedPlace(
+	state: LineupSelection,
+	rules: PlacementRules
+): LineupSelection {
 	if (state.selected === null || benchPlayerId(state.selected) !== null) {
 		return state;
 	}
+	const playerId = state.assignments[state.selected];
+	const team = rules.slotTeam(state.selected);
+	const benchTeams = { ...state.benchTeams };
+	if (playerId && team) benchTeams[playerId] = team;
 	return {
+		...state,
 		selected: null,
-		assignments: removePlayer(state.assignments, state.selected)
+		assignments: removePlayer(state.assignments, state.selected),
+		benchTeams
 	};
 }
 
@@ -377,4 +432,18 @@ export function assignmentsForSave(
 		slotIndex: slot.slotIndex,
 		playerId: map[slotKey(slot)] ?? null
 	}));
+}
+
+/**
+ * Le banc habillé envoyé à l'enregistrement : les joueurs encore au banc qui
+ * ont une équipe. Les joueurs hors effectif (sans équipe) ne sont pas envoyés;
+ * le service les recalcule à partir du bassin vivant.
+ */
+export function benchForSave(
+	benchPlayers: readonly Pick<GamePlayer, 'playerId'>[],
+	benchTeams: Record<string, Team>
+): { playerId: string; team: Team }[] {
+	return benchPlayers
+		.filter((player) => benchTeams[player.playerId] !== undefined)
+		.map((player) => ({ playerId: player.playerId, team: benchTeams[player.playerId] }));
 }
