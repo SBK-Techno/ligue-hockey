@@ -52,7 +52,7 @@ L'application ne termine pas TLS et n'émet jamais `Strict-Transport-Security` :
 - Activer HTTP/2 (h2) vers les navigateurs. L'origine Node sert du HTTP/1.1; le proxy négocie h2 avec le client et multiplexe les requêtes. Sans h2, le graphe JavaScript d'une page coûte plus de connexions que le budget ne le permet.
 - Préserver `Vary: Accept-Encoding`. Le serveur compresse lui-même le HTML et le JSON en br ou gzip et pose cet en-tête. Si le proxy compresse à son tour, il ne doit ni retirer `Vary`, ni réencoder une réponse qui porte déjà `Content-Encoding`. Le manifeste `/manifest.webmanifest` reste en identité : l'adaptateur ne précompresse pas cette extension et le fichier fait moins d'un kilo-octet; il n'est pas déclaré compressible par `src/lib/server/compression.ts`.
 - Ne pas remplacer les politiques de cache : `scripts/lib/static-cache.js` est le propriétaire des en-têtes et `static/generated-assets.json` celui des noms. Les actifs nommés par contenu sont immuables, le manifeste et la page hors ligne ont un cache court, le service worker n'est jamais mis en cache.
-- Le préchargement des données utilise `tap`, jamais `hover` : une page privée en `no-store` ne doit pas être demandée au simple survol.
+- Le préchargement des données et du code démarre au survol (et au toucher sur mobile) : la page privée est demandée avant le clic pour que la navigation paraisse instantanée. La réponse reste `private, no-store` et n'est jamais mise en cache; le navigateur réutilise la session de l'utilisateur et ne montre rien à un tiers.
 
 Vérifier après chaque changement de proxy :
 `curl -sI https://votre-domaine/ | grep -i '^strict-transport-security'`

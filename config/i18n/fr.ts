@@ -237,8 +237,6 @@ export const fr = {
     'Le responsable n’a pas encore publié l’alignement de ce match.',
   'teams.noLineupPast': 'Aucune équipe n’a été publiée pour ce match.',
   'teams.managerTitle': 'Préparation de l’équipe',
-  'teams.managerHelp':
-    'Déplace un joueur, refais les équipes ou comble une place. L’alignement enregistré reste attaché à ce match.',
   'teams.generateHelp':
     'Crée l’alignement du prochain match à partir des présences et des règles de la ligue.',
   'teams.lockedHelp': 'Ce match a commencé : l’alignement ne change plus.',
@@ -452,12 +450,9 @@ export const fr = {
   'games.openSlots.one': '{count} place ouverte',
   'games.openSlots.many': '{count} places ouvertes',
   'games.sizeGap': 'Écart de joueurs : {count}',
-  'games.teamSize': '{team} : {count}',
   'games.details': 'Détails du match',
   'games.generate': 'Faire les équipes',
   'games.regenerate': 'Refaire les équipes',
-  'games.regenerateConfirm':
-    'L’alignement publié sera remplacé. Les places ouvertes seront recalculées.',
   'games.generated': 'Alignement publié',
   'games.publishedAt': 'Équipes affichées le {date}',
   'games.notGenerated': 'Sans alignement',
@@ -466,8 +461,6 @@ export const fr = {
     'Échanger {a} et {b} ferait passer l’écart de notes de {before} à {after}.',
   'games.bestSwapAge':
     'L’écart d’âge cumulé passerait de {before} à {after} ans.',
-  'games.swapConfirm':
-    'Échanger {a} et {b} ? L’écart de notes passera de {before} à {after} et l’écart d’âge cumulé de {ageBefore} à {ageAfter} ans.',
   'games.applySwap': 'Faire l’échange',
   'games.swapDone': 'Échange fait, alignement rééquilibré.',
   'games.noBetterSwap': 'Aucun échange ne rapproche davantage les équipes.',
@@ -482,8 +475,9 @@ export const fr = {
   'games.adminEdit': 'Modifier le match',
   'games.adminCancel': 'Annuler le match',
   'games.notes': 'Note pour les joueurs',
-  'games.balanceSkill': 'Écart de notes : {value}',
-  'games.balanceAge': 'Écart d’âge cumulé : {value} ans',
+  'games.gapSkill': 'Écart de notes',
+  'games.gapAge': 'Écart d’âge cumulé',
+  'games.ageYears': 'ans',
   'games.rulesConflict': 'Règles incompatibles',
   'games.warning.rulePreference':
     'Une préférence d’alignement n’a pas pu être respectée.',
@@ -549,13 +543,6 @@ export const fr = {
   'rink.yourSpot': 'Ton poste',
   'rink.chooseTeam': 'Choisis une équipe',
   'rink.roster': 'La formation en liste',
-  'rink.steps': 'Étapes pour placer les joueurs',
-  'rink.stepPick': 'Choisis un joueur',
-  'rink.stepPlace': 'Choisis sa place',
-  'rink.stepSave': 'Enregistre',
-  'rink.stepDone': 'Terminé',
-  'rink.stepActive': 'En cours',
-  'rink.stepTodo': 'À faire',
   'rink.helpManager':
     'À la souris, glisse un joueur vers une place. Sur un écran tactile, touche-le puis touche la place. Utilise Envoyer au banc pour le retirer.',
   'rink.helpPlayer': 'La formation sur la glace, avec les numéros de chandail.',
@@ -567,6 +554,8 @@ export const fr = {
   'rink.benchEmpty': 'Personne sur le banc.',
   'rink.selectedBench': 'Prêt à placer sur la glace.',
   'rink.selectedIce': 'Choisis une autre place, ou dépose-le sur le banc.',
+  'rink.positionOnly':
+    'Poste : {position}. Les places des autres postes sont verrouillées.',
   'rink.remove': 'Envoyer au banc',
   'rink.save': 'Enregistrer l’alignement',
   'rink.saved': 'Alignement enregistré.',

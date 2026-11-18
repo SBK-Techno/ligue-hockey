@@ -122,12 +122,12 @@ if grep -q '@' "$TMP/health.body"; then
 	exit 1
 fi
 
-# P1/P2/P11 : la coquille anonyme est compressée, sa tranche critique reste
-# petite et le préchargement n'utilise plus le survol.
+# P1/P2/P11: the anonymous shell is compressed, its critical slice stays
+# small and preloading starts on hover.
 fetch /connexion connexion
 expect_header "$TMP/connexion.headers" 'content-encoding' '\(gzip\|br\)' 'connexion compressée'
 expect_header "$TMP/connexion.headers" 'vary' 'accept-encoding' 'connexion et Vary'
-expect_body "$TMP/connexion.body" 'data-sveltekit-preload-data="tap"' 'préchargement au tap'
+expect_body "$TMP/connexion.body" 'data-sveltekit-preload-data="hover"' 'préchargement au survol'
 budget inline-css "$TMP/connexion.body" authInlineCssBytes
 
 signin_status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \

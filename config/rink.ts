@@ -20,7 +20,9 @@ export const RINK = {
 	neutralSpot: 1.5,
 	cornerRadius: 8.5,
 	/** Profondeur du demi-cercle du gardien. */
-	crease: 1.8
+	crease: 1.8,
+	/** Distance from the defending end boards to the goalie, just above the crease. */
+	goalieDepth: 6.6
 } as const;
 
 export type RinkRoleKey = 'G' | 'LD' | 'RD' | 'C' | 'LW' | 'RW';
@@ -44,10 +46,24 @@ export type RinkPlacement = RinkRoleDefinition & {
 };
 
 /**
- * Chaque place d'attaque et de défense soutenue par les réglages (jusqu'à
- * 8F et 8D) a sa propre coordonnée. Deux jetons ne partagent jamais top/left :
- * le dernier nœud du DOM ne peut donc pas voler le clic du premier. La
- * première ligne et la première paire gardent les coordonnées historiques.
+ * Length percentage of a point measured from the defending end boards. The
+ * portrait `y` coordinate descends toward the player's own net: 0% is the
+ * opponent end and 100% is the defending end. Painted lines and tokens read
+ * the same measure.
+ */
+export function rinkLengthPercent(metersFromOwnEnd: number): number {
+	return Number((100 - (metersFromOwnEnd / RINK.length) * 100).toFixed(3));
+}
+
+/**
+ * Every forward and defence slot the settings support (up to 8F and 8D) has
+ * its own coordinate. Two tokens never share top/left, so the last DOM node
+ * cannot steal the first one's click.
+ *
+ * The first forward line and first defence pair align with the painted lines:
+ * the centre on the red line, the wings on the opponent blue line, the first
+ * pair on the defending blue line, and the goalie at the crease. Extra trios
+ * and pairs step back by depth.
  */
 export const RINK_PLACEMENTS = [
 	{
@@ -65,8 +81,8 @@ export const RINK_PLACEMENTS = [
 		slotIndex: 1,
 		key: 'LW',
 		labelKey: 'rink.leftWing',
-		x: 16,
-		y: 38,
+		x: 23,
+		y: rinkLengthPercent(RINK.length - RINK.blueLine),
 		line: 1,
 		pair: 0
 	},
@@ -75,8 +91,8 @@ export const RINK_PLACEMENTS = [
 		slotIndex: 2,
 		key: 'RW',
 		labelKey: 'rink.rightWing',
-		x: 84,
-		y: 38,
+		x: 77,
+		y: rinkLengthPercent(RINK.length - RINK.blueLine),
 		line: 1,
 		pair: 0
 	},
@@ -135,8 +151,8 @@ export const RINK_PLACEMENTS = [
 		slotIndex: 0,
 		key: 'LD',
 		labelKey: 'rink.leftDefense',
-		x: 30,
-		y: 62,
+		x: 26,
+		y: rinkLengthPercent(RINK.blueLine),
 		line: 0,
 		pair: 1
 	},
@@ -145,8 +161,8 @@ export const RINK_PLACEMENTS = [
 		slotIndex: 1,
 		key: 'RD',
 		labelKey: 'rink.rightDefense',
-		x: 70,
-		y: 62,
+		x: 74,
+		y: rinkLengthPercent(RINK.blueLine),
 		line: 0,
 		pair: 1
 	},
@@ -216,7 +232,7 @@ export const RINK_PLACEMENTS = [
 		key: 'G',
 		labelKey: 'rink.goalie',
 		x: 50,
-		y: 92,
+		y: rinkLengthPercent(RINK.goalieDepth),
 		line: 0,
 		pair: 0
 	},

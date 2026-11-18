@@ -12,13 +12,16 @@
 	import Avatar from '#lib/ui/Avatar.svelte';
 	import TeamRoster from '#lib/ui/TeamRoster.svelte';
 	import {
+		assignmentsAllowed,
 		assignmentsForSave,
 		benchKey,
 		benchPlayerId,
 		boardPlacements,
+		canPlacePlayer,
 		clearSelectedPlace,
 		dropOnPlace,
 		initialAssignments,
+		placementRules,
 		rinkPlayerLastName,
 		rinkRoleShortLabel,
 		selectBenchPlayer,
@@ -112,6 +115,13 @@
 		return list;
 	});
 
+	/**
+	 * The same position table drives rendering, hover and drops. The server
+	 * already rejects a player outside their position, so the board never
+	 * offers a gesture that would fail on save.
+	 */
+	const rules = $derived(placementRules(slots, players));
+
 	const placedIds = $derived(
 		Object.values(assignments).filter((value): value is string => value !== null)
 	);
@@ -187,16 +197,6 @@
 		return { title: t('rink.yourSpot'), text: parts.join(' · '), help: null };
 	});
 
-	/**
-	 * Le guide suit un seul chemin : choisir un joueur, choisir sa place,
-	 * enregistrer. Après un déplacement, les deux premiers gestes sont faits.
-	 */
-	const stepOne = $derived(selected !== null || dirty ? 'done' : 'active');
-	const stepTwo = $derived(
-		selected !== null ? 'active' : dirty ? 'done' : 'todo'
-	);
-	const stepThree = $derived(dirty ? 'active' : 'todo');
-
 	function playerById(playerId: string): BoardPlayer | null {
 		return players.find((player) => player.playerId === playerId) ?? null;
 	}
@@ -234,9 +234,18 @@
 	 * et un geste sans effet ne crée ni entrée ni changement.
 	 */
 	function commit(next: LineupAssignmentMap) {
+		if (!assignmentsAllowed(rules, next)) return;
 		if (JSON.stringify(next) === JSON.stringify(assignments)) return;
 		history = [...history.slice(-19), assignments];
 		assignments = next;
+	}
+
+	/** A slot only accepts the selected player's position. */
+	function canTarget(key: string): boolean {
+		return (
+			selectedPlayer === null ||
+			canPlacePlayer(rules, selectedPlayer.playerId, key)
+		);
 	}
 
 	function activateKey(key: string) {
@@ -246,7 +255,7 @@
 			selected = selectBenchPlayer({ selected, assignments }, benchId).selected;
 			return;
 		}
-		const next = selectPlace({ selected, assignments }, key);
+		const next = selectPlace({ selected, assignments }, key, rules);
 		commit(next.assignments);
 		selected = next.selected;
 	}
@@ -322,7 +331,8 @@
 		drag = { ...drag, dragging: true, x: event.clientX, y: event.clientY };
 		const under = document.elementFromPoint(event.clientX, event.clientY);
 		const key = lineupKeyAt(under);
-		hoverKey = key === drag.key ? null : key;
+		hoverKey =
+			key === drag.key || (key !== null && !canTarget(key)) ? null : key;
 		benchHover = Boolean(
 			drag.fromSlot && under?.closest('[data-bench-drop]')
 		);
@@ -344,7 +354,11 @@
 				commit(next.assignments);
 				selected = next.selected;
 			} else if (hoverKey && hoverKey !== session.key) {
-				const next = dropOnPlace({ selected: session.key, assignments }, hoverKey);
+				const next = dropOnPlace(
+					{ selected: session.key, assignments },
+					hoverKey,
+					rules
+				);
 				commit(next.assignments);
 				selected = next.selected;
 			}
@@ -400,42 +414,6 @@
 		</div>
 	{/if}
 
-	{#if canEdit}
-		<div>
-			<p class="sr-only">{t('rink.steps')}</p>
-			<ol class="lineup-steps">
-				<li data-state={stepOne} aria-current={stepOne === 'active' ? 'step' : undefined}>
-					<span class="step-mark" aria-hidden="true">1</span>
-					<span>{t('rink.stepPick')}</span>
-					<span class="sr-only">
-						{stepOne === 'done' ? t('rink.stepDone') : t('rink.stepActive')}
-					</span>
-				</li>
-				<li data-state={stepTwo} aria-current={stepTwo === 'active' ? 'step' : undefined}>
-					<span class="step-mark" aria-hidden="true">2</span>
-					<span>{t('rink.stepPlace')}</span>
-					<span class="sr-only">
-						{stepTwo === 'done'
-							? t('rink.stepDone')
-							: stepTwo === 'active'
-								? t('rink.stepActive')
-								: t('rink.stepTodo')}
-					</span>
-				</li>
-				<li
-					data-state={stepThree}
-					aria-current={stepThree === 'active' ? 'step' : undefined}
-				>
-					<span class="step-mark" aria-hidden="true">3</span>
-					<span>{t('rink.stepSave')}</span>
-					<span class="sr-only">
-						{stepThree === 'active' ? t('rink.stepActive') : t('rink.stepTodo')}
-					</span>
-				</li>
-			</ol>
-		</div>
-	{/if}
-
 	<p class="text-meta text-muted">
 		{canEdit ? t('rink.helpManager') : t('rink.helpPlayer')}
 	</p>
@@ -457,7 +435,7 @@
 		{/each}
 	</div>
 
-	<div class="grid gap-4 lg:grid-cols-2">
+	<div class="rink-teams">
 		{#each orderedTeams as team (team.key)}
 			<div
 				class="rink-team min-w-0"
@@ -491,8 +469,16 @@
 								data-selected={selected === placement.key}
 								data-drag-source={drag?.dragging && drag.key === placement.key}
 								data-drop-active={hoverKey === placement.key}
-								data-awaiting={canEdit && selected !== null && selected !== placement.key}
-								disabled={!canEdit && player === null}
+								data-awaiting={canEdit &&
+									selected !== null &&
+									selected !== placement.key &&
+									canTarget(placement.key)}
+								data-ineligible={canEdit && selected !== null && !canTarget(placement.key)}
+								disabled={(!canEdit && player === null) ||
+									(canEdit &&
+										selected !== null &&
+										!canTarget(placement.key) &&
+										player === null)}
 								data-player-peek={!canEdit && player ? 'click' : undefined}
 								onclick={(event) => handleClick(event, placement.key)}
 								aria-label={player ? ariaWithYou(slotAriaLabel(team.key, placement, player), player) : slotAriaLabel(team.key, placement, null)}
@@ -533,8 +519,16 @@
 									data-selected={selected === placement.key}
 										data-drag-source={drag?.dragging && drag.key === placement.key}
 									data-drop-active={hoverKey === placement.key}
-									data-awaiting={canEdit && selected !== null && selected !== placement.key}
-									disabled={!canEdit && player === null}
+									data-awaiting={canEdit &&
+										selected !== null &&
+										selected !== placement.key &&
+										canTarget(placement.key)}
+									data-ineligible={canEdit && selected !== null && !canTarget(placement.key)}
+									disabled={(!canEdit && player === null) ||
+										(canEdit &&
+											selected !== null &&
+											!canTarget(placement.key) &&
+											player === null)}
 									data-player-peek={!canEdit && player ? 'click' : undefined}
 									onclick={(event) => handleClick(event, placement.key)}
 									aria-label={player ? ariaWithYou(slotAriaLabel(team.key, placement, player), player) : slotAriaLabel(team.key, placement, null)}
@@ -638,6 +632,11 @@
 				<p class="truncate text-body font-semibold">{selectedPlayer.fullName}</p>
 				<p class="text-meta text-muted">
 					{selectedIsBench ? t('rink.selectedBench') : t('rink.selectedIce')}
+				</p>
+				<p class="hint mt-0.5">
+					{t('rink.positionOnly', {
+						position: t(positionDefinition(selectedPlayer.position).labelKey)
+					})}
 				</p>
 			</div>
 			<div class="ml-auto flex flex-wrap items-center gap-2">

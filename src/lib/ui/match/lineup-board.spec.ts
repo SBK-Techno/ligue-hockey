@@ -2,9 +2,10 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { rinkRole } from '#config/rink.ts';
 import { TEAMS } from '#config/teams.ts';
-import type { GameSlotView } from '#lib/domain/games/types.ts';
+import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 import { t } from '#lib/shared/i18n/index.ts';
 import {
+	assignmentsAllowed,
 	assignmentsForSave,
 	benchKey,
 	benchPlayerId,
@@ -13,6 +14,7 @@ import {
 	dropOnPlace,
 	initialAssignments,
 	placeFromBench,
+	placementRules,
 	removePlayer,
 	rinkRoleShortLabel,
 	selectBenchPlayer,
@@ -45,42 +47,90 @@ function slot(
 	};
 }
 
+function benchEntry(
+	playerId: string,
+	position: 'forward' | 'defense' | 'goalie'
+): GamePlayer {
+	return {
+		playerId,
+		fullName: `${playerId} Test`,
+		position,
+		jerseyNumber: 10,
+		avatarId: null,
+		kind: 'regular'
+	};
+}
+
 const slots = [
 	slot('white', 'forward', 0, 'a'),
 	slot('white', 'forward', 1, 'b'),
+	slot('white', 'forward', 2, null),
+	slot('white', 'defense', 0, null),
 	slot('black', 'forward', 0, 'c'),
-	slot('black', 'goalie', 0, null)
+	slot('black', 'defense', 0, 'e'),
+	slot('black', 'goalie', 0, 'g')
 ];
+
+const bench = [
+	benchEntry('d', 'forward'),
+	benchEntry('f', 'defense'),
+	benchEntry('h', 'goalie')
+];
+
+const players = [
+	...slots.flatMap((entry) => (entry.player ? [entry.player] : [])),
+	...bench
+];
+
+const rules = placementRules(slots, players);
 
 describe('carte d’alignement', () => {
 	it('part de l’alignement publié, places vides comprises', () => {
 		expect(initialAssignments(slots)).toEqual({
 			'white:forward:0': 'a',
 			'white:forward:1': 'b',
+			'white:forward:2': null,
+			'white:defense:0': null,
 			'black:forward:0': 'c',
-			'black:goalie:0': null
+			'black:defense:0': 'e',
+			'black:goalie:0': 'g'
 		});
 	});
 
 	it('échange deux joueurs sans en perdre un', () => {
-		const swapped = swapPlayers(initialAssignments(slots), 'white:forward:0', 'black:forward:0');
+		const swapped = swapPlayers(
+			initialAssignments(slots),
+			'white:forward:0',
+			'black:forward:0',
+			rules
+		);
 
 		expect(swapped['white:forward:0']).toBe('c');
 		expect(swapped['black:forward:0']).toBe('a');
-		expect(Object.values(swapped).filter(Boolean)).toHaveLength(3);
+		expect(Object.values(swapped).filter(Boolean)).toHaveLength(5);
 	});
 
 	it('pose un joueur du banc sur une place occupée et renvoie l’ancien au banc', () => {
-		const placed = placeFromBench(initialAssignments(slots), 'd', 'white:forward:0');
+		const placed = placeFromBench(
+			initialAssignments(slots),
+			'd',
+			'white:forward:0',
+			rules
+		);
 
 		expect(placed['white:forward:0']).toBe('d');
 		expect(Object.values(placed)).not.toContain('a');
 	});
 
 	it('déplace un joueur déjà sur la glace vers une place vide', () => {
-		const moved = placeFromBench(initialAssignments(slots), 'a', 'black:goalie:0');
+		const moved = placeFromBench(
+			initialAssignments(slots),
+			'a',
+			'white:forward:2',
+			rules
+		);
 
-		expect(moved['black:goalie:0']).toBe('a');
+		expect(moved['white:forward:2']).toBe('a');
 		expect(moved['white:forward:0']).toBeNull();
 	});
 
@@ -94,23 +144,33 @@ describe('carte d’alignement', () => {
 	it('refuse une place inconnue au lieu de créer une clé', () => {
 		const map = initialAssignments(slots);
 
-		expect(swapPlayers(map, 'white:forward:0', 'nope')).toBe(map);
-		expect(placeFromBench(map, 'd', 'nope')).toBe(map);
+		expect(swapPlayers(map, 'white:forward:0', 'nope', rules)).toBe(map);
+		expect(placeFromBench(map, 'd', 'nope', rules)).toBe(map);
 	});
 
 	it('produit une formation complète, places vides comprises', () => {
 		expect(assignmentsForSave(slots, initialAssignments(slots))).toEqual([
 			{ team: 'white', position: 'forward', slotIndex: 0, playerId: 'a' },
 			{ team: 'white', position: 'forward', slotIndex: 1, playerId: 'b' },
+			{ team: 'white', position: 'forward', slotIndex: 2, playerId: null },
+			{ team: 'white', position: 'defense', slotIndex: 0, playerId: null },
 			{ team: 'black', position: 'forward', slotIndex: 0, playerId: 'c' },
-			{ team: 'black', position: 'goalie', slotIndex: 0, playerId: null }
+			{ team: 'black', position: 'defense', slotIndex: 0, playerId: 'e' },
+			{ team: 'black', position: 'goalie', slotIndex: 0, playerId: 'g' }
 		]);
 
-		const filled = { ...initialAssignments(slots), 'black:goalie:0': 'd' };
-		expect(assignmentsForSave(slots, filled).at(-1)).toEqual({
-			team: 'black',
-			position: 'goalie',
-			slotIndex: 0,
+		const filled = { ...initialAssignments(slots), 'white:forward:2': 'd' };
+		expect(
+			assignmentsForSave(slots, filled).find(
+				(assignment) =>
+					assignment.team === 'white' &&
+					assignment.position === 'forward' &&
+					assignment.slotIndex === 2
+			)
+		).toEqual({
+			team: 'white',
+			position: 'forward',
+			slotIndex: 2,
 			playerId: 'd'
 		});
 	});
@@ -181,7 +241,7 @@ describe('lisibilité des jetons sur la glace', () => {
 		expect(base).toContain('overflow-wrap: normal');
 	});
 
-	it('garde le nom visible sur un jeton mobile', () => {
+	it('garde le nom entier; une glace étroite le confie à la liste nommée', () => {
 		expect(base).not.toContain('display: none');
 	});
 
@@ -249,22 +309,25 @@ describe('sélection de la carte', () => {
 
 	it('choisit une place occupée, puis la relâche au second clic', () => {
 		const assignments = initialAssignments(slots);
-		const selected = selectPlace({ selected: null, assignments }, 'white:forward:0');
+		const selected = selectPlace(
+			{ selected: null, assignments },
+			'white:forward:0',
+			rules
+		);
 		expect(selected).toEqual({ selected: 'white:forward:0', assignments });
 
-		expect(selectPlace(selected, 'white:forward:0')).toEqual({
+		expect(selectPlace(selected, 'white:forward:0', rules)).toEqual({
 			selected: null,
 			assignments
 		});
 	});
 
 	it('ne sélectionne jamais une place vide', () => {
+		const assignments = initialAssignments(slots);
+
 		expect(
-			selectPlace(
-				{ selected: null, assignments: initialAssignments(slots) },
-				'black:goalie:0'
-			)
-		).toEqual({ selected: null, assignments: initialAssignments(slots) });
+			selectPlace({ selected: null, assignments }, 'white:forward:2', rules)
+		).toEqual({ selected: null, assignments });
 	});
 
 	it('pose un joueur du banc sur une place et vide sa sélection', () => {
@@ -274,20 +337,43 @@ describe('sélection de la carte', () => {
 		);
 		expect(state.selected).toBe('bench:d');
 
-		const placed = selectPlace(state, 'white:forward:0');
+		const placed = selectPlace(state, 'white:forward:0', rules);
 		expect(placed.selected).toBeNull();
 		expect(placed.assignments['white:forward:0']).toBe('d');
 		expect(Object.values(placed.assignments)).not.toContain('a');
 	});
 
-	it('échange deux joueurs sélectionnés l’un après l’autre', () => {
+	it('échange deux joueurs du même poste sélectionnés l’un après l’autre', () => {
 		const first = selectPlace(
 			{ selected: null, assignments: initialAssignments(slots) },
-			'white:forward:0'
+			'white:forward:0',
+			rules
 		);
-		const swapped = selectPlace(first, 'black:forward:0');
+		const swapped = selectPlace(first, 'black:forward:0', rules);
 		expect(swapped.assignments['white:forward:0']).toBe('c');
 		expect(swapped.assignments['black:forward:0']).toBe('a');
+	});
+
+	it('sélectionne le joueur d’une place d’un autre poste sans l’échanger', () => {
+		const first = selectPlace(
+			{ selected: null, assignments: initialAssignments(slots) },
+			'white:forward:0',
+			rules
+		);
+		const next = selectPlace(first, 'black:defense:0', rules);
+
+		expect(next.assignments).toEqual(first.assignments);
+		expect(next.selected).toBe('black:defense:0');
+	});
+
+	it('garde la sélection devant une place vide d’un autre poste', () => {
+		const first = selectPlace(
+			{ selected: null, assignments: initialAssignments(slots) },
+			'white:forward:0',
+			rules
+		);
+
+		expect(selectPlace(first, 'white:defense:0', rules)).toBe(first);
 	});
 
 	it('retire le joueur sélectionné et ignore une sélection de banc', () => {
@@ -307,63 +393,121 @@ describe('sélection de la carte', () => {
 describe('dépôt sur la glace', () => {
 	const base = initialAssignments(slots);
 
-	it('pose un joueur du banc sur une place vide sans toucher aux autres', () => {
+	it('pose un joueur du banc sur une place vide de son poste', () => {
 		const dropped = dropOnPlace(
 			{ selected: benchKey('d'), assignments: base },
-			'black:goalie:0'
+			'white:forward:2',
+			rules
 		);
 
 		expect(dropped.selected).toBeNull();
-		expect(dropped.assignments['black:goalie:0']).toBe('d');
+		expect(dropped.assignments['white:forward:2']).toBe('d');
 		expect(dropped.assignments['white:forward:0']).toBe('a');
 	});
 
-	it('déplace un joueur de la glace vers une place vide', () => {
+	it('déplace un joueur de la glace vers une place vide de son poste', () => {
 		const dropped = dropOnPlace(
 			{ selected: 'white:forward:0', assignments: base },
-			'black:goalie:0'
+			'white:forward:2',
+			rules
 		);
 
-		expect(dropped.assignments['black:goalie:0']).toBe('a');
+		expect(dropped.assignments['white:forward:2']).toBe('a');
 		expect(dropped.assignments['white:forward:0']).toBeNull();
 	});
 
 	it('échange deux joueurs quand la place est occupée', () => {
 		const dropped = dropOnPlace(
 			{ selected: 'white:forward:0', assignments: base },
-			'black:forward:0'
+			'black:forward:0',
+			rules
 		);
 
 		expect(dropped.assignments['white:forward:0']).toBe('c');
 		expect(dropped.assignments['black:forward:0']).toBe('a');
+	});
+
+	it('refuse un gardien dans une place de défenseur', () => {
+		const state = { selected: benchKey('h'), assignments: base };
+
+		expect(dropOnPlace(state, 'white:defense:0', rules)).toBe(state);
+		expect(dropOnPlace(state, 'black:defense:0', rules)).toBe(state);
+	});
+
+	it('refuse un attaquant dans la place du gardien', () => {
+		const state = { selected: 'white:forward:0', assignments: base };
+
+		expect(dropOnPlace(state, 'black:goalie:0', rules)).toBe(state);
+	});
+
+	it('refuse un échange entre deux postes', () => {
+		const state = { selected: 'white:forward:0', assignments: base };
+
+		expect(dropOnPlace(state, 'black:defense:0', rules)).toBe(state);
+	});
+
+	it('accepte un défenseur dans une place de défenseur', () => {
+		const dropped = dropOnPlace(
+			{ selected: benchKey('f'), assignments: base },
+			'white:defense:0',
+			rules
+		);
+
+		expect(dropped.assignments['white:defense:0']).toBe('f');
+	});
+
+	it('accepte le gardien dans sa place', () => {
+		const dropped = dropOnPlace(
+			{ selected: benchKey('h'), assignments: base },
+			'black:goalie:0',
+			rules
+		);
+
+		expect(dropped.assignments['black:goalie:0']).toBe('h');
 	});
 
 	it('ne relâche pas la sélection en déposant sur sa propre place', () => {
 		const state = { selected: 'white:forward:0', assignments: base };
 
-		expect(dropOnPlace(state, 'white:forward:0')).toBe(state);
+		expect(dropOnPlace(state, 'white:forward:0', rules)).toBe(state);
 	});
 
 	it('ignore une place inconnue et garde la sélection', () => {
 		const state = { selected: 'white:forward:0', assignments: base };
 
-		expect(dropOnPlace(state, 'nope')).toBe(state);
+		expect(dropOnPlace(state, 'nope', rules)).toBe(state);
 	});
 
 	it('ignore une sélection dont la place n’existe plus', () => {
 		const state = { selected: 'white:forward:7', assignments: base };
 
-		expect(dropOnPlace(state, 'black:forward:0')).toBe(state);
+		expect(dropOnPlace(state, 'black:forward:0', rules)).toBe(state);
 	});
 
 	it('replace un joueur du banc déjà sur la glace en échangeant sa place', () => {
 		const dropped = dropOnPlace(
 			{ selected: benchKey('a'), assignments: base },
-			'black:forward:0'
+			'black:forward:0',
+			rules
 		);
 
 		expect(dropped.assignments['black:forward:0']).toBe('a');
 		expect(dropped.assignments['white:forward:0']).toBe('c');
+	});
+});
+
+describe('admissibilité des places', () => {
+	it('accepte une formation où chaque joueur occupe son poste', () => {
+		expect(assignmentsAllowed(rules, initialAssignments(slots))).toBe(true);
+	});
+
+	it('refuse une formation avec un gardien en défense', () => {
+		expect(
+			assignmentsAllowed(rules, {
+				...initialAssignments(slots),
+				'white:defense:0': 'h'
+			})
+		).toBe(false);
 	});
 });
 

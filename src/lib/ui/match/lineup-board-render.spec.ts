@@ -125,27 +125,28 @@ describe('rendu de la carte d’alignement', () => {
 		expect(block).not.toContain('white-space: nowrap');
 	});
 
-	it('passe une glace étroite en grille de formation sans chevauchement', () => {
+	it('garde la formation exacte et compacte seulement les pastilles étroites', () => {
 		const css = readFileSync('src/routes/layout.css', 'utf8');
 		const team = css.slice(css.indexOf('.rink-team {'), css.indexOf('.rink-roster'));
 		expect(team).toContain('container-type: inline-size');
 
-		const start = css.indexOf('@container (max-width: 559px)');
-		const grid = css.slice(start, css.indexOf('@media (min-width: 900px)', start));
+		const start = css.indexOf('@container (max-width: 439px)');
+		const compact = css.slice(start, css.indexOf('.avatar-picker', start));
 		expect(start).toBeGreaterThan(0);
-		expect(grid).toContain('aspect-ratio: 4 / 3');
-		expect(grid).toContain('width: min(28%, 4rem)');
-		for (const slot of [
-			':forward:0',
-			':forward:1',
-			':forward:2',
-			':defense:0',
-			':defense:1',
-			':goalie:0'
-		]) {
-			expect(grid).toContain(`data-lineup-key$='${slot}'`);
-		}
-		expect(grid).toContain("data-team='white'");
+		expect(compact).toContain('--rink-face-size: 2.75rem');
+		expect(compact).toContain('.rink-name');
+		expect(compact).toContain('display: none');
+		expect(css).not.toContain('@container (max-width: 559px)');
+		expect(css).not.toContain('aspect-ratio: 4 / 3');
+	});
+
+	it('ne met deux glaces côte à côte que si chacune garde sa largeur', () => {
+		const css = readFileSync('src/routes/layout.css', 'utf8');
+		const teams = css.slice(css.indexOf('.rink-teams {'), css.indexOf('.rink-team {'));
+
+		expect(teams).toContain(
+			'grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr))'
+		);
 	});
 
 	it('découpe le portrait, jamais le numéro ni le nom', () => {
@@ -188,7 +189,7 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).not.toContain('aria-haspopup="dialog"');
 	});
 
-	it('affiche un portrait par joueur et le guide des trois gestes', () => {
+	it('affiche un portrait par joueur et une seule ligne d’aide', () => {
 		const { body } = render(LineupBoard, {
 			props: { slots: fullSlots, bench, canEdit: true, expectedGeneratedAt: 123 }
 		});
@@ -203,12 +204,7 @@ describe('rendu de la carte d’alignement', () => {
 		expect(identitySheetStyle(knownAvatars['white-forward-0']!)).not.toBe(
 			identitySheetStyle(knownAvatars['black-forward-0']!)
 		);
-		expect(body).toContain(t('rink.stepPick'));
-		expect(body).toContain(t('rink.stepPlace'));
-		expect(body).toContain(t('rink.stepSave'));
-		expect(body).toContain(t('rink.stepActive'));
-		expect(body).toContain(t('rink.stepTodo'));
-		expect((body.match(/aria-current="step"/g) ?? []).length).toBe(1);
+		expect(body).toContain(t('rink.helpManager'));
 		expect(body).toContain(t('rink.undo'));
 		expect(body).toContain('data-bench-drop="true"');
 
@@ -306,12 +302,13 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).toContain('id="rink-team-white" data-active="false"');
 	});
 
-	it('masque le guide et la cible du banc en lecture seule', () => {
+	it('masque l’aide du gérant et la cible du banc en lecture seule', () => {
 		const { body } = render(LineupBoard, {
 			props: { slots: fullSlots, bench, canEdit: false, expectedGeneratedAt: 123 }
 		});
 
-		expect(body).not.toContain(t('rink.stepPick'));
+		expect(body).not.toContain(t('rink.helpManager'));
+		expect(body).toContain(t('rink.helpPlayer'));
 		expect(body).not.toContain('data-bench-drop');
 		expect(body).not.toContain(t('rink.undo'));
 	});

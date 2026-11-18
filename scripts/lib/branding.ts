@@ -226,8 +226,9 @@ function buildAppShell(
 		<style nonce="%sveltekit.nonce%">${criticalCss}</style>
 		%sveltekit.head%
 	</head>
-	<!-- tap : aucune page privée en no-store n'est demandée au survol. -->
-	<body data-sveltekit-preload-data="tap">
+	<!-- hover: page data and code arrive before the click; touch starts on
+	     touchstart, with no request while the pointer rests. -->
+	<body data-sveltekit-preload-data="hover" data-sveltekit-preload-code="viewport">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

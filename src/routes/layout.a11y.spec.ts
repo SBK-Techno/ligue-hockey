@@ -31,6 +31,18 @@ describe('transition de page', () => {
 		expect(block).toContain('backwards');
 		expect(block).not.toMatch(/\bboth\b/);
 	});
+
+	it('affiche le contenu dès le premier rendu de la page', () => {
+		const block = css.slice(css.indexOf('.page-enter {'), css.indexOf('.reveal {'));
+		expect(block).toContain('page-settle');
+		expect(block).not.toContain('opacity');
+	});
+
+	it('ne cache pas les panneaux d’accueil pendant leur décalage', () => {
+		const block = css.slice(css.indexOf('.reveal {'), css.indexOf('@keyframes page-settle'));
+		expect(block).toContain('page-settle');
+		expect(block).not.toContain('opacity');
+	});
 });
 
 describe('composition de la coquille', () => {

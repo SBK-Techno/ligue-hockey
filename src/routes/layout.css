@@ -286,20 +286,19 @@
 		min-width: 2.75rem;
 		padding-inline: 0;
 	}
-	/* Entrée de page : courte, commune à toutes les surfaces. Le remplissage
-	   s'arrête à la fin : aucun transform retenu ne transforme la page en bloc
-	   conteneur pour les éléments fixes (la pastille de nouveaux messages). */
+	/* Page entrance: a short settle, never an invisible page. The fill stops
+	   at the end, so no retained transform turns the page into a containing
+	   block for fixed elements (the new-message pill). */
 	.page-enter {
-		animation: page-rise var(--duration-base) var(--ease-out-expo) backwards;
+		animation: page-settle var(--duration-fast) var(--ease-out-expo) backwards;
 	}
 	.reveal {
-		animation: page-rise var(--duration-slow) var(--ease-out-expo) both;
-		animation-delay: calc(var(--i, 0) * 45ms);
+		animation: page-settle var(--duration-fast) var(--ease-out-expo) backwards;
+		animation-delay: calc(var(--i, 0) * 30ms);
 	}
-	@keyframes page-rise {
+	@keyframes page-settle {
 		from {
-			opacity: 0;
-			transform: translateY(8px);
+			transform: translateY(4px);
 		}
 	}
 	/* Tableau indicateur : une planche peinte, bleu profond et ligne de centre. */
@@ -759,9 +758,15 @@
 			display: none;
 		}
 	}
+	.rink-teams {
+		display: grid;
+		gap: 1rem;
+		/* Two rinks share a row only when each keeps its formation width.
+		   A narrower card takes the full row on its own. */
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+	}
 	.rink-team {
-		/* La largeur de la glace décide de la disposition des jetons, pas la
-		   largeur de la fenêtre : une carte étroite reçoit la grille. */
+		/* The rink width, not the viewport width, decides the token size. */
 		container-type: inline-size;
 	}
 	.rink-roster {
@@ -799,20 +804,21 @@
 		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-paper) 55%, transparent);
 	}
 	.rink-token {
+		--rink-face-size: clamp(3rem, 14cqi, 4rem);
 		position: absolute;
-		/* Le gardien et les défenseurs frôlent les bandes : l'inset garde le
-		   portrait et son étiquette à une demi-hauteur mesurée de la bande. */
-		top: clamp(2.5rem, var(--y), calc(100% - 2.5rem));
-		left: clamp(2.5rem, var(--x), calc(100% - 2.5rem));
+		/* The portrait centre lands exactly on the coordinate: the name hangs
+		   below the token without moving the marker. */
+		top: calc(var(--y) - var(--rink-face-size) * 0.5);
+		left: var(--x);
 		z-index: 2;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		gap: 0.2rem;
-		width: clamp(3rem, 14%, 4rem);
+		width: var(--rink-face-size);
 		min-height: 2.75rem;
 		padding: 0;
-		transform: translate(-50%, -50%);
+		transform: translateX(-50%);
 		border: 0;
 		background: transparent;
 		color: var(--color-ink);
@@ -897,6 +903,15 @@
 	.rink-token:disabled {
 		cursor: default;
 	}
+	.rink-token[data-ineligible='true'][data-filled='false'],
+	.bench-chip[data-ineligible='true'][data-filled='false'] {
+		cursor: not-allowed;
+		opacity: 0.4;
+	}
+	.rink-token[data-ineligible='true'][data-filled='true'],
+	.bench-chip[data-ineligible='true'][data-filled='true'] {
+		opacity: 0.7;
+	}
 	.rink-number {
 		position: absolute;
 		left: 50%;
@@ -949,48 +964,24 @@
 		letter-spacing: 0.02em;
 		line-height: 1;
 	}
-	/* Une glace étroite garde six jetons lisibles : deux rangées, trois
-	   colonnes, jamais de chevauchement. Les attaquants restent devant, les
-	   défenseurs et le gardien derrière, chacun de son côté. */
-	@container (max-width: 559px) {
-		.rink {
-			aspect-ratio: 4 / 3;
-		}
+	/* A narrow rink keeps the exact formation: the portrait becomes a 44 px
+	   disc and the surname moves to the named roster below the ice. */
+	@container (max-width: 439px) {
 		.rink-token {
-			width: min(28%, 4rem);
+			--rink-face-size: 2.75rem;
 		}
-		.rink-token[data-lineup-key$=':forward:0'] {
-			top: 25%;
-			left: 20%;
+		.rink-name {
+			display: none;
 		}
-		.rink-token[data-lineup-key$=':forward:1'] {
-			top: 25%;
-			left: 50%;
-		}
-		.rink-token[data-lineup-key$=':forward:2'] {
-			top: 25%;
-			left: 80%;
-		}
-		.rink-token[data-lineup-key$=':defense:0'] {
-			top: 75%;
-			left: 20%;
-		}
-		.rink-token[data-lineup-key$=':defense:1'] {
-			top: 75%;
-			left: 50%;
-		}
-		.rink-token[data-lineup-key$=':goalie:0'] {
-			top: 75%;
-			left: 80%;
-		}
-		.rink-token[data-team='white'][data-lineup-key$=':defense:0'] {
-			left: 80%;
-		}
-		.rink-token[data-team='white'][data-lineup-key$=':defense:1'] {
-			left: 50%;
-		}
-		.rink-token[data-team='white'][data-lineup-key$=':goalie:0'] {
-			left: 20%;
+	}
+	/* The legend picker follows its real column width: two columns only when
+	   each card keeps a readable name. */
+	.avatar-picker {
+		container-type: inline-size;
+	}
+	@container (min-width: 24rem) {
+		.avatar-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 	/* Au grand écran, le numéro atteint la taille de lecture plancher; le nom
@@ -1062,66 +1053,6 @@
 	}
 	.bench-chip:disabled {
 		cursor: default;
-	}
-
-	/* Le guide d'alignement : trois gestes nommés, jamais une légende opaque. */
-	.lineup-steps {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 0.5rem;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-	.lineup-steps li {
-		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		align-items: center;
-		gap: 0.4rem;
-		min-height: 2.75rem;
-		padding: 0.35rem 0.5rem;
-		border: 1px solid var(--color-line);
-		border-radius: var(--radius-control);
-		background: var(--color-surface);
-		color: var(--color-muted);
-		font-size: var(--text-caption);
-		line-height: 1.2;
-	}
-	.lineup-steps li[data-state='active'] {
-		border-color: var(--color-accent);
-		background: var(--color-accent-soft);
-		color: var(--color-ink);
-	}
-	.lineup-steps li[data-state='done'] {
-		border-color: color-mix(in srgb, var(--color-ok) 45%, var(--color-line));
-		background: var(--color-ok-soft);
-		color: var(--color-ink);
-	}
-	.step-mark {
-		display: grid;
-		place-items: center;
-		width: 1.2rem;
-		height: 1.2rem;
-		border-radius: 50%;
-		background: var(--color-paper-deep);
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		font-weight: 700;
-	}
-	.lineup-steps li[data-state='active'] .step-mark {
-		background: var(--color-accent);
-		color: var(--color-on-brand);
-	}
-	.lineup-steps li[data-state='done'] .step-mark {
-		background: var(--color-ok);
-		color: var(--color-on-brand);
-	}
-	@media (max-width: 479px) {
-		.lineup-steps li {
-			grid-template-columns: 1fr;
-			align-items: start;
-			gap: 0.2rem;
-		}
 	}
 
 	/* Le joueur choisi reste visible au-dessus de la glace, avec son portrait. */

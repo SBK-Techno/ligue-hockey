@@ -95,8 +95,10 @@ function button(label: string): HTMLButtonElement {
 	return node as HTMLButtonElement;
 }
 
-function currentStep(): HTMLElement | null {
-	return document.querySelector<HTMLElement>('.lineup-steps li[aria-current="step"]');
+function hasButton(label: string): boolean {
+	return [...document.querySelectorAll('button')].some(
+		(candidate) => candidate.textContent?.trim() === label
+	);
 }
 
 beforeEach(() => {
@@ -120,9 +122,14 @@ beforeEach(() => {
 	const slots = [
 		slot('white', 'forward', 0, player('a', 'Alice Roy', 1)),
 		slot('white', 'forward', 1, null),
-		slot('black', 'forward', 0, null)
+		slot('black', 'forward', 0, null),
+		slot('black', 'defense', 0, null),
+		slot('black', 'goalie', 0, null)
 	];
-	const bench = [player('b', 'Bob Gagnon', 27)];
+	const bench = [
+		player('b', 'Bob Gagnon', 27),
+		player('g', 'Guy Gagnon', 30, 'goalie')
+	];
 
 	const target = document.createElement('div');
 	document.body.append(target);
@@ -147,7 +154,8 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(token('white:forward:1').dataset.filled).toBe('true');
 		expect(token('white:forward:1').textContent).toContain('Roy');
-		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
+		expect(button(t('rink.save')).disabled).toBe(false);
+		expect(hasButton(t('rink.reset'))).toBe(true);
 	});
 
 	it('touche un joueur puis une place pour le déplacer', () => {
@@ -155,12 +163,12 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.selected).toBe('true');
 		expect(token('white:forward:1').dataset.awaiting).toBe('true');
 		expect(document.body.textContent).toContain('Alice Roy');
-		expect(currentStep()?.textContent).toContain(t('rink.stepPlace'));
+		expect(button(t('rink.save')).disabled).toBe(true);
 
 		tap(token('white:forward:1'));
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(token('white:forward:1').textContent).toContain('Roy');
-		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
+		expect(button(t('rink.save')).disabled).toBe(false);
 	});
 
 	it('glisse un joueur du banc vers la glace', () => {
@@ -168,7 +176,7 @@ describe('gestes de la carte', () => {
 
 		expect(token('white:forward:1').textContent).toContain('Gagnon');
 		expect(document.querySelector('[data-lineup-key="bench:b"]')).toBeNull();
-		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
+		expect(button(t('rink.save')).disabled).toBe(false);
 	});
 
 	it('dépose un joueur sur le banc pour le retirer de la glace', () => {
@@ -190,7 +198,8 @@ describe('gestes de la carte', () => {
 
 		expect(token('white:forward:0').dataset.filled).toBe('true');
 		expect(token('white:forward:1').dataset.filled).toBe('false');
-		expect(currentStep()?.textContent).toContain(t('rink.stepPick'));
+		expect(button(t('rink.save')).disabled).toBe(true);
+		expect(hasButton(t('rink.reset'))).toBe(false);
 	});
 
 	it('laisse la sélection en place quand le dépôt est annulé', () => {
@@ -239,5 +248,27 @@ describe('gestes de la carte', () => {
 		fireTouch(token('white:forward:0'), 'pointerup', 10, 10);
 
 		expect(token('white:forward:0').dataset.selected).toBe('true');
+	});
+
+	it('refuse de placer le gardien hors de sa place', () => {
+		tap(token('bench:g'));
+
+		expect(token('black:defense:0').dataset.ineligible).toBe('true');
+		expect(token('black:defense:0').hasAttribute('disabled')).toBe(true);
+		expect(token('black:goalie:0').dataset.ineligible).toBe('false');
+		expect(token('black:goalie:0').hasAttribute('disabled')).toBe(false);
+		expect(document.body.textContent).toContain(
+			t('rink.positionOnly', { position: t('position.goalie') })
+		);
+
+		drag(token('bench:g'), token('black:defense:0'));
+
+		expect(token('black:defense:0').dataset.filled).toBe('false');
+		expect(document.querySelector('[data-lineup-key="bench:g"]')).not.toBeNull();
+
+		tap(token('black:goalie:0'));
+
+		expect(token('black:goalie:0').dataset.filled).toBe('true');
+		expect(token('black:goalie:0').textContent).toContain('Gagnon');
 	});
 });
