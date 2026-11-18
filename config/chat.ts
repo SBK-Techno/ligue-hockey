@@ -36,6 +36,3 @@ export const CHAT_POLL_SYNC_LIMIT = 100;
 
 /** Le plafond de sécurité du cache de conversation sur l'appareil. */
 export const CHAT_CACHE_MAX_MESSAGES = 20_000;
-
-/** La largeur à partir de laquelle les sondages passent dans la colonne. */
-export const CHAT_RAIL_MIN_WIDTH = 1280;

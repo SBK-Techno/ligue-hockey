@@ -65,6 +65,27 @@ describe('cache de conversation', () => {
 		expect(merged[1].body).toBe('neuf');
 	});
 
+	it('garde la même référence quand une synchronisation n’apporte rien', () => {
+		// Sans cette identité, un fil vide de nouveaux messages invaliderait
+		// tout le rendu à chaque tick de 15 s, chaque vote et chaque page.
+		const existing = [message('a', 1), message('b', 2)];
+
+		expect(mergeChatMessages(existing, [])).toBe(existing);
+		expect(applyDeletedIds(existing, [])).toBe(existing);
+		expect(applyPollStates(existing, [])).toBe(existing);
+		expect(applyDeletedIds(existing, ['inconnu'])).toBe(existing);
+		expect(applyPollStates(existing, [{ id: 'inconnu', poll: null }])).toBe(existing);
+	});
+
+	it('produit une nouvelle référence dès qu’un message change vraiment', () => {
+		const existing = [message('a', 1), message('b', 2)];
+		const withPoll = [message('p', 1, { kind: 'poll', body: null, poll: poll('Q') })];
+
+		expect(mergeChatMessages(existing, [message('c', 3)])).not.toBe(existing);
+		expect(applyDeletedIds(existing, ['a'])).not.toBe(existing);
+		expect(applyPollStates(withPoll, [{ id: 'p', poll: poll('Q', true) }])).not.toBe(withPoll);
+	});
+
 	it('marque une suppression sans perdre l’auteur ni l’heure', () => {
 		const before = message('a', 1, { body: 'texte' });
 		const [after] = applyDeletedIds([before], ['a']);

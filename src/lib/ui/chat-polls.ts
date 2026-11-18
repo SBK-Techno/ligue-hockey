@@ -1,4 +1,3 @@
-import { CHAT_RAIL_MIN_WIDTH } from '#config/chat.ts';
 import type { ChatMessageView, ChatPollView } from '#lib/domain/chat/service.ts';
 
 /**
@@ -23,17 +22,4 @@ export function pollEntries(messages: readonly ChatMessageView[]): PollEntry[] {
 		}
 		return right.message.id.localeCompare(left.message.id);
 	});
-}
-
-/** Retire du fil les sondages déplacés dans la colonne, jamais les tombstones. */
-export function streamMessages(
-	messages: readonly ChatMessageView[],
-	sidePolls: boolean
-): readonly ChatMessageView[] {
-	if (!sidePolls) return messages;
-	return messages.filter((message) => !(message.poll && !message.deleted));
-}
-
-export function shouldShowPollRail(viewportWidth: number): boolean {
-	return viewportWidth >= CHAT_RAIL_MIN_WIDTH;
 }
