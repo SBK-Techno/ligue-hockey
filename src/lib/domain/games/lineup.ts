@@ -1,4 +1,6 @@
 import { canFillPosition } from '#config/positions.ts';
+import { rosterSize } from '#config/roster.ts';
+import type { Team } from '#config/teams.ts';
 import { requirePermission } from '#lib/domain/auth/policy.ts';
 import type { Actor } from '#lib/domain/auth/types.ts';
 import { auditEntry } from '#lib/domain/audit/service.ts';
@@ -11,6 +13,7 @@ import { isLineupEditable } from './playability.ts';
 import { isPublished } from './published.ts';
 import { benchFromMembers, lineupPool, type PoolSlot } from './pool.ts';
 import { findGame, saveAssignments, type SlotAssignment } from './queries.ts';
+import type { BenchPlayer } from './selection.ts';
 import { getGame, type GameView } from './service.ts';
 import type { GameSlotView } from './types.ts';
 import {
@@ -123,7 +126,45 @@ export function saveManualLineup(
 		};
 	});
 
-	const bench = benchFromMembers(pool.members, assignedPlayers);
+	// Le banc habillé par équipe vient du gestionnaire : chaque joueur envoyé
+	// habille le banc de son équipe, sans doublon avec la glace, dans la limite
+	// de l'effectif. Le reste attend hors effectif, sans équipe.
+	const teamBench: BenchPlayer[] = [];
+	const benchIds = new Set<string>();
+	const dressedPerTeam = new Map<Team, number>();
+	for (const assignment of assignments) {
+		dressedPerTeam.set(assignment.team, (dressedPerTeam.get(assignment.team) ?? 0) + 1);
+	}
+	const capacity = rosterSize(pool.template);
+	for (const entry of parsed.bench) {
+		const member = members.get(entry.playerId);
+		if (!member) {
+			throw new AppError('VALIDATION', {
+				key: 'games.lineupPlayerAbsent',
+				params: { name: entry.playerId }
+			});
+		}
+		if (assignedPlayers.has(entry.playerId) || benchIds.has(entry.playerId)) {
+			throw new AppError('VALIDATION', {
+				key: 'games.lineupPlayerDuplicate',
+				params: { name: member.name }
+			});
+		}
+		const dressed = dressedPerTeam.get(entry.team) ?? 0;
+		if (dressed >= capacity) {
+			throw new AppError('VALIDATION', { key: 'games.lineupRosterFull' });
+		}
+		dressedPerTeam.set(entry.team, dressed + 1);
+		benchIds.add(entry.playerId);
+		teamBench.push({
+			playerId: entry.playerId,
+			position: member.eligiblePositions[0] ?? member.position,
+			kind: member.kind,
+			team: entry.team
+		});
+	}
+	const rosteredIds = new Set([...assignedPlayers, ...benchIds]);
+	const bench = [...teamBench, ...benchFromMembers(pool.members, rosteredIds)];
 	const built = buildGenerationSnapshot({
 		assignments,
 		bench,

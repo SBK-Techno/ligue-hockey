@@ -19,8 +19,9 @@
 
 <div class="grid gap-4 sm:grid-cols-2">
 	{#each orderedTeams(ownTeam) as team (team.key)}
+		{@const teamBenchCount = bench.filter((player) => player.team === team.key).length}
 		<div class="card-flush min-w-0 overflow-hidden">
-			<TeamRoster {slots} team={team.key} {actorId} {ownTeam} showCount />
+			<TeamRoster {slots} team={team.key} {actorId} {ownTeam} showCount benchCount={teamBenchCount} />
 		</div>
 	{/each}
 </div>

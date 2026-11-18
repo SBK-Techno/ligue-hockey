@@ -35,6 +35,7 @@ import {
 	listAvailabilityForPlayer,
 	listGameListRows,
 	listGames,
+	listGenerationSnapshots,
 	listTeamSlotCounts,
 	releasePlayerSlot,
 	listSlotAssignments,
@@ -44,6 +45,7 @@ import {
 	type SlotAssignment
 } from './queries.ts';
 import { generationPlan, lineupPool, type LineupPool, type PoolSlot } from './pool.ts';
+import { draftTeamBench, type DraftMember, type IceDraftPlacement } from './bench.ts';
 import { ratingsRemovedAudit } from './audit.ts';
 import type { GameRow } from './schema.ts';
 import type {
@@ -170,7 +172,8 @@ function generationView(
 					position: entry.position,
 					jerseyNumber: members.get(entry.playerId)?.jerseyNumber ?? null,
 					avatarId: members.get(entry.playerId)?.avatarId ?? null,
-					kind: entry.kind
+					kind: entry.kind,
+					team: entry.team ?? null
 				}))
 			: visibleParticipants(
 					row,
@@ -182,7 +185,8 @@ function generationView(
 					position: entry.position,
 					jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
 					avatarId: names.get(entry.playerId)?.avatarId ?? null,
-					kind: entry.kind
+					kind: entry.kind,
+					team: entry.team ?? null
 				})),
 		generatedAt: snapshot.generatedAt
 	};
@@ -254,6 +258,21 @@ export function listTeamHistory(
 	for (const row of listTeamSlotCounts(gameIds)) {
 		const record = counts.get(row.gameId);
 		if (record) record[row.team] = row.count;
+	}
+	// Le banc habillé compte dans l'effectif publié, au même titre que les
+	// places sur la glace. Un ancien instantané sans équipe n'ajoute rien.
+	for (const row of listGenerationSnapshots(gameIds)) {
+		if (!row.generationJson) continue;
+		const record = counts.get(row.gameId);
+		if (!record) continue;
+		try {
+			const snapshot = generationSnapshotSchema.parse(JSON.parse(row.generationJson));
+			for (const entry of snapshot.bench) {
+				if (entry.team) record[entry.team] += 1;
+			}
+		} catch {
+			// Instantané illisible : les places sur la glace suffisent.
+		}
 	}
 	return gameIds.flatMap((gameId) => {
 		const entry = entries.get(gameId);
@@ -549,6 +568,29 @@ export function regenerateGame(
 		kind: plan.kindOf.get(assignment.playerId) ?? 'regular'
 	}));
 
+	// Le banc habillé se drafte après la glace, équipe par équipe, jusqu'à
+	// l'effectif configuré. Le reste attend hors effectif.
+	const iceById = new Map(plan.players.map((player) => [player.id, player]));
+	const ice: IceDraftPlacement[] = result.assignments.map((assignment) => {
+		const player = iceById.get(assignment.playerId)!;
+		return {
+			playerId: player.id,
+			position: player.position,
+			kind: player.kind,
+			age: player.age,
+			overall: player.overall,
+			team: assignment.team
+		};
+	});
+	const remaining: DraftMember[] = plan.remaining.map((member) => ({
+		playerId: member.playerId,
+		position: member.eligiblePositions[0] ?? member.position,
+		kind: member.kind,
+		age: member.age,
+		overall: member.overall
+	}));
+	const bench = draftTeamBench(template, ice, remaining);
+
 	const generatedAt = clock.nowMs();
 	const snapshot: GenerationSnapshot = {
 		skillDiff: result.skillDiff,
@@ -556,7 +598,7 @@ export function regenerateGame(
 		sizeDiff: result.sizeDiff,
 		warnings: gameWarningsInOrder(result.warnings),
 		ruleViolations: result.violations,
-		bench: plan.bench,
+		bench,
 		candidateKey: result.candidateKey,
 		generatedAt
 	};
@@ -593,17 +635,18 @@ export function regenerateGame(
 	}
 
 	const namedIds = [
-		...plan.bench.map((entry) => entry.playerId),
+		...bench.map((entry) => entry.playerId),
 		...result.violations.flatMap((violation) => violation.playerIds)
 	];
 	const names = namedPlayers(namedIds);
-	const benchViews: GamePlayer[] = plan.bench.map((entry) => ({
+	const benchViews: GamePlayer[] = bench.map((entry) => ({
 		playerId: entry.playerId,
 		fullName: names.get(entry.playerId)?.fullName ?? neutralPlayerName(),
 		position: entry.position,
 		jerseyNumber: names.get(entry.playerId)?.jerseyNumber ?? null,
 		avatarId: names.get(entry.playerId)?.avatarId ?? null,
-		kind: entry.kind
+		kind: entry.kind,
+		team: entry.team ?? null
 	}));
 
 	return {

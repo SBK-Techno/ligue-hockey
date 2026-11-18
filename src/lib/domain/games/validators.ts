@@ -3,7 +3,7 @@ import { POSITION_KEYS } from '#config/positions.ts';
 import { GAME_LIMITS } from '#config/games.ts';
 import { GAME_WARNING_KEYS } from '#config/game-warnings.ts';
 import { ROSTER_LIMITS } from '#config/roster.ts';
-import { TEAM_KEYS } from '#config/teams.ts';
+import { TEAM_KEYS, TEAMS } from '#config/teams.ts';
 import { DATE_PATTERN, TIME_PATTERN } from '#config/time.ts';
 import { isRealDate } from '#lib/shared/time/clock.ts';
 
@@ -40,7 +40,9 @@ export const generationSnapshotSchema = z.object({
 		z.object({
 			playerId: z.string().min(1),
 			position: z.enum(POSITION_KEYS),
-			kind: z.enum(['regular', 'sub'])
+			kind: z.enum(['regular', 'sub']),
+			/** Absent des anciens instantanés : banc global, sans équipe. */
+			team: z.enum(TEAM_KEYS).optional()
 		})
 	),
 	candidateKey: z.string(),
@@ -78,8 +80,22 @@ export const manualLineupInputSchema = z.object({
 				playerId: z.string().trim().min(1).nullable()
 			})
 		)
-		.max(ROSTER_LIMITS.maxAssignments)
+		.max(ROSTER_LIMITS.maxAssignments),
+	/**
+	 * Le banc habillé par équipe : chaque joueur envoyé habille le banc de son
+	 * équipe. Absent ou vide, tout membre non aligné attend hors effectif,
+	 * comme avant l'effectif par équipe.
+	 */
+	bench: z
+		.array(
+			z.object({
+				playerId: z.string().trim().min(1),
+				team: z.enum(TEAM_KEYS)
+			})
+		)
+		.max(ROSTER_LIMITS.playersPerTeam * TEAMS.length)
+		.default([])
 });
 
-export type ManualLineupInput = z.infer<typeof manualLineupInputSchema>;
+export type ManualLineupInput = z.input<typeof manualLineupInputSchema>;
 export type ManualLineupAssignment = ManualLineupInput['assignments'][number];

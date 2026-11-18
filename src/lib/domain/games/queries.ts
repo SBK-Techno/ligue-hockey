@@ -123,6 +123,22 @@ export function listTeamSlotCounts(
 		.all();
 }
 
+/**
+ * Les instantanés publiés de plusieurs matchs, pour compter le banc habillé
+ * par équipe en plus des places sur la glace. La lecture reste groupée; le
+ * décodage du banc appartient au service, pas au SQL.
+ */
+export function listGenerationSnapshots(
+	gameIds: readonly string[]
+): { gameId: string; generationJson: string | null }[] {
+	if (gameIds.length === 0) return [];
+	return db
+		.select({ gameId: games.id, generationJson: games.generationJson })
+		.from(games)
+		.where(inArray(games.id, [...gameIds]))
+		.all();
+}
+
 export function listSlots(gameId: string) {
 	return db
 		.select()
@@ -177,6 +193,25 @@ export type SaveAssignmentsOptions = {
 	manualAt?: number | null;
 };
 
+/**
+ * Les joueurs qui habillent le banc d'une équipe dans un instantané. Le banc
+ * habillé fait partie de l'effectif; le banc global (sans équipe) n'en fait
+ * pas partie. Un instantané illisible ne donne aucun banc habillé.
+ */
+function rosteredBenchIds(generationJson: string | null | undefined): string[] {
+	if (!generationJson) return [];
+	try {
+		const snapshot = JSON.parse(generationJson) as {
+			bench?: { playerId?: unknown; team?: unknown }[];
+		};
+		return (snapshot.bench ?? [])
+			.filter((entry) => entry.team && typeof entry.playerId === 'string')
+			.map((entry) => entry.playerId as string);
+	} catch {
+		return [];
+	}
+}
+
 export function saveAssignments(
 	gameId: string,
 	assignments: readonly SlotAssignment[],
@@ -197,6 +232,14 @@ export function saveAssignments(
 				: {})
 		};
 
+		// L'ancien instantané est lu avant le remplacement : son banc habillé
+		// fait partie de l'ancien effectif pour le diff de purge.
+		const previousSnapshot = tx
+			.select({ generationJson: games.generationJson })
+			.from(games)
+			.where(eq(games.id, gameId))
+			.get();
+
 		// Le jeton se vérifie avant toute écriture de place : une lecture
 		// périmée ne doit jamais laisser un alignement à moitié remplacé.
 		if (hasCondition) {
@@ -216,19 +259,24 @@ export function saveAssignments(
 			if (claimed.changes !== 1) return false;
 		}
 
-		// Le seul propriétaire du diff de purge : l'ancien ensemble habillé
-		// moins le nouveau. Un joueur au banc n'a jamais été habillé et garde
-		// donc ses notes; un joueur sorti de la glace les perd.
-		const previousDressed = new Set(
-			tx
+		// Le seul propriétaire du diff de purge : l'ancien effectif habillé
+		// (glace et banc par équipe) moins le nouveau. Un joueur qui reste
+		// habillé, sur la glace ou au banc de son équipe, garde ses notes;
+		// seul un joueur qui quitte l'effectif les perd.
+		const previousDressed = new Set([
+			...tx
 				.select({ playerId: gameSlots.assignedPlayerId })
 				.from(gameSlots)
 				.where(eq(gameSlots.gameId, gameId))
 				.all()
 				.map((row) => row.playerId)
-				.filter((playerId): playerId is string => playerId !== null)
-		);
-		const nextDressed = new Set(assignments.map((assignment) => assignment.playerId));
+				.filter((playerId): playerId is string => playerId !== null),
+			...rosteredBenchIds(previousSnapshot?.generationJson)
+		]);
+		const nextDressed = new Set([
+			...assignments.map((assignment) => assignment.playerId),
+			...rosteredBenchIds(generationJson)
+		]);
 		const removedRatedPlayerIds = [...previousDressed].filter(
 			(playerId) => !nextDressed.has(playerId)
 		);

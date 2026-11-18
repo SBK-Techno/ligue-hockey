@@ -39,6 +39,7 @@ import {
 import { parseSettings } from '#config/settings-registry.ts';
 import type { Position } from '#config/positions.ts';
 import type { Team } from '#config/teams.ts';
+import { draftTeamBench, type DraftMember, type IceDraftPlacement } from '#lib/domain/games/bench.ts';
 import type { GameStatus } from '#lib/domain/games/schema.ts';
 import { gameAvailability, gameSlots, games } from '#lib/domain/games/schema.ts';
 import { selectGenerationPlayers, type SelectionCandidate } from '#lib/domain/games/selection.ts';
@@ -638,17 +639,20 @@ for (const game of planned) {
 		gameStart(game.gameDate) - 2 * 86_400_000
 	);
 
+	const playerById = new Map(demoPlayers.map((entry) => [entry.userId, entry]));
+	const icePlayers: GeneratorPlayer[] = selection.selected.map((candidate) => {
+		const player = playerById.get(candidate.playerId);
+		return {
+			id: candidate.playerId,
+			position: candidate.selectionPosition,
+			age: player?.age ?? 30,
+			overall: player?.overall ?? 3,
+			kind: candidate.kind
+		};
+	});
+
 	const result = generateTeams({
-		players: selection.selected.map((candidate) => {
-			const player = demoPlayers.find((entry) => entry.userId === candidate.playerId);
-			return {
-				id: candidate.playerId,
-				position: candidate.selectionPosition,
-				age: player?.age ?? 30,
-				overall: player?.overall ?? 3,
-				kind: candidate.kind
-			} satisfies GeneratorPlayer;
-		}),
+		players: icePlayers,
 		template: TEMPLATE,
 		rules: generatorRules,
 		skillTolerance: settings['teams.skillTolerance'],
@@ -669,6 +673,31 @@ for (const game of planned) {
 	);
 
 	const kinds = new Map(selection.selected.map((candidate) => [candidate.playerId, candidate.kind]));
+	// Le banc habillé se drafte après la glace, comme dans le service de
+	// génération : le même propriétaire équilibre les effectifs.
+	const iceById = new Map(icePlayers.map((player) => [player.id, player]));
+	const ice: IceDraftPlacement[] = result.assignments.map((assignment) => {
+		const player = iceById.get(assignment.playerId)!;
+		return {
+			playerId: player.id,
+			position: player.position,
+			kind: player.kind,
+			age: player.age,
+			overall: player.overall,
+			team: assignment.team
+		};
+	});
+	const remaining: DraftMember[] = selection.bench.map((candidate) => {
+		const player = playerById.get(candidate.playerId);
+		return {
+			playerId: candidate.playerId,
+			position: candidate.eligiblePositions[0] ?? candidate.position,
+			kind: candidate.kind,
+			age: player?.age ?? 30,
+			overall: player?.overall ?? null
+		};
+	});
+	const bench = draftTeamBench(TEMPLATE, ice, remaining);
 	const snapshot = generationSnapshotSchema.parse({
 		skillDiff: result.skillDiff,
 		ageDiff: result.ageDiff,
@@ -680,11 +709,7 @@ for (const game of planned) {
 			strict: violation.strict,
 			playerIds: violation.playerIds
 		})),
-		bench: selection.bench.map((candidate) => ({
-			playerId: candidate.playerId,
-			position: candidate.position,
-			kind: candidate.kind
-		})),
+		bench,
 		candidateKey: result.candidateKey,
 		generatedAt
 	});

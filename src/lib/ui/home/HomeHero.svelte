@@ -4,6 +4,7 @@
 	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import type { HeroVariant } from '#lib/domain/home/composition.ts';
 	import type { SubRequestWithGame } from '#lib/domain/roster/service.ts';
+	import { teamDefinition } from '#config/teams.ts';
 	import { filledRequestLabel } from '#lib/ui/filled-request.ts';
 	import {
 		formatDayMonth,
@@ -201,7 +202,11 @@
 							{teamLabel}{jerseyNumber !== null ? ` · #${jerseyNumber}` : ''}
 						</span>
 					{:else if ownBench}
-						<span class="stamp border-paper/40 text-paper/80">{t('home.benchStamp')}</span>
+						<span class="stamp border-paper/40 text-paper/80">
+							{ownBench.team
+								? `${t(teamDefinition(ownBench.team).labelKey)} · ${t('home.benchStamp')}`
+								: t('home.benchStamp')}
+						</span>
 					{/if}
 				</div>
 
