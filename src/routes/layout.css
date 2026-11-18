@@ -387,7 +387,8 @@
 	.btn-ghost:active,
 	.btn-danger:active,
 	.btn-on-ink:active {
-		border-bottom-width: 1px;
+		/* La bordure garde sa largeur : l'enfoncement vient de la transformée,
+		   seule propriété composée, sans mise en page à chaque clic. */
 		transform: translateY(1px);
 	}
 	.btn-primary {
@@ -1342,9 +1343,11 @@
 		position: absolute;
 		inset: 0 auto 0 0;
 		z-index: -1;
-		width: calc(var(--share) * 100%);
+		width: 100%;
 		background: color-mix(in srgb, var(--color-ice) 14%, transparent);
-		transition: width var(--duration-slow) var(--ease-out-expo);
+		transform: scaleX(var(--share));
+		transform-origin: left center;
+		transition: transform var(--duration-slow) var(--ease-out-expo);
 	}
 	.poll-option[data-mine='true'] .poll-fill {
 		background: color-mix(in srgb, var(--color-ice) 26%, transparent);

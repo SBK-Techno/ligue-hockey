@@ -44,8 +44,12 @@
 	}
 
 	function onViewportChange() {
+		// Fermée, la carte ne coûte rien au défilement : ni lecture de mise en
+		// page ni écriture d'état. Le listener ne sert qu'à fermer une carte
+		// ouverte quand la fenêtre bouge.
+		if (!playerPeek.openId) return;
 		updateViewport();
-		if (playerPeek.openId) closePlayerPeek();
+		closePlayerPeek();
 	}
 
 	onMount(() => {
@@ -56,6 +60,12 @@
 			window.removeEventListener('resize', onViewportChange);
 			window.removeEventListener('scroll', onViewportChange);
 		};
+	});
+
+	// À l'ouverture, la fenêtre a pu changer depuis le montage : on pose une
+	// viewport fraîche pour placer la carte, sans dépendre du défilement.
+	$effect(() => {
+		if (playerPeek.openId) updateViewport();
 	});
 
 	$effect(() => {
