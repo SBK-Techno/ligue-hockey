@@ -2,7 +2,7 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Interaction performance (in progress)
+## Release 1.14.2 (shipped)
 
 - **Audit.** Two read-only audits (main-thread handlers and CSS rendering) plus three Playwright measurement passes (full route matrix, CPU-throttled mobile/desktop deep dives, and a 2050-message chat database) located the jank. Every fix below is a root cause confirmed by measurement, not a guess.
 - **Shared formatters.** `todayInZone`/`timeInZone`/`zoneOffsetMs` (clock) and `formatMoney`/`currencySymbol` (i18n) built a new `Intl` object per call. The chat `groups` derived calls `todayInZone` per message on every sync, vote, older-page load and 20-40x at mount; the soldes ledger calls `formatMoney` ~200x per render. Formatters are now cached at their owners by the inputs that change them (timezone, currency), reusing the existing `formatDecimal` Map pattern. Measured: `todayInZone` x4200 132ms to 9.1ms (~14x); DST transitions, offset math and fr-CA money strings proven byte-identical by oracle tests; invalid inputs still throw on every call.
@@ -12,6 +12,9 @@ This file tracks the current milestone, verified evidence, and the work that is 
 - **Browser evidence.** Under 4x CPU throttle, wheel-scroll jank is 0 with max frame 17ms on discussion, matchs, admin joueurs/soldes/evaluations and profil, and 0 (max 33ms) on the lineup page; home shows a single 67ms entrance frame. No horizontal overflow and no console errors on any page.
 - **Gate.** `npm run gate` exit 0: 1336 tests in 175 files, svelte-check 0/0, architecture 436 files, 1165 language values, generated assets and documentation current, 100 client chunks without zod and an 8328-byte precache shell.
 - **Deliberately deferred.** The whole-page `{#key pathname}` remount and its 140ms transform entrance (one ~51ms task on mobile navigation), hover/viewport preloading on link-dense lists, and the admin player search per-keystroke `replaceState` are real but architectural trade-offs against perceived navigation speed and progressive enhancement; they are left unchanged pending a dedicated decision rather than risk a regression in this pass.
+- **Release.** PR #56 merged at `c957ee0`; the Auto-release workflow pushed `release/next` at `3fb648e` and, as in every release since 1.10.0, could not create the release pull request, so the documented recovery opened #57 manually; #57 merged at `f116048`. The Auto-release run on that merge push created tag `v1.14.2` (`8079c48`) and the called release workflow produced the GitHub release and the GHCR image.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.14.2`, host digest `sha256:ad53e65fce4ce709305d68a4737dea547064feac1de96c2019f74dcad5af3466`, local id `sha256:feb65a440f37c5ce89e3de48c674dab08a09a971bfe1fe5f336a31221258ad32`, healthy with zero restarts and the 16 recorded migrations applied. Public health reports `ok`/`ok`/`applied` with an empty queue (0 pending, 0 failed); `/connexion` returns 200 and `/discussion` redirects (303). The first probe returned 502 while the container started; the retry returned the healthy payload. No error lines in the first minutes of logs. The served stylesheet carries `scaleX(var(--share))` and `will-change:transform`, confirming the poll-fill and drag-ghost fixes are live.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261118T175945.db` (`integrity_check: ok`, 29 players, 30 accounts), the 1.14.1 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.14.1.bak`, and image `1.14.1` stays available on the host.
 
 ## Release 1.14.1 (shipped)
 
