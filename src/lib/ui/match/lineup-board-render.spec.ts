@@ -329,3 +329,59 @@ describe('rendu de la carte d’alignement', () => {
 		expect(chip).not.toContain('aria-pressed');
 	});
 });
+
+describe('banc habillé par équipe sur la carte', () => {
+	const dressedBench: GamePlayer[] = [
+		{ ...player('bench-1'), position: 'defense', team: 'white' },
+		{ ...player('bench-2'), position: 'goalie', team: 'black' },
+		{ ...player('bench-3'), position: 'forward' }
+	];
+
+	it('groupe le banc par équipe et laisse le reste hors effectif', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench: dressedBench,
+				canEdit: true,
+				expectedGeneratedAt: 123
+			}
+		});
+
+		expect(body).toContain('data-team="white"');
+		expect(body).toContain('data-team="black"');
+		expect(body).toContain('data-overflow="true"');
+		expect(body).toContain(t('rink.benchOverflow'));
+		expect(body).toContain(`${t('team.white')} · 1`);
+		expect(body).toContain(`${t('team.black')} · 1`);
+	});
+
+	it('envoie le banc habillé avec le formulaire, sans les joueurs hors effectif', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench: dressedBench,
+				canEdit: true,
+				expectedGeneratedAt: 123
+			}
+		});
+		const hidden = body.match(/<input[^>]*name="bench"[^>]*>/)?.[0] ?? '';
+
+		expect(hidden).toContain('bench-1');
+		expect(hidden).toContain('bench-2');
+		expect(hidden).not.toContain('bench-3');
+	});
+
+	it('nomme l’équipe du joueur connecté sur le banc', () => {
+		const { body } = render(LineupBoard, {
+			props: {
+				slots: fullSlots,
+				bench: dressedBench,
+				canEdit: false,
+				expectedGeneratedAt: 123,
+				actorId: 'bench-1'
+			}
+		});
+
+		expect(body).toContain(`${t('team.white')} · ${t('rink.bench')}`);
+	});
+});

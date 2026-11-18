@@ -3,6 +3,8 @@ import { render } from 'svelte/server';
 import type { AvailabilityView } from '#lib/domain/availability/service.ts';
 import type { GameView } from '#lib/domain/games/service.ts';
 import type { GameSheetView } from '#lib/domain/gamesheet/types.ts';
+import type { GamePlayer } from '#lib/domain/games/types.ts';
+import { t } from '#lib/shared/i18n/index.ts';
 import HomeHero from '#lib/ui/home/HomeHero.svelte';
 import GameSheet from '#lib/ui/match/GameSheet.svelte';
 
@@ -59,6 +61,7 @@ describe('ligne de centre du tableau', () => {
 				game,
 				mapUrl: null,
 				teamLabel: null,
+				benchTeamLabel: null,
 				availability,
 				ownSlot: null,
 				ownBench: null,
@@ -87,6 +90,7 @@ describe('ligne de centre du tableau', () => {
 				game,
 				mapUrl: null,
 				teamLabel: null,
+				benchTeamLabel: null,
 				availability: null,
 				ownSlot: null,
 				ownBench: null,
@@ -108,5 +112,49 @@ describe('ligne de centre du tableau', () => {
 
 		expect(body.match(/h-8 w-px bg-paper\/25/g)).toHaveLength(1);
 		expect(body).not.toContain('scoreboard-split');
+	});
+});
+
+describe('pastille de banc à l’accueil', () => {
+	const benchPlayer: GamePlayer = {
+		playerId: 'bench-1',
+		fullName: 'Bench Test',
+		position: 'forward',
+		jerseyNumber: 9,
+		avatarId: null,
+		kind: 'regular',
+		team: 'white'
+	};
+
+	function heroBody(ownBench: GamePlayer | null, benchTeamLabel: string | null): string {
+		return render(HomeHero, {
+			props: {
+				variant: 'upcoming',
+				game,
+				mapUrl: null,
+				teamLabel: null,
+				benchTeamLabel,
+				availability: null,
+				ownSlot: null,
+				ownBench,
+				ownRequest: null,
+				isSubstitute: false,
+				isManager: false,
+				hasGame: true
+			}
+		}).body;
+	}
+
+	it('nomme l’équipe du joueur habillé sur le banc', () => {
+		const body = heroBody(benchPlayer, t('team.white'));
+
+		expect(body).toContain(`${t('team.white')} · ${t('home.benchStamp')}`);
+	});
+
+	it('garde la pastille simple pour un joueur hors effectif', () => {
+		const body = heroBody({ ...benchPlayer, team: null }, null);
+
+		expect(body).toContain(t('home.benchStamp'));
+		expect(body).not.toContain(t('team.white'));
 	});
 });

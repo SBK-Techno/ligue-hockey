@@ -106,6 +106,13 @@
       "when": 1794897595981,
       "tag": "0014_vengeful_lord_tyger",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1795029333306,
+      "tag": "0015_same_vertigo",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,7 @@
 		game,
 		mapUrl,
 		teamLabel,
+		benchTeamLabel,
 		availability,
 		ownSlot,
 		ownBench,
@@ -31,6 +32,7 @@
 		game: GameView | null;
 		mapUrl: string | null;
 		teamLabel: string | null;
+		benchTeamLabel: string | null;
 		availability: AvailabilityView | null;
 		ownSlot: GameSlotView | null;
 		ownBench: GamePlayer | null;
@@ -201,7 +203,11 @@
 							{teamLabel}{jerseyNumber !== null ? ` · #${jerseyNumber}` : ''}
 						</span>
 					{:else if ownBench}
-						<span class="stamp border-paper/40 text-paper/80">{t('home.benchStamp')}</span>
+						<span class="stamp border-paper/40 text-paper/80">
+							{benchTeamLabel
+								? `${benchTeamLabel} · ${t('home.benchStamp')}`
+								: t('home.benchStamp')}
+						</span>
 					{/if}
 				</div>
 

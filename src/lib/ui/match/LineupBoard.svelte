@@ -14,6 +14,7 @@
 	import {
 		assignmentsAllowed,
 		assignmentsForSave,
+		benchForSave,
 		benchKey,
 		benchPlayerId,
 		boardPlacements,
@@ -21,6 +22,7 @@
 		clearSelectedPlace,
 		dropOnPlace,
 		initialAssignments,
+		initialBenchTeams,
 		placementRules,
 		rinkPlayerLastName,
 		rinkRoleShortLabel,
@@ -79,14 +81,21 @@
 	// La carte est remontée quand la génération change; l'état initial est stable.
 	// svelte-ignore state_referenced_locally
 	let assignments = $state<LineupAssignmentMap>(initialAssignments(slots));
+	// svelte-ignore state_referenced_locally
+	let benchTeams = $state<Record<string, Team>>(initialBenchTeams(bench));
 	let selected = $state<string | null>(null);
-	let history = $state<LineupAssignmentMap[]>([]);
+	let history = $state<{ assignments: LineupAssignmentMap; benchTeams: Record<string, Team> }[]>([]);
 	let drag = $state<DragSession | null>(null);
 	let hoverKey = $state<string | null>(null);
 	let benchHover = $state(false);
 	// svelte-ignore state_referenced_locally
 	const initialJson = JSON.stringify(initialAssignments(slots));
-	const dirty = $derived(JSON.stringify(assignments) !== initialJson);
+	// svelte-ignore state_referenced_locally
+	const initialBenchJson = JSON.stringify(initialBenchTeams(bench));
+	const dirty = $derived(
+		JSON.stringify(assignments) !== initialJson ||
+			JSON.stringify(benchTeams) !== initialBenchJson
+	);
 
 	const players = $derived.by<BoardPlayer[]>(() => {
 		const list: BoardPlayer[] = [];
@@ -128,6 +137,9 @@
 	const benchPlayers = $derived(
 		players.filter((player) => !placedIds.includes(player.playerId))
 	);
+	const overflowBench = $derived(
+		benchPlayers.filter((player) => benchTeams[player.playerId] === undefined)
+	);
 	const selectedPlayer = $derived.by(() => (selected ? playerOf(selected) : null));
 	const selectedIsBench = $derived(
 		selected !== null && benchPlayerId(selected) !== null
@@ -135,6 +147,7 @@
 	const draggedPlayer = $derived.by(() => (drag ? playerOf(drag.key) : null));
 
 	const assignmentsJson = $derived(JSON.stringify(assignmentsForSave(slots, assignments)));
+	const benchJson = $derived(JSON.stringify(benchForSave(benchPlayers, benchTeams)));
 	const geometryStyle = rinkGeometryStyle();
 
 	/**
@@ -168,13 +181,21 @@
 	 * Le résumé du joueur suit les gestes en cours : déplacer son propre jeton
 	 * met « Ton poste » à jour avant même d'enregistrer.
 	 */
-	const viewer = $derived(viewerSpot(rosterSlots, benchPlayers, actorId));
+	// Le résumé du joueur suit l'état vivant du banc : l'équipe vient des
+	// gestes en cours, pas seulement du banc publié.
+	const viewerBench = $derived(
+		benchPlayers.map((player) => ({ ...player, team: benchTeams[player.playerId] ?? null }))
+	);
+	const viewer = $derived(viewerSpot(rosterSlots, viewerBench, actorId));
 	const viewerSummary = $derived.by(() => {
 		if (!viewer) return null;
 		if (viewer.kind === 'bench') {
+			const text = viewer.team
+				? `${t(teamDefinition(viewer.team).labelKey)} · ${t('rink.bench')}`
+				: t('home.teamBench');
 			return {
 				title: null,
-				text: t('home.teamBench'),
+				text,
 				help: t('home.teamBenchHelp')
 			};
 		}
@@ -233,36 +254,45 @@
 	 * Chaque mutation passe par ici : l'historique garde au plus vingt états,
 	 * et un geste sans effet ne crée ni entrée ni changement.
 	 */
-	function commit(next: LineupAssignmentMap) {
+	function commit(next: LineupAssignmentMap, nextBenchTeams: Record<string, Team>) {
 		if (!assignmentsAllowed(rules, next)) return;
-		if (JSON.stringify(next) === JSON.stringify(assignments)) return;
-		history = [...history.slice(-19), assignments];
+		if (
+			JSON.stringify(next) === JSON.stringify(assignments) &&
+			JSON.stringify(nextBenchTeams) === JSON.stringify(benchTeams)
+		) {
+			return;
+		}
+		history = [...history.slice(-19), { assignments, benchTeams }];
 		assignments = next;
+		benchTeams = nextBenchTeams;
 	}
 
-	/** A slot only accepts the selected player's position. */
+	/** A slot only accepts the selected player's position and bench team. */
 	function canTarget(key: string): boolean {
-		return (
-			selectedPlayer === null ||
-			canPlacePlayer(rules, selectedPlayer.playerId, key)
-		);
+		if (selectedPlayer === null) return true;
+		if (!canPlacePlayer(rules, selectedPlayer.playerId, key)) return false;
+		if (selectedIsBench) {
+			const team = benchTeams[selectedPlayer.playerId];
+			if (team !== undefined && rules.slotTeam(key) !== team) return false;
+		}
+		return true;
 	}
 
 	function activateKey(key: string) {
 		if (!canEdit) return;
 		const benchId = benchPlayerId(key);
 		if (benchId !== null) {
-			selected = selectBenchPlayer({ selected, assignments }, benchId).selected;
+			selected = selectBenchPlayer({ selected, assignments, benchTeams }, benchId).selected;
 			return;
 		}
-		const next = selectPlace({ selected, assignments }, key, rules);
-		commit(next.assignments);
+		const next = selectPlace({ selected, assignments, benchTeams }, key, rules);
+		commit(next.assignments, next.benchTeams);
 		selected = next.selected;
 	}
 
 	function removeSelected() {
-		const next = clearSelectedPlace({ selected, assignments });
-		commit(next.assignments);
+		const next = clearSelectedPlace({ selected, assignments, benchTeams }, rules);
+		commit(next.assignments, next.benchTeams);
 		selected = next.selected;
 	}
 
@@ -270,13 +300,16 @@
 		const previous = history.at(-1);
 		if (!previous) return;
 		history = history.slice(0, -1);
-		assignments = previous;
+		assignments = previous.assignments;
+		benchTeams = previous.benchTeams;
 		selected = null;
 	}
 
 	function reset() {
 		if (!dirty) return;
-		commit(initialAssignments(slots));
+		history = [...history.slice(-19), { assignments, benchTeams }];
+		assignments = initialAssignments(slots);
+		benchTeams = initialBenchTeams(bench);
 		selected = null;
 	}
 
@@ -350,16 +383,19 @@
 
 		if (session.dragging) {
 			if (benchHover && session.fromSlot) {
-				const next = clearSelectedPlace({ selected: session.key, assignments });
-				commit(next.assignments);
+				const next = clearSelectedPlace(
+					{ selected: session.key, assignments, benchTeams },
+					rules
+				);
+				commit(next.assignments, next.benchTeams);
 				selected = next.selected;
 			} else if (hoverKey && hoverKey !== session.key) {
 				const next = dropOnPlace(
-					{ selected: session.key, assignments },
+					{ selected: session.key, assignments, benchTeams },
 					hoverKey,
 					rules
 				);
-				commit(next.assignments);
+				commit(next.assignments, next.benchTeams);
 				selected = next.selected;
 			}
 			hoverKey = null;
@@ -577,6 +613,34 @@
 	</div>
 
 	{#if canEdit || benchPlayers.length > 0}
+		{#snippet benchChip(player: BoardPlayer)}
+			<button
+				type="button"
+				class="bench-chip"
+				data-player-id={player.playerId}
+				data-lineup-key={benchKey(player.playerId)}
+				data-filled="true"
+				data-you={isViewer(player.playerId)}
+				data-selected={selected === benchKey(player.playerId)}
+				data-drag-source={drag?.dragging && drag.key === benchKey(player.playerId)}
+				data-drop-active={hoverKey === benchKey(player.playerId)}
+				data-player-peek={!canEdit ? 'click' : undefined}
+				onclick={(event) => handleClick(event, benchKey(player.playerId))}
+				aria-label={ariaWithYou(`${player.jerseyNumber ?? '?'} ${player.fullName}`, player)}
+				aria-haspopup={!canEdit ? 'dialog' : undefined}
+				aria-expanded={!canEdit ? 'false' : undefined}
+				aria-pressed={canEdit ? selected === benchKey(player.playerId) : undefined}
+			>
+				<span class="bench-portrait">
+					<Avatar player={portrait(player)} fill />
+				</span>
+				<span class="font-mono text-caption text-muted">{player.jerseyNumber ?? '?'}</span>
+				<span class="bench-name">{player.fullName}</span>
+				{#if isViewer(player.playerId)}
+					<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>
+				{/if}
+			</button>
+		{/snippet}
 		<div
 			class="bench-zone"
 			data-editable={canEdit}
@@ -585,38 +649,36 @@
 		>
 			<h3 class="text-subhead font-semibold">{t('rink.bench')}</h3>
 			{#if benchPlayers.length > 0}
-				<ul role="list" class="mt-2 flex flex-wrap gap-1.5">
-					{#each benchPlayers as player (player.playerId)}
-						<li>
-							<button
-								type="button"
-								class="bench-chip"
-								data-player-id={player.playerId}
-								data-lineup-key={benchKey(player.playerId)}
-								data-filled="true"
-								data-you={isViewer(player.playerId)}
-								data-selected={selected === benchKey(player.playerId)}
-								data-drag-source={drag?.dragging && drag.key === benchKey(player.playerId)}
-								data-drop-active={hoverKey === benchKey(player.playerId)}
-								data-player-peek={!canEdit ? 'click' : undefined}
-								onclick={(event) => handleClick(event, benchKey(player.playerId))}
-								aria-label={ariaWithYou(`${player.jerseyNumber ?? '?'} ${player.fullName}`, player)}
-								aria-haspopup={!canEdit ? 'dialog' : undefined}
-								aria-expanded={!canEdit ? 'false' : undefined}
-								aria-pressed={canEdit ? selected === benchKey(player.playerId) : undefined}
-							>
-								<span class="bench-portrait">
-									<Avatar player={portrait(player)} fill />
-								</span>
-								<span class="font-mono text-caption text-muted">{player.jerseyNumber ?? '?'}</span>
-								<span class="bench-name">{player.fullName}</span>
-								{#if isViewer(player.playerId)}
-									<span class="stamp border-ice bg-ice-soft text-ice-deep">{t('common.you')}</span>
-								{/if}
-							</button>
-						</li>
+				<div class="mt-2 space-y-3">
+					{#each orderedTeams as team (team.key)}
+						{@const teamBench = benchPlayers.filter(
+							(player) => benchTeams[player.playerId] === team.key
+						)}
+						{#if teamBench.length > 0}
+							<div class="bench-team" data-team={team.key}>
+								<p class="micro-label">
+									{t(teamDefinition(team.key).labelKey)} · {teamBench.length}
+								</p>
+								<ul role="list" class="mt-1 flex flex-wrap gap-1.5">
+									{#each teamBench as player (player.playerId)}
+										<li>{@render benchChip(player)}</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
 					{/each}
-				</ul>
+					{#if overflowBench.length > 0}
+						<div class="bench-team" data-overflow="true">
+							<p class="micro-label">{t('rink.benchOverflow')} · {overflowBench.length}</p>
+							<p class="hint">{t('rink.benchOverflowHelp')}</p>
+							<ul role="list" class="mt-1 flex flex-wrap gap-1.5">
+								{#each overflowBench as player (player.playerId)}
+									<li>{@render benchChip(player)}</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+				</div>
 			{:else}
 				<p class="mt-2 text-meta text-muted">{t('rink.benchEmpty')}</p>
 			{/if}
@@ -660,6 +722,7 @@
 			class="lineup-actions flex flex-wrap items-center gap-2"
 		>
 			<input type="hidden" name="lineup" value={assignmentsJson} />
+			<input type="hidden" name="bench" value={benchJson} />
 			<input
 				type="hidden"
 				name="expectedGeneratedAt"

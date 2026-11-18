@@ -137,7 +137,12 @@ function intelligenceFrom(pool: LineupPool): LineupIntelligence {
 		ageDiff: view.ageDiff,
 		sizeDiff: view.sizeDiff,
 		averages: byTeam((team) => average(view, team)),
-		sizes: byTeam((team) => view.totals[team].count),
+		// L'effectif habillé : les places sur la glace plus le banc de l'équipe.
+		sizes: byTeam(
+			(team) =>
+				pool.placed.filter((placement) => placement.team === team).length +
+				pool.bench.filter((entry) => entry.team === team).length
+		),
 		swap: swap
 			? {
 					playerAId: swap.playerAId,
@@ -329,7 +334,8 @@ export function buildGenerationSnapshot(input: {
 		bench: benchEntries.map((entry) => ({
 			playerId: entry.playerId,
 			position: entry.position,
-			kind: entry.kind
+			kind: entry.kind,
+			...(entry.team ? { team: entry.team } : {})
 		})),
 		candidateKey: candidateKey(input.assignments),
 		generatedAt

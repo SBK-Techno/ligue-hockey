@@ -159,6 +159,7 @@
 						game={data.game}
 						mapUrl={data.gameMapUrl}
 						teamLabel={data.ownTeamLabel}
+						benchTeamLabel={data.ownBenchTeamLabel}
 						availability={data.availability}
 						ownSlot={data.ownSlot}
 						ownBench={data.ownBench}

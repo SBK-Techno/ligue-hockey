@@ -14,7 +14,8 @@
 		ownTeam = null,
 		heading = true,
 		peek = true,
-		showCount = false
+		showCount = false,
+		benchCount = 0
 	}: {
 		slots: readonly GameSlotView[];
 		team: Team;
@@ -23,12 +24,15 @@
 		heading?: boolean;
 		peek?: boolean;
 		showCount?: boolean;
+		benchCount?: number;
 	} = $props();
 
 	const definition = $derived(teamDefinition(team));
 	const playerCount = $derived(
 		slots.filter((slot) => slot.team === team && slot.player !== null).length
 	);
+	// L'effectif habillé : les joueurs sur la glace plus le banc de l'équipe.
+	const rosterCount = $derived(playerCount + benchCount);
 
 	function slotsFor(position: string) {
 		return slots.filter((slot) => slot.team === team && slot.position === position);
@@ -46,7 +50,7 @@
 			<h3 class="text-base font-semibold">{t(definition.labelKey)}</h3>
 			{#if showCount}
 				<span class="text-meta text-muted">
-					{formatCount(playerCount, 'common.playerCount.one', 'common.playerCount.many')}
+					{formatCount(rosterCount, 'common.playerCount.one', 'common.playerCount.many')}
 				</span>
 			{/if}
 		</div>

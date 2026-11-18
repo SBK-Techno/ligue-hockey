@@ -18,6 +18,7 @@ import {
 	type BenchPlayer,
 	type SelectionCandidate
 } from './selection.ts';
+import { generationSnapshotSchema } from './validators.ts';
 
 export type PoolSlot = {
 	team: Team;
@@ -61,7 +62,8 @@ export type LineupPool = {
 
 export type GenerationPlan = {
 	players: GeneratorPlayer[];
-	bench: BenchPlayer[];
+	/** Les membres vivants non retenus sur la glace, candidats au banc. */
+	remaining: LineupMember[];
 	kindOf: Map<string, 'regular' | 'sub'>;
 };
 
@@ -112,6 +114,25 @@ export function benchFromMembers(
 			.filter((member) => !dressedIds.has(member.playerId))
 			.map(benchPlayer)
 	);
+}
+
+/**
+ * Le banc habillé par équipe vient de l'instantané publié : c'est une
+ * affectation persistée, pas une projection. Un ancien instantané sans
+ * équipe ne donne aucun banc habillé, tout attend alors hors effectif.
+ */
+function snapshotBenchTeams(row: GameRow): Map<string, Team> {
+	const teams = new Map<string, Team>();
+	if (!row.generationJson) return teams;
+	try {
+		const snapshot = generationSnapshotSchema.parse(JSON.parse(row.generationJson));
+		for (const entry of snapshot.bench) {
+			if (entry.team) teams.set(entry.playerId, entry.team);
+		}
+	} catch {
+		// Instantané illisible : aucun banc habillé, le banc global suffit.
+	}
+	return teams;
 }
 
 /**
@@ -278,7 +299,22 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 		.map((member) => member as EligiblePlayer)
 		.sort((a, b) => a.order - b.order || a.playerId.localeCompare(b.playerId));
 
-	const bench = benchFromMembers(members, dressedIds);
+	// Le banc habillé suit l'affectation publiée, reconciliée avec le bassin
+	// vivant : un joueur retiré de la glace garde son équipe, un joueur parti
+	// quitte le banc. Le reste attend hors effectif, sans équipe.
+	const benchTeams = snapshotBenchTeams(row);
+	const teamBench: BenchPlayer[] = [];
+	const rosteredIds = new Set(dressedIds);
+	for (const member of members) {
+		const team = benchTeams.get(member.playerId);
+		if (!team || dressedIds.has(member.playerId)) continue;
+		teamBench.push({ ...benchPlayer(member), team });
+		rosteredIds.add(member.playerId);
+	}
+	const bench = uniqueBench([
+		...teamBench,
+		...benchFromMembers(members, rosteredIds)
+	]);
 
 	return {
 		template,
@@ -308,7 +344,8 @@ export function lineupPool(row: GameRow, slots: readonly PoolSlot[]): LineupPool
 
 /**
  * Entrées du générateur : les membres notés, au plus la capacité de chaque
- * poste. Le reste, y compris les joueurs sans note, forme le banc enregistré.
+ * poste sur la glace. Les autres membres vivants restent candidats au banc
+ * habillé; le draft du banc se fait après la génération, équipe par équipe.
  */
 export function generationPlan(pool: LineupPool): GenerationPlan {
 	const rated = pool.members.filter(
@@ -316,9 +353,7 @@ export function generationPlan(pool: LineupPool): GenerationPlan {
 	);
 	const selection = selectGenerationPlayers(rated, pool.template);
 	const selectedIds = new Set(selection.selected.map((member) => member.playerId));
-	const bench = uniqueBench(
-		pool.members.filter((member) => !selectedIds.has(member.playerId)).map(benchPlayer)
-	);
+	const remaining = pool.members.filter((member) => !selectedIds.has(member.playerId));
 
 	return {
 		players: selection.selected.map((member) => ({
@@ -328,7 +363,7 @@ export function generationPlan(pool: LineupPool): GenerationPlan {
 			overall: member.overall,
 			kind: member.kind
 		})),
-		bench,
+		remaining,
 		kindOf: pool.kindOf
 	};
 }

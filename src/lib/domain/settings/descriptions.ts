@@ -7,7 +7,9 @@ import {
 } from '#config/settings-registry.ts';
 import { TEAMS } from '#config/teams.ts';
 import {
+	benchPerTeam,
 	buildSlotDefinitions,
+	formationTotal,
 	rosterTemplateFromSettings,
 	slotCounts
 } from '#config/roster.ts';
@@ -70,6 +72,13 @@ const PARAMS: Partial<Record<SettingsKey, ParamBuilder>> = {
 	'roster.defensePerTeam': (values) => ({
 		total: positionTotal(values, 'defense')
 	}),
+	'roster.playersPerTeam': (values) => {
+		const template = rosterTemplateFromSettings(values);
+		return {
+			onIce: formationTotal(template),
+			bench: benchPerTeam(template)
+		};
+	},
 	'games.availabilityClosesHours': (values) =>
 		timeParam(values, values['games.availabilityClosesHours'] * 60),
 	'notifications.generalLeadHours': (values) =>
