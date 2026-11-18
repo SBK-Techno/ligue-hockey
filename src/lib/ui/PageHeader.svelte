@@ -18,7 +18,7 @@
 	} = $props();
 </script>
 
-<header class="mb-6">
+<header class="page-enter mb-6">
 	{#if back}
 		<a
 			class="mb-2 inline-flex min-h-11 items-center gap-1.5 text-body font-semibold text-muted no-underline hover:text-ink"

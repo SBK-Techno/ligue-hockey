@@ -76,7 +76,8 @@
 	// svelte-ignore state_referenced_locally
 	let activeTeam = $state<Team>(ownTeam ?? TEAMS[0].key);
 
-	// La carte est remontée quand la génération change; l'état initial est stable.
+	// La carte est remontée quand la partie ou la génération change ; l'état
+	// initial est stable.
 	// svelte-ignore state_referenced_locally
 	let assignments = $state<LineupAssignmentMap>(initialAssignments(slots));
 	// svelte-ignore state_referenced_locally

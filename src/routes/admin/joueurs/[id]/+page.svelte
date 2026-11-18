@@ -35,6 +35,17 @@
 	// Le poste pilote la liste de légendes offerte, sans attendre l’enregistrement.
 	// svelte-ignore state_referenced_locally
 	let position = $state<Position | null>(player?.position ?? null);
+	// Kit garde la page montée quand on passe d'un joueur à l'autre sur la
+	// même route : les brouillons suivent le joueur affiché, pas l'instance.
+	// svelte-ignore state_referenced_locally
+	let draftPlayerId = player?.userId;
+	$effect(() => {
+		const id = player?.userId;
+		if (id === draftPlayerId) return;
+		draftPlayerId = id;
+		selectedRole = null;
+		position = player?.position ?? null;
+	});
 	const activeRole = $derived(selectedRole ?? player?.role ?? 'player');
 	const selectedRoleDefinition = $derived(roleDefinition(activeRole));
 	const legend = $derived(

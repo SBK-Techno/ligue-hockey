@@ -6,6 +6,7 @@ const avatar = readFileSync('src/lib/ui/Avatar.svelte', 'utf8');
 const css = readFileSync('src/routes/layout.css', 'utf8');
 const adminLayout = readFileSync('src/routes/admin/+layout.svelte', 'utf8');
 const discussion = readFileSync('src/routes/discussion/+page.svelte', 'utf8');
+const pageHeader = readFileSync('src/lib/ui/PageHeader.svelte', 'utf8');
 
 describe('accessibilité des identités', () => {
 	it('donne un texte de remplacement à l’image de partage', () => {
@@ -42,6 +43,18 @@ describe('transition de page', () => {
 		const block = css.slice(css.indexOf('.reveal {'), css.indexOf('@keyframes page-settle'));
 		expect(block).toContain('page-settle');
 		expect(block).not.toContain('opacity');
+	});
+
+	it('laisse Kit gérer le cycle de vie plutôt que de remonter toute la page', () => {
+		// Une clé sur le chemin forcerait la reconstruction des layouts
+		// intermédiaires et des pages à paramètre, et piégerait les éléments
+		// fixes dans un ancêtre transformé pendant l’entrée.
+		expect(layout).not.toContain('{#key page.url.pathname}');
+		expect(layout).not.toContain('class="page-enter">{@render children()}');
+	});
+
+	it('porte l’entrée sur l’en-tête de page, jamais sur un conteneur d’éléments fixes', () => {
+		expect(pageHeader).toContain('<header class="page-enter mb-6">');
 	});
 });
 

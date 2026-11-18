@@ -286,9 +286,13 @@
 		min-width: 2.75rem;
 		padding-inline: 0;
 	}
-	/* Page entrance: a short settle, never an invisible page. The fill stops
-	   at the end, so no retained transform turns the page into a containing
-	   block for fixed elements (the new-message pill). */
+	/* Page entrance: a short settle, never an invisible page. It belongs to
+	   the page header (and the auth panel), never to a wrapper around the
+	   whole page: a transformed ancestor would trap fixed-position elements
+	   (the new-message pill, the drag ghost) for the duration, and would
+	   promote the entire page to a composite layer. Kit recreates the header
+	   on every route change, so the settle re-runs without a keyed remount.
+	   The fill stops at the end, leaving no retained transform. */
 	.page-enter {
 		animation: page-settle var(--duration-fast) var(--ease-out-expo) backwards;
 	}
