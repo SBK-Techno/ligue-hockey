@@ -26,7 +26,7 @@
 		mergeChatMessages
 	} from '#lib/ui/chat-cache.ts';
 	import { clearChatCache, readChatCache, writeChatMessages } from '#lib/ui/chat-cache-idb.ts';
-	import { pollEntries, shouldShowPollRail, streamMessages } from '#lib/ui/chat-polls.ts';
+	import { pollEntries } from '#lib/ui/chat-polls.ts';
 	import {
 		readChatPosition,
 		writeChatPosition,
@@ -42,6 +42,9 @@
 	import type { PageProps } from './$types';
 
 	type DayGroup = { key: string; label: string; messages: ChatMessageView[] };
+	type StreamItem =
+		| { kind: 'day'; key: string; label: string; pollsOnly: boolean }
+		| { kind: 'message'; key: string; message: ChatMessageView };
 
 	let { data, form }: PageProps = $props();
 	let showPoll = $state(false);
@@ -84,10 +87,6 @@
 	let olderError = $state(false);
 	let syncError = $state(false);
 	let cacheError = $state(false);
-	// Le serveur rend le fil avec ses sondages; le montage bascule la colonne
-	// selon la largeur réelle avant la première peinture, sans désaccord
-	// d'hydratation.
-	let sidePolls = $state(false);
 	let sentinel = $state<HTMLElement>();
 	// Un cache plus ancien que la page serveur laisse un trou entre les deux :
 	// le montage le comble en arrière-plan, après avoir rendu la lecture.
@@ -114,8 +113,11 @@
 
 	const canAddOption = $derived(pollOptions.length < data.limits.pollMaxOptions);
 	const polls = $derived(pollEntries(messages));
-	const railOpen = $derived(sidePolls && polls.length > 0);
-	const visible = $derived(streamMessages(messages, railOpen));
+	// La colonne est pilotée par la largeur en CSS : le serveur et le client
+	// rendent les mêmes deux copies des sondages, et `xl:` décide laquelle
+	// montre. Aucun déplacement du DOM après la première peinture, donc aucun
+	// saut de mise en page à l'hydratation ni au redimensionnement.
+	const hasRail = $derived(polls.length > 0);
 
 	function dayLabel(key: string): string {
 		if (key === data.today) return t('chat.today');
@@ -126,7 +128,7 @@
 	/** Le jour est écrit une fois; les messages gardent leur heure. */
 	const groups = $derived.by<DayGroup[]>(() => {
 		const result: DayGroup[] = [];
-		for (const message of visible) {
+		for (const message of messages) {
 			const key = todayInZone(branding.timezone, message.createdAt);
 			let group = result.at(-1);
 			if (!group || group.key !== key) {
@@ -136,6 +138,22 @@
 			group.messages.push(message);
 		}
 		return result;
+	});
+
+	// Une seule liste à plat, clé stable par message : quand une page plus
+	// ancienne décale les frontières de jour, les lignes déjà rendues gardent
+	// leur nœud DOM. Aucun conteneur de jour n'est recréé sous le lecteur, donc
+	// aucun saut de mise en page pendant le préchargement de l'historique.
+	const streamItems = $derived.by<StreamItem[]>(() => {
+		const items: StreamItem[] = [];
+		for (const group of groups) {
+			const pollsOnly = group.messages.every((message) => message.poll && !message.deleted);
+			items.push({ kind: 'day', key: `day:${group.key}`, label: group.label, pollsOnly });
+			for (const message of group.messages) {
+				items.push({ kind: 'message', key: message.id, message });
+			}
+		}
+		return items;
 	});
 
 	// svelte-ignore state_referenced_locally
@@ -156,15 +174,27 @@
 		});
 	}
 
+	// Attend qu'une peinture ait eu lieu : la position initiale doit être posée
+	// à l'écran avant que l'historique en arrière-plan n'ajoute des lignes.
+	function nextPaint(): Promise<void> {
+		return new Promise((resolve) =>
+			requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+		);
+	}
+
 	function newestCursor(): string | null {
 		const latest = messages.at(-1);
 		return latest ? encodeCursor(latest) : null;
 	}
 
 	function findMessageRow(messageId: string): HTMLElement | null {
-		return document.querySelector<HTMLElement>(
+		const row = document.querySelector<HTMLElement>(
 			`[data-message-id="${CSS.escape(messageId)}"]`
 		);
+		// Une ligne masquée par la colonne (sondage en double copie) n'a pas de
+		// boîte : elle ne peut servir ni d'ancre ni de cible de lecture.
+		if (!row || row.getClientRects().length === 0) return null;
+		return row;
 	}
 
 	/** Le premier message encore visible est l'ancre stable de la lecture. */
@@ -296,13 +326,16 @@
 			messages = mergeChatMessages(messages, incoming);
 			olderCursor = payload.nextCursor ?? null;
 			complete = olderCursor === null;
+			// La correction d'ancre suit le DOM dans la même frame : aucune
+			// peinture ne doit montrer les lignes ajoutées sans compensation.
+			// La persistance IndexedDB vient après, elle ne bloque pas le scroll.
+			await tick();
+			if (anchor) scrollToAnchor(anchor);
 			const stored = await writeChatMessages(viewerId, incoming, {
 				complete,
 				syncedAt
 			});
 			cacheError = stored === null;
-			await tick();
-			if (anchor) scrollToAnchor(anchor);
 			return incoming.length > 0;
 		} catch (error) {
 			if (!isAbort(error)) olderError = true;
@@ -526,14 +559,6 @@
 		return true;
 	}
 
-	async function switchRail(next: boolean): Promise<void> {
-		if (sidePolls === next) return;
-		const anchor = currentAnchor();
-		sidePolls = next;
-		await tick();
-		if (anchor) scrollToAnchor(anchor);
-	}
-
 	$effect(() => {
 		if (!saving) return;
 		acknowledgeIfBottom();
@@ -561,14 +586,9 @@
 	});
 
 	onMount(() => {
-		// La largeur réelle se résout au montage, avant la première peinture :
-		// le serveur a rendu les sondages dans le fil, le client les déplace
-		// dans la colonne sans désaccord d'hydratation.
-		sidePolls = shouldShowPollRail(window.innerWidth);
 		// Une lecture enregistrée masque le fil maintenant, avant la peinture,
 		// pour ne jamais montrer le mauvais endroit.
 		if (savedPosition) ready = false;
-		const onResize = () => void switchRail(shouldShowPollRail(window.innerWidth));
 		const onScroll = () => {
 			acknowledgeIfBottom();
 			scheduleSave();
@@ -583,7 +603,6 @@
 		const onPageHide = () => flushSave();
 
 		window.addEventListener('scroll', onScroll, { passive: true });
-		window.addEventListener('resize', onResize);
 		window.addEventListener('pagehide', onPageHide);
 		document.addEventListener('visibilitychange', onVisibility);
 
@@ -600,6 +619,11 @@
 				// tout l'historique : aucune position intermédiaire n'est sauvée.
 				if (messages.length > 0) scrollToLatest(true);
 			}
+			// La position initiale peint avant tout enrichissement : sinon les
+			// premières pages plus anciennes défilent sous un rendu pas encore
+			// posé et produisent un saut de mise en page à l'ouverture.
+			await nextPaint();
+			if (cancelled) return;
 			settled = true;
 			startSaving();
 			const gap = pendingGapCursor;
@@ -614,7 +638,6 @@
 			if (saveTimer) clearTimeout(saveTimer);
 			flushSave();
 			window.removeEventListener('scroll', onScroll);
-			window.removeEventListener('resize', onResize);
 			window.removeEventListener('pagehide', onPageHide);
 			document.removeEventListener('visibilitychange', onVisibility);
 		};
@@ -732,7 +755,7 @@
 	{/if}
 
 	<div class="mx-auto w-full max-w-4xl xl:max-w-6xl">
-		<div class="grid gap-6 {railOpen ? 'xl:grid-cols-[minmax(0,1fr)_20rem]' : ''}">
+		<div class="grid gap-6 {hasRail ? 'xl:grid-cols-[minmax(0,1fr)_20rem]' : ''}">
 			<div class="min-w-0 space-y-4">
 				{#if hydrated && messages.length === 0 && EmptyState}
 					<EmptyState title={t('chat.empty')} help={t('chat.emptyHelp')} />
@@ -769,18 +792,24 @@
 						class="sheet {ready ? '' : 'invisible'}"
 						aria-label={t('chat.title')}
 					>
-						{#each groups as group (group.key)}
-							<p
-								class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted"
-							>
-								{group.label}
-							</p>
-							<ul role="list">
-								{#each group.messages as message (message.id)}
+						<ul role="list">
+							{#each streamItems as item (item.key)}
+								{#if item.kind === 'day'}
 									<li
-										class="chat-row"
+										role="presentation"
+										class="border-b border-line bg-paper-deep/60 px-4 py-2 text-caption font-semibold text-muted {item.pollsOnly
+											? 'xl:hidden'
+											: ''}"
+									>
+										{item.label}
+									</li>
+								{:else}
+									{@const message = item.message}
+									<li
+										class="chat-row {message.poll && !message.deleted ? 'xl:hidden' : ''}"
 										data-own={message.isOwn}
 										data-message-id={message.id}
+										data-poll={message.poll && !message.deleted ? 'true' : undefined}
 									>
 										<div class="chat-avatar">
 											<Avatar
@@ -857,9 +886,9 @@
 											</div>
 										{/if}
 									</li>
-								{/each}
-							</ul>
-						{/each}
+								{/if}
+							{/each}
+						</ul>
 					</section>
 				{/if}
 
@@ -900,7 +929,7 @@
 				</form>
 			</div>
 
-			{#if railOpen}
+			{#if hasRail}
 				<aside class="hidden xl:block" aria-label={t('chat.pollsTitle')}>
 					<div
 						class="sticky top-[var(--anchor-offset)] max-h-[calc(100dvh-var(--anchor-offset)-var(--footer-offset)-1rem)] overflow-y-auto"

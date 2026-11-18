@@ -387,7 +387,8 @@
 	.btn-ghost:active,
 	.btn-danger:active,
 	.btn-on-ink:active {
-		border-bottom-width: 1px;
+		/* La bordure garde sa largeur : l'enfoncement vient de la transformée,
+		   seule propriété composée, sans mise en page à chaque clic. */
 		transform: translateY(1px);
 	}
 	.btn-primary {
@@ -1094,6 +1095,8 @@
 	/* Le fantôme suit le pointeur : il nomme le joueur, pas un rectangle vide. */
 	.drag-ghost {
 		position: fixed;
+		left: 0;
+		top: 0;
 		z-index: 90;
 		display: flex;
 		align-items: center;
@@ -1101,6 +1104,7 @@
 		max-width: 14rem;
 		padding: 0.25rem 0.65rem 0.25rem 0.25rem;
 		transform: translate(-50%, calc(-100% - 0.75rem));
+		will-change: transform;
 		border: 1px solid var(--color-line-strong);
 		border-radius: var(--radius-pill);
 		background: var(--color-surface);
@@ -1339,9 +1343,11 @@
 		position: absolute;
 		inset: 0 auto 0 0;
 		z-index: -1;
-		width: calc(var(--share) * 100%);
+		width: 100%;
 		background: color-mix(in srgb, var(--color-ice) 14%, transparent);
-		transition: width var(--duration-slow) var(--ease-out-expo);
+		transform: scaleX(var(--share));
+		transform-origin: left center;
+		transition: transform var(--duration-slow) var(--ease-out-expo);
 	}
 	.poll-option[data-mine='true'] .poll-fill {
 		background: color-mix(in srgb, var(--color-ice) 26%, transparent);

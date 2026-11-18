@@ -143,21 +143,35 @@ export function formatDateTime(date: string, time: string): string {
 	return `${formatDate(date)} · ${formatTime(time)}`;
 }
 
+const currencySymbolFormats = new Map<string, Intl.NumberFormat>();
+
 export function currencySymbol(currency: string): string {
-	const parts = new Intl.NumberFormat(branding.locale, {
-		style: 'currency',
-		currency
-	}).formatToParts(0);
+	let formatter = currencySymbolFormats.get(currency);
+	if (!formatter) {
+		formatter = new Intl.NumberFormat(branding.locale, {
+			style: 'currency',
+			currency
+		});
+		currencySymbolFormats.set(currency, formatter);
+	}
+	const parts = formatter.formatToParts(0);
 	return parts.find((part) => part.type === 'currency')?.value ?? currency;
 }
 
+const moneyFormats = new Map<string, Intl.NumberFormat>();
+
 export function formatMoney(cents: number, currency: string): string {
-	return new Intl.NumberFormat(branding.locale, {
-		style: 'currency',
-		currency,
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2
-	}).format(cents / 100);
+	let formatter = moneyFormats.get(currency);
+	if (!formatter) {
+		formatter = new Intl.NumberFormat(branding.locale, {
+			style: 'currency',
+			currency,
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		});
+		moneyFormats.set(currency, formatter);
+	}
+	return formatter.format(cents / 100);
 }
 
 export function centsToInput(cents: number): string {

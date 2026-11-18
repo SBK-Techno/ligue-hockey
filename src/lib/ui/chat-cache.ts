@@ -88,6 +88,9 @@ export function mergeChatMessages(
 	existing: readonly ChatMessageView[],
 	incoming: readonly ChatMessageView[]
 ): ChatMessageView[] {
+	// Une page vide ne change rien : la même référence évite d'invalider
+	// tout le fil à chaque synchronisation sans nouveau message.
+	if (incoming.length === 0) return existing as ChatMessageView[];
 	const byId = new Map(existing.map((message) => [message.id, message]));
 	for (const message of incoming) byId.set(message.id, message);
 	return [...byId.values()].sort(compareChatMessages);
@@ -98,13 +101,17 @@ export function applyDeletedIds(
 	messages: readonly ChatMessageView[],
 	deletedIds: readonly string[]
 ): ChatMessageView[] {
-	if (deletedIds.length === 0) return [...messages];
+	if (deletedIds.length === 0) return messages as ChatMessageView[];
 	const deleted = new Set(deletedIds);
-	return messages.map((message) =>
-		deleted.has(message.id) && !message.deleted
-			? { ...message, body: null, deleted: true, poll: null, canDelete: false }
-			: message
-	);
+	let touched = false;
+	const next = messages.map((message) => {
+		if (deleted.has(message.id) && !message.deleted) {
+			touched = true;
+			return { ...message, body: null, deleted: true, poll: null, canDelete: false };
+		}
+		return message;
+	});
+	return touched ? next : (messages as ChatMessageView[]);
 }
 
 /**
@@ -117,16 +124,19 @@ export function applyPollStates(
 	messages: readonly ChatMessageView[],
 	polls: readonly { id: string; poll: ChatPollView | null }[]
 ): ChatMessageView[] {
-	if (polls.length === 0) return [...messages];
+	if (polls.length === 0) return messages as ChatMessageView[];
 	const states = new Map(polls.map((entry) => [entry.id, entry.poll]));
-	return messages.map((message) => {
+	let touched = false;
+	const next = messages.map((message) => {
 		if (!states.has(message.id)) return message;
+		touched = true;
 		const poll = states.get(message.id) ?? null;
 		if (poll === null && message.kind === 'poll') {
 			return { ...message, body: null, deleted: true, poll: null, canDelete: false };
 		}
 		return { ...message, poll };
 	});
+	return touched ? next : (messages as ChatMessageView[]);
 }
 
 /**

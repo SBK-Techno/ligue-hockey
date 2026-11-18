@@ -72,10 +72,20 @@ function fireTouch(node: Element, type: string, x: number, y: number) {
 	flushSync();
 }
 
-function drag(from: Element, to: Element) {
+function nextFrame(): Promise<void> {
+	return new Promise((resolve) =>
+		requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+	);
+}
+
+async function drag(from: Element, to: Element) {
 	dropTarget = to;
 	fire(from, 'pointerdown', 10, 10);
 	fire(from, 'pointermove', 40, 40);
+	// La cible de dépôt est résolue dans une image animée : on la laisse
+	// passer avant de relâcher le pointeur, comme dans un vrai glissement.
+	await nextFrame();
+	flushSync();
 	fire(from, 'pointerup', 40, 40);
 	dropTarget = null;
 }
@@ -148,8 +158,8 @@ afterEach(() => {
 });
 
 describe('gestes de la carte', () => {
-	it('glisse un joueur de la glace vers une place vide', () => {
-		drag(token('white:forward:0'), token('white:forward:1'));
+	it('glisse un joueur de la glace vers une place vide', async () => {
+		await drag(token('white:forward:0'), token('white:forward:1'));
 
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(token('white:forward:1').dataset.filled).toBe('true');
@@ -171,26 +181,26 @@ describe('gestes de la carte', () => {
 		expect(button(t('rink.save')).disabled).toBe(false);
 	});
 
-	it('glisse un joueur du banc vers la glace', () => {
-		drag(token('bench:b'), token('white:forward:1'));
+	it('glisse un joueur du banc vers la glace', async () => {
+		await drag(token('bench:b'), token('white:forward:1'));
 
 		expect(token('white:forward:1').textContent).toContain('Gagnon');
 		expect(document.querySelector('[data-lineup-key="bench:b"]')).toBeNull();
 		expect(button(t('rink.save')).disabled).toBe(false);
 	});
 
-	it('dépose un joueur sur le banc pour le retirer de la glace', () => {
+	it('dépose un joueur sur le banc pour le retirer de la glace', async () => {
 		const bench = document.querySelector('[data-bench-drop]');
 		if (!bench) throw new Error('zone du banc absente');
 
-		drag(token('white:forward:0'), bench);
+		await drag(token('white:forward:0'), bench);
 
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(document.querySelector('[data-lineup-key="bench:a"]')).not.toBeNull();
 	});
 
-	it('annule le dernier geste depuis le bouton', () => {
-		drag(token('white:forward:0'), token('white:forward:1'));
+	it('annule le dernier geste depuis le bouton', async () => {
+		await drag(token('white:forward:0'), token('white:forward:1'));
 		expect(token('white:forward:1').dataset.filled).toBe('true');
 
 		button(t('rink.undo')).click();
@@ -202,11 +212,13 @@ describe('gestes de la carte', () => {
 		expect(hasButton(t('rink.reset'))).toBe(false);
 	});
 
-	it('laisse la sélection en place quand le dépôt est annulé', () => {
+	it('laisse la sélection en place quand le dépôt est annulé', async () => {
 		tap(token('white:forward:0'));
 		dropTarget = null;
 		fire(token('white:forward:0'), 'pointerdown', 10, 10);
 		fire(token('white:forward:0'), 'pointermove', 40, 40);
+		await nextFrame();
+		flushSync();
 		fire(token('white:forward:0'), 'pointerup', 40, 40);
 
 		expect(token('white:forward:0').dataset.selected).toBe('true');
@@ -250,7 +262,7 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.selected).toBe('true');
 	});
 
-	it('refuse de placer le gardien hors de sa place', () => {
+	it('refuse de placer le gardien hors de sa place', async () => {
 		tap(token('bench:g'));
 
 		expect(token('black:defense:0').dataset.ineligible).toBe('true');
@@ -261,7 +273,7 @@ describe('gestes de la carte', () => {
 			t('rink.positionOnly', { position: t('position.goalie') })
 		);
 
-		drag(token('bench:g'), token('black:defense:0'));
+		await drag(token('bench:g'), token('black:defense:0'));
 
 		expect(token('black:defense:0').dataset.filled).toBe('false');
 		expect(document.querySelector('[data-lineup-key="bench:g"]')).not.toBeNull();

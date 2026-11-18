@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatMessageView, ChatPollView } from '#lib/domain/chat/service.ts';
-import { pollEntries, shouldShowPollRail, streamMessages } from './chat-polls.ts';
+import { pollEntries } from './chat-polls.ts';
 
 function poll(question: string, closed = false): ChatPollView {
 	return {
@@ -59,28 +59,5 @@ describe('colonne des sondages', () => {
 		]);
 
 		expect(entries.map((entry) => entry.message.id)).toEqual(['poll']);
-	});
-
-	it('retire les sondages vivants du fil quand la colonne est active', () => {
-		const messages = [
-			message('text', 1),
-			message('poll', 2, { kind: 'poll', poll: poll('Ouvert') }),
-			message('deleted_poll', 3, { kind: 'poll', poll: null, deleted: true })
-		];
-
-		expect(streamMessages(messages, false).map((entry) => entry.id)).toEqual([
-			'text',
-			'poll',
-			'deleted_poll'
-		]);
-		expect(streamMessages(messages, true).map((entry) => entry.id)).toEqual([
-			'text',
-			'deleted_poll'
-		]);
-	});
-
-	it('bascule la colonne au seuil de 1280 px', () => {
-		expect(shouldShowPollRail(1279)).toBe(false);
-		expect(shouldShowPollRail(1280)).toBe(true);
 	});
 });

@@ -3,7 +3,6 @@ import { ABUSE_LIMITS } from '#config/abuse.ts';
 import {
 	CHAT_HISTORY_PREFETCH_PAGES,
 	CHAT_POSITION_LOOKUP_PAGES,
-	CHAT_RAIL_MIN_WIDTH,
 	CHAT_SYNC_MAX_PAGES
 } from '#config/chat.ts';
 
@@ -22,11 +21,5 @@ describe('budget de lecture de la discussion', () => {
 			syncTicksPerMinute;
 
 		expect(burst).toBeLessThanOrEqual(ABUSE_LIMITS.chatRead.limit);
-	});
-
-	it('garde le seuil de la colonne aligné sur xl de Tailwind', () => {
-		// Le balisage porte `xl:` (80rem = 1280 px); les deux valeurs changent
-		// ensemble, et ce test est le contrat qui les relie.
-		expect(CHAT_RAIL_MIN_WIDTH).toBe(1280);
 	});
 });

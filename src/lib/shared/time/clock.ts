@@ -16,13 +16,23 @@ export function nowDate(): Date {
 	return toDate(clock.nowMs());
 }
 
+// Intl construction dominates these hot paths (per message, per row). The
+// formatters are immutable and timezone-aware per call, so one instance per
+// timezone and option shape is reused; only the formatted instant varies.
+const zoneDateFormats = new Map<string, Intl.DateTimeFormat>();
+
 export function todayInZone(timeZone: string, at: number = clock.nowMs()): string {
-	const parts = new Intl.DateTimeFormat(PART_LOCALE, {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	}).formatToParts(toDate(at));
+	let formatter = zoneDateFormats.get(timeZone);
+	if (!formatter) {
+		formatter = new Intl.DateTimeFormat(PART_LOCALE, {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		});
+		zoneDateFormats.set(timeZone, formatter);
+	}
+	const parts = formatter.formatToParts(toDate(at));
 
 	const value = Object.fromEntries(
 		parts
@@ -33,14 +43,21 @@ export function todayInZone(timeZone: string, at: number = clock.nowMs()): strin
 	return `${value.year}-${value.month}-${value.day}`;
 }
 
+const zoneTimeFormats = new Map<string, Intl.DateTimeFormat>();
+
 /** L'heure locale du fuseau de la ligue, au format `HH:MM`. */
 export function timeInZone(timeZone: string, at: number = clock.nowMs()): string {
-	const parts = new Intl.DateTimeFormat(PART_LOCALE, {
-		timeZone,
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false
-	}).formatToParts(toDate(at));
+	let formatter = zoneTimeFormats.get(timeZone);
+	if (!formatter) {
+		formatter = new Intl.DateTimeFormat(PART_LOCALE, {
+			timeZone,
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		});
+		zoneTimeFormats.set(timeZone, formatter);
+	}
+	const parts = formatter.formatToParts(toDate(at));
 
 	const rawHour = parts.find((part) => part.type === 'hour')?.value ?? '00';
 	// `hour12: false` peut rendre minuit comme 24:00 selon la plateforme.
@@ -59,17 +76,24 @@ export function isRealDate(date: string): boolean {
 	return dateOnlyToDate(date).toISOString().slice(0, 10) === date;
 }
 
+const zoneOffsetFormats = new Map<string, Intl.DateTimeFormat>();
+
 function zoneOffsetMs(utcMs: number, timeZone: string): number {
-	const parts = new Intl.DateTimeFormat(OFFSET_LOCALE, {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit',
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		hour12: false
-	}).formatToParts(toDate(utcMs));
+	let formatter = zoneOffsetFormats.get(timeZone);
+	if (!formatter) {
+		formatter = new Intl.DateTimeFormat(OFFSET_LOCALE, {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hour12: false
+		});
+		zoneOffsetFormats.set(timeZone, formatter);
+	}
+	const parts = formatter.formatToParts(toDate(utcMs));
 
 	const value = Object.fromEntries(
 		parts

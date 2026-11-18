@@ -24,6 +24,11 @@ describe('comportement de la discussion', () => {
 		expect(older).toContain('const anchor = options.preserveScroll ? currentAnchor() : null;');
 		expect(older).toContain('if (anchor) scrollToAnchor(anchor);');
 		expect(older).not.toContain('scrollBy');
+		// La correction d'ancre précède la persistance : aucune peinture ne
+		// montre les lignes ajoutées sans compensation de scroll.
+		expect(older.indexOf('if (anchor) scrollToAnchor(anchor);')).toBeLessThan(
+			older.indexOf('await writeChatMessages')
+		);
 	});
 
 	it('n’affiche les sondages dans la colonne qu’au seuil large', () => {
@@ -44,9 +49,14 @@ describe('comportement de la discussion', () => {
 		expect(page).toContain('if (!bridged) await resetLocalCopy();');
 	});
 
-	it('garde le premier rendu identique au serveur pour les sondages', () => {
-		expect(page).toContain('let sidePolls = $state(false);');
-		expect(page).not.toContain("typeof window !== 'undefined' && shouldShowPollRail");
+	it('pilote la colonne des sondages en CSS, sans déplacement après peinture', () => {
+		// Les deux copies existent dès le rendu serveur; la largeur décide.
+		// Aucun état de largeur ni bascule au montage : pas de saut à l'hydratation.
+		expect(page).toContain('data-poll={message.poll && !message.deleted');
+		expect(page).toContain("message.poll && !message.deleted ? 'xl:hidden' : ''");
+		expect(page).not.toContain('sidePolls');
+		expect(page).not.toContain('shouldShowPollRail');
+		expect(page).not.toContain("window.addEventListener('resize'");
 	});
 
 	it('jette la copie locale quand le serveur ne peut plus prouver les suppressions', () => {
