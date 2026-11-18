@@ -61,6 +61,7 @@ describe('ligne de centre du tableau', () => {
 				game,
 				mapUrl: null,
 				teamLabel: null,
+				benchTeamLabel: null,
 				availability,
 				ownSlot: null,
 				ownBench: null,
@@ -89,6 +90,7 @@ describe('ligne de centre du tableau', () => {
 				game,
 				mapUrl: null,
 				teamLabel: null,
+				benchTeamLabel: null,
 				availability: null,
 				ownSlot: null,
 				ownBench: null,
@@ -124,13 +126,14 @@ describe('pastille de banc à l’accueil', () => {
 		team: 'white'
 	};
 
-	function heroBody(ownBench: GamePlayer | null): string {
+	function heroBody(ownBench: GamePlayer | null, benchTeamLabel: string | null): string {
 		return render(HomeHero, {
 			props: {
 				variant: 'upcoming',
 				game,
 				mapUrl: null,
 				teamLabel: null,
+				benchTeamLabel,
 				availability: null,
 				ownSlot: null,
 				ownBench,
@@ -143,13 +146,13 @@ describe('pastille de banc à l’accueil', () => {
 	}
 
 	it('nomme l’équipe du joueur habillé sur le banc', () => {
-		const body = heroBody(benchPlayer);
+		const body = heroBody(benchPlayer, t('team.white'));
 
 		expect(body).toContain(`${t('team.white')} · ${t('home.benchStamp')}`);
 	});
 
 	it('garde la pastille simple pour un joueur hors effectif', () => {
-		const body = heroBody({ ...benchPlayer, team: null });
+		const body = heroBody({ ...benchPlayer, team: null }, null);
 
 		expect(body).toContain(t('home.benchStamp'));
 		expect(body).not.toContain(t('team.white'));

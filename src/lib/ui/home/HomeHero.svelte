@@ -4,7 +4,6 @@
 	import type { GamePlayer, GameSlotView } from '#lib/domain/games/types.ts';
 	import type { HeroVariant } from '#lib/domain/home/composition.ts';
 	import type { SubRequestWithGame } from '#lib/domain/roster/service.ts';
-	import { teamDefinition } from '#config/teams.ts';
 	import { filledRequestLabel } from '#lib/ui/filled-request.ts';
 	import {
 		formatDayMonth,
@@ -20,6 +19,7 @@
 		game,
 		mapUrl,
 		teamLabel,
+		benchTeamLabel,
 		availability,
 		ownSlot,
 		ownBench,
@@ -32,6 +32,7 @@
 		game: GameView | null;
 		mapUrl: string | null;
 		teamLabel: string | null;
+		benchTeamLabel: string | null;
 		availability: AvailabilityView | null;
 		ownSlot: GameSlotView | null;
 		ownBench: GamePlayer | null;
@@ -203,8 +204,8 @@
 						</span>
 					{:else if ownBench}
 						<span class="stamp border-paper/40 text-paper/80">
-							{ownBench.team
-								? `${t(teamDefinition(ownBench.team).labelKey)} · ${t('home.benchStamp')}`
+							{benchTeamLabel
+								? `${benchTeamLabel} · ${t('home.benchStamp')}`
 								: t('home.benchStamp')}
 						</span>
 					{/if}

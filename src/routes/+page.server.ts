@@ -131,6 +131,9 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 	// libellés sont résolus une fois, côté serveur, avec les autres surfaces.
 	const gameMapUrl = game ? mapUrlFor(game.locationAddress, game.locationMapUrl) : null;
 	const ownTeamLabel = ownSlot ? t(teamDefinition(ownSlot.team).labelKey) : null;
+	const ownBenchTeamLabel = ownBench?.team
+		? t(teamDefinition(ownBench.team).labelKey)
+		: null;
 
 	const myRequests = hasPlayerProfile
 		? listMyRequests(actor, schedule).filter(
@@ -243,6 +246,7 @@ export const load: ServerLoad = async ({ locals, parent }) => {
 		nextGames,
 		gameMapUrl,
 		ownTeamLabel,
+		ownBenchTeamLabel,
 		availability,
 		balance,
 		ownSlot,
