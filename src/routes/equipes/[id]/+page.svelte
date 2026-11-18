@@ -8,6 +8,7 @@
 	import MapLink from '#lib/ui/MapLink.svelte';
 	import PageHeader from '#lib/ui/PageHeader.svelte';
 	import SectionCard from '#lib/ui/SectionCard.svelte';
+	import StatStrip from '#lib/ui/StatStrip.svelte';
 	import LineupBoard from '#lib/ui/match/LineupBoard.svelte';
 	import TeamBoard from '#lib/ui/teams/TeamBoard.svelte';
 	import TeamHistory from '#lib/ui/teams/TeamHistory.svelte';
@@ -28,6 +29,28 @@
 	const managerEditor = $derived(
 		Boolean(game && data.canManage && data.editable && game.generated)
 	);
+	/**
+	 * The measured lineup, right where the alignment lives: only gaps the
+	 * generation really measured, then the two team sizes from the live pool.
+	 */
+	const lineupStats = $derived.by(() => {
+		const generation = game?.generation;
+		const intelligence = data.intelligence;
+		if (!generation || !intelligence) return [] as { value: string; label: string }[];
+		const cells: { value: string; label: string }[] = [];
+		if (generation.skillDiffLabel !== null) {
+			cells.push({ value: generation.skillDiffLabel, label: t('games.gapSkill') });
+		}
+		if (generation.ageDiffLabel !== null) {
+			cells.push({
+				value: `${generation.ageDiffLabel} ${t('games.ageYears')}`,
+				label: t('games.gapAge')
+			});
+		}
+		cells.push({ value: String(intelligence.sizes.white), label: t('team.white') });
+		cells.push({ value: String(intelligence.sizes.black), label: t('team.black') });
+		return cells;
+	});
 	const sectionTitle = $derived(
 		data.isNext && game?.status === 'scheduled'
 			? t('teams.nextMatch')
@@ -107,6 +130,11 @@
 						</span>
 					{/snippet}
 					<FormFeedback {form} section="lineup" focusOnChange class="mb-3" />
+					{#if lineupStats.length > 0}
+						<div class="mb-3">
+							<StatStrip cells={lineupStats} />
+						</div>
+					{/if}
 					{#key game.generation?.generatedAt}
 						<LineupBoard
 							slots={game.slots}

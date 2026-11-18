@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 import { t } from '#lib/shared/i18n/index.ts';
@@ -442,22 +441,42 @@ describe('propriétaire de l’alignement', () => {
 		expect(team.body).toContain('aria-current="page"');
 	});
 
-	it('confirme la régénération avec un déclencheur, jamais un envoi direct', () => {
+	it('refait les équipes en un clic, sans confirmation intermédiaire', () => {
 		const team = renderTeam();
 		const start = team.body.indexOf('action="?/generate"');
 		const end = team.body.indexOf('</form>', start);
 		const form = team.body.slice(start, end);
 
 		expect(start).toBeGreaterThan(-1);
-		expect(form).toContain('type="button"');
-		expect(form).not.toContain('type="submit"');
+		expect(form).toContain('type="submit"');
+		expect(form).not.toContain('type="button"');
+		expect(team.body).toContain('class="btn-primary btn-sm"');
+	});
 
-		const source = readFileSync(
-			new URL('../../../lib/ui/teams/TeamManagerPanel.svelte', import.meta.url),
-			'utf8'
-		);
-		expect(source).toContain("question={t('games.regenerateConfirm')}");
-		expect(t('games.regenerateConfirm')).toContain('alignement publié');
+	it('mesure l’équilibre à côté de la glace, pas dans un panneau lointain', () => {
+		const team = renderTeam({
+			game: {
+				...game,
+				generation: {
+					...game.generation!,
+					skillDiffLabel: '0,25',
+					ageDiffLabel: '1,0'
+				}
+			}
+		});
+
+		expect(team.body).toContain('class="metric-strip"');
+		expect(team.body).toContain(t('games.gapSkill'));
+		expect(team.body).toContain(t('games.gapAge'));
+		expect(team.body).toContain(t('team.white'));
+		expect(team.body).toContain(t('team.black'));
+
+		const rosterTitle = team.body.indexOf(`<h2>${t('games.roster')}</h2>`);
+		const strip = team.body.indexOf('class="metric-strip"');
+		const board = team.body.indexOf(t('rink.board'));
+		expect(rosterTitle).toBeGreaterThan(-1);
+		expect(strip).toBeGreaterThan(rosterTitle);
+		expect(board).toBeGreaterThan(strip);
 	});
 
 	it('garde les commandes de présence sur le match, jamais l’alignement', () => {

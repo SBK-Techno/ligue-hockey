@@ -189,7 +189,7 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).not.toContain('aria-haspopup="dialog"');
 	});
 
-	it('affiche un portrait par joueur et le guide des trois gestes', () => {
+	it('affiche un portrait par joueur et une seule ligne d’aide', () => {
 		const { body } = render(LineupBoard, {
 			props: { slots: fullSlots, bench, canEdit: true, expectedGeneratedAt: 123 }
 		});
@@ -204,12 +204,7 @@ describe('rendu de la carte d’alignement', () => {
 		expect(identitySheetStyle(knownAvatars['white-forward-0']!)).not.toBe(
 			identitySheetStyle(knownAvatars['black-forward-0']!)
 		);
-		expect(body).toContain(t('rink.stepPick'));
-		expect(body).toContain(t('rink.stepPlace'));
-		expect(body).toContain(t('rink.stepSave'));
-		expect(body).toContain(t('rink.stepActive'));
-		expect(body).toContain(t('rink.stepTodo'));
-		expect((body.match(/aria-current="step"/g) ?? []).length).toBe(1);
+		expect(body).toContain(t('rink.helpManager'));
 		expect(body).toContain(t('rink.undo'));
 		expect(body).toContain('data-bench-drop="true"');
 
@@ -307,12 +302,13 @@ describe('rendu de la carte d’alignement', () => {
 		expect(body).toContain('id="rink-team-white" data-active="false"');
 	});
 
-	it('masque le guide et la cible du banc en lecture seule', () => {
+	it('masque l’aide du gérant et la cible du banc en lecture seule', () => {
 		const { body } = render(LineupBoard, {
 			props: { slots: fullSlots, bench, canEdit: false, expectedGeneratedAt: 123 }
 		});
 
-		expect(body).not.toContain(t('rink.stepPick'));
+		expect(body).not.toContain(t('rink.helpManager'));
+		expect(body).toContain(t('rink.helpPlayer'));
 		expect(body).not.toContain('data-bench-drop');
 		expect(body).not.toContain(t('rink.undo'));
 	});

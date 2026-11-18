@@ -197,16 +197,6 @@
 		return { title: t('rink.yourSpot'), text: parts.join(' · '), help: null };
 	});
 
-	/**
-	 * Le guide suit un seul chemin : choisir un joueur, choisir sa place,
-	 * enregistrer. Après un déplacement, les deux premiers gestes sont faits.
-	 */
-	const stepOne = $derived(selected !== null || dirty ? 'done' : 'active');
-	const stepTwo = $derived(
-		selected !== null ? 'active' : dirty ? 'done' : 'todo'
-	);
-	const stepThree = $derived(dirty ? 'active' : 'todo');
-
 	function playerById(playerId: string): BoardPlayer | null {
 		return players.find((player) => player.playerId === playerId) ?? null;
 	}
@@ -421,42 +411,6 @@
 					<p class="hint mt-0.5">{viewerSummary.help}</p>
 				{/if}
 			</div>
-		</div>
-	{/if}
-
-	{#if canEdit}
-		<div>
-			<p class="sr-only">{t('rink.steps')}</p>
-			<ol class="lineup-steps">
-				<li data-state={stepOne} aria-current={stepOne === 'active' ? 'step' : undefined}>
-					<span class="step-mark" aria-hidden="true">1</span>
-					<span>{t('rink.stepPick')}</span>
-					<span class="sr-only">
-						{stepOne === 'done' ? t('rink.stepDone') : t('rink.stepActive')}
-					</span>
-				</li>
-				<li data-state={stepTwo} aria-current={stepTwo === 'active' ? 'step' : undefined}>
-					<span class="step-mark" aria-hidden="true">2</span>
-					<span>{t('rink.stepPlace')}</span>
-					<span class="sr-only">
-						{stepTwo === 'done'
-							? t('rink.stepDone')
-							: stepTwo === 'active'
-								? t('rink.stepActive')
-								: t('rink.stepTodo')}
-					</span>
-				</li>
-				<li
-					data-state={stepThree}
-					aria-current={stepThree === 'active' ? 'step' : undefined}
-				>
-					<span class="step-mark" aria-hidden="true">3</span>
-					<span>{t('rink.stepSave')}</span>
-					<span class="sr-only">
-						{stepThree === 'active' ? t('rink.stepActive') : t('rink.stepTodo')}
-					</span>
-				</li>
-			</ol>
 		</div>
 	{/if}
 

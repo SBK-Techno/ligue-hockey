@@ -95,8 +95,10 @@ function button(label: string): HTMLButtonElement {
 	return node as HTMLButtonElement;
 }
 
-function currentStep(): HTMLElement | null {
-	return document.querySelector<HTMLElement>('.lineup-steps li[aria-current="step"]');
+function hasButton(label: string): boolean {
+	return [...document.querySelectorAll('button')].some(
+		(candidate) => candidate.textContent?.trim() === label
+	);
 }
 
 beforeEach(() => {
@@ -152,7 +154,8 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(token('white:forward:1').dataset.filled).toBe('true');
 		expect(token('white:forward:1').textContent).toContain('Roy');
-		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
+		expect(button(t('rink.save')).disabled).toBe(false);
+		expect(hasButton(t('rink.reset'))).toBe(true);
 	});
 
 	it('touche un joueur puis une place pour le déplacer', () => {
@@ -160,12 +163,12 @@ describe('gestes de la carte', () => {
 		expect(token('white:forward:0').dataset.selected).toBe('true');
 		expect(token('white:forward:1').dataset.awaiting).toBe('true');
 		expect(document.body.textContent).toContain('Alice Roy');
-		expect(currentStep()?.textContent).toContain(t('rink.stepPlace'));
+		expect(button(t('rink.save')).disabled).toBe(true);
 
 		tap(token('white:forward:1'));
 		expect(token('white:forward:0').dataset.filled).toBe('false');
 		expect(token('white:forward:1').textContent).toContain('Roy');
-		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
+		expect(button(t('rink.save')).disabled).toBe(false);
 	});
 
 	it('glisse un joueur du banc vers la glace', () => {
@@ -173,7 +176,7 @@ describe('gestes de la carte', () => {
 
 		expect(token('white:forward:1').textContent).toContain('Gagnon');
 		expect(document.querySelector('[data-lineup-key="bench:b"]')).toBeNull();
-		expect(currentStep()?.textContent).toContain(t('rink.stepSave'));
+		expect(button(t('rink.save')).disabled).toBe(false);
 	});
 
 	it('dépose un joueur sur le banc pour le retirer de la glace', () => {
@@ -195,7 +198,8 @@ describe('gestes de la carte', () => {
 
 		expect(token('white:forward:0').dataset.filled).toBe('true');
 		expect(token('white:forward:1').dataset.filled).toBe('false');
-		expect(currentStep()?.textContent).toContain(t('rink.stepPick'));
+		expect(button(t('rink.save')).disabled).toBe(true);
+		expect(hasButton(t('rink.reset'))).toBe(false);
 	});
 
 	it('laisse la sélection en place quand le dépôt est annulé', () => {
