@@ -49,9 +49,9 @@
 		replaceState(`${resolve('/admin/joueurs')}${url.search}`, {});
 	}
 
-	const filtered = $derived(
-		data.players.filter((player) => {
-			const needle = query.trim().toLowerCase();
+	const filtered = $derived.by(() => {
+		const needle = query.trim().toLowerCase();
+		return data.players.filter((player) => {
 			const matchesQuery =
 				!needle ||
 				player.fullName.toLowerCase().includes(needle) ||
@@ -62,8 +62,8 @@
 				(filter === 'subs' && player.active && player.isSubstitute) ||
 				(filter === 'inactive' && !player.active);
 			return matchesQuery && matchesFilter;
-		})
-	);
+		});
+	});
 
 </script>
 
