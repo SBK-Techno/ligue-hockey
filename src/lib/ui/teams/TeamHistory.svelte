@@ -18,7 +18,7 @@
 {#if entries.length === 0}
 	<p class="section-row text-body text-muted">{t('teams.historyEmpty')}</p>
 {:else}
-	<ul role="list" class="divide-y divide-line">
+	<ul role="list" class="ledger-columns">
 		{#each entries as entry (entry.id)}
 			{@const selected = entry.id === selectedId}
 			{@const status = gameStatus(entry.status)}

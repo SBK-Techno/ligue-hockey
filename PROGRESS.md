@@ -2,6 +2,10 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.13.1 (in progress)
+
+- **History columns.** “Matchs passés” joins the shared ruled two-column ledger from 1024 px: the list reuses `.ledger-columns`, the primitive already owned by the substitutes and admin player lists, instead of a parallel grid. The section halves on desktop, 1033 px to 598 px at 1440 with 13 rows at 73 px in 623 px columns and 495 px columns at 1024, and keeps one ruled column below the threshold, identical at 320 px with no horizontal overflow and no console error. A scoped spec pins the history list to the shared class so a silent revert to the single-column divide cannot pass.
+
 ## Release 1.13.0 (shipped)
 
 - **Rink geometry.** Token coordinates are exact percentages of the ice and the portrait centre is the anchor; the label hangs below without shifting the marker. The first forward line and first defence pair sit on the painted centre and blue lines, and the goalie stands at the crease depth. Two rinks share a row only when each keeps a 28 rem formation width; below 440 px the portrait becomes a 44 px number disc and the named roster carries the surnames. The 559 px formation grid is gone, so browser zoom changes the scale, never the positions.

@@ -441,6 +441,16 @@ describe('propriétaire de l’alignement', () => {
 		expect(team.body).toContain('aria-current="page"');
 	});
 
+	it('règle l’historique en deux colonnes réglées, le registre partagé', () => {
+		const team = renderTeam();
+		const start = team.body.indexOf(`<h2>${t('teams.history')}</h2>`);
+		const section = team.body.slice(start);
+
+		expect(start).toBeGreaterThan(-1);
+		expect(section).toContain('<ul role="list" class="ledger-columns">');
+		expect(section).not.toContain('class="divide-y divide-line"');
+	});
+
 	it('refait les équipes en un clic, sans confirmation intermédiaire', () => {
 		const team = renderTeam();
 		const start = team.body.indexOf('action="?/generate"');
