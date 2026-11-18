@@ -2,9 +2,13 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
-## Release 1.14.1 (in progress)
+## Release 1.14.1 (shipped)
 
 - **History columns.** “Matchs passés” joins the shared ruled two-column ledger from 1024 px: the list reuses `.ledger-columns`, the primitive already owned by the substitutes and admin player lists, instead of a parallel grid. The section halves on desktop, 1033 px to 598 px at 1440 with 13 rows at 73 px in 623 px columns and 495 px columns at 1024, and keeps one ruled column below the threshold, identical at 320 px with no horizontal overflow and no console error. A scoped spec pins the history list to the shared class so a silent revert to the single-column divide cannot pass.
+- **Gate.** `npm run gate` exit 0 on the branch synced with the shipped roster: 1289 tests in 175 files, svelte-check 0/0, 100 client chunks without zod and an 8328-byte precache shell. Playwright on the merged tree confirms the history list renders in two ruled columns at 1440 (two x positions 97 and 720) and one at 320, with no horizontal overflow and no console error.
+- **Release.** PR #50 merged at `0b16cac`; the Auto-release workflow pushed `release/next` at `b28722e` and, as in every release since 1.10.0, could not create the release pull request, so the documented recovery opened #54 manually; #54 merged at `899db1c`. The Auto-release run on that merge push created tag `v1.14.1` (`8969c06`) and the called release workflow produced the GitHub release and the GHCR image.
+- **Live.** Image `ghcr.io/sbk-techno/ligue-hockey:1.14.1`, host digest `sha256:eccf7f188b5e518f7b7b7c546ca80aa78a7efbb11bb4d8e27869c541c7492cca`, local id `sha256:b306a9f52202bd3dad1a466ae2c27cf38518b1bcc9b80cd6c5e57e687529d7a9`, healthy with zero restarts and the 16 recorded migrations applied. Public health reports `ok`/`ok`/`applied` with an empty queue (0 pending, 0 failed); `/connexion` returns 200 and `/discussion` redirects (303). The first probe returned 502 while the container started; the retry returned the healthy payload. No error lines in the first minutes of logs.
+- **Rollback.** The pre-update database copy is `/home/jadorais/backups/ligue-20261118T154055.db`, the 1.14.0 compose file is `/home/jadorais/compose.ligue-hockey.yml.1.14.0.bak`, and image `1.14.0` stays available on the host.
 
 ## Release 1.14.0 (shipped)
 
