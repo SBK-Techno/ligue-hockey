@@ -2,6 +2,10 @@
 
 This file tracks the current milestone, verified evidence, and the work that is deliberately deferred. It is not part of the published documentation site.
 
+## Release 1.14.1 (in progress)
+
+- **History columns.** “Matchs passés” joins the shared ruled two-column ledger from 1024 px: the list reuses `.ledger-columns`, the primitive already owned by the substitutes and admin player lists, instead of a parallel grid. The section halves on desktop, 1033 px to 598 px at 1440 with 13 rows at 73 px in 623 px columns and 495 px columns at 1024, and keeps one ruled column below the threshold, identical at 320 px with no horizontal overflow and no console error. A scoped spec pins the history list to the shared class so a silent revert to the single-column divide cannot pass.
+
 ## Release 1.14.0 (shipped)
 
 - **Dressed roster.** A team is now 11 dressed players: the unchanged 6 on the ice (3 attack, 2 defence, 1 goalie) plus a bench of 5 owned by that team. The new `roster.playersPerTeam` setting (default 11) drives the dressed size; the formation keys stay the on-ice counts and `config/roster.ts` derives `benchPerTeam`. Generation keeps the ice generator untouched, then `draftTeamBench` fills each team bench up to capacity, serving the smaller then weaker team first with the strongest remaining member; anyone beyond both benches waits in a team-less overflow. The demo seed drafts through the same owner.
