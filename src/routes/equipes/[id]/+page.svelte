@@ -135,7 +135,7 @@
 							<StatStrip cells={lineupStats} />
 						</div>
 					{/if}
-					{#key game.generation?.generatedAt}
+					{#key `${game.id}:${game.generation?.generatedAt}`}
 						<LineupBoard
 							slots={game.slots}
 							bench={game.generation?.bench ?? []}

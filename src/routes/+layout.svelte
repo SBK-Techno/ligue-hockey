@@ -173,9 +173,11 @@
 			tabindex="-1"
 			class="app-main mx-auto w-full max-w-6xl xl:max-w-7xl px-4 pt-6 sm:pt-8"
 		>
-			{#key page.url.pathname}
-				<div class="page-enter">{@render children()}</div>
-			{/key}
+			<!-- Pas de clé sur la page : Kit remonte déjà le composant de route
+			     à chaque navigation, et une clé forcerait aussi la reconstruction
+			     des layouts intermédiaires et des pages à paramètre. L'entrée
+			     animée appartient au PageHeader, remonté lui par Kit. -->
+			<div>{@render children()}</div>
 			<div aria-live="polite" class="sr-only">{pageTitle}</div>
 		</main>
 		<AppNavBottom items={data.nav.mobile} visible={memberShell} />
